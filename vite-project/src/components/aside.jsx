@@ -1,0 +1,164 @@
+import React, { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTachometerAlt, faInbox, faUser, faPeopleGroup, faGear, faFile, faClock, faCalendar, faCaretDown } from '@fortawesome/free-solid-svg-icons';
+import { useDarkMode } from '../contexts/DarkModeContext';
+import { useStateContext } from '../contexts/ContextProvider';
+
+const Aside = ({ className }) => {
+  const { user } = useStateContext(); // Obtén el usuario del contexto
+  const [dropdownOpen, setDropdownOpen] = useState({
+    users: false,
+    pages: false,
+    settings: false,
+    extraHours: false,
+    solicitudes: false,
+  });
+
+  const { darkMode } = useDarkMode();
+
+  const toggleDropdown = (dropdown) => {
+    setDropdownOpen((prevState) => ({
+      ...prevState,
+      [dropdown]: !prevState[dropdown],
+    }));
+  };
+
+  if (!user) {
+    return (
+      <aside className={`w-64 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'} ${className}`}>
+        <div className="flex items-center justify-center h-screen">
+          <p>Cargando menú...</p>
+        </div>
+      </aside>
+    );
+  }
+
+  const userType = user.type; // Asume que el campo `type` contiene el rol del usuario
+    
+
+    return (
+      <aside className={`w-64 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'} ${className}`}>
+        <nav className="mt-6">
+          {/* Inicio */}
+          <a href="/dashboard" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <FontAwesomeIcon icon={faTachometerAlt} className="w-5 h-5 mr-2" />
+            Inicio
+          </a>
+
+          {/* Notificaciones */}
+          <a href="#inbox" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <FontAwesomeIcon icon={faInbox} className="w-5 h-5 mr-2" />
+            Notificaciones
+            <span className="ml-auto bg-blue-600 text-white text-sm font-semibold px-2.5 py-0.5 rounded-full">3</span>
+          </a>
+
+          {/* Usuarios */}
+          {userType !== 'bombero' && (
+            <a href="/users" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+              <FontAwesomeIcon icon={faUser} className="w-5 h-5 mr-2" />
+              Usuarios
+            </a>
+          )}
+
+          {/* Brigadas */}
+          {userType !== 'bombero' && (
+            <div className="relative">
+              <button onClick={() => toggleDropdown('pages')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+                <span className="flex items-center">
+                  <FontAwesomeIcon icon={faPeopleGroup} className="w-5 h-5 mr-2" />
+                  Brigadas
+                </span>
+                <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.pages ? 'rotate-180' : ''}`} />
+              </button>
+              {dropdownOpen.pages && (
+                <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                  <a href="/brigades" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Ver Brigadas</a>
+                  <a href="/firefighter-assignments" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Asignar Brigada</a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Configuración */}
+          {userType !== 'bombero' && (
+            <div className="relative">
+              <button onClick={() => toggleDropdown('settings')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+                <span className="flex items-center">
+                  <FontAwesomeIcon icon={faGear} className="w-5 h-5 mr-2" />
+                  Configuración
+                </span>
+                <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.settings ? 'rotate-180' : ''}`} />
+              </button>
+              {dropdownOpen.settings && (
+                <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                  <a href="/settings" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Preferencias</a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Horas Extra */}
+          <div className="relative">
+            <button onClick={() => toggleDropdown('extraHours')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+              <span className="flex items-center">
+                <FontAwesomeIcon icon={faClock} className="w-5 h-5 mr-2" />
+                Horas Extra
+              </span>
+              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.extraHours ? 'rotate-180' : ''}`} />
+            </button>
+            {dropdownOpen.extraHours && (
+            <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+            {userType !== 'bombero' && (
+              <a href="/horas-extra" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Horas Extra</a>
+            )}
+            {userType !== 'bombero' && (
+              <a href="/total-horas-extra" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Total Horas Extra</a>
+            )}
+            <a href="/requerimientos" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos 24h</a>
+            <a href="/requerimientos-10-horas" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos 10h</a>
+          </div>
+          
+            )}
+          </div>
+
+          {/* Solicitudes */}
+          <div className="relative">
+            <button onClick={() => toggleDropdown('solicitudes')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+              <span className="flex items-center">
+                <FontAwesomeIcon icon={faFile} className="w-5 h-5 mr-2" />
+                Solicitudes
+              </span>
+              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.solicitudes ? 'rotate-180' : ''}`} />
+            </button>
+            {dropdownOpen.solicitudes && (
+              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <a href="/solicitud" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Crear Solicitud</a>
+                {userType !== 'bombero' && <a href="/solicitudes" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Lista de Solicitudes</a>}
+                <a href="/cambio-guardia" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Cambio de Guardia</a>
+                {userType !== 'bombero' && <a href="/solicitudes-guardia" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Solicitudes de Guardia</a>}
+              </div>
+            )}
+          </div>
+
+          {/* Calendario */}
+          <div className="relative">
+            <button onClick={() => toggleDropdown('authentication')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+              <span className="flex items-center">
+                <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 mr-2" />
+                Calendario
+              </span>
+              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.authentication ? 'rotate-180' : ''}`} />
+            </button>
+            {dropdownOpen.authentication && (
+              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <a href="/calendario-norte" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Calendario Parque Norte</a>
+                <a href="/calendario-sur" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Calendario Parque Sur</a>
+              </div>
+            )}
+          </div>
+        </nav>
+      </aside>
+    );
+  };
+
+  export default Aside;

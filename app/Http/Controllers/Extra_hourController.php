@@ -6,7 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Extra_hour;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;  // Importar Rule para las validaciones avanzadas
-use Illuminate\Support\Facades\log;
+use Illuminate\Support\Facades\Log;
+use App\Models\Guard;
 
 class Extra_hourController extends Controller
 {

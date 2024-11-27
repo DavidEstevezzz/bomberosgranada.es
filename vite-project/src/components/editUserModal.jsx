@@ -10,7 +10,6 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
     nombre: user.nombre || '',
     apellido: user.apellido || '',
     email: user.email || '',
-    password: '',
     telefono: user.telefono || '',
     dni: user.dni || '',
     type: user.type || '',
@@ -25,7 +24,6 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
         nombre: user.nombre || '',
         apellido: user.apellido || '',
         email: user.email || '',
-        password: '',
         telefono: user.telefono || '',
         dni: user.dni || '',
         type: user.type || '',
@@ -49,7 +47,6 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
       ...(formValues.password && { password: formValues.password }) // Only include password if provided
     };
 
-    console.log('Datos enviados:', updatedUser); // Verificar los datos enviados
 
     try {
       const response = await UsuariosApiService.updateUsuario(user.id_empleado, updatedUser);
@@ -83,10 +80,7 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
               <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Email</label>
               <input type="email" name="email" id="email" value={formValues.email} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500" />
             </div>
-            <div>
-              <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Password</label>
-              <input type="password" name="password" id="password" value={formValues.password} onChange={handleChange} placeholder="Leave blank to keep current password" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500" />
-            </div>
+            
             <div>
               <label htmlFor="telefono" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Teléfono</label>
               <input type="text" name="telefono" id="telefono" value={formValues.telefono} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500" />

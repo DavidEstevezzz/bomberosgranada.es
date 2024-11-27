@@ -28,6 +28,7 @@ class User extends Authenticatable
         'type',
         'puesto',
         'AP',
+        'email2',
     ];
 
     protected $hidden = [

@@ -11,6 +11,7 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
         nombre: '',
         apellido: '',
         email: '',
+        email2: '',
         telefono: '',
         dni: '',
         puesto: '',
@@ -28,6 +29,7 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
                 nombre: '',
                 apellido: '',
                 email: '',
+                email2: '',
                 password: '',
                 telefono: '',
                 dni: '',
@@ -131,6 +133,19 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
                             {errorMessages.email && <span className="text-red-500 text-sm">{errorMessages.email}</span>}
                         </div>
                         <div>
+                            <label htmlFor="email2" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Email Secundario</label>
+                            <input
+                                type="email"
+                                name="email2"
+                                id="email2"
+                                value={formValues.email2 || ''}
+                                onChange={handleChange}
+                                className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
+                            />
+                            {errorMessages.email2 && <span className="text-red-500 text-sm">{errorMessages.email2}</span>}
+                        </div>
+
+                        <div>
                             <label htmlFor="telefono" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Teléfono</label>
                             <input
                                 type="text"
@@ -156,7 +171,7 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
                             />
                             {errorMessages.dni && <span className="text-red-500 text-sm">{errorMessages.dni}</span>}
                         </div>
-                       
+
                         <div>
                             <label htmlFor="type" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Puesto</label>
                             <select
@@ -195,7 +210,7 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
                                 {errorMessages.puesto && <span className="text-red-500 text-sm">{errorMessages.puesto}</span>}
                             </div>
                         )}
-                        
+
                         <div>
                             <label htmlFor="AP" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Asuntos Propios (AP)</label>
                             <input

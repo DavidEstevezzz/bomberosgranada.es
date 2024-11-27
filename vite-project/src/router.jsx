@@ -48,7 +48,7 @@ const router = createBrowserRouter([
       { path: 'guardia-activa', element: <ProtectedRoute element={<ActiveFirefighters />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'aprobacion-cambio-guardia', element: <ProtectedRoute element={<ShiftChangeApprovalPage />} rolesAllowed={['Jefe', 'Mando']} /> },
 
-      // Mantén las demás rutas abiertas
+      // Mantener las demás rutas abiertas
       { path: 'calendario-norte', element: <CalendarPage /> },
       { path: 'calendario-sur', element: <CalendarPage2 /> },
       { path: 'requerimientos', element: <AvailableFirefighters /> },

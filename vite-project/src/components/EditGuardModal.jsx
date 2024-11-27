@@ -121,6 +121,7 @@ const EditGuardModal = ({ isOpen, onClose, guard, setGuards, availableBrigades }
                   <option value="Laborable">Laborable</option>
                   <option value="Festivo">Festivo</option>
                   <option value="Prefestivo">Prefestivo</option>
+                  <option value="Festivo víspera">Festivo víspera</option>
                 </select>
                 <button
                   type="submit"

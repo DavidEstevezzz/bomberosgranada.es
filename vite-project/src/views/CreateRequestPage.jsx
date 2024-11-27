@@ -43,9 +43,6 @@ const CreateRequestPage = () => {
 
       const lastAssignment = sortedAssignments[0];
       if (lastAssignment) {
-        console.log(
-          `Brigada más reciente para el usuario ${user.id_empleado} en ${formattedDate}: ${lastAssignment.id_brigada_destino}`
-        );
         return lastAssignment.id_brigada_destino;
       }
       return null;
@@ -158,17 +155,15 @@ const CreateRequestPage = () => {
       tipo,
       motivo,
       fecha_ini: fechaIni,
-      fecha_fin: tipo === 'salidas personales' ? fechaIni : fechaFin,
-      turno: tipo === 'asuntos propios' ? turno : null,
+      fecha_fin: tipo === 'salidas personales' || tipo === 'licencias por jornadas' ? fechaIni : fechaFin,
+      turno: tipo === 'asuntos propios' || tipo === 'licencias por jornadas' ? turno : null,
       horas: tipo === 'salidas personales' ? horas : null,
       estado: 'Pendiente',
-    };
+  };
 
-    console.log('Enviando solicitud con datos:', requestData);
 
     try {
       const response = await RequestApiService.createRequest(requestData);
-      console.log('Respuesta de solicitud de RequestApiService:', response.data);
       setSuccess('Solicitud enviada con éxito.');
     } catch (error) {
       console.error('Error al enviar la solicitud:', error);
@@ -193,18 +188,20 @@ const CreateRequestPage = () => {
             Tipo de Solicitud
           </label>
           <select
-            id="tipo"
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value)}
-            className={`w-full p-2 border rounded ${
-              darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-            }`}
-            required
-          >
-            <option value="vacaciones">Vacaciones</option>
-            <option value="asuntos propios">Asuntos Propios</option>
-            <option value="salidas personales">Salidas Personales</option>
-          </select>
+    id="tipo"
+    value={tipo}
+    onChange={(e) => setTipo(e.target.value)}
+    className={`w-full p-2 border rounded ${
+        darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
+    }`}
+    required
+>
+    <option value="vacaciones">Vacaciones</option>
+    <option value="asuntos propios">Asuntos Propios</option>
+    <option value="salidas personales">Salidas Personales</option>
+    <option value="licencias por jornadas">Licencias por Jornadas</option>
+    <option value="licencias por dias">Licencias por Días</option>
+</select>
         </div>
 
         <div className="mb-4">
@@ -226,7 +223,7 @@ const CreateRequestPage = () => {
           />
         </div>
 
-        {tipo === 'vacaciones' && (
+        {(tipo === 'vacaciones' || tipo === 'licencias por dias') && (
           <div className="mb-4">
             <label
               className="block text-sm font-medium mb-2"
@@ -289,7 +286,7 @@ const CreateRequestPage = () => {
           </>
         )}
 
-        {tipo === 'asuntos propios' && (
+        {(tipo === 'asuntos propios' || tipo === 'licencias por jornadas' )&& (
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2" htmlFor="turno">
               Turno
@@ -316,7 +313,7 @@ const CreateRequestPage = () => {
 
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2" htmlFor="motivo">
-            Motivo del Permiso
+            Observaciones
           </label>
           <textarea
             id="motivo"

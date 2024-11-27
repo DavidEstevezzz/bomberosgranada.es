@@ -21,7 +21,7 @@ const AssignmentsTable = ({ assignments, setSelectedAssignment, setShowEditModal
                 ]);
 
                 const bomberos = resUsuarios.data.filter(usuario => usuario.type === 'bombero');
-                setUsuarios(bomberos);
+                setUsuarios(resUsuarios.data);
                 setBrigades(resBrigades.data);
             } catch (err) {
                 console.error('Failed to fetch data:', err);

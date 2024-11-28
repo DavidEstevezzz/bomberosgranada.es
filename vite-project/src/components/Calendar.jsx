@@ -19,32 +19,42 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
     const daysInPrevMonth = new Date(year, month, 0).getDate();
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     const lastDayOfMonth = new Date(year, month + 1, 0).getDay();
-
+  
     let days = [];
-
+  
     for (let i = (firstDayOfMonth + 6) % 7; i > 0; i--) {
+      const date = new Date(year, month - 1, daysInPrevMonth - i + 1);
+      date.setHours(0, 0, 0, 0); // Normaliza la hora
       days.push({
         day: daysInPrevMonth - i + 1,
         monthOffset: -1,
+        date,
       });
     }
-
+  
     for (let i = 1; i <= daysInMonth; i++) {
+      const date = new Date(year, month, i);
+      date.setHours(0, 0, 0, 0); // Normaliza la hora
       days.push({
         day: i,
         monthOffset: 0,
+        date,
       });
     }
-
+  
     for (let i = 1; i < 7 - (lastDayOfMonth + 6) % 7; i++) {
+      const date = new Date(year, month + 1, i);
+      date.setHours(0, 0, 0, 0); // Normaliza la hora
       days.push({
         day: i,
         monthOffset: 1,
+        date,
       });
     }
-
+  
     return days;
   };
+  
 
   const days = generateCalendar(year, month);
 
@@ -65,7 +75,7 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
   const handleDateClick = (date) => {
     const dateString = format(date, 'yyyy-MM-dd');
     const existingGuard = guards.find((guard) => guard.date === dateString);
-    if (existingGuard) {
+    if (existingGuard  && onEditClick) {
       onEditClick(existingGuard);
     } else {
       onDateClick(date);
@@ -97,25 +107,55 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
           </div>
         ))}
         {days.map((day, index) => {
-          const date = new Date(year, month + day.monthOffset, day.day);
+  const { date } = day;
           const brigadeName = getGuardForDate(date);
-          const isBrigadeA = brigadeName === 'Brigada A';
-          const isBrigadeB = brigadeName === 'Brigada B';
-          const isBrigadeC = brigadeName === 'Brigada C';
+
+          // Define el color según el nombre de la brigada
+          let brigadeColor = '';
+          let nameColor = '';
+          switch (brigadeName) {
+            case 'Brigada A':
+              brigadeColor = 'bg-green-300';
+              nameColor = 'text-green-600';
+              break;
+            case 'Brigada B':
+              brigadeColor = 'bg-zinc-50';
+              nameColor = 'text-zinc-600';
+              break;
+            case 'Brigada C':
+              brigadeColor = 'bg-blue-300';
+              nameColor = 'text-blue-600';
+            
+              break;
+            case 'Brigada D':
+              brigadeColor = 'bg-red-300';
+              nameColor = 'text-red-600';
+              break;
+            case 'Brigada E':
+              brigadeColor = 'bg-yellow-300';
+              nameColor = 'text-yellow-600';
+              break;
+            case 'Brigada F':
+              brigadeColor = 'bg-gray-300';
+              nameColor = 'text-gray-600';
+              break;
+            default:
+              brigadeColor = '';
+          }
 
           return (
             <div
               key={index}
               className={`day h-24 p-4 text-center cursor-pointer rounded-lg border ${
                 day.monthOffset !== 0 ? 'text-gray-400' : 'text-black'
-              } ${isBrigadeA ? 'bg-green-200' : isBrigadeB ? 'bg-red-200' : isBrigadeC ? 'bg-blue-200' : ''} hover:bg-gray-200`}
+              } ${brigadeColor} hover:bg-gray-200`}
               onClick={() => {
                 handleDateClick(date);
               }}
             >
               <div className="flex flex-col items-center justify-center h-full">
                 <div>{day.day}</div>
-                {brigadeName && <div className="brigade-name text-sm text-blue-600 mt-1">{brigadeName}</div>}
+                {brigadeName && <div className={`brigade-name text-sm ${nameColor} mt-1`}>{brigadeName}</div>}
               </div>
             </div>
           );

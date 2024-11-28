@@ -46,8 +46,7 @@ const GuardModal = ({ isOpen, onClose, guardDate, setGuards }) => {
       return;
     }
 
-    // Verifica la fecha antes de convertirla a ISOString
-    console.log('Guard date before formatting:', guardDate);
+
 
     // Ajustar la fecha a UTC
     const dateUTC = new Date(Date.UTC(guardDate.getFullYear(), guardDate.getMonth(), guardDate.getDate()));
@@ -59,11 +58,9 @@ const GuardModal = ({ isOpen, onClose, guardDate, setGuards }) => {
       tipo: type
     };
 
-    console.log('Guard to be sent:', guard); // Añade este console.log para verificar los datos enviados
 
     try {
       const response = await GuardsApiService.createGuard(guard);
-      console.log('Response from server:', response.data); // Verifica la respuesta del servidor
       setGuards(prev => [...prev, response.data]);
       onClose();
     } catch (error) {

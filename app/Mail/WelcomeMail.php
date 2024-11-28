@@ -27,7 +27,7 @@ class WelcomeMail extends Mailable
      */
     public function build()
     {
-        return $this->subject('Bienvenido a ' . config('app.name'))
+        return $this->subject('Bienvenido. Se ha creado su cuenta correctamente ' )
                     ->view('emails.welcome');
     }
 }

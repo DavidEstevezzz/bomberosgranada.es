@@ -349,7 +349,7 @@ const handleFileChange = (e) => {
     type="file"
     id="file"
     onChange={handleFileChange}
-    className={`w-full m-2 p-3 border rounded ${
+    className={`w-full p-3 border rounded ${
       darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
     }`}
   />

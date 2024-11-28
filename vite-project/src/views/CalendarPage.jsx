@@ -22,7 +22,7 @@ const CalendarPage = () => {
     const fetchUserType = async () => {
       try {
         const response = await UsuariosApiService.getUserByToken();
-        setUserType(response.data.type); // Asume que `type` es el campo que indica el tipo de usuario
+        setUserType(response.data.type); 
       } catch (error) {
         console.error('Error fetching user type:', error);
       }
@@ -31,7 +31,7 @@ const CalendarPage = () => {
     const fetchGuards = async () => {
       try {
         const response = await GuardsApiService.getGuards();
-        setGuards(response.data); // Asumimos que los guardias no necesitan filtrarse por parque aquí
+        setGuards(response.data); 
       } catch (error) {
         console.error('Error fetching guards:', error);
       }
@@ -72,7 +72,7 @@ const CalendarPage = () => {
 
   return (
     <div className="flex flex-col items-start justify-start min-h-screen mt-3">
-      <div className="w-full p-4 bg-white rounded-lg shadow-lg">
+      <div className="w-full p-4 bg-gray-50 rounded-lg shadow-lg">
         <Calendar 
           onDateClick={handleDateClick} 
           onEditClick={(guard) => {

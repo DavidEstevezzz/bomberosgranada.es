@@ -6,6 +6,7 @@ import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-so
 import dayjs from 'dayjs';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { useSearchParams } from 'react-router-dom';
 
 const BrigadeDetail = () => {
   const { id_brigada } = useParams();
@@ -13,7 +14,9 @@ const BrigadeDetail = () => {
   const [firefighters, setFirefighters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [searchParams] = useSearchParams();
+  const initialDate = searchParams.get('date') || dayjs().format('YYYY-MM-DD');
+  const [selectedDate, setSelectedDate] = useState(initialDate);
   const navigate = useNavigate();
 
   const minimums = {

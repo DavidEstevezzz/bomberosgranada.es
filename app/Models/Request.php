@@ -18,6 +18,7 @@ class Request extends Model
         'estado',
         'turno',
         'horas',
+        'file',
     ];
 
     public function EnviadaPor()

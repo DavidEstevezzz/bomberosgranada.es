@@ -30,17 +30,25 @@ class BaseApiService {
         responseType = 'json'
     ) {
         const token = localStorage.getItem('token');
-        
+    
+        // Elimina el encabezado 'Content-Type' si se envía FormData
+        if (headers['Content-Type'] === 'multipart/form-data') {
+            delete headers['Content-Type']; // Axios configurará esto automáticamente para FormData
+        }
+    
         let paramsHeader = {
-            params : queryParams,
-            headers : headers,
-            responseType : responseType
+            params: queryParams,
+            headers: headers,
+            responseType: responseType,
         };
+    
         if (token) {
             paramsHeader.headers.Authorization = `Bearer ${token}`;
         }
+    
         return paramsHeader;
     }
+    
 
     getWithDebounce(url, queryParams, headers, responseType, delay = 200) {
         return new Promise((resolve, reject) => {

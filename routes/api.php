@@ -60,6 +60,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/requests', [RequestController::class, 'index']);
     Route::get('/requests/{id}', [RequestController::class, 'show']);
     Route::post('/requests', [RequestController::class, 'store']);
+    Route::get('/requests/{id}/file', [RequestController::class, 'downloadFile']);
+
 
     Route::get('/shift-change-requests', [ShiftChangeRequestController::class, 'index']);
     Route::get('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'show']);

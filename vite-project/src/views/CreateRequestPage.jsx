@@ -19,6 +19,11 @@ const CreateRequestPage = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [file, setFile] = useState(null); // Estado para almacenar el archivo
+
+const handleFileChange = (e) => {
+  setFile(e.target.files[0]);
+};
 
   useEffect(() => {
     if (tipo === 'asuntos propios') {
@@ -123,9 +128,9 @@ const CreateRequestPage = () => {
     setError(null);
     setSuccess(null);
     setIsLoading(true);
-
+  
     let horas = null;
-
+  
     if (tipo === 'asuntos propios') {
       const hasEnoughAPDays = await validatePersonalLeaveDays();
       if (!hasEnoughAPDays) {
@@ -133,7 +138,7 @@ const CreateRequestPage = () => {
         return;
       }
     }
-
+  
     if (tipo === 'vacaciones') {
       const areDatesValid = await validateDates();
       if (!areDatesValid) {
@@ -141,7 +146,7 @@ const CreateRequestPage = () => {
         return;
       }
     }
-
+  
     if (tipo === 'salidas personales') {
       horas = validateSPHours();
       if (!horas) {
@@ -149,21 +154,30 @@ const CreateRequestPage = () => {
         return;
       }
     }
-
-    const requestData = {
-      id_empleado: user.id_empleado,
-      tipo,
-      motivo,
-      fecha_ini: fechaIni,
-      fecha_fin: tipo === 'salidas personales' || tipo === 'licencias por jornadas' ? fechaIni : fechaFin,
-      turno: tipo === 'asuntos propios' || tipo === 'licencias por jornadas' ? turno : null,
-      horas: tipo === 'salidas personales' ? horas : null,
-      estado: 'Pendiente',
-  };
-
-
+  
+    const formData = new FormData();
+    formData.append('id_empleado', user.id_empleado);
+    formData.append('tipo', tipo);
+    formData.append('motivo', motivo);
+    formData.append('fecha_ini', fechaIni);
+    formData.append(
+      'fecha_fin',
+      tipo === 'salidas personales' || tipo === 'licencias por jornadas' ? fechaIni : fechaFin
+    );
+    formData.append('turno', tipo === 'asuntos propios' || tipo === 'licencias por jornadas' ? turno : '');
+    formData.append('horas', tipo === 'salidas personales' ? horas : '');
+    formData.append('estado', 'Pendiente');
+  
+    if (file) {
+      formData.append('file', file); // Adjuntar archivo si existe
+    }
+  
     try {
-      const response = await RequestApiService.createRequest(requestData);
+      const response = await RequestApiService.createRequest(formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       setSuccess('Solicitud enviada con éxito.');
     } catch (error) {
       console.error('Error al enviar la solicitud:', error);
@@ -172,6 +186,7 @@ const CreateRequestPage = () => {
       setIsLoading(false);
     }
   };
+  
 
   return (
     <div
@@ -325,6 +340,21 @@ const CreateRequestPage = () => {
             rows="4"
           />
         </div>
+
+        <div className="mb-4">
+  <label className="block text-sm font-medium mb-2" htmlFor="file">
+    Adjuntar Archivo (opcional)
+  </label>
+  <input
+    type="file"
+    id="file"
+    onChange={handleFileChange}
+    className={`w-full m-2 p-3 border rounded ${
+      darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
+    }`}
+  />
+</div>
+
 
         <button
           type="submit"

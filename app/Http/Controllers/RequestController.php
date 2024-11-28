@@ -17,63 +17,112 @@ class RequestController extends Controller
     }
 
     public function store(Request $request)
-    {
-        Log::info('Datos de la solicitud recibidos:', $request->all());
+{
+    Log::info('Datos de la solicitud recibidos:', $request->all());
 
-        // Reglas generales
-        $rules = [
-            'id_empleado' => 'required|exists:users,id_empleado',
-            'tipo' => 'required|in:vacaciones,asuntos propios,salidas personales,licencias por jornadas, licencias por dias',
-            'fecha_ini' => 'required|date',
-            'fecha_fin' => 'required|date',
-            'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
-        ];
+    // Reglas generales
+    $rules = [
+        'id_empleado' => 'required|exists:users,id_empleado',
+        'tipo' => 'required|in:vacaciones,asuntos propios,salidas personales,licencias por jornadas,licencias por dias',
+        'fecha_ini' => 'required|date',
+        'fecha_fin' => 'required|date',
+        'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
+        'file' => 'nullable|file|mimes:pdf,jpg,png|max:2048', // Validación del archivo
+    ];
 
-        // Reglas específicas para "asuntos propios"
-        if ($request->tipo === 'asuntos propios' || $request->tipo === 'licencias por jornadas') {
-            $rules['turno'] = 'required|in:Mañana,Tarde,Noche,Día Completo,Mañana y tarde,Tarde y noche';
-        }
-
-        // Reglas específicas para "salidas personales"
-        if ($request->tipo === 'salidas personales') {
-            $rules['horas'] = 'required|numeric|min:1|max:24'; // Validar las horas
-            $request->merge([
-                'fecha_fin' => $request->fecha_ini, // Asegurar que fecha_ini y fecha_fin sean iguales
-            ]);
-        }
-
-        if ($request->tipo === 'licencias por dias') {
-            $request->merge([
-                'fecha_fin' => $request->fecha_fin ?? $request->fecha_ini, // Asegura que haya fecha_fin
-            ]);
-        }
-
-        // Validar los datos
-        $validator = Validator::make($request->all(), $rules);
-
-        if ($validator->fails()) {
-            Log::error('Errores de validación:', $validator->errors()->toArray());
-            return response()->json($validator->errors(), 400);
-        }
-
-        // Crear la solicitud
-        $miRequest = MiRequest::create($request->all());
-
-        Log::info('Solicitud creada con éxito:', $miRequest->toArray());
-        return response()->json($miRequest, 201);
+    // Reglas específicas para "asuntos propios"
+    if ($request->tipo === 'asuntos propios' || $request->tipo === 'licencias por jornadas') {
+        $rules['turno'] = 'required|in:Mañana,Tarde,Noche,Día Completo,Mañana y tarde,Tarde y noche';
     }
 
-
-    public function show(string $id)
-    {
-        $miRequest = MiRequest::find($id);
-
-        if (!$miRequest) {
-            return response()->json(['message' => 'Request not found'], 404);
-        }
-
-        return response()->json($miRequest);
+    // Reglas específicas para "salidas personales"
+    if ($request->tipo === 'salidas personales') {
+        $rules['horas'] = 'required|numeric|min:1|max:24'; // Validar las horas
+        $request->merge([
+            'fecha_fin' => $request->fecha_ini, // Asegurar que fecha_ini y fecha_fin sean iguales
+        ]);
     }
+
+    if ($request->tipo === 'licencias por dias') {
+        $request->merge([
+            'fecha_fin' => $request->fecha_fin ?? $request->fecha_ini, // Asegura que haya fecha_fin
+        ]);
+    }
+
+    // Validar los datos
+    $validator = Validator::make($request->all(), $rules);
+
+    if ($validator->fails()) {
+        Log::error('Errores de validación:', $validator->errors()->toArray());
+        return response()->json($validator->errors(), 400);
+    }
+
+    // Guardar el archivo si se proporciona
+    $filePath = null;
+    if ($request->hasFile('file')) {
+        $filePath = $request->file('file')->store('files', 'public');
+    }
+
+    Log::info('Datos de la solicitud recibidos:', $request->all());
+
+    if ($request->hasFile('file')) {
+        $file = $request->file('file');
+        Log::info('Archivo recibido:', ['nombre' => $file->getClientOriginalName()]);
+    } else {
+        Log::warning('No se recibió ningún archivo.');
+    }
+
+    // Crear la solicitud
+    $miRequest = MiRequest::create(array_merge($request->all(), ['file' => $filePath]));
+
+    Log::info('Solicitud creada con éxito:', $miRequest->toArray());
+    return response()->json($miRequest, 201);
+}
+
+
+
+public function show(string $id)
+{
+    $miRequest = MiRequest::find($id);
+
+    if (!$miRequest) {
+        return response()->json(['message' => 'Request not found'], 404);
+    }
+
+    
+    
+    $fileExists = $miRequest->file && file_exists(public_path('storage/' . $miRequest->file));
+
+    return response()->json([
+        'request' => $miRequest,
+        'file_url' => $fileExists ? url('storage/' . $miRequest->file) : null,
+    ]);
+
+}
+
+public function downloadFile(string $id)
+{
+    // Buscar la solicitud por ID
+    $miRequest = MiRequest::find($id);
+
+    // Verificar si la solicitud existe y tiene un archivo asociado
+    if (!$miRequest || !$miRequest->file) {
+        return response()->json(['message' => 'Archivo no encontrado'], 404);
+    }
+
+    // Obtener la ruta completa al archivo almacenado
+    $filePath = public_path('storage/' . $miRequest->file);
+
+    // Verificar si el archivo existe físicamente en el servidor
+    if (!file_exists($filePath)) {
+        return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
+    }
+
+    // Responder con el archivo para que el navegador inicie la descarga
+    return response()->download($filePath);
+}
+
+
 
     public function update(Request $request, $id)
     {

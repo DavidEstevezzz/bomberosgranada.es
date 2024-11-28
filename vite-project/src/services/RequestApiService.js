@@ -18,7 +18,19 @@ class RequestApiService {
 
     // Crear una nueva solicitud
     async createRequest(request) {
-        return await BaseApiService.post(API_URL, request);
+        let headers = {};
+    
+        // Si el request es FormData, ajusta el encabezado
+        if (request instanceof FormData) {
+            headers['Content-Type'] = 'multipart/form-data';
+        }
+    
+        return await BaseApiService.post(API_URL, request, null, headers);
+    }
+
+    async downloadFile(id) {
+        const url = `${API_URL}/${id}/file`;
+        return await BaseApiService.get(url, null, {}, 'blob');
     }
 
     // Actualizar una solicitud existente por ID

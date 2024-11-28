@@ -10,7 +10,7 @@ const AddGuardModal = ({ date, isOpen, onClose, onSave, brigades }) => {
         date: new Date(date),
         id_brigada: '',
         id_salario: '',
-        tipo: '',
+        tipo: 'Festivo víspera',
     });
 
     const { darkMode } = useDarkMode();
@@ -22,7 +22,7 @@ const AddGuardModal = ({ date, isOpen, onClose, onSave, brigades }) => {
                 date: new Date(date),
                 id_brigada: '',
                 id_salario: '',
-                tipo: '',
+                tipo: guard.tipo || 'Festivo víspera',
             });
             setIsSubmitting(false);
         }
@@ -101,16 +101,21 @@ const AddGuardModal = ({ date, isOpen, onClose, onSave, brigades }) => {
                         </div>
                         <div>
                             <label htmlFor="tipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Tipo</label>
-                            <input
-                                type="text"
+                            <select
                                 name="tipo"
                                 id="tipo"
                                 value={guard.tipo}
                                 onChange={handleChange}
                                 className={`bg-gray-50 border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500' : 'border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'}`}
                                 required
-                            />
+                            >
+                                <option value="Laborable">Laborable</option>
+                                <option value="Festivo">Festivo</option>
+                                <option value="Prefestivo">Prefestivo</option>
+                                <option value="Festivo víspera">Festivo víspera</option>
+                            </select>
                         </div>
+
                     </div>
                     <div className="flex items-center space-x-4">
                         <button type="submit" className={`text-sm px-5 py-2.5 text-center font-medium rounded-lg focus:outline-none focus:ring-4 ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-800' : 'bg-blue-700 hover:bg-blue-800 text-white focus:ring-blue-300'}`} disabled={isSubmitting}>

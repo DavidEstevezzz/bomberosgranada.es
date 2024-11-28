@@ -128,7 +128,7 @@ const GuardModal = ({ isOpen, onClose, guardDate, setGuards }) => {
                   <option value="Laborable">Laborable</option>
                   <option value="Festivo">Festivo</option>
                   <option value="Prefestivo">Prefestivo</option>
-                  <option value="Prefestivo">Festivo víspera</option>
+                  <option value="Festivo víspera">Festivo víspera</option>
 
 
                 </select>

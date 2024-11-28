@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FaFilePdf } from 'react-icons/fa'; // Librería react-icons para el ícono de PDF
 import RequestApiService from '../services/RequestApiService';
 import UsuariosApiService from '../services/UsuariosApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
@@ -133,6 +134,8 @@ const RequestListPage = () => {
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
+
+
   return (
     <div className={`p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
       <h1 className="text-2xl font-bold mb-4">Solicitudes</h1>
@@ -156,6 +159,7 @@ const RequestListPage = () => {
                     <th className="py-2 px-2">Fecha Fin</th>
                     <th className="py-2 px-2">Turno</th>
                     <th className="py-2 px-2">Estado</th>
+                    <th className="py-2 px-2">Archivo</th>
                     <th className="py-2 px-2">Acciones</th>
                   </tr>
                 </thead>
@@ -170,6 +174,34 @@ const RequestListPage = () => {
                         <td className="py-2 px-2">{request.fecha_fin}</td>
                         <td className="py-2 px-2">{request.turno}</td>
                         <td className="py-2 px-2">{request.estado}</td>
+                        <td className="py-2 px-2">
+  {request.file ? (
+    <button
+      onClick={async () => {
+        try {
+          const response = await RequestApiService.downloadFile(request.id);
+          const url = window.URL.createObjectURL(new Blob([response.data]));
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', `Solicitud_${request.id}.pdf`); // Cambia el nombre del archivo si es necesario
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        } catch (error) {
+          console.error('Error descargando el archivo:', error);
+        }
+      }}
+      className="text-red-500 hover:text-red-700" // Estilo para el ícono
+      title="Descargar archivo PDF"
+    >
+      <FaFilePdf size={24} /> {/* Ícono PDF de react-icons */}
+    </button>
+  ) : (
+    '-'
+  )}
+</td>
+
+
                         <td className="py-2 px-2 flex space-x-2">
                           <button
                             onClick={() => handleUpdateRequestStatus(request.id, 'Confirmada', request.tipo, request.id_empleado, request.turno)}
@@ -188,7 +220,7 @@ const RequestListPage = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="8" className="text-center py-4">No hay solicitudes en esta página</td>
+                      <td colSpan="9" className="text-center py-4">No hay solicitudes en esta página</td>
                     </tr>
                   )}
                 </tbody>

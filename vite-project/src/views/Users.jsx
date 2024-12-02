@@ -151,7 +151,7 @@ const Users = () => {
                   <td className="py-2 px-2 flex items-center space-x-2">
                     <img src="https://via.placeholder.com/40" alt="Avatar" className="w-10 h-10 rounded-full" />
                     <div className="flex flex-col">
-                      <span className="font-bold">{user.nombre}</span>
+                      <span className="font-bold">{user.nombre} {user.apellido}</span>
                       <span className="text-gray-500 text-sm">{user.email}</span>
                     </div>
                   </td>

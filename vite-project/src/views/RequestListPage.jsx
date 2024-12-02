@@ -194,7 +194,8 @@ const RequestListPage = () => {
       className="text-red-500 hover:text-red-700" // Estilo para el ícono
       title="Descargar archivo PDF"
     >
-      <FaFilePdf size={24} /> {/* Ícono PDF de react-icons */}
+      <FaFilePdf size={24} /> {
+      }
     </button>
   ) : (
     '-'

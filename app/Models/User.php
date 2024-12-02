@@ -55,7 +55,7 @@ class User extends Authenticatable
 
     public function setApellidoAttribute($value)
     {
-        $this->attributes['apellido'] = ucfirst(strtolower($value));
+        $this->attributes['apellido'] = ucwords(strtolower($value));
     }
 
     public function envia()

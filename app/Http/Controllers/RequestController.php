@@ -143,6 +143,10 @@ public function downloadFile(string $id)
         $miRequest->save();
 
         // Ajustar la columna `SP` si la solicitud es de tipo `salidas personales`
+        if ($miRequest->tipo === 'vacaciones') {
+        $this->adjustVacationDays($miRequest, $oldEstado, $miRequest->estado);}
+        
+
         if ($miRequest->tipo === 'salidas personales') {
             $this->adjustSPHours($miRequest, $oldEstado, $miRequest->estado);
         } else {
@@ -317,6 +321,34 @@ public function downloadFile(string $id)
         $miRequest->delete();
         return response()->json(null, 204);
     }
+
+    private function adjustVacationDays($miRequest, $oldEstado, $newEstado)
+{
+    $user = $miRequest->EnviadaPor; // Relación con el modelo User
+    if (!$user) {
+        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+        return;
+    }
+
+    // Calcular los días solicitados
+    $fechaInicio = new \DateTime($miRequest->fecha_ini);
+    $fechaFin = new \DateTime($miRequest->fecha_fin);
+    $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1; // +1 para incluir ambos días
+
+    // Restar días de `vacaciones` si la solicitud es confirmada
+    if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
+        $user->vacaciones = max(0, $user->vacaciones - $diasSolicitados); // Evitar valores negativos
+    }
+
+    // Sumar días de `vacaciones` si la solicitud es cancelada
+    if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+        $user->vacaciones += $diasSolicitados;
+    }
+
+    $user->save();
+    Log::info("Columna vacaciones ajustada para el usuario ID: {$user->id_empleado}, días ajustados: {$diasSolicitados}");
+}
+
 
     private function adjustSPHours($miRequest, $oldEstado, $newEstado)
     {

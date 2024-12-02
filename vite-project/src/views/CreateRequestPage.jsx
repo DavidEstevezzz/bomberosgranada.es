@@ -70,6 +70,22 @@ const handleFileChange = (e) => {
     return true;
   };
 
+  const validateVacationDays = () => {
+    const availableVacationDays = user.vacaciones || 0; // Días disponibles
+    const startDate = dayjs(fechaIni);
+    const endDate = dayjs(fechaFin);
+    const requestedDays = endDate.diff(startDate, 'day') + 1; // Incluye ambos días
+  
+    console.log('Días de vacaciones disponibles:', availableVacationDays);
+    console.log('Días solicitados:', requestedDays);
+  
+    if (requestedDays > availableVacationDays) {
+      setError('No tienes suficientes días de vacaciones disponibles.');
+      return false;
+    }
+    return true;
+  };
+
   const validateSPHours = () => {
     const [horaInicio, minutoInicio] = horaIni.split(':').map(Number);
     const [horaFinal, minutoFinal] = horaFin.split(':').map(Number);
@@ -140,6 +156,12 @@ const handleFileChange = (e) => {
     }
   
     if (tipo === 'vacaciones') {
+      const hasEnoughVacationDays = validateVacationDays();
+      if (!hasEnoughVacationDays) {
+        setIsLoading(false);
+        return;
+      }
+  
       const areDatesValid = await validateDates();
       if (!areDatesValid) {
         setIsLoading(false);
@@ -186,6 +208,7 @@ const handleFileChange = (e) => {
       setIsLoading(false);
     }
   };
+  
   
 
   return (

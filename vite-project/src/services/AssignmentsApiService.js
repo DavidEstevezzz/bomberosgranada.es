@@ -27,7 +27,6 @@ class AssignmentsApiService {
     }
 
     async getAvailableFirefighters(date) {
-        console.log("Enviando fecha desde frontend:", date);  // Log para verificar la fecha en el frontend
         return await BaseApiService.get(API_URL2, { date });
     }
 }

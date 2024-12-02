@@ -188,6 +188,18 @@ public function update(Request $request, User $id)
     }
 }
 
+public function getUsersByPuesto(Request $request)
+{
+    $puesto = $request->query('puesto'); // Obtener el puesto desde la query string
+
+    if (!$puesto) {
+        return response()->json(['error' => 'El parámetro puesto es obligatorio.'], 400);
+    }
+
+    $users = User::where('puesto', $puesto)->get();
+
+    return response()->json($users);
+}
 
 
     public function updateAP(Request $request, $id)

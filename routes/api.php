@@ -27,7 +27,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/por-puesto', [UserController::class, 'getUsersByPuesto']);
     Route::get('/users/{id}', [UserController::class, 'show']);
+
 
     Route::get('/parks', [ParkController::class, 'index']);
     Route::get('/parks/{id_parque}', [ParkController::class, 'show']);

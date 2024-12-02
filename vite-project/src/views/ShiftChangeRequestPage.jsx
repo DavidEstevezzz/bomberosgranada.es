@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import UsuariosApiService from '../services/UsuariosApiService';
-import AssignmentsApiService from '../services/AssignmentsApiService';
 import ShiftChangeRequestApiService from '../services/ShiftChangeRequestApiService';
 import { useStateContext } from '../contexts/ContextProvider';
 import { useDarkMode } from '../contexts/DarkModeContext';
@@ -10,6 +9,8 @@ const ShiftChangeRequestPage = () => {
   const { user } = useStateContext();
   const { darkMode } = useDarkMode();
   const [employees, setEmployees] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [fecha, setFecha] = useState('');
   const [turno, setTurno] = useState('Mañana');
@@ -18,104 +19,53 @@ const ShiftChangeRequestPage = () => {
   const [success, setSuccess] = useState(null);
 
   useEffect(() => {
-    const fetchEmployees = async () => {
+    const fetchEmployeesByPuesto = async () => {
+      if (!user?.puesto) {
+        return;
+      }
+
       try {
-        const response = await UsuariosApiService.getUsuarios();
-        const otherEmployees = response.data.filter(emp => emp.id_empleado !== user.id_empleado);
-        setEmployees(otherEmployees);
+        const response = await UsuariosApiService.bomberosPorPuesto(user.puesto);
+        setEmployees(response.data);
+        setFilteredEmployees(response.data);
       } catch (error) {
+        console.error('Error fetching employees by puesto:', error);
+        setError('Error al obtener los empleados por puesto.');
       }
     };
 
-    fetchEmployees();
+    fetchEmployeesByPuesto();
   }, [user]);
 
-  const fetchBrigadesForDate = async (fecha, id_empleado) => {
-    try {
-      const response = await AssignmentsApiService.getAssignments();
-      console.log('Datos de respuesta de assignments:', response.data); // Log del response completo
-      const formattedDate = dayjs(fecha).format('YYYY-MM-DD');
-  
-      const assignmentsForEmployee = response.data.filter(assign => {
-        const assignDate = dayjs(assign.fecha_ini).format('YYYY-MM-DD');
-        const isEmployeeMatch = parseInt(assign.id_empleado) === parseInt(id_empleado);
-        const isDateMatch = dayjs(assignDate).isSameOrBefore(formattedDate);
-        return isEmployeeMatch && isDateMatch;
-      });
-      
-      console.log(`Asignaciones filtradas para empleado ${id_empleado}:`, assignmentsForEmployee); // Log después de filtrar asignaciones
+  useEffect(() => {
+    const filtered = employees.filter(emp =>
+      `${emp.nombre} ${emp.apellido}`.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredEmployees(filtered);
+  }, [searchTerm, employees]);
 
-      const turnoPriority = (turno) => {
-        if (turno === 'Mañana') return 1;
-        if (turno === 'Tarde') return 2;
-        if (turno === 'Noche') return 3;
-        return 4;
-      };
-  
-      const sortedAssignments = assignmentsForEmployee.sort((a, b) => {
-        const dateDiff = dayjs(b.fecha_ini).diff(dayjs(a.fecha_ini));
-        if (dateDiff === 0) {
-          return turnoPriority(b.turno) - turnoPriority(a.turno);
-        }
-        return dateDiff;
-      });
-  
-      const lastAssignment = sortedAssignments[0];
-  
-      if (lastAssignment) {
-        console.log(`Brigada para el empleado ${id_empleado} en la fecha ${formattedDate}: ${lastAssignment.id_brigada_destino}, turno: ${lastAssignment.turno}`);
-        return lastAssignment.id_brigada_destino;
-      } else {
-        console.error(`No se encontró una asignación para el empleado con id ${id_empleado} en la fecha ${formattedDate}.`);
-        setError(`No se encontró una asignación para el empleado con id ${id_empleado} en la fecha ${formattedDate}.`);
-        return null;
-      }
-    } catch (error) {
-      console.error('Error al obtener las asignaciones:', error);
-      setError('Error al obtener las asignaciones.');
-      return null;
-    }
-  };
-
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    const brigada1 = await fetchBrigadesForDate(fecha, user.id_empleado);
-    const brigada2 = await fetchBrigadesForDate(fecha, selectedEmployee);
-
-    if (!brigada1 || !brigada2) {
-      setError('No se pudieron determinar las brigadas para las fechas seleccionadas.');
-      return;
-    }
-
-    console.log(`Brigada del usuario actual: ${brigada1}`);
-    console.log(`Brigada del bombero seleccionado: ${brigada2}`);
-
-    const requestData = {
-      id_empleado1: user.id_empleado,
-      id_empleado2: selectedEmployee,
-      brigada1,
-      brigada2,
-      fecha,
-      turno,
-      motivo,
-      estado: 'en_tramite'
-    };
-    
-    console.log('Datos de request antes de enviar:', requestData); // Log del requestData antes de enviar
-
     try {
-      const response = await ShiftChangeRequestApiService.createRequest(requestData);
-      console.log('Respuesta del servidor para la creación de solicitud:', response.data); // Log de la respuesta
+      const requestData = {
+        id_empleado1: user.id_empleado,
+        id_empleado2: selectedEmployee,
+        fecha,
+        turno,
+        motivo,
+        estado: 'en_tramite',
+      };
+
+      await ShiftChangeRequestApiService.createRequest(requestData);
       setSuccess('Solicitud de cambio de guardia enviada con éxito.');
     } catch (error) {
-      console.error('Error al enviar la solicitud de cambio de guardia:', error); // Log de cualquier error al hacer POST
+      console.error('Error al enviar la solicitud de cambio de guardia:', error);
       setError('Error al enviar la solicitud de cambio de guardia.');
     }
   };
-
 
   return (
     <div className={`max-w-4xl mx-auto p-6 rounded-lg ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
@@ -123,6 +73,20 @@ const handleSubmit = async (e) => {
       {error && <div className="mb-4 text-red-500">{error}</div>}
       {success && <div className="mb-4 text-green-500">{success}</div>}
       <form onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-2" htmlFor="search">
+            Buscar Bombero
+          </label>
+          <input
+            id="search"
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'}`}
+            placeholder="Escriba un nombre"
+          />
+        </div>
+
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2" htmlFor="employee">
             Seleccionar Bombero
@@ -134,9 +98,9 @@ const handleSubmit = async (e) => {
             className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'}`}
             required
           >
-            <option value="" className="text-black">Seleccione un bombero</option>
-            {employees.map((employee) => (
-              <option key={employee.id_empleado} value={employee.id_empleado} className="text-black">
+            <option value="">Seleccione un bombero</option>
+            {filteredEmployees.map((employee) => (
+              <option key={employee.id_empleado} value={employee.id_empleado}>
                 {employee.nombre} {employee.apellido}
               </option>
             ))}

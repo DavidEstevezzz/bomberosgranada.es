@@ -32,6 +32,13 @@ class UsuariosApiService {
     async resetPassword(data) {
         return await BaseApiService.post(`${API_URL}/reset-password`, data);
     }
+
+    async bomberosPorPuesto(puesto) {
+        const url = `${API_URL}/por-puesto`;
+        const params = { puesto };
+        return await BaseApiService.get(url, params);
+      }
+      
     
     
 }

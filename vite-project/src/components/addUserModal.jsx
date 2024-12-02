@@ -161,7 +161,7 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
                             {errorMessages.telefono && <span className="text-red-500 text-sm">{errorMessages.telefono}</span>}
                         </div>
                         <div>
-                            <label htmlFor="dni" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>DNI</label>
+                            <label htmlFor="dni" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Nº Funcionario</label>
                             <input
                                 type="text"
                                 name="dni"

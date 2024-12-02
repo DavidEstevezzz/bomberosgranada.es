@@ -148,7 +148,7 @@ public function downloadFile(string $id)
         
 
         if ($miRequest->tipo === 'salidas personales') {
-            $this->adjustSPHours($miRequest, $oldEstado, $miRequest->estado);
+            $this->adjustSPHours($miRequest, $oldEstado, $miRequest->estado); //AHORA FALTA HACER LA COMPROBACION ANTES DE ENVIAR LA SOLICITUD
         } else {
             // Crear o eliminar asignaciones solo para otros tipos de solicitudes
             if ($miRequest->estado === 'Confirmada') {
@@ -209,6 +209,7 @@ public function downloadFile(string $id)
         // Crear la asignación inicial
         Firefighters_assignment::create([
             'id_empleado' => $miRequest->id_empleado,
+            'id_request' => $miRequest->id,
             'id_brigada_origen' => $brigadeOriginal,
             'id_brigada_destino' => $brigadeId,
             'fecha_ini' => $miRequest->fecha_ini,
@@ -223,6 +224,7 @@ public function downloadFile(string $id)
         // Crear la asignación de retorno
         Firefighters_assignment::create([
             'id_empleado' => $miRequest->id_empleado,
+            'id_request' => $miRequest->id,
             'id_brigada_origen' => $brigadeId,
             'id_brigada_destino' => $brigadeOriginal,
             'fecha_ini' => $fechaDevolucion,
@@ -258,31 +260,9 @@ public function downloadFile(string $id)
 
     private function deleteAssignments($miRequest)
     {
-        Log::info("Eliminando asignaciones para empleado: {$miRequest->id_empleado} entre las fechas: {$miRequest->fecha_ini} y {$miRequest->fecha_fin} con turno: {$miRequest->turno}");
+        Log::info("Eliminando asignaciones vinculadas a la solicitud ID: {$miRequest->id}");
 
-        if ($miRequest->tipo === 'asuntos propios') {
-            // Determinar turnos de ida y vuelta específicos para asuntos propios
-            $turnoInicial = $this->determinarTurnoInicial($miRequest->turno);
-            $turnoDevolucion = $this->determinarTurnoDevolucion($miRequest->turno);
-            $fechaDevolucion = $this->determinarFechaDevolucion($miRequest->fecha_ini, $miRequest->turno);
-
-            // Eliminar asignaciones de ida y de vuelta basadas en turno y fecha específicos
-            Firefighters_assignment::where('id_empleado', $miRequest->id_empleado)
-                ->where(function ($query) use ($miRequest, $turnoInicial, $turnoDevolucion, $fechaDevolucion) {
-                    $query->where('fecha_ini', $miRequest->fecha_ini)
-                        ->where('turno', $turnoInicial)
-                        ->orWhere(function ($q) use ($fechaDevolucion, $turnoDevolucion) {
-                            $q->where('fecha_ini', $fechaDevolucion)
-                                ->where('turno', $turnoDevolucion);
-                        });
-                })
-                ->delete();
-        } else {
-            // Eliminar todas las asignaciones para otros tipos (vacaciones, salidas personales) basadas en fecha solamente
-            Firefighters_assignment::where('id_empleado', $miRequest->id_empleado)
-                ->whereIn('fecha_ini', [$miRequest->fecha_ini, $miRequest->fecha_fin])
-                ->delete();
-        }
+        Firefighters_assignment::where('id_request', $miRequest->id)->delete();
     }
 
 

@@ -26,6 +26,7 @@ import AvailableFirefighters2 from './views/AvailableFirefighters2.jsx';
 import ProtectedRoute from "./components/ProtectedRoute"; 
 import ForgotPassword from './views/ForgotPassword.jsx';
 import ResetPassword from './views/ResetPassword.jsx';
+import RequestAndShiftChangePage from './views/RequestAndShiftChangePage.jsx';
 
 
 const router = createBrowserRouter([
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
       { path: 'requerimientos-10-horas', element: <AvailableFirefighters2 /> },
       { path: 'cambio-guardia', element: <ShiftChangeRequestPage /> },
       { path: 'solicitud', element: <CreateRequestPage /> },
+      { path: 'lista-solicitudes', element: <RequestAndShiftChangePage /> },
     ],
   },
   {

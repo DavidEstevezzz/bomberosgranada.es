@@ -65,7 +65,7 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
     <div className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-full bg-black bg-opacity-50">
       <div className="bg-white dark:bg-gray-800 p-4 w-full max-w-2xl rounded-lg shadow-lg">
         <div className="flex justify-between items-center pb-4 mb-4 border-b dark:border-gray-600">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Update User</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Actualizar usuario</h3>
           <button onClick={onClose} className="text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 p-1.5 rounded-lg">
             <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
           </button>
@@ -147,7 +147,7 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
             <button type="submit" className="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">Update User</button>
             <button type="button" onClick={onClose} className="text-red-600 hover:text-white border border-red-600 hover:bg-red-600 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-red-500 dark:text-red-500 dark:hover:text-white dark:hover:bg-red-600 dark:focus:ring-red-900">
               <FontAwesomeIcon icon={faTrash} className="w-5 h-5 mr-1" />
-              Cancel
+              Cancelar
             </button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaFilePdf } from 'react-icons/fa'; // Librería react-icons para el ícono de PDF
+import dayjs from 'dayjs'; // Manejo de fechas
 import RequestApiService from '../services/RequestApiService';
 import UsuariosApiService from '../services/UsuariosApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
@@ -9,6 +10,7 @@ const RequestListPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [currentMonth, setCurrentMonth] = useState(dayjs()); // Estado para el mes actual
   const [pagination, setPagination] = useState({
     Pendiente: 1,
     Confirmada: 1,
@@ -53,68 +55,24 @@ const RequestListPage = () => {
     }
   };
 
-  const getAPDaysRemaining = (userId) => {
-    const user = users.find((user) => user.id_empleado === userId);
-    return user ? user.AP : 0;
-  };
-
-  const updateUserAPDays = async (userId, daysChange) => {
-    try {
-      const user = users.find((user) => user.id_empleado === userId);
-      const newAP = (user?.AP || 0) + daysChange;
-
-      await UsuariosApiService.updateUserAP(userId, newAP);
-      setUsers(users.map((user) =>
-        user.id_empleado === userId ? { ...user, AP: newAP } : user
-      ));
-    } catch (error) {
-      console.error('Error al actualizar los días de AP en el backend:', error);
-    }
-  };
-
-  const handleUpdateRequestStatus = async (id, newStatus, tipo, idEmpleado, turno = 'Mañana') => {
-    try {
-      const request = requests.find((req) => req.id === id);
-      const currentStatus = request?.estado;
-
-      if (tipo === 'asuntos propios') {
-        let requestedAPDays;
-        if (turno === 'Día Completo') {
-          requestedAPDays = 3;
-        } else if (turno === 'Mañana y tarde' || turno === 'Tarde y noche') {
-          requestedAPDays = 2;
-        } else {
-          requestedAPDays = 1;
-        }
-
-        const remainingAPDays = getAPDaysRemaining(idEmpleado);
-
-        if (newStatus === 'Confirmada' && currentStatus !== 'Confirmada') {
-          if (requestedAPDays > remainingAPDays) {
-            alert('No te quedan suficientes días de asuntos propios (AP) para aceptar esta solicitud.');
-            return;
-          }
-          await updateUserAPDays(idEmpleado, -requestedAPDays);
-        } else if (newStatus !== 'Confirmada' && currentStatus === 'Confirmada') {
-          await updateUserAPDays(idEmpleado, requestedAPDays);
-        }
-      }
-
-      const payload = { estado: newStatus };
-      if (tipo === 'asuntos propios') {
-        payload.turno = turno;
-      }
-
-      await RequestApiService.updateRequest(id, payload);
-      fetchRequests();
-    } catch (error) {
-      console.error('Error al actualizar el estado de la solicitud:', error);
-    }
-  };
-
   const findUserById = (id_empleado) => {
     const user = users.find((user) => user.id_empleado === id_empleado);
     return user ? `${user.nombre} ${user.apellido}` : 'N/A';
+  };
+  
+
+  const handlePreviousMonth = () => {
+    setCurrentMonth((prev) => prev.subtract(1, 'month'));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth((prev) => prev.add(1, 'month'));
+  };
+
+  const filterRequestsByMonth = () => {
+    return requests.filter((request) =>
+      dayjs(request.fecha_ini).isSame(currentMonth, 'month')
+    );
   };
 
   const paginate = (data, status) => {
@@ -134,16 +92,33 @@ const RequestListPage = () => {
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
-
+  const filteredRequests = filterRequestsByMonth();
 
   return (
     <div className={`p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      <h1 className="text-2xl font-bold mb-4">Solicitudes</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Solicitudes</h1>
+        <div className="flex space-x-4">
+          <button
+            onClick={handlePreviousMonth}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+          >
+            Mes Anterior
+          </button>
+            <span className="text-xl font-semibold">{currentMonth.format('MMMM YYYY').charAt(0).toUpperCase() + currentMonth.format('MMMM YYYY').slice(1)}</span>
+          <button
+            onClick={handleNextMonth}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+          >
+            Mes Siguiente
+          </button>
+        </div>
+      </div>
 
       {['Pendiente', 'Confirmada', 'Cancelada'].map((status) => {
-        const filteredRequests = requests.filter((request) => request.estado === status);
-        const paginatedRequests = paginate(filteredRequests, status);
-        const totalPages = getTotalPages(filteredRequests);
+        const filteredByStatus = filteredRequests.filter((request) => request.estado === status);
+        const paginatedRequests = paginate(filteredByStatus, status);
+        const totalPages = getTotalPages(filteredByStatus);
 
         return (
           <div key={status} className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -175,34 +150,31 @@ const RequestListPage = () => {
                         <td className="py-2 px-2">{request.turno}</td>
                         <td className="py-2 px-2">{request.estado}</td>
                         <td className="py-2 px-2">
-  {request.file ? (
-    <button
-      onClick={async () => {
-        try {
-          const response = await RequestApiService.downloadFile(request.id);
-          const url = window.URL.createObjectURL(new Blob([response.data]));
-          const link = document.createElement('a');
-          link.href = url;
-          link.setAttribute('download', `Solicitud_${request.id}.pdf`); // Cambia el nombre del archivo si es necesario
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-        } catch (error) {
-          console.error('Error descargando el archivo:', error);
-        }
-      }}
-      className="text-red-500 hover:text-red-700" // Estilo para el ícono
-      title="Descargar archivo PDF"
-    >
-      <FaFilePdf size={24} /> {
-      }
-    </button>
-  ) : (
-    '-'
-  )}
-</td>
-
-
+                          {request.file ? (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const response = await RequestApiService.downloadFile(request.id);
+                                  const url = window.URL.createObjectURL(new Blob([response.data]));
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.setAttribute('download', `Solicitud_${request.id}.pdf`);
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  link.remove();
+                                } catch (error) {
+                                  console.error('Error descargando el archivo:', error);
+                                }
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                              title="Descargar archivo PDF"
+                            >
+                              <FaFilePdf size={24} />
+                            </button>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
                         <td className="py-2 px-2 flex space-x-2">
                           <button
                             onClick={() => handleUpdateRequestStatus(request.id, 'Confirmada', request.tipo, request.id_empleado, request.turno)}
@@ -210,18 +182,20 @@ const RequestListPage = () => {
                           >
                             Aceptar
                           </button>
-                          <button
-                            onClick={() => handleUpdateRequestStatus(request.id, 'Cancelada', request.tipo, request.id_empleado, request.turno)}
-                            className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1"
-                          >
-                            Rechazar
-                          </button>
+                          {request.estado !== 'Cancelada' && (
+                            <button
+                              onClick={() => handleUpdateRequestStatus(request.id, 'Cancelada', request.tipo, request.id_empleado, request.turno)}
+                              className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1"
+                            >
+                              Rechazar
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="9" className="text-center py-4">No hay solicitudes en esta página</td>
+                      <td colSpan="9" className="text-center py-4">No hay solicitudes para este estado este mes</td>
                     </tr>
                   )}
                 </tbody>

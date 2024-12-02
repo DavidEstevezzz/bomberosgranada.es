@@ -50,7 +50,7 @@ class User extends Authenticatable
 
     public function setNombreAttribute($value)
     {
-        $this->attributes['nombre'] = ucfirst(strtolower($value));
+        $this->attributes['nombre'] = ucwords(strtolower($value));
     }
 
     public function setApellidoAttribute($value)

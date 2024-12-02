@@ -6,10 +6,11 @@ import AssignmentsApiService from '../services/AssignmentsApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import EmployeeSalary from '../components/EmployeeSalary';
 import EmployeeShiftChangeTable from '../components/EmployeeShiftChangeTable';
+import UserExtraHoursTable from '../components/UserExtraHoursTable';
 import dayjs from 'dayjs';
 
 const Profile = () => {
-  const { id_empleado } = useParams(); // Obtén el id del usuario desde la URL si existe
+  const { id_empleado } = useParams();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,7 +27,7 @@ const Profile = () => {
 
   useEffect(() => {
     const fetchUserAndVacationDays = async () => {
-      try {        
+      try {
         const authenticatedUserResponse = await UsuariosApiService.getUserByToken();
         const authenticatedUser = authenticatedUserResponse.data;
 
@@ -43,7 +44,7 @@ const Profile = () => {
         if (id_empleado) {
           userResponse = await UsuariosApiService.getUsuario(id_empleado);
         } else {
-          userResponse = authenticatedUserResponse; // Usa directamente el usuario autenticado
+          userResponse = authenticatedUserResponse;
         }
 
         setUser(userResponse.data);
@@ -83,7 +84,6 @@ const Profile = () => {
 
         const remainingDays = maxVacationDays - vacationDaysTaken;
         setVacationDaysRemaining(remainingDays);
-
       } catch (error) {
         console.error('Error fetching user or vacation days data:', error);
         setError('Error loading user data or vacation days');
@@ -99,28 +99,27 @@ const Profile = () => {
     e.preventDefault();
 
     if (newPassword !== confirmNewPassword) {
-        setPasswordError('Las contraseñas nuevas no coinciden');
-        return;
+      setPasswordError('Las contraseñas nuevas no coinciden');
+      return;
     }
 
     try {
-        await UsuariosApiService.updateUsuario(user.id_empleado, {
-            current_password: currentPassword,
-            password: newPassword,
-            password_confirmation: confirmNewPassword, // Enviar al backend
-        });
+      await UsuariosApiService.updateUsuario(user.id_empleado, {
+        current_password: currentPassword,
+        password: newPassword,
+        password_confirmation: confirmNewPassword,
+      });
 
-        setPasswordSuccess('Contraseña actualizada con éxito');
-        setPasswordError('');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmNewPassword('');
+      setPasswordSuccess('Contraseña actualizada con éxito');
+      setPasswordError('');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
     } catch (error) {
-        console.error('Error updating password:', error);
-        setPasswordError('Error al actualizar la contraseña');
+      console.error('Error updating password:', error);
+      setPasswordError('Error al actualizar la contraseña');
     }
-};
-
+  };
 
   if (loading) return <div className="text-center py-8">Loading...</div>;
   if (error) return <div className="text-center py-8 text-red-500">Error: {error}</div>;
@@ -129,48 +128,29 @@ const Profile = () => {
     <div className={`min-h-screen max-w-screen p-4 ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-800'}`}>
       <div className={`max-w-4xl mx-auto p-6 rounded-lg shadow-md ${darkMode ? 'bg-gray-700' : 'bg-white'}`}>
         <h1 className="text-3xl font-bold mb-6 text-center">Perfil de {user.nombre} {user.apellido}</h1>
-        
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold mb-4">Información Personal</h2>
-          <div className={`space-y-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+
+        <div className="grid grid-cols-1 mb-6 md:grid-cols-2 gap-6">
+          {/* Información Personal */}
+          <div className="p-4  rounded-lg  bg-gradient-to-r from-gray-900 to-gray-700 text-gray-200">
+            <h2 className="text-xl font-semibold mb-2">Información Personal</h2>
             <p><strong>Email:</strong> {user.email}</p>
             <p><strong>Teléfono:</strong> {user.telefono}</p>
-            <p><strong>DNI:</strong> {user.dni}</p>
+            <p><strong>Nº Funcionario:</strong> {user.dni}</p>
           </div>
-        </div>
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold mb-4">Detalles del Rol</h2>
-          <div className={`space-y-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            <p><strong>Puesto:</strong> {user.puesto}</p>
-            <p><strong>Tipo:</strong> {user.type.charAt(0).toUpperCase() + user.type.slice(1)}</p>
+
+          {/* Días Restantes */}
+          <div className="p-4  rounded-lg  bg-gradient-to-r from-gray-900 to-gray-700 text-white">
+            <h2 className="text-xl font-semibold mb-2">Permisos Restantes</h2>
+            <p><strong>Vacaciones:</strong> {vacationDaysRemaining !== null ? vacationDaysRemaining : 'No disponible'} días</p>
+            <p><strong>Asuntos Propios:</strong> {user.AP} jornadas </p>
+            <p><strong>Salidas Personales:</strong> {user.SP} horas</p>
           </div>
-        </div>
-
-        {/* Sección de días de vacaciones restantes */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4">Días de Vacaciones Restantes</h2>
-          <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            {vacationDaysRemaining !== null ? (
-              <span>Te quedan <strong>{vacationDaysRemaining}</strong> días de vacaciones para este año.</span>
-            ) : (
-              'No se pudo cargar la información de los días de vacaciones.'
-            )}
-          </p>
-
-          <h2 className="text-xl font-semibold mb-4"> Días de Asuntos propios restantes</h2>
-          <p className={`p-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            <span>Te quedan <strong>{user.AP}</strong> días de asuntos propios para este año.</span>
-          </p>
-          <h2 className="text-xl font-semibold mb-4"> Horas de Salidas personales restantes</h2>
-          <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-
-            <span>Te quedan <strong>{user.SP}</strong> horas de salidas personales para este año.</span>
-
-          </p>
         </div>
 
         <EmployeeSalary user={user} />
         <EmployeeShiftChangeTable user={user} />
+        <UserExtraHoursTable user={user} />
+
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-4">Cambiar Contraseña</h2>
           <form onSubmit={handleChangePassword}>

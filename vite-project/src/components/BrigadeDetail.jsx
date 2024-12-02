@@ -65,7 +65,7 @@ const BrigadeDetail = () => {
 
   const categorizeFirefighters = (shift) => {
     const categories = ['Subinspector', 'Oficial', 'Operador', 'Conductor', 'Bombero'];
-    return categories.map(category => {
+    const counts = categories.map(category => {
       const count = firefighters.filter(firefighter => {
         const isCategory = firefighter.puesto === category;
         const hasShift = [shift, 'Día completo'].includes(firefighter.turno);
@@ -75,11 +75,30 @@ const BrigadeDetail = () => {
       }).length;
       return { category, count };
     });
+  
+    // Añadir categoría "Tropa" si el parque es 2
+    if (brigade?.park?.id_parque === 2) {
+      const tropaCount = counts.reduce((sum, { category, count }) => {
+        if (['Bombero', 'Conductor', 'Operador'].includes(category)) {
+          return sum + count;
+        }
+        return sum;
+      }, 0);
+      counts.push({ category: 'Tropa', count: tropaCount });
+    }
+  
+    return counts;
   };
-
+  
   const checkMinimums = (category, count) => {
     const parkId = brigade?.park?.id_parque;
-    const minimumCount = minimums[parkId]?.[category] || 0;
+    let minimumCount = minimums[parkId]?.[category] || 0;
+  
+    // Definir mínimo para "Tropa" en el parque 2
+    if (category === 'Tropa' && parkId === 2) {
+      minimumCount = 10; // Mínimo específico para "Tropa"
+    }
+  
     return { isBelowMinimum: count < minimumCount, minimumCount };
   };
 

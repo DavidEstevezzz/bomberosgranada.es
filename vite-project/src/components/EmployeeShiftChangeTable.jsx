@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ShiftChangeRequestApiService from '../services/ShiftChangeRequestApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
+import dayjs from 'dayjs';
 
 const formatEstado = (estado) => {
   switch (estado) {
@@ -19,6 +20,8 @@ const formatEstado = (estado) => {
 
 const EmployeeShiftChangeTable = ({ user }) => {
   const [shiftChangeRequests, setShiftChangeRequests] = useState([]);
+  const [filteredRequests, setFilteredRequests] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(dayjs().format('YYYY-MM'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { darkMode } = useDarkMode();
@@ -27,11 +30,14 @@ const EmployeeShiftChangeTable = ({ user }) => {
     fetchShiftChangeRequests();
   }, [user]);
 
+  useEffect(() => {
+    filterRequestsByMonth();
+  }, [shiftChangeRequests, selectedMonth]);
+
   const fetchShiftChangeRequests = async () => {
     setLoading(true);
     try {
       const response = await ShiftChangeRequestApiService.getRequests();
-
       if (response.data) {
         const userRequests = response.data.filter(
           (request) => request.id_empleado1 === user.id_empleado || request.id_empleado2 === user.id_empleado
@@ -49,6 +55,13 @@ const EmployeeShiftChangeTable = ({ user }) => {
     }
   };
 
+  const filterRequestsByMonth = () => {
+    const filtered = shiftChangeRequests.filter((request) =>
+      dayjs(request.fecha).isSame(selectedMonth, 'month')
+    );
+    setFilteredRequests(filtered);
+  };
+
   const handleUpdateRequestStatus = async (requestId, newStatus) => {
     try {
       await ShiftChangeRequestApiService.updateRequest(requestId, { estado: newStatus });
@@ -58,8 +71,17 @@ const EmployeeShiftChangeTable = ({ user }) => {
     }
   };
 
-  // Verifica si hay alguna solicitud que cumpla con la condición para mostrar las acciones
-  const showActionsColumn = shiftChangeRequests.some(
+  const handlePreviousMonth = () => {
+    const newMonth = dayjs(selectedMonth).subtract(1, 'month').format('YYYY-MM');
+    setSelectedMonth(newMonth);
+  };
+
+  const handleNextMonth = () => {
+    const newMonth = dayjs(selectedMonth).add(1, 'month').format('YYYY-MM');
+    setSelectedMonth(newMonth);
+  };
+
+  const showActionsColumn = filteredRequests.some(
     (request) => request.id_empleado2 === user.id_empleado && request.estado === 'en_tramite'
   );
 
@@ -73,7 +95,22 @@ const EmployeeShiftChangeTable = ({ user }) => {
       }`}
     >
       <h3 className="text-lg font-semibold mb-4 text-center">Tus Cambios de Guardia</h3>
-      <div className={`overflow-x-auto shadow-md sm:rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={handlePreviousMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
+          Mes Anterior
+        </button>
+        <span className="text-lg font-semibold">{dayjs(selectedMonth).format('MMMM YYYY').charAt(0).toUpperCase() + dayjs(selectedMonth).format('MMMM YYYY').slice(1)}</span>
+        <button onClick={handleNextMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
+          Mes Siguiente
+        </button>
+      </div>
+
+      <div
+        className={`overflow-x-auto shadow-md sm:rounded-lg border ${
+          darkMode ? 'border-gray-700' : 'border-gray-200'
+        }`}
+      >
         <table className="w-full text-sm text-center">
           <thead className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
             <tr>
@@ -85,10 +122,14 @@ const EmployeeShiftChangeTable = ({ user }) => {
             </tr>
           </thead>
           <tbody>
-            {shiftChangeRequests.map((request) => (
+            {filteredRequests.map((request) => (
               <tr
                 key={request.id}
-                className={`${darkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-b hover:bg-gray-50'}`}
+                className={`${
+                  darkMode
+                    ? 'bg-gray-800 border-gray-700 hover:bg-gray-700'
+                    : 'bg-white border-b hover:bg-gray-50'
+                }`}
               >
                 <td className="py-4 px-6">
                   {request.empleado1?.nombre} {request.empleado1?.apellido}
@@ -96,7 +137,7 @@ const EmployeeShiftChangeTable = ({ user }) => {
                 <td className="py-4 px-6">
                   {request.empleado2?.nombre} {request.empleado2?.apellido}
                 </td>
-                <td className="py-4 px-6">{request.fecha}</td>
+                <td className="py-4 px-6">{dayjs(request.fecha).format('DD-MM-YYYY')}</td>
                 <td className="py-2 px-2">{formatEstado(request.estado)}</td>
                 {showActionsColumn && (
                   <td className="py-4 px-6 flex justify-center space-x-2">

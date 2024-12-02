@@ -28,7 +28,7 @@ class PasswordResetController extends Controller
             ['email' => $user->email],
             ['token' => $token, 'created_at' => Carbon::now()]
         );
-        $frontendUrl = 'http://localhost:3000/reset-password'; // URL de tu frontend
+        $frontendUrl = 'https://bomberosgranada.es/reset-password'; // URL de tu frontend
 
         $resetUrl = $frontendUrl . '/' . $token;
 

@@ -23,7 +23,7 @@ class RequestController extends Controller
     // Reglas generales
     $rules = [
         'id_empleado' => 'required|exists:users,id_empleado',
-        'tipo' => 'required|in:vacaciones,asuntos propios,salidas personales,licencias por jornadas,licencias por dias',
+        'tipo' => 'required|in:vacaciones,asuntos propios,salidas personales,licencias por jornadas,licencias por dias,modulo',
         'fecha_ini' => 'required|date',
         'fecha_fin' => 'required|date',
         'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
@@ -124,44 +124,70 @@ public function downloadFile(string $id)
 
 
 
-    public function update(Request $request, $id)
-    {
-        $miRequest = MiRequest::findOrFail($id);
+public function update(Request $request, $id)
+{
+    $miRequest = MiRequest::findOrFail($id);
 
-        $rules = [
-            'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
-        ];
+    $rules = [
+        'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
+    ];
 
-        $validator = Validator::make($request->all(), $rules);
+    $validator = Validator::make($request->all(), $rules);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 400);
-        }
-
-        $oldEstado = $miRequest->estado;
-        $miRequest->estado = $request->estado;
-        $miRequest->save();
-
-        // Ajustar la columna `SP` si la solicitud es de tipo `salidas personales`
-        if ($miRequest->tipo === 'vacaciones') {
-        $this->adjustVacationDays($miRequest, $oldEstado, $miRequest->estado);}
-        
-
-        if ($miRequest->tipo === 'salidas personales') {
-            $this->adjustSPHours($miRequest, $oldEstado, $miRequest->estado); //AHORA FALTA HACER LA COMPROBACION ANTES DE ENVIAR LA SOLICITUD
-        } else {
-            // Crear o eliminar asignaciones solo para otros tipos de solicitudes
-            if ($miRequest->estado === 'Confirmada') {
-                $this->createAssignments($miRequest);
-            }
-
-            if ($oldEstado === 'Confirmada' && $miRequest->estado === 'Cancelada') {
-                $this->deleteAssignments($miRequest);
-            }
-        }
-
-        return response()->json($miRequest, 200);
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 400);
     }
+
+    $oldEstado = $miRequest->estado;
+    $newEstado = $request->estado;
+
+    // Validar disponibilidad de días para "vacaciones" y "modulo"
+    if ($newEstado === 'Confirmada') {
+        $user = $miRequest->EnviadaPor; // Relación con el modelo User
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no encontrado para esta solicitud'], 404);
+        }
+
+        $fechaInicio = new \DateTime($miRequest->fecha_ini);
+        $fechaFin = new \DateTime($miRequest->fecha_fin);
+        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1; // +1 para incluir ambos días
+
+        // Verificar para "vacaciones"
+        if ($miRequest->tipo === 'vacaciones' && $user->vacaciones < $diasSolicitados) {
+            return response()->json(['error' => 'El usuario no tiene suficientes días de vacaciones disponibles'], 400);
+        }
+
+        // Verificar para "modulo"
+        if ($miRequest->tipo === 'modulo' && $user->modulo < $diasSolicitados) {
+            return response()->json(['error' => 'El usuario no tiene suficientes días en su módulo disponibles'], 400);
+        }
+    }
+
+    // Actualizar el estado de la solicitud
+    $miRequest->estado = $newEstado;
+    $miRequest->save();
+
+    // Ajustar las columnas correspondientes si el estado es confirmado
+    if ($miRequest->tipo === 'vacaciones' || $miRequest->tipo === 'modulo') {
+        $this->adjustVacationDays($miRequest, $oldEstado, $newEstado);
+    }
+
+    if ($miRequest->tipo === 'salidas personales') {
+        $this->adjustSPHours($miRequest, $oldEstado, $newEstado);
+    } else {
+        // Crear o eliminar asignaciones solo para otros tipos de solicitudes
+        if ($newEstado === 'Confirmada') {
+            $this->createAssignments($miRequest);
+        }
+
+        if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+            $this->deleteAssignments($miRequest);
+        }
+    }
+
+    return response()->json($miRequest, 200);
+}
+
 
 
     private function createAssignments($miRequest)
@@ -184,6 +210,9 @@ public function downloadFile(string $id)
                 break;
             case 'licencias por dias':
                 $brigadeId = \App\Models\Brigade::where('nombre', 'Licencias por Días')->value('id_brigada');
+                break;
+            case 'modulo':
+                $brigadeId = \App\Models\Brigade::where('nombre', 'Modulo')->value('id_brigada');
                 break;
         }
 
@@ -217,7 +246,12 @@ public function downloadFile(string $id)
         ]);
 
         // Definir la fecha de devolución
-        $fechaDevolucion = $this->determinarFechaDevolucion($miRequest->fecha_ini, $miRequest->turno);
+        $fechaDevolucion = $this->determinarFechaDevolucion(
+            $miRequest->fecha_ini,
+            $miRequest->fecha_fin,
+            $miRequest->turno,
+            $miRequest->tipo
+        );
 
         Log::info("Asignación de retorno - Empleado: {$miRequest->id_empleado}, Brigada Original: {$brigadeOriginal}, Fecha: {$fechaDevolucion}, Turno: {$turnoDevolucion}");
 
@@ -251,12 +285,23 @@ public function downloadFile(string $id)
         };
     }
 
-    private function determinarFechaDevolucion($fechaInicio, $turno)
-    {
-        return in_array($turno, ['Noche', 'Día Completo', 'Tarde y noche'])
-            ? date('Y-m-d', strtotime($fechaInicio . ' +1 day'))
-            : $fechaInicio;
+    private function determinarFechaDevolucion($fechaInicio, $fechaFin, $turno, $tipoSolicitud)
+{
+    // Si el tipo de solicitud incluye una fecha de fin y es de los tipos específicos
+    if (in_array($tipoSolicitud, ['vacaciones', 'licencias por dias', 'modulo']) && $fechaFin) {
+        $fechaFin = new \DateTime($fechaFin);
+        $fechaFin->modify('+1 day'); // Incrementar un día para la devolución
+        return $fechaFin->format('Y-m-d');
     }
+
+    // Para los demás tipos de solicitud, usar la lógica previa
+    $fechaInicio = new \DateTime($fechaInicio);
+    if (in_array($turno, ['Noche', 'Día Completo', 'Tarde y noche', null])) {
+        $fechaInicio->modify('+1 day'); // Incrementar un día si es nocturno o día completo
+    }
+    return $fechaInicio->format('Y-m-d');
+}
+
 
     private function deleteAssignments($miRequest)
     {
@@ -316,18 +361,48 @@ public function downloadFile(string $id)
     $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1; // +1 para incluir ambos días
 
     // Restar días de `vacaciones` si la solicitud es confirmada
-    if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
-        $user->vacaciones = max(0, $user->vacaciones - $diasSolicitados); // Evitar valores negativos
+    if ($miRequest->tipo === 'vacaciones') {
+        if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
+            $user->vacaciones = max(0, $user->vacaciones - $diasSolicitados); // Evitar valores negativos
+        }
+
+        // Sumar días de `vacaciones` si la solicitud es cancelada
+        if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+            $user->vacaciones += $diasSolicitados;
+        }
     }
 
-    // Sumar días de `vacaciones` si la solicitud es cancelada
-    if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
-        $user->vacaciones += $diasSolicitados;
+    // Restar días de `modulo` si la solicitud es confirmada
+    if ($miRequest->tipo === 'modulo') {
+        $this->adjustModuloDays($miRequest, $oldEstado, $newEstado, $diasSolicitados);
     }
 
     $user->save();
-    Log::info("Columna vacaciones ajustada para el usuario ID: {$user->id_empleado}, días ajustados: {$diasSolicitados}");
+    Log::info("Columna ajustada para el usuario ID: {$user->id_empleado}, días ajustados: {$diasSolicitados}");
 }
+
+private function adjustModuloDays($miRequest, $oldEstado, $newEstado, $diasSolicitados)
+{
+    $user = $miRequest->EnviadaPor; // Relación con el modelo User
+    if (!$user) {
+        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+        return;
+    }
+
+    // Restar días de `modulo` si la solicitud es confirmada
+    if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
+        $user->modulo = max(0, $user->modulo - $diasSolicitados); // Evitar valores negativos
+    }
+
+    // Sumar días de `modulo` si la solicitud es cancelada
+    if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+        $user->modulo += $diasSolicitados;
+    }
+
+    $user->save();
+    Log::info("Columna modulo ajustada para el usuario ID: {$user->id_empleado}, días ajustados: {$diasSolicitados}");
+}
+
 
 
     private function adjustSPHours($miRequest, $oldEstado, $newEstado)

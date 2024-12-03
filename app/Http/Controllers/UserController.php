@@ -46,6 +46,7 @@ public function store(Request $request)
         'type' => 'required',
         'AP' => 'required_if:type,bombero,mando',
         'vacaciones' => 'required',
+        'modulo' => 'required',    
     ];
 
     $validator = Validator::make($request->all(), $rules);
@@ -125,6 +126,7 @@ public function update(Request $request, User $id)
             'type' => 'sometimes|required',
             'AP' => 'sometimes|required_if:type,bombero,mando',
             'vacaciones' => 'sometimes|required',
+            'modulo' => 'sometimes|required',
         ];
     }
 

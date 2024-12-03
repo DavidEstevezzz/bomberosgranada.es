@@ -105,6 +105,22 @@ const handleFileChange = (e) => {
     return diff;
   };
 
+  const validateModuloDays = () => {
+    const availableModuloDays = user.modulo || 0; // Días disponibles
+    const startDate = dayjs(fechaIni);
+    const endDate = dayjs(fechaFin);
+    const requestedDays = endDate.diff(startDate, 'day') + 1; // Incluye ambos días
+  
+    console.log('Días de módulo disponibles:', availableModuloDays);
+    console.log('Días solicitados:', requestedDays);
+  
+    if (requestedDays > availableModuloDays) {
+      setError('No tienes suficientes días en tu módulo disponibles.');
+      return false;
+    }
+    return true;
+  };
+
   const validateDates = async () => {
     try {
       const startBrigade = await fetchUserBrigadeForDate(fechaIni);
@@ -150,6 +166,14 @@ const handleFileChange = (e) => {
     if (tipo === 'asuntos propios') {
       const hasEnoughAPDays = await validatePersonalLeaveDays();
       if (!hasEnoughAPDays) {
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    if (tipo === 'modulo') {
+      const hasEnoughModuloDays = validateModuloDays();
+      if (!hasEnoughModuloDays) {
         setIsLoading(false);
         return;
       }
@@ -239,6 +263,7 @@ const handleFileChange = (e) => {
     <option value="salidas personales">Salidas Personales</option>
     <option value="licencias por jornadas">Licencias por Jornadas</option>
     <option value="licencias por dias">Licencias por Días</option>
+    <option value="modulo">Módulo</option>
 </select>
         </div>
 
@@ -261,7 +286,7 @@ const handleFileChange = (e) => {
           />
         </div>
 
-        {(tipo === 'vacaciones' || tipo === 'licencias por dias') && (
+        {(tipo === 'vacaciones' || tipo === 'licencias por dias' || tipo === 'modulo') && (
           <div className="mb-4">
             <label
               className="block text-sm font-medium mb-2"

@@ -59,7 +59,45 @@ const RequestListPage = () => {
     const user = users.find((user) => user.id_empleado === id_empleado);
     return user ? `${user.nombre} ${user.apellido}` : 'N/A';
   };
-  
+  const handleUpdateRequestStatus = async (id, newStatus, tipo, idEmpleado, turno = 'Mañana') => {
+    try {
+      const request = requests.find((req) => req.id === id);
+      const currentStatus = request?.estado;
+
+      if (tipo === 'asuntos propios') {
+        let requestedAPDays;
+        if (turno === 'Día Completo') {
+          requestedAPDays = 3;
+        } else if (turno === 'Mañana y tarde' || turno === 'Tarde y noche') {
+          requestedAPDays = 2;
+        } else {
+          requestedAPDays = 1;
+        }
+
+        const remainingAPDays = getAPDaysRemaining(idEmpleado);
+
+        if (newStatus === 'Confirmada' && currentStatus !== 'Confirmada') {
+          if (requestedAPDays > remainingAPDays) {
+            alert('No te quedan suficientes días de asuntos propios (AP) para aceptar esta solicitud.');
+            return;
+          }
+          await updateUserAPDays(idEmpleado, -requestedAPDays);
+        } else if (newStatus !== 'Confirmada' && currentStatus === 'Confirmada') {
+          await updateUserAPDays(idEmpleado, requestedAPDays);
+        }
+      }
+
+      const payload = { estado: newStatus };
+      if (tipo === 'asuntos propios') {
+        payload.turno = turno;
+      }
+
+      await RequestApiService.updateRequest(id, payload);
+      fetchRequests();
+    } catch (error) {
+      console.error('Error al actualizar el estado de la solicitud:', error);
+    }
+  };  
 
   const handlePreviousMonth = () => {
     setCurrentMonth((prev) => prev.subtract(1, 'month'));

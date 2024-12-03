@@ -18,6 +18,7 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
         type: '',
         AP: '',
         vacaciones: '',
+        modulo: '',
     });
 
     const [errorMessages, setErrorMessages] = useState({});
@@ -39,6 +40,7 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
                 type: '',
                 AP: '',
                 vacaciones: '',
+                modulo: '',
             });
             setErrorMessages({});
             setIsSubmitting(false);
@@ -239,6 +241,18 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
                             />
                             {errorMessages.vacaciones && <span className="text-red-500 text-sm">{errorMessages.vacaciones}</span>}
                     </div>
+                    <div>
+                        <label htmlFor="modulo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Módulo</label>
+                        <input
+                            type="text"
+                            name="modulo"
+                            id="modulo"
+                            value={formValues.modulo}
+                            onChange={handleChange}
+                            className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
+                            required
+                        />
+                        {errorMessages.modulo && <span className="text-red-500 text-sm">{errorMessages.modulo}</span>}
                     </div>
                     <div className="flex items-center space-x-4">
                         <button type="submit" className={`text-sm px-5 py-2.5 text-center font-medium rounded-lg focus:outline-none focus:ring-4 ${darkMode ? 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-800' : 'bg-primary-700 hover:bg-primary-800 text-white focus:ring-primary-300'}`} disabled={isSubmitting}>
@@ -248,6 +262,7 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
                             <FontAwesomeIcon icon={faTimes} className="w-5 h-5 mr-1" />
                             Cancelar
                         </button>
+                    </div>
                     </div>
                 </form>
             </div>

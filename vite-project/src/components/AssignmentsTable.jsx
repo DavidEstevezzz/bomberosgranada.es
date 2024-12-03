@@ -1,88 +1,118 @@
 import React, { useEffect, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import {FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
 import UsuariosApiService from '../services/UsuariosApiService';
 import BrigadesApiService from '../services/BrigadesApiService';
 
-const AssignmentsTable = ({ assignments, setSelectedAssignment, setShowEditModal, handleDelete }) => {
-    const [usuarios, setUsuarios] = useState([]);
-    const [brigades, setBrigades] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+const AssignmentsTable = ({
+  assignments,
+  setSelectedAssignment,
+  setShowEditModal,
+  handleDelete,
+  darkMode, // Recibimos darkMode como prop
+}) => {
+  const [usuarios, setUsuarios] = useState([]);
+  const [brigades, setBrigades] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const [resUsuarios, resBrigades] = await Promise.all([
-                    UsuariosApiService.getUsuarios(),
-                    BrigadesApiService.getBrigades(),
-                ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [resUsuarios, resBrigades] = await Promise.all([
+          UsuariosApiService.getUsuarios(),
+          BrigadesApiService.getBrigades(),
+        ]);
 
-                const bomberos = resUsuarios.data.filter(usuario => usuario.type === 'bombero');
-                setUsuarios(resUsuarios.data);
-                setBrigades(resBrigades.data);
-            } catch (err) {
-                console.error('Failed to fetch data:', err);
-                setError('Failed to fetch data');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    const getUsuarioNombre = (id_empleado) => {
-        const usuario = usuarios.find(usuario => usuario.id_empleado === id_empleado);
-        return usuario ?`${usuario.nombre} ${usuario.apellido}`  : 'Desconocido';
+        setUsuarios(resUsuarios.data);
+        setBrigades(resBrigades.data);
+      } catch (err) {
+        console.error('Failed to fetch data:', err);
+        setError('Failed to fetch data');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const getBrigadaNombre = (id_brigada) => {
-        const brigada = brigades.find(brigada => brigada.id_brigada === id_brigada);
-        return brigada ? brigada.nombre : 'Desconocida';
-    };
+    fetchData();
+  }, []);
 
-    if (loading) return <p>Loading...</p>;
-    if (error) return <p>Error: {error}</p>;
+  const getUsuarioNombre = (id_empleado) => {
+    const usuario = usuarios.find((usuario) => usuario.id_empleado === id_empleado);
+    return usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Desconocido';
+  };
 
-    return (
-        <div className="overflow-x-auto">
-            <table className="w-full text-left">
-                <thead>
-                    <tr>
-                        <th className="py-2 px-2">Fecha Inicio</th>
-                        <th className="py-2 px-2">Empleado</th>
-                        <th className="py-2 px-2">Brigada Origen</th>
-                        <th className="py-2 px-2">Brigada Destino</th>
-                        <th className="py-2 px-2" style={{ width: '200px' }}>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {assignments.map(assignment => (
-                        <tr key={assignment.id_asignacion}>
-                            <td className="py-2 px-2">{assignment.fecha_ini}</td>
-                            <td className="py-2 px-2">{getUsuarioNombre(assignment.id_empleado)}</td>
-                            <td className="py-2 px-2">{getBrigadaNombre(assignment.id_brigada_origen)}</td>
-                            <td className="py-2 px-2">{getBrigadaNombre(assignment.id_brigada_destino)}</td>
-                            <td className="py-2 px-2 flex space-x-2">
-                                <button onClick={() => { setSelectedAssignment(assignment); setShowEditModal(true); }} className="bg-blue-600 text-white px-4 py-1 rounded flex items-center space-x-1">
-                                    <FontAwesomeIcon icon={faEdit} />
-                                    <span>Editar</span>
-                                </button>
-                                <button onClick={() => handleDelete(assignment.id_asignacion)} className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1">
-                                    <FontAwesomeIcon icon={faTrash} />
-                                    <span>Borrar</span>
-                                </button>
-                                
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
+  const getBrigadaNombre = (id_brigada) => {
+    const brigada = brigades.find((brigada) => brigada.id_brigada === id_brigada);
+    return brigada ? brigada.nombre : 'Desconocida';
+  };
+
+  if (loading) return <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Cargando...</p>;
+  if (error) return <p className={`text-center ${darkMode ? 'text-red-300' : 'text-red-500'}`}>Error: {error}</p>;
+
+  return (
+    <div className="overflow-x-auto">
+      <table
+        className={`w-full text-left border-collapse rounded-lg ${
+          darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-900'
+        }`}
+      >
+        <thead>
+          <tr className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-900'}`}>
+            <th className="py-2 px-2">Fecha Inicio</th>
+            <th className="py-2 px-2">Empleado</th>
+            <th className="py-2 px-2">Brigada Origen</th>
+            <th className="py-2 px-2">Brigada Destino</th>
+            <th className="py-2 px-2" style={{ width: '200px' }}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {assignments.length > 0 ? (
+            assignments.map((assignment) => (
+              <tr
+                key={assignment.id_asignacion}
+                className={`border-b ${
+                  darkMode ? 'border-gray-700 bg-gray-800 text-gray-200' : 'border-gray-300 bg-white text-gray-900'
+                }`}
+              >
+                <td className="py-2 px-2">{assignment.fecha_ini}</td>
+                <td className="py-2 px-2">{getUsuarioNombre(assignment.id_empleado)}</td>
+                <td className="py-2 px-2">{getBrigadaNombre(assignment.id_brigada_origen)}</td>
+                <td className="py-2 px-2">{getBrigadaNombre(assignment.id_brigada_destino)}</td>
+                <td className="py-2 px-2 flex space-x-2">
+                  <button
+                    onClick={() => {
+                      setSelectedAssignment(assignment);
+                      setShowEditModal(true);
+                    }}
+                    className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 flex items-center space-x-1"
+                  >
+                    <FontAwesomeIcon icon={faEdit} />
+                    <span>Editar</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(assignment.id_asignacion)}
+                    className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700 flex items-center space-x-1"
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                    <span>Borrar</span>
+                  </button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="5" className={`text-center py-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                No hay asignaciones disponibles
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 };
 
 export default AssignmentsTable;

@@ -16,7 +16,7 @@ const CalendarPageParque2 = () => {
   const [brigades, setBrigades] = useState([]);
   const [brigadeMap, setBrigadeMap] = useState({});
   const [userType, setUserType] = useState(null);
-  const idParque = 2; // Añadido el id del parque directamente
+  const idParque = 1; // Añadido el id del parque directamente
 
   useEffect(() => {
     const fetchUserType = async () => {
@@ -29,9 +29,13 @@ const CalendarPageParque2 = () => {
     };
 
     const fetchGuards = async () => {
-      const response = await GuardsApiService.getGuards();
-      const filteredGuards = response.data.filter(guard => guard.brigada && guard.brigada.id_parque === idParque);
-      setGuards(filteredGuards);
+      try {
+        const response = await GuardsApiService.getGuards();
+        setGuards(response.data); 
+        console.log("Guardias finales para el calendario 2:", guards);
+      } catch (error) {
+        console.error('Error fetching guards:', error);
+      }
     };
 
     const fetchBrigades = async () => {
@@ -43,6 +47,7 @@ const CalendarPageParque2 = () => {
         return acc;
       }, {});
       setBrigadeMap(map);
+      console.log("Mapa de brigadas para el parque 2:", brigadeMap);
     };
 
     fetchUserType();

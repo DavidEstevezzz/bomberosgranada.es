@@ -117,5 +117,11 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::put('/requests/{id}', [RequestController::class, 'update']);
     Route::delete('/requests/{id}', [RequestController::class, 'destroy']);
 
+    Route::put('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'update']);
+Route::delete('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'destroy']);
+Route::post('/firefighters-assignments', [FirefighterAssignmentController::class, 'store']);
+
+
+
     Route::delete('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'destroy']);
 });

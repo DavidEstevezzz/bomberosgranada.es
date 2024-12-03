@@ -80,7 +80,7 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
                         <option value="">Seleccione Brigada Origen</option>
                         {brigades.map(brigada => (
                             <option key={brigada.id_brigada} value={brigada.id_brigada}>
-                                {brigada.nombre}
+                                {brigada.nombre} ({brigada.id_parque})
                             </option>
                         ))}
                     </select>
@@ -88,7 +88,7 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
                         <option value="">Seleccione Brigada Destino</option>
                         {brigades.map(brigada => (
                             <option key={brigada.id_brigada} value={brigada.id_brigada}>
-                                {brigada.nombre}
+                                {brigada.nombre} ({brigada.id_parque})
                             </option>
                         ))}
                     </select>

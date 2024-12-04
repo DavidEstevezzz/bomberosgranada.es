@@ -7,8 +7,10 @@ import dayjs from 'dayjs';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useSearchParams } from 'react-router-dom';
+import { useStateContext } from '../contexts/ContextProvider.jsx';
 
 const BrigadeDetail = () => {
+  const { user } = useStateContext();
   const { id_brigada } = useParams();
   const [brigade, setBrigade] = useState(null);
   const [firefighters, setFirefighters] = useState([]);
@@ -53,6 +55,27 @@ const BrigadeDetail = () => {
     fetchBrigadeDetails();
   }, [id_brigada, selectedDate]);
 
+  const [assignments, setAssignments] = useState({
+    Mañana: {},
+    Tarde: {},
+    Noche: {},
+  });
+  const options = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7'];
+
+  const handleAssignmentChange = (shift, employeeId, value) => {
+    setAssignments((prev) => {
+      const updated = { ...prev };
+      updated[shift] = { ...updated[shift], [employeeId]: value };
+      return updated;
+    });
+  };
+
+  const getAvailableOptions = (shift) => {
+    const usedOptions = Object.values(assignments[shift]);
+    return options.filter((option) => !usedOptions.includes(option));
+  };
+
+
   const handlePreviousDay = () => {
     const previousDay = dayjs(selectedDate).subtract(1, 'day').format('YYYY-MM-DD');
     setSelectedDate(previousDay);
@@ -75,7 +98,7 @@ const BrigadeDetail = () => {
       }).length;
       return { category, count };
     });
-  
+
     // Añadir categoría "Tropa" si el parque es 2
     if (brigade?.park?.id_parque === 2) {
       const tropaCount = counts.reduce((sum, { category, count }) => {
@@ -86,19 +109,19 @@ const BrigadeDetail = () => {
       }, 0);
       counts.push({ category: 'Tropa', count: tropaCount });
     }
-  
+
     return counts;
   };
-  
+
   const checkMinimums = (category, count) => {
     const parkId = brigade?.park?.id_parque;
     let minimumCount = minimums[parkId]?.[category] || 0;
-  
+
     // Definir mínimo para "Tropa" en el parque 2
     if (category === 'Tropa' && parkId === 2) {
       minimumCount = 10; // Mínimo específico para "Tropa"
     }
-  
+
     return { isBelowMinimum: count < minimumCount, minimumCount };
   };
 
@@ -114,47 +137,49 @@ const BrigadeDetail = () => {
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-  
+
     // Usar la fuente Helvetica
     doc.setFont('helvetica', 'bold');
-  
+
     // Título principal del documento
     const pageWidth = doc.internal.pageSize.getWidth(); // Ancho de la página
     doc.setFontSize(16);
     doc.text('BOMBEROS POR TURNO', pageWidth / 2, 20, { align: 'center' });
-  
+
     shifts.forEach((shift, index) => {
       const previousY = doc.previousAutoTable?.finalY || 20;
-  
+
       // Títulos de turnos
       doc.setFontSize(14);
       doc.text(`${shift.label}`, pageWidth / 2, previousY + 15, { align: 'center' });
-  
+
       // Generar tabla
       doc.autoTable({
         startY: previousY + 20,
-        head: [['Nombre', 'Puesto', 'Teléfono', 'Turno asignado']], // Encabezados
-        body: filterFirefightersByShift(shift.key).map(firefighter => [
+        head: [['Nombre', 'Puesto', 'Teléfono', 'Turno asignado', 'Asignación']],
+        body: filterFirefightersByShift(shift.key).map((firefighter) => [
           `${firefighter.nombre} ${firefighter.apellido}`,
           firefighter.puesto,
           firefighter.telefono,
           firefighter.turno,
+          assignments[shift.key][firefighter.id_empleado] || 'No asignado',
         ]),
         theme: 'striped',
-        styles: { halign: 'center' }, // Centrar contenido de las tablas
-        headStyles: { fillColor: [22, 160, 133], halign: 'center' }, // Encabezado centrado
-        bodyStyles: { textColor: [44, 62, 80], halign: 'center' }, // Cuerpo centrado
-        alternateRowStyles: { fillColor: [240, 240, 240] }, // Colores alternados para filas
+        styles: { halign: 'center' },
+        headStyles: { fillColor: [22, 160, 133], halign: 'center' },
+        bodyStyles: { textColor: [44, 62, 80], halign: 'center' },
+        alternateRowStyles: { fillColor: [240, 240, 240] },
       });
+
     });
-  
+
     // Guardar el archivo PDF
     doc.save('Bomberos_Por_Turno.pdf');
   };
-  
-  
-  
-  
+
+
+
+
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -223,39 +248,70 @@ const BrigadeDetail = () => {
 
         <h2 className="text-xl font-bold mt-6 mb-6 text-center">Bomberos Asignados</h2>
         <div className="overflow-x-auto w-full rounded-lg">
-        <table className="w-full text-center bg-gray-700 rounded-lg border-2 border-gray-700">
-  <thead className='bg-gray-600'>
-    <tr>
-      <th className="py-2 px-2">Nombre</th>
-      <th className="py-2 px-2">Puesto</th>
-      <th className="py-2 px-2">Teléfono</th>
-      <th className="py-2 px-2">Turno Asignado</th>
-    </tr>
-  </thead>
-  <tbody>
-    {shifts.map(shift => (
-      <>
-        <tr key={`header-${shift.key}`} className="bg-gray-800 text-white">
-          <td colSpan="4" className="py-4 px-4 text-center font-bold">{shift.label}</td>
-        </tr>
-        {filterFirefightersByShift(shift.key).length > 0 ? (
-          filterFirefightersByShift(shift.key).map((firefighter, index) => (
-            <tr key={`${firefighter.id_empleado}-${index}`} className="border-b border-gray-700">
-              <td className="py-2 px-2">{firefighter.nombre} {firefighter.apellido}</td>
-              <td className="py-2 px-2">{firefighter.puesto}</td>
-              <td className="py-2 px-2">{firefighter.telefono}</td>
-              <td className="py-2 px-2">{firefighter.turno}</td>
-            </tr>
-          ))
-        ) : (
-          <tr key={`no-firefighters-${shift.key}`}>
-            <td colSpan="4" className="text-center py-4">No hay bomberos asignados para este turno.</td>
-          </tr>
-        )}
-      </>
-    ))}
-  </tbody>
-</table>
+          <table className="w-full text-center bg-gray-700 rounded-lg border-2 border-gray-700">
+            <thead className='bg-gray-600'>
+              <tr>
+                <th className="py-2 px-2">Nombre</th>
+                <th className="py-2 px-2">Puesto</th>
+                <th className="py-2 px-2">Teléfono</th>
+                <th className="py-2 px-2">Turno Asignado</th>
+                {['mando', 'jefe'].includes(user.type) && (
+                  <th className="py-2 px-2">Puesto</th>
+                )}    </tr>
+            </thead>
+            <tbody>
+              {shifts.map(shift => (
+                <>
+                  <tr key={`header-${shift.key}`} className="bg-gray-800 text-white">
+                    <td colSpan="5" className="py-4 px-4 text-center font-bold">{shift.label}</td>
+                  </tr>
+                  {filterFirefightersByShift(shift.key).length > 0 ? (
+                    filterFirefightersByShift(shift.key).map((firefighter, index) => (
+                      <tr key={`${firefighter.id_empleado}-${index}`} className="border-b border-gray-700">
+                        <td className="py-2 px-2">{firefighter.nombre} {firefighter.apellido}</td>
+                        <td className="py-2 px-2">{firefighter.puesto}</td>
+                        <td className="py-2 px-2">{firefighter.telefono}</td>
+                        <td className="py-2 px-2">{firefighter.turno}</td>
+                        <td className="py-2 px-2">
+                          {['mando', 'jefe'].includes(user.type) && (
+                            <select
+                              className="bg-gray-700 text-white p-1 rounded"
+                              value={assignments[shift.key][firefighter.id_empleado] || ''}
+                              onChange={(e) =>
+                                handleAssignmentChange(shift.key, firefighter.id_empleado, e.target.value)
+                              }
+                            >
+                              <option value="" disabled>
+                                Seleccione
+                              </option>
+                              {options.map((option) => (
+                                <option
+                                  key={option}
+                                  value={option}
+                                  disabled={
+                                    Object.entries(assignments[shift.key]).some(
+                                      ([_, selectedOption]) => selectedOption === option
+                                    )
+                                  }
+                                >
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+
+                      </tr>
+                    ))
+                  ) : (
+                    <tr key={`no-firefighters-${shift.key}`}>
+                      <td colSpan="4" className="text-center py-4">No hay bomberos asignados para este turno.</td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
+          </table>
 
         </div>
 

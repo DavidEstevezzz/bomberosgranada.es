@@ -18,7 +18,7 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
             const fetchUsuarios = async () => {
                 try {
                     const response = await UsuariosApiService.getUsuarios();
-                    const bomberos = response.data.filter(usuario => usuario.type === 'bombero'); // Filtrar empleados con rol 'bombero'
+                    const bomberos = response.data.filter(usuario => usuario.type === 'bombero' || usuario.type === 'mando'); // Filtrar empleados con rol 'bombero' o 'mando'
                     setUsuarios(bomberos);
                 } catch (error) {
                     console.error('Failed to fetch users:', error);

@@ -38,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/brigades/{id}', [BrigadeController::class, 'show']);
     Route::get('/brigades/{id}/firefighters', [BrigadeController::class, 'getFirefightersByBrigade']);
     Route::get('/guards/by-brigades', [GuardController::class, 'getGuardsByBrigades']);
+    Route::get('/guards/by-date/{date}', [GuardController::class, 'getGuardsByDate']);
 
 
 

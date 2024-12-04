@@ -38,7 +38,6 @@ const router = createBrowserRouter([
       { path: 'users', element: <ProtectedRoute element={<Users />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: '/users/:id_empleado', element: <Profile /> },
       { path: 'brigades', element: <ProtectedRoute element={<Brigades />} rolesAllowed={['Jefe', 'Mando']} /> },
-      { path: '/brigades/:id_brigada', element: <ProtectedRoute element={<BrigadeDetail />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'firefighter-assignments', element: <ProtectedRoute element={<FirefighterAssigment />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'salaries', element: <ProtectedRoute element={<Salaries />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'settings', element: <ProtectedRoute element={<Settings />} rolesAllowed={['Jefe', 'Mando']} /> },
@@ -50,6 +49,7 @@ const router = createBrowserRouter([
       { path: 'aprobacion-cambio-guardia', element: <ProtectedRoute element={<ShiftChangeApprovalPage />} rolesAllowed={['Jefe', 'Mando']} /> },
 
       // Mantener las demás rutas abiertas
+      { path: '/brigades/:id_brigada', element: <BrigadeDetail /> },
       { path: 'calendario-norte', element: <CalendarPage /> },
       { path: 'calendario-sur', element: <CalendarPage2 /> },
       { path: 'requerimientos', element: <AvailableFirefighters /> },

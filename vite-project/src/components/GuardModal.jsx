@@ -38,37 +38,63 @@ const GuardModal = ({ isOpen, onClose, guardDate, setGuards }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
-    // Validación adicional para asegurarse de que todos los campos estén completos
+  
     if (!brigadeId || !salaryId || !type) {
-      alert('Please fill in all fields.');
+      console.error('Error: Todos los campos son obligatorios.');
+      alert('Por favor, completa todos los campos.');
       setLoading(false);
       return;
     }
-
-
-
-    // Ajustar la fecha a UTC
+  
     const dateUTC = new Date(Date.UTC(guardDate.getFullYear(), guardDate.getMonth(), guardDate.getDate()));
-
+  
     const guard = {
       date: dateUTC.toISOString().slice(0, 10),
       id_brigada: brigadeId,
       id_salario: salaryId,
-      tipo: type
+      tipo: type,
     };
-
-
+  
     try {
       const response = await GuardsApiService.createGuard(guard);
-      setGuards(prev => [...prev, response.data]);
+      setGuards((prev) => [...prev, response.data]);
+  
+      const allBrigadesResponse = await BrigadesApiService.getBrigades(); // Nueva búsqueda de todas las brigadas
+      const allBrigades = allBrigadesResponse.data;
+  
+      const selectedBrigade = brigades.find((brigade) => String(brigade.id_brigada) === String(brigadeId));
+  
+      if (!selectedBrigade) {
+        console.warn('No se encontró la brigada seleccionada con ID:', brigadeId);
+        return;
+      }
+  
+      const brigadeForParque2 = allBrigades.find(
+        (brigade) =>
+          brigade.id_parque === 2 &&
+          brigade.nombre.trim().toLowerCase() === selectedBrigade.nombre.trim().toLowerCase()
+      );
+  
+      if (brigadeForParque2) {
+        const secondGuard = {
+          ...guard,
+          id_brigada: brigadeForParque2.id_brigada,
+        };
+  
+        const secondResponse = await GuardsApiService.createGuard(secondGuard);
+        setGuards((prev) => [...prev, secondResponse.data]);
+      } else {
+        console.warn('No se encontró brigada en parque 2 para el nombre:', selectedBrigade.nombre);
+      }
+  
       onClose();
     } catch (error) {
-      console.error('Failed to save the guard:', error);
+      console.error('Error al intentar guardar las guardias:', error);
     } finally {
       setLoading(false);
     }
   };
+  
 
   return (
     isOpen && (

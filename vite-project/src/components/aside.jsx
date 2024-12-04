@@ -142,21 +142,10 @@ const Aside = ({ className }) => {
           </div>
 
           {/* Calendario */}
-          <div className="relative">
-            <button onClick={() => toggleDropdown('authentication')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-              <span className="flex items-center">
-                <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 mr-2" />
-                Calendario
-              </span>
-              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.authentication ? 'rotate-180' : ''}`} />
-            </button>
-            {dropdownOpen.authentication && (
-              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                <a href="/calendario-norte" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Calendario Parque Norte</a>
-                <a href="/calendario-sur" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Calendario Parque Sur</a>
-              </div>
-            )}
-          </div>
+          <a href="/calendario-norte" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 mr-2" />
+            Calendario
+          </a>
         </nav>
       </aside>
     );

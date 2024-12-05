@@ -24,6 +24,25 @@ const RequestListPage = () => {
     fetchUsers();
   }, []);
 
+  const getAPDaysRemaining = (userId) => {
+    const user = users.find((user) => user.id_empleado === userId);
+    return user ? user.AP : 0;
+  };
+
+  const updateUserAPDays = async (userId, daysChange) => {
+    try {
+      const user = users.find((user) => user.id_empleado === userId);
+      const newAP = (user?.AP || 0) + daysChange;
+
+      await UsuariosApiService.updateUserAP(userId, newAP);
+      setUsers(users.map((user) =>
+        user.id_empleado === userId ? { ...user, AP: newAP } : user
+      ));
+    } catch (error) {
+      console.error('Error al actualizar los días de AP en el backend:', error);
+    }
+  };
+
   const fetchRequests = async () => {
     setLoading(true);
     try {

@@ -11,6 +11,9 @@ use App\Mail\WelcomeMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str; 
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Traits\HasRoles;
+use Spatie\Permission\Models\Role;
+
 
 
 class UserController extends Controller
@@ -110,31 +113,62 @@ public function update(Request $request, User $id)
 {
     Log::info('Request received for user update', ['request_data' => $request->all()]);
 
-    // Inicializar reglas de validación
-    $rules = [];
+    $user = Auth::user(); // Usuario autenticado
 
-    // Si no se envía información para cambiar la contraseña, valida los demás campos
-    if ($request->hasAny(['nombre', 'apellido', 'email', 'telefono', 'dni', 'puesto', 'type', 'AP'])) {
-        $rules = [
-            'nombre' => 'sometimes|required',
-            'apellido' => 'sometimes|required',
-            'email' => 'sometimes|required|email',
-            'email2' => 'nullable|email|max:64',
-            'telefono' => 'sometimes|required',
-            'dni' => 'sometimes|required',
-            'puesto' => 'sometimes|required_if:type,bombero,mando',
-            'type' => 'sometimes|required',
-            'AP' => 'sometimes|required_if:type,bombero,mando',
-            'vacaciones' => 'sometimes|required',
-            'modulo' => 'sometimes|required',
-        ];
-    }
-
-    // Validación específica para cambio de contraseña
+    // Permitir que cualquier usuario cambie su contraseña
     if ($request->has('current_password') || $request->has('password')) {
-        $rules['current_password'] = 'required_with:password'; // La contraseña actual es obligatoria si se envía una nueva
-        $rules['password'] = 'required_with:current_password|min:6|confirmed'; // Nueva contraseña debe ser confirmada
+        // Validación específica para cambio de contraseña
+        $rules = [
+            'current_password' => 'required_with:password', // La contraseña actual es obligatoria si se envía una nueva
+            'password' => 'required_with:current_password|min:6|confirmed', // Nueva contraseña debe ser confirmada
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            Log::error('Validation failed for password update', ['errors' => $validator->errors()->toArray()]);
+            return response()->json($validator->errors(), 400);
+        }
+
+        if (!Hash::check($request->input('current_password'), $id->password)) {
+            Log::error('La contraseña actual no coincide para actualizar el usuario', [
+                'user_id' => $id->id_empleado,
+                'current_password_input' => $request->input('current_password'),
+                'hashed_password_stored' => $id->password
+            ]);
+            return response()->json(['error' => 'La contraseña actual no es correcta'], 403);
+        }
+
+        // Actualizar la contraseña
+        $id->update(['password' => bcrypt($request->input('password'))]);
+
+        Log::info('Password updated successfully', ['user_id' => $id->id_empleado]);
+        return response()->json(['message' => 'Contraseña actualizada con éxito'], 200);
     }
+
+    // Verificar que el usuario autenticado sea un jefe
+    if (!$user->hasRole('jefe')) {
+        Log::error('Acceso denegado para actualizar información', [
+            'auth_user_id' => $user->id_empleado,
+            'target_user_id' => $id->id_empleado,
+        ]);
+        return response()->json(['error' => 'No tienes permisos para editar esta información'], 403);
+    }
+
+    // Validaciones para otros campos
+    $rules = [
+        'nombre' => 'sometimes|required',
+        'apellido' => 'sometimes|required',
+        'email' => 'sometimes|required|email',
+        'email2' => 'nullable|email|max:64',
+        'telefono' => 'sometimes|required',
+        'dni' => 'sometimes|required',
+        'puesto' => 'sometimes|required_if:type,bombero,mando',
+        'type' => 'sometimes|required',
+        'AP' => 'sometimes|required_if:type,bombero,mando',
+        'vacaciones' => 'sometimes|required',
+        'modulo' => 'sometimes|required',
+    ];
 
     $validator = Validator::make($request->all(), $rules);
 
@@ -145,31 +179,6 @@ public function update(Request $request, User $id)
 
     try {
         $data = $request->all();
-
-        // Si se envía una nueva contraseña, verificar la actual y actualizarla
-        if ($request->has('current_password') && $request->has('password')) {
-            // Registrar contraseñas para depuración (solo en desarrollo)
-            Log::info('Comparando contraseñas para usuario', [
-                'user_id' => $id->id_empleado,
-                'current_password_input' => $request->input('current_password'),
-                'hashed_password_stored' => $id->password
-            ]);
-        
-            if (!Hash::check($request->input('current_password'), $id->password)) {
-                Log::error('La contraseña actual no coincide para actualizar el usuario', [
-                    'user_id' => $id->id_empleado,
-                    'current_password_input' => $request->input('current_password'),
-                    'hashed_password_stored' => $id->password
-                ]);
-                return response()->json(['error' => 'La contraseña actual no es correcta'], 403);
-            }
-        
-        
-
-            $data['password'] = bcrypt($request->input('password'));
-        } else {
-            unset($data['password']); // No actualizar contraseña si no se envía
-        }
 
         Log::info('Updating user', ['user_id' => $id->id_empleado, 'data' => $data]);
 
@@ -189,6 +198,7 @@ public function update(Request $request, User $id)
         return response()->json(['error' => 'Internal Server Error'], 500);
     }
 }
+
 
 public function getUsersByPuesto(Request $request)
 {

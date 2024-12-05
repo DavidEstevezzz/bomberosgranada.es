@@ -29,6 +29,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/por-puesto', [UserController::class, 'getUsersByPuesto']);
     Route::get('/users/{id}', [UserController::class, 'show']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+
 
 
     Route::get('/parks', [ParkController::class, 'index']);
@@ -38,7 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/brigades/{id}', [BrigadeController::class, 'show']);
     Route::get('/brigades/{id}/firefighters', [BrigadeController::class, 'getFirefightersByBrigade']);
     Route::get('/guards/by-brigades', [GuardController::class, 'getGuardsByBrigades']);
-    Route::get('/guards/by-date/{date}', [GuardController::class, 'getGuardsByDate']);
+    Route::get('/guards/by-date', [GuardController::class, 'getGuardsByDate']);
 
 
 
@@ -81,7 +83,6 @@ Route::middleware('auth:sanctum')->post('/logout', [apiController::class, 'logou
 Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     // CRUD de Usuarios
     Route::post('/users/create', [UserController::class, 'store']);
-    Route::put('/users/{id}', [UserController::class, 'update']);
     Route::put('/users/{id}/update-ap', [UserController::class, 'updateAP']);
 
     // CRUD de Parques

@@ -78,6 +78,7 @@ const RequestListPage = () => {
     const user = users.find((user) => user.id_empleado === id_empleado);
     return user ? `${user.nombre} ${user.apellido}` : 'N/A';
   };
+  
   const handleUpdateRequestStatus = async (id, newStatus, tipo, idEmpleado, turno = 'Mañana') => {
     try {
       const request = requests.find((req) => req.id === id);
@@ -93,6 +94,7 @@ const RequestListPage = () => {
           requestedAPDays = 1;
         }
 
+        // Asegúrate de usar el nombre correcto de la función
         const remainingAPDays = getAPDaysRemaining(idEmpleado);
 
         if (newStatus === 'Confirmada' && currentStatus !== 'Confirmada') {
@@ -117,6 +119,7 @@ const RequestListPage = () => {
       console.error('Error al actualizar el estado de la solicitud:', error);
     }
   };  
+
 
   const handlePreviousMonth = () => {
     setCurrentMonth((prev) => prev.subtract(1, 'month'));

@@ -147,7 +147,7 @@ public function update(Request $request, User $id)
     }
 
     // Verificar que el usuario autenticado sea un jefe
-    if (!$user->hasRole('jefe')) {
+    if (!$user->hasRole('Jefe')) {
         Log::error('Acceso denegado para actualizar información', [
             'auth_user_id' => $user->id_empleado,
             'target_user_id' => $id->id_empleado,

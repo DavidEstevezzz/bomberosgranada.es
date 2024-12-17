@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Models\Firefighters_assignment;
+use App\Mail\RequestStatusUpdatedMail;
+use Illuminate\Support\Facades\Mail;
+
 
 class RequestController extends Controller
 {
@@ -150,7 +153,7 @@ public function update(Request $request, $id)
 
         $fechaInicio = new \DateTime($miRequest->fecha_ini);
         $fechaFin = new \DateTime($miRequest->fecha_fin);
-        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1; // +1 para incluir ambos días
+        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
 
         // Verificar para "vacaciones"
         if ($miRequest->tipo === 'vacaciones' && $user->vacaciones < $diasSolicitados) {
@@ -167,7 +170,7 @@ public function update(Request $request, $id)
     $miRequest->estado = $newEstado;
     $miRequest->save();
 
-    // Ajustar las columnas correspondientes si el estado es confirmado
+    // Ajustar columnas correspondientes si el estado es confirmado
     if ($miRequest->tipo === 'vacaciones' || $miRequest->tipo === 'modulo') {
         $this->adjustVacationDays($miRequest, $oldEstado, $newEstado);
     }
@@ -185,8 +188,19 @@ public function update(Request $request, $id)
         }
     }
 
+    // Enviar correo de notificación al usuario
+    $user = $miRequest->EnviadaPor; // Relación con User
+    if ($user && $user->email) {
+        try {
+            Mail::to($user->email)->send(new RequestStatusUpdatedMail($miRequest, $newEstado));
+        } catch (\Exception $e) {
+            Log::error("Error enviando correo: " . $e->getMessage());
+        }
+    }
+
     return response()->json($miRequest, 200);
 }
+
 
 
 

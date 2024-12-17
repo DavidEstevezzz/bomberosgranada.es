@@ -42,13 +42,18 @@ const RequestAndShiftChangePage = () => {
           ShiftChangeRequestApiService.getRequests(),
         ]);
 
-        const filteredRequests = requestsResponse.data.filter((req) =>
-          dayjs(req.fecha_ini).isSame(currentMonth, 'month')
+        // Filtrar solicitudes solo para el usuario logueado
+        const filteredRequests = requestsResponse.data.filter(
+          (req) =>
+            req.id_empleado === user.id_empleado &&
+            dayjs(req.fecha_ini).isSame(currentMonth, 'month')
         );
 
-        const filteredShiftChanges = shiftChangeResponse.data.filter((req) =>
-          dayjs(req.fecha).isSame(currentMonth, 'month') &&
-          (req.id_empleado1 === user.id_empleado || req.id_empleado2 === user.id_empleado)
+        // Filtrar cambios de guardia donde el usuario esté involucrado
+        const filteredShiftChanges = shiftChangeResponse.data.filter(
+          (req) =>
+            dayjs(req.fecha).isSame(currentMonth, 'month') &&
+            (req.id_empleado1 === user.id_empleado || req.id_empleado2 === user.id_empleado)
         );
 
         setRequests(filteredRequests);
@@ -129,14 +134,7 @@ const RequestAndShiftChangePage = () => {
         </>
       );
     }
-    return (
-      <button
-        onClick={() => handleShiftChangeStatusChange(request.id, 'rechazado')}
-        className="bg-red-600 text-white px-4 py-1 rounded"
-      >
-        Rechazar
-      </button>
-    );
+    return null;
   };
 
   const handlePreviousMonth = () => {
@@ -153,7 +151,9 @@ const RequestAndShiftChangePage = () => {
   return (
     <div className={`p-8 rounded-xl ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'}`}>
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Solicitudes y Cambios de Guardia - {currentMonth.format('MMMM YYYY')}</h1>
+        <h1 className="text-2xl font-bold">
+          Solicitudes y Cambios de Guardia - {currentMonth.format('MMMM YYYY')}
+        </h1>
         <div className="flex space-x-4">
           <button
             onClick={handlePreviousMonth}
@@ -188,7 +188,9 @@ const RequestAndShiftChangePage = () => {
               <tbody>
                 {requests.map((request) => (
                   <tr key={request.id} className="border-b border-gray-700">
-                    <td className="py-2 px-4">{request.tipo.charAt(0).toUpperCase() + request.tipo.slice(1)}</td>
+                    <td className="py-2 px-4">
+                      {request.tipo.charAt(0).toUpperCase() + request.tipo.slice(1)}
+                    </td>
                     <td className="py-2 px-4">{request.fecha_ini}</td>
                     <td className="py-2 px-4">{request.fecha_fin}</td>
                     <td className="py-2 px-4">{request.turno}</td>

@@ -15,6 +15,7 @@ class Guard extends Model
         'id_brigada',
         'id_salario',
         'tipo',
+        'comentarios',
     ];
 
     // Clave primaria autoincrementable

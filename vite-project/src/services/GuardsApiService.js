@@ -10,8 +10,9 @@ class GuardsApiService {
     return await BaseApiService.get(API_URL);
   }
 
-  async getGuard(date) {
-    return await BaseApiService.get(`${API_URL}/${date}`);
+  async getGuard(id_brigada, date) {
+    const url = `${API_URL}/by-brigade-and-date?id_brigada=${id_brigada}&date=${date}`;
+    return await BaseApiService.get(url);
   }
 
   async createGuard(guard) {
@@ -46,6 +47,15 @@ async getAvailableFirefighters(date) {
   const url = `${API_URL}/available-firefighters`;
   const params = { date };
   return await BaseApiService.get(url, params);
+}
+
+async updateGuardComments(idBrigada, date, comentarios) {
+  const url = `${API_URL}/update-comments`;
+  return await BaseApiService.put(url, {
+    id_brigada: idBrigada,
+    date: date,
+    comentarios: comentarios,
+  });
 }
   
 }

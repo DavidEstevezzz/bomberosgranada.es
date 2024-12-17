@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BrigadesApiService from '../services/BrigadesApiService';
+import GuardsApiService from '../services/GuardsApiService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
@@ -14,6 +15,8 @@ const BrigadeDetail = () => {
   const { id_brigada } = useParams();
   const [brigade, setBrigade] = useState(null);
   const [firefighters, setFirefighters] = useState([]);
+  const [comentarios, setComentarios] = useState(''); // Estado para los comentarios
+  const [isUpdating, setIsUpdating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchParams] = useSearchParams();
@@ -44,8 +47,17 @@ const BrigadeDetail = () => {
         }
 
         setFirefighters(Object.values(response.data.firefighters));
+
+        const commentsResponse = await GuardsApiService.getGuard(id_brigada, selectedDate);
+      if (commentsResponse.data.comentarios) {
+        setComentarios(commentsResponse.data.comentarios);
+      } else {
+        setComentarios(''); // Resetear comentarios si no hay ninguno
+      }
+
         setError(null);
       } catch (error) {
+        console.error('Error en fetchBrigadeDetails:', error); // Log completo del error
         setError('Failed to load brigade details');
       } finally {
         setLoading(false);
@@ -75,6 +87,24 @@ const BrigadeDetail = () => {
     return options.filter((option) => !usedOptions.includes(option));
   };
 
+  const handleCommentSubmit = async () => {
+    if (!user || user.type !== 'jefe') return;
+  
+    setIsUpdating(true);
+    try {
+      const response = await GuardsApiService.updateGuardComments(
+        id_brigada, // ID de la brigada
+        selectedDate, // Fecha seleccionada
+        comentarios // Comentarios a guardar
+      );
+      setComentarios(response.data.comentarios);
+    } catch (error) {
+      console.error('Error actualizando comentarios:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  
 
   const handlePreviousDay = () => {
     const previousDay = dayjs(selectedDate).subtract(1, 'day').format('YYYY-MM-DD');
@@ -176,10 +206,6 @@ const BrigadeDetail = () => {
     // Guardar el archivo PDF
     doc.save('Bomberos_Por_Turno.pdf');
   };
-
-
-
-
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -316,6 +342,32 @@ const BrigadeDetail = () => {
         </div>
 
         <button onClick={exportToPDF} className="bg-green-500 text-white px-4 py-2 rounded mt-4">Exportar a PDF</button>
+
+        <div className="mt-6 w-full">
+          <h2 className="text-xl font-bold mb-4">Comentarios</h2>
+          <div className="bg-gray-700 p-4 rounded-lg">
+            {user.type === 'jefe' ? (
+              <>
+                <textarea
+                  className="w-full p-2 rounded bg-gray-600 text-white"
+                  rows="4"
+                  placeholder="Añadir comentarios..."
+                  value={comentarios}
+                  onChange={(e) => setComentarios(e.target.value)}
+                />
+                <button
+                  onClick={handleCommentSubmit}
+                  className={`mt-2 px-4 py-2 rounded ${isUpdating ? 'bg-gray-500' : 'bg-blue-500'} text-white`}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? 'Guardando...' : 'Guardar Comentarios'}
+                </button>
+              </>
+            ) : (
+              <p className="text-white">{comentarios || 'No hay comentarios disponibles.'}</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

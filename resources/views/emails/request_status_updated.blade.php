@@ -16,7 +16,7 @@
             <li>Inicio: {{ $fechaIni }}</li>
             <li>Fin: {{ $fechaFin }}</li>
         </ul>
-        <p>Por favor, revisa tu cuenta en la plataforma para más detalles.</p>
+        <p>Por favor, revisa tu cuenta en la plataforma y entra en 'Mis Solicitudes' para más detalles.</p>
         <p>Gracias,</p>
         <p><strong>El equipo de soporte</strong></p>
     </div>

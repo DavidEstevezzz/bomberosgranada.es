@@ -41,7 +41,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/brigades/{id}/firefighters', [BrigadeController::class, 'getFirefightersByBrigade']);
     Route::get('/guards/by-brigades', [GuardController::class, 'getGuardsByBrigades']);
     Route::get('/guards/by-date', [GuardController::class, 'getGuardsByDate']);
-
+    Route::get('/guards/by-brigade-and-date', [GuardController::class, 'getGuardByBrigadeAndDate']);
+    Route::put('/guards/update-comments', [GuardController::class, 'updateComments']);
 
 
     Route::get('/firefighters-assignments', [FirefighterAssignmentController::class, 'index']);
@@ -99,6 +100,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('/guards', [GuardController::class, 'store']);
     Route::put('/guards/{id}', [GuardController::class, 'update']);
     Route::delete('/guards/{id}', [GuardController::class, 'destroy']);
+
 
     // CRUD de Horas Extra
     Route::post('/extra_hours', [Extra_hourController::class, 'store']);

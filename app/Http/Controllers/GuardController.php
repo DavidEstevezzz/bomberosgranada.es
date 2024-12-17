@@ -118,6 +118,60 @@ class GuardController extends Controller
     return response()->json($guards);
 }
 
+public function updateComments(Request $request)
+{
+    // Validar la entrada
+    $request->validate([
+        'id_brigada' => 'required|exists:guards,id_brigada',
+        'date' => 'required|date',
+        'comentarios' => 'required|string',
+    ]);
+
+    // Buscar la guardia por fecha y brigada
+    $guard = Guard::where('id_brigada', $request->id_brigada)
+                  ->where('date', $request->date)
+                  ->first();
+
+    if (!$guard) {
+        return response()->json(['message' => 'Guardia no encontrada'], 404);
+    }
+
+    // Actualizar comentarios
+    $guard->comentarios = $request->comentarios;
+    $guard->save();
+
+    return response()->json([
+        'message' => 'Comentarios actualizados con éxito',
+        'comentarios' => $guard->comentarios
+    ], 200);
+}
+
+
+public function getGuardByBrigadeAndDate(Request $request)
+{
+    // Validar los parámetros
+    $request->validate([
+        'id_brigada' => 'required|exists:guards,id_brigada',
+        'date' => 'required|date',
+    ]);
+
+    // Buscar la guardia por id_brigada y fecha
+    $guard = Guard::where('id_brigada', $request->id_brigada)
+                  ->where('date', $request->date)
+                  ->first();
+
+    if (!$guard) {
+        return response()->json(['message' => 'Guardia no encontrada'], 404);
+    }
+
+    return response()->json([
+        'comentarios' => $guard->comentarios,
+        'guard' => $guard
+    ], 200);
+}
+
+
+
 // public function availableFirefighters(Request $request)
 // {
     // return response()->json(['message' => 'Route accessed successfully']);

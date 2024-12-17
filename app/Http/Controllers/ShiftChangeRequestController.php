@@ -7,6 +7,8 @@ use App\Models\Firefighters_assignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use App\Mail\ShiftChangeStatusUpdatedMail;
+use Illuminate\Support\Facades\Mail;
 
 class ShiftChangeRequestController extends Controller
 {
@@ -48,45 +50,59 @@ class ShiftChangeRequestController extends Controller
         return response()->json($shiftChangeRequest, 201);
     }
 
-    public function update(Request $request, $id)
-    {
+    
 
-        Log::info('Valor de turno recibido:', ['turno' => $request->turno]);
+public function update(Request $request, $id)
+{
+    Log::info('Valor de turno recibido:', ['turno' => $request->turno]);
 
-        $rules = [
-            'estado' => 'required|in:rechazado,aceptado_por_empleados,en_tramite,aceptado'
-        ];
+    $rules = [
+        'estado' => 'required|in:rechazado,aceptado_por_empleados,en_tramite,aceptado'
+    ];
 
-        $validator = Validator::make($request->all(), $rules);
+    $validator = Validator::make($request->all(), $rules);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 400);
-        }
-
-        $shiftChangeRequest = ShiftChangeRequest::find($id);
-
-        if (!$shiftChangeRequest) {
-            return response()->json(['message' => 'Shift change request not found'], 404);
-        }
-
-        $oldEstado = $shiftChangeRequest->estado;
-
-        // Actualizar solo el estado
-        $shiftChangeRequest->estado = $request->estado;
-        $shiftChangeRequest->save();
-
-        // Si el estado es "aceptado", crear asignaciones
-        if ($shiftChangeRequest->estado === 'aceptado') {
-            $this->createAssignments($shiftChangeRequest);
-        }
-
-        // Si el estado ha cambiado de "aceptado" a "rechazado", eliminar asignaciones
-        if ($oldEstado === 'aceptado' && $shiftChangeRequest->estado === 'rechazado') {
-            $this->deleteAssignments($shiftChangeRequest);
-        }
-
-        return response()->json($shiftChangeRequest, 200);
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 400);
     }
+
+    $shiftChangeRequest = ShiftChangeRequest::find($id);
+
+    if (!$shiftChangeRequest) {
+        return response()->json(['message' => 'Shift change request not found'], 404);
+    }
+
+    $oldEstado = $shiftChangeRequest->estado;
+
+    // Actualizar solo el estado
+    $shiftChangeRequest->estado = $request->estado;
+    $shiftChangeRequest->save();
+
+    // Si el estado es "aceptado", crear asignaciones
+    if ($shiftChangeRequest->estado === 'aceptado') {
+        $this->createAssignments($shiftChangeRequest);
+    }
+
+    // Si el estado ha cambiado de "aceptado" a "rechazado", eliminar asignaciones
+    if ($oldEstado === 'aceptado' && $shiftChangeRequest->estado === 'rechazado') {
+        $this->deleteAssignments($shiftChangeRequest);
+    }
+
+    // Enviar notificación a los dos empleados
+    $empleado1 = $shiftChangeRequest->empleado1;
+    $empleado2 = $shiftChangeRequest->empleado2;
+
+    if ($empleado1 && $empleado1->email) {
+        Mail::to($empleado1->email)->send(new ShiftChangeStatusUpdatedMail($shiftChangeRequest, $request->estado));
+    }
+
+    if ($empleado2 && $empleado2->email) {
+        Mail::to($empleado2->email)->send(new ShiftChangeStatusUpdatedMail($shiftChangeRequest, $request->estado));
+    }
+
+    return response()->json($shiftChangeRequest, 200);
+}
+
 
     private function createAssignments($shiftChangeRequest)
     {

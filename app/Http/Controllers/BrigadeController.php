@@ -131,10 +131,8 @@ class BrigadeController extends Controller
         // Obtener asignaciones el mismo día
         $sameDayAssignments = Firefighters_assignment::where('id_empleado', $user->id_empleado)
             ->whereDate('fecha_ini', '=', $fecha)
-            ->orderByRaw("FIELD(turno, 'Mañana', 'Tarde', 'Noche')")
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get();
-
-        Log::info("Asignaciones del mismo día para el usuario con ID {$user->id_empleado} el {$fecha}:", ['asignaciones' => $sameDayAssignments->toArray()]);
 
         // Buscar última asignación previa a la fecha
         $lastAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)

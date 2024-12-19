@@ -189,8 +189,11 @@ class BrigadeController extends Controller
         'firefighters' => $filteredUsers->values()->toArray()
     ]);
 
-    return response()->json($filteredUsers->values());
-}
+    return response()->json([
+        'brigade' => $brigade,
+        'firefighters' => $filteredUsers->values(),
+        'fecha' => $fecha,
+    ]);}
 
 
 

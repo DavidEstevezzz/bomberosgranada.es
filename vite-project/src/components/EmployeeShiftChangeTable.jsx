@@ -117,6 +117,7 @@ const EmployeeShiftChangeTable = ({ user }) => {
               <th className="py-3 px-6">Bombero 1</th>
               <th className="py-3 px-6">Bombero 2</th>
               <th className="py-3 px-6">Fecha</th>
+              <th className="py-3 px-6">Turno</th>
               <th className="py-3 px-6">Estado</th>
               {showActionsColumn && <th className="py-3 px-6">Acciones</th>}
             </tr>
@@ -138,6 +139,7 @@ const EmployeeShiftChangeTable = ({ user }) => {
                   {request.empleado2?.nombre} {request.empleado2?.apellido}
                 </td>
                 <td className="py-4 px-6">{dayjs(request.fecha).format('DD-MM-YYYY')}</td>
+                <td className="py-4 px-6">{request.turno}</td>
                 <td className="py-2 px-2">{formatEstado(request.estado)}</td>
                 {showActionsColumn && (
                   <td className="py-4 px-6 flex justify-center space-x-2">

@@ -23,32 +23,47 @@ class ShiftChangeRequestController extends Controller
         $rules = [
             'id_empleado1' => 'required|exists:users,id_empleado',
             'id_empleado2' => 'required|exists:users,id_empleado',
-            'brigada1' => 'required|integer|exists:brigades,id_brigada',
-            'brigada2' => 'required|integer|exists:brigades,id_brigada',
             'fecha' => 'required|date',
             'turno' => 'required|in:Mañana,Tarde,Noche,Dia Completo,Mañana y tarde,Tarde y noche',
             'motivo' => 'required|string',
             'estado' => 'required|in:rechazado,aceptado_por_empleados,en_tramite,aceptado'
         ];
-
+    
         $validator = Validator::make($request->all(), $rules);
-
+    
         if ($validator->fails()) {
             return response()->json($validator->errors(), 400);
         }
-
-        $shiftChangeRequest = ShiftChangeRequest::create($request->only([
-            'id_empleado1', 
-            'id_empleado2', 
-            'brigada1', 
-            'brigada2', 
-            'fecha', 
-            'turno', 
-            'motivo', 
-            'estado'
-        ]));
+    
+        // Obtener asignaciones más relevantes para la fecha
+        $assignments = $this->getLatestBrigadeAssignments($request->fecha);
+    
+        // Determinar las brigadas para los empleados involucrados
+        $brigada1 = $assignments->firstWhere('id_empleado', $request->id_empleado1)?->id_brigada_destino;
+        $brigada2 = $assignments->firstWhere('id_empleado', $request->id_empleado2)?->id_brigada_destino;
+    
+        // Validar que se encontraron las brigadas
+        if (!$brigada1 || !$brigada2) {
+            return response()->json([
+                'message' => 'No se encontraron asignaciones de brigada para los empleados en la fecha proporcionada.'
+            ], 400);
+        }
+    
+        // Crear solicitud de cambio de guardia
+        $shiftChangeRequest = ShiftChangeRequest::create([
+            'id_empleado1' => $request->id_empleado1,
+            'id_empleado2' => $request->id_empleado2,
+            'brigada1' => $brigada1,
+            'brigada2' => $brigada2,
+            'fecha' => $request->fecha,
+            'turno' => $request->turno,
+            'motivo' => $request->motivo,
+            'estado' => $request->estado,
+        ]);
+    
         return response()->json($shiftChangeRequest, 201);
     }
+    
 
     
 
@@ -243,6 +258,18 @@ private function determinarTurnoInicial($turnoOriginal)
         default:
             return $turnoOriginal; // Para los turnos simples (Mañana, Tarde, Noche)
     }
+}
+
+public function getLatestBrigadeAssignments($date)
+{
+    $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
+        ->orderByRaw("CASE WHEN fecha_ini = '$date' THEN 0 ELSE 1 END") // Priorizar asignaciones del día actual
+        ->orderBy('fecha_ini', 'desc') // Luego ordenar descendentemente por fecha
+        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')") // Priorizar turnos
+        ->get()
+        ->unique('id_empleado'); // Eliminar duplicados por empleado
+    
+    return $assignments;
 }
 
 }

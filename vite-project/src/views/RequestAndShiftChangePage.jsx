@@ -224,8 +224,8 @@ const RequestAndShiftChangePage = () => {
               <tbody>
                 {shiftChangeRequests.map((request) => (
                   <tr key={request.id} className="border-b border-gray-700">
-                    <td className="py-2 px-4">{request.empleado1?.nombre}</td>
-                    <td className="py-2 px-4">{request.empleado2?.nombre}</td>
+                    <td className="py-2 px-4">{request.empleado1?.nombre} {request.empleado1?.apellido}</td>
+                    <td className="py-2 px-4">{request.empleado2?.nombre} {request.empleado2?.apellido}</td>
                     <td className="py-2 px-4">{request.fecha}</td>
                     <td className="py-2 px-4">{request.turno}</td>
                     <td className="py-2 px-4">{normalizeState(request.estado)}</td>

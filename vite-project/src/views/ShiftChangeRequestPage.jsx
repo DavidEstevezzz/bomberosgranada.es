@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import dayjs from 'dayjs';
 import UsuariosApiService from '../services/UsuariosApiService';
 import ShiftChangeRequestApiService from '../services/ShiftChangeRequestApiService';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -19,36 +18,34 @@ const ShiftChangeRequestPage = () => {
   const [success, setSuccess] = useState(null);
 
   useEffect(() => {
-    const fetchEmployeesByPuesto = async () => {
-      if (!user?.puesto) {
-        return;
-      }
+    const fetchAndFilterEmployees = async () => {
+      if (!user?.puesto) return;
 
       try {
+        // Fetch employees
         const response = await UsuariosApiService.bomberosPorPuesto(user.puesto);
-        setEmployees(response.data);
-        setFilteredEmployees(response.data);
+        const allEmployees = response.data;
+        setEmployees(allEmployees);
+
+        // Filter employees based on the search term
+        const filtered = allEmployees.filter(emp =>
+          `${emp.nombre} ${emp.apellido}`.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredEmployees(filtered);
       } catch (error) {
         console.error('Error fetching employees by puesto:', error);
         setError('Error al obtener los empleados por puesto.');
       }
     };
 
-    fetchEmployeesByPuesto();
-  }, [user]);
-
-  useEffect(() => {
-    const filtered = employees.filter(emp =>
-      `${emp.nombre} ${emp.apellido}`.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredEmployees(filtered);
-  }, [searchTerm, employees]);
+    fetchAndFilterEmployees();
+  }, [user, searchTerm]); // Combina la lógica de fetching y filtrado en un solo efecto.
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-
+  
     try {
       const requestData = {
         id_empleado1: user.id_empleado,
@@ -58,14 +55,33 @@ const ShiftChangeRequestPage = () => {
         motivo,
         estado: 'en_tramite',
       };
-
-      await ShiftChangeRequestApiService.createRequest(requestData);
+  
+      // Log para verificar los datos enviados
+      console.log('Datos enviados en la solicitud:', requestData);
+  
+      const response = await ShiftChangeRequestApiService.createRequest(requestData);
+  
+      // Log para verificar la respuesta exitosa del servidor
+      console.log('Respuesta del servidor (éxito):', response);
+  
       setSuccess('Solicitud de cambio de guardia enviada con éxito.');
     } catch (error) {
       console.error('Error al enviar la solicitud de cambio de guardia:', error);
+  
+      // Log para capturar la respuesta del servidor en caso de error
+      if (error.response) {
+        console.error('Respuesta del servidor (error):', error.response);
+        console.error('Datos del error:', error.response.data);
+        console.error('Estado HTTP:', error.response.status);
+        console.error('Encabezados del error:', error.response.headers);
+      } else {
+        console.error('Error sin respuesta del servidor:', error);
+      }
+  
       setError('Error al enviar la solicitud de cambio de guardia.');
     }
   };
+  
 
   return (
     <div className={`max-w-4xl mx-auto p-6 rounded-lg ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>

@@ -190,11 +190,6 @@ class FirefighterAssignmentController extends Controller
     
         return $unavailableFirefighterIds;
     }
-    
-
-
-
-    
 
 
 }

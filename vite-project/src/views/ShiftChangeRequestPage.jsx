@@ -159,7 +159,7 @@ const ShiftChangeRequestPage = () => {
 
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2" htmlFor="motivo">
-            Motivo del Cambio
+            Observaciones
           </label>
           <textarea
             id="motivo"
@@ -167,7 +167,7 @@ const ShiftChangeRequestPage = () => {
             onChange={(e) => setMotivo(e.target.value)}
             className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'}`}
             rows="4"
-            required
+            
           />
         </div>
 

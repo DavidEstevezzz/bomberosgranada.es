@@ -52,7 +52,16 @@ const EmployeeSalary = ({ user }) => {
           const findLastAssignment = (date) => {
             return currentMonthAssignments
               .filter(assignment => dayjs(assignment.fecha_ini).isSameOrBefore(date))
-              .sort((a, b) => dayjs(b.fecha_ini).diff(dayjs(a.fecha_ini)))[0];
+              .sort((a, b) => {
+                // Comparar por fecha primero (descendente)
+                const dateComparison = dayjs(b.fecha_ini).diff(dayjs(a.fecha_ini));
+                if (dateComparison !== 0) {
+                  return dateComparison;
+                }
+                // Si las fechas son iguales, priorizar por turno (Noche > Tarde > Mañana)
+                const turnPriority = ['Noche', 'Tarde', 'Mañana'];
+                return turnPriority.indexOf(a.turno) - turnPriority.indexOf(b.turno);
+              })[0]; // Retorna la primera asignación en orden
           };
 
           // Filter guards by checking last assignment before each guard date

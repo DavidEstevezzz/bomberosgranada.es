@@ -19,17 +19,28 @@ const EmployeeSalary = ({ user }) => {
 
   // Estado para el mes actual mostrado
   const [currentMonth, setCurrentMonth] = useState(dayjs().startOf('month'));
+  const [dataReady, setDataReady] = useState(false); // Nuevo estado para controlar si los datos están listos
 
   useEffect(() => {
+
+    if (!user || !user.id_empleado) {
+      console.log('El usuario aún no está listo. Esperando...');
+      return; // No ejecutar nada hasta que el usuario esté disponible
+    }
+    
     const fetchAssignmentsAndGuards = async () => {
       try {
+        console.log('Inicio de fetchAssignmentsAndGuards');
+        setDataReady(false); // Marcar como no listo
         const monthStart = currentMonth.format('YYYY-MM-DD');
         const monthEnd = currentMonth.endOf('month').format('YYYY-MM-DD');
 
+        console.log('Rango del mes actual:', { monthStart, monthEnd });
+
         // Fetch all assignments
         const assignmentResponse = await AssignmentsApiService.getAssignments();
+        console.log('Asignaciones obtenidas:', assignmentResponse.data);
 
-        // Filter assignments for the current user
         const currentMonthAssignments = assignmentResponse.data.filter(assignment => {
           const assignmentDate = dayjs(assignment.fecha_ini).format('YYYY-MM-DD');
           const isCorrectUser = assignment.id_empleado === user.id_empleado;
@@ -38,54 +49,72 @@ const EmployeeSalary = ({ user }) => {
           return isCorrectUser && isInCurrentMonth;
         });
 
+        console.log('Asignaciones del usuario en el mes actual:', currentMonthAssignments);
+
         setAssignments(currentMonthAssignments);
 
-        // Collect unique brigade IDs from assignments
         const brigades = [...new Set(currentMonthAssignments.map(a => a.id_brigada_destino))];
+        console.log('Brigadas únicas obtenidas de las asignaciones:', brigades);
 
         if (brigades.length > 0) {
-          // Fetch guards for the current month using brigade IDs
           const guardResponse = await GuardsApiService.getGuardsByBrigades(brigades, monthStart, monthEnd);
           const allGuards = guardResponse.data;
 
-          // Function to find the last assignment before a specific date
+          console.log('Guardias obtenidas para las brigadas:', allGuards);
+
           const findLastAssignment = (date) => {
-            return currentMonthAssignments
-              .filter(assignment => dayjs(assignment.fecha_ini).isSameOrBefore(date))
-              .sort((a, b) => {
-                // Comparar por fecha primero (descendente)
-                const dateComparison = dayjs(b.fecha_ini).diff(dayjs(a.fecha_ini));
-                if (dateComparison !== 0) {
-                  return dateComparison;
-                }
-                // Si las fechas son iguales, priorizar por turno (Noche > Tarde > Mañana)
-                const turnPriority = ['Noche', 'Tarde', 'Mañana'];
-                return turnPriority.indexOf(a.turno) - turnPriority.indexOf(b.turno);
-              })[0]; // Retorna la primera asignación en orden
+            if (!currentMonthAssignments || currentMonthAssignments.length === 0) {
+              console.warn('No hay asignaciones disponibles para calcular.');
+              return null;
+            }
+
+            const filteredAssignments = currentMonthAssignments.filter(assignment => dayjs(assignment.fecha_ini).isSameOrBefore(date));
+            console.log(`Asignaciones filtradas para la fecha ${date}:`, filteredAssignments);
+
+            const sortedAssignments = filteredAssignments.sort((a, b) => {
+              const dateComparison = dayjs(b.fecha_ini).diff(dayjs(a.fecha_ini));
+              if (dateComparison !== 0) {
+                return dateComparison;
+              }
+              const turnPriority = ['Noche', 'Tarde', 'Mañana'];
+              return turnPriority.indexOf(a.turno) - turnPriority.indexOf(b.turno);
+            });
+
+            console.log('Asignaciones ordenadas por prioridad:', sortedAssignments);
+            return sortedAssignments[0]; // Retorna la primera asignación en orden
           };
 
-          // Filter guards by checking last assignment before each guard date
           const guardsForAssignments = allGuards.filter(guard => {
             const guardDate = dayjs(guard.date);
             const lastAssignment = findLastAssignment(guardDate);
 
-            return lastAssignment && lastAssignment.id_brigada_destino === guard.id_brigada;
+            const isValid = lastAssignment && lastAssignment.id_brigada_destino === guard.id_brigada;
+            console.log('Validación de guardia:', { guardDate, lastAssignment, isValid });
+
+            return isValid;
           });
 
-          // Filter future guards using the same logic
+          console.log('Guardias válidas para las asignaciones:', guardsForAssignments);
+
           const futureGuardsForAssignments = allGuards.filter(guard => {
             const guardDate = dayjs(guard.date);
             if (!guardDate.isSameOrAfter(dayjs())) return false;
             const lastAssignment = findLastAssignment(guardDate);
 
-            return lastAssignment && lastAssignment.id_brigada_destino === guard.id_brigada;
+            const isValidFuture = lastAssignment && lastAssignment.id_brigada_destino === guard.id_brigada;
+            console.log('Validación de guardia futura:', { guardDate, lastAssignment, isValidFuture });
+
+            return isValidFuture;
           });
+
+          console.log('Guardias futuras válidas:', futureGuardsForAssignments);
 
           setGuards(guardsForAssignments);
           setFutureGuards(futureGuardsForAssignments);
         }
 
         setError(null);
+        setDataReady(true); // Marcar como listo
       } catch (error) {
         console.error('Error fetching assignments and guards:', error);
         setError('Failed to load data');
@@ -116,7 +145,7 @@ const EmployeeSalary = ({ user }) => {
     setCurrentMonth(prev => prev.add(1, 'month'));
   };
 
-  if (loading) return <div>Cargando...</div>;
+  if (loading || !dataReady) return <div>Cargando...</div>; // Asegurar que los datos están listos
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -154,7 +183,7 @@ const EmployeeSalary = ({ user }) => {
           <p className="text-gray-500">No hay asignaciones en este mes.</p>
         )}
       </div>
-
+      {/* Tabla de guardias */}
       <div className="mt-8">
         <h3 className="text-lg font-semibold mb-2">Guardias para las Asignaciones</h3>
         {guards.length > 0 ? (
@@ -175,7 +204,6 @@ const EmployeeSalary = ({ user }) => {
                     <td className="py-4 px-6">{guard.brigade ? guard.brigade.nombre : guard.id_brigada}</td>
                   </tr>
                 ))}
-              
               </tbody>
             </table>
           </div>
@@ -183,8 +211,6 @@ const EmployeeSalary = ({ user }) => {
           <p className="text-gray-500">No hay guardias para las asignaciones en este mes.</p>
         )}
       </div>
-
-      
     </div>
   );
 };

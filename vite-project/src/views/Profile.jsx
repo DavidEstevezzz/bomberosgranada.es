@@ -17,6 +17,8 @@ const Profile = () => {
   const { darkMode } = useDarkMode();
   const [vacationDaysRemaining, setVacationDaysRemaining] = useState(null);
   const id_brigada_vacaciones = 10;
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
+
 
   // Estado para el cambio de contraseña
   const [currentPassword, setCurrentPassword] = useState('');
@@ -48,6 +50,7 @@ const Profile = () => {
         }
 
         setUser(userResponse.data);
+        setIsUserLoaded(true); // Marcar que el usuario está cargado
 
         const settingsResponse = await SettingsApiService.getSetting(2);
         const maxVacationDays = parseInt(settingsResponse.data.valor);

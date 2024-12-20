@@ -11,6 +11,8 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
         id_brigada_destino: '',
     });
     const [usuarios, setUsuarios] = useState([]);
+    const [filteredUsuarios, setFilteredUsuarios] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [brigades, setBrigades] = useState([]);
 
     useEffect(() => {
@@ -18,7 +20,7 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
             const fetchUsuarios = async () => {
                 try {
                     const response = await UsuariosApiService.getUsuarios();
-                    const bomberos = response.data.filter(usuario => usuario.type === 'bombero' || usuario.type === 'mando'); // Filtrar empleados con rol 'bombero' o 'mando'
+                    const bomberos = response.data.filter(usuario => usuario.type === 'bombero' || usuario.type === 'mando');
                     setUsuarios(bomberos);
                 } catch (error) {
                     console.error('Failed to fetch users:', error);
@@ -37,7 +39,14 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
             fetchUsuarios();
             fetchBrigades();
         }
-    }, [show]); // Solo ejecuta el efecto cuando 'show' cambia
+    }, [show]);
+
+    useEffect(() => {
+        const filtered = usuarios.filter(usuario =>
+            `${usuario.nombre} ${usuario.apellido}`.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredUsuarios(filtered);
+    }, [searchTerm, usuarios]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -59,7 +68,7 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
         }
     };
 
-    if (!show) return null; // No renderizar el modal si no está abierto
+    if (!show) return null;
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-50">
@@ -68,14 +77,23 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
                 <h2 className="text-2xl font-bold text-white mb-4">Añadir Asignación</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <input type="date" name="fecha_ini" placeholder="Fecha Inicio" onChange={handleChange} required className="w-full p-2 rounded bg-gray-700 text-white" />
-                    <select name="id_empleado" onChange={handleChange} required className="w-full p-2 rounded bg-gray-700 text-white">
-                        <option value="">Seleccione un Empleado</option>
-                        {usuarios.map(usuario => (
-                            <option key={usuario.id_empleado} value={usuario.id_empleado}>
-                                {usuario.nombre} {usuario.apellido}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="space-y-4">
+                        <input
+                            type="text"
+                            placeholder="Buscar empleado"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full p-2 rounded bg-gray-700 text-white"
+                        />
+                        <select name="id_empleado" onChange={handleChange} required className="w-full p-2 rounded bg-gray-700 text-white">
+                            <option value="">Seleccione un Empleado</option>
+                            {filteredUsuarios.map(usuario => (
+                                <option key={usuario.id_empleado} value={usuario.id_empleado}>
+                                    {usuario.nombre} {usuario.apellido}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                     <select name="id_brigada_origen" onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white">
                         <option value="">Seleccione Brigada Origen</option>
                         {brigades.map(brigada => (

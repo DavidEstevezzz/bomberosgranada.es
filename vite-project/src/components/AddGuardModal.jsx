@@ -22,7 +22,7 @@ const AddGuardModal = ({ date, isOpen, onClose, onSave, brigades }) => {
                 date: new Date(date),
                 id_brigada: '',
                 id_salario: '',
-                tipo: guard.tipo || 'Festivo víspera',
+                tipo: guard.tipo || 'Laborable',
             });
             setIsSubmitting(false);
         }
@@ -86,18 +86,6 @@ const AddGuardModal = ({ date, isOpen, onClose, onSave, brigades }) => {
                                     </option>
                                 ))}
                             </select>
-                        </div>
-                        <div>
-                            <label htmlFor="id_salario" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>ID Salario</label>
-                            <input
-                                type="text"
-                                name="id_salario"
-                                id="id_salario"
-                                value={guard.id_salario}
-                                onChange={handleChange}
-                                className={`bg-gray-50 border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500' : 'border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'}`}
-                                required
-                            />
                         </div>
                         <div>
                             <label htmlFor="tipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Tipo</label>

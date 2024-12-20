@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
 import UsuariosApiService from '../services/UsuariosApiService';
 import BrigadesApiService from '../services/BrigadesApiService';
@@ -9,10 +9,12 @@ const AssignmentsTable = ({
   setSelectedAssignment,
   setShowEditModal,
   handleDelete,
-  darkMode, // Recibimos darkMode como prop
+  darkMode,
 }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [brigades, setBrigades] = useState([]);
+  const [filteredAssignments, setFilteredAssignments] = useState(assignments);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -39,6 +41,14 @@ const AssignmentsTable = ({
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const filtered = assignments.filter((assignment) => {
+      const usuarioNombre = getUsuarioNombre(assignment.id_empleado).toLowerCase();
+      return usuarioNombre.includes(searchTerm.toLowerCase());
+    });
+    setFilteredAssignments(filtered);
+  }, [searchTerm, assignments]);
+
   const getUsuarioNombre = (id_empleado) => {
     const usuario = usuarios.find((usuario) => usuario.id_empleado === id_empleado);
     return usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Desconocido';
@@ -54,6 +64,18 @@ const AssignmentsTable = ({
 
   return (
     <div className="overflow-x-auto">
+      {/* Buscador */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Buscar por usuario"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className={`w-full px-4 py-2 rounded ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'}`}
+        />
+      </div>
+
+      {/* Tabla */}
       <table
         className={`w-full text-left border-collapse rounded-lg ${
           darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-900'
@@ -69,8 +91,8 @@ const AssignmentsTable = ({
           </tr>
         </thead>
         <tbody>
-          {assignments.length > 0 ? (
-            assignments.map((assignment) => (
+          {filteredAssignments.length > 0 ? (
+            filteredAssignments.map((assignment) => (
               <tr
                 key={assignment.id_asignacion}
                 className={`border-b ${

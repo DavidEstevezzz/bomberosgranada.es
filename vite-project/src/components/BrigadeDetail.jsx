@@ -28,6 +28,13 @@ const BrigadeDetail = () => {
     1: { Subinspector: 1, Oficial: 1, Operador: 2, Conductor: 3, Bombero: 6 },
     2: { Subinspector: 1, Oficial: 1, Operador: 0, Conductor: 3, Bombero: 6 },
   };
+  const puestoPriority = {
+    Operador: 1,
+    Subinspector: 2,
+    Oficial: 3,
+    Conductor: 4,
+    Bombero: 5,
+  };
 
   useEffect(() => {
     const fetchBrigadeDetails = async () => {
@@ -156,14 +163,17 @@ const BrigadeDetail = () => {
   };
 
   const filterFirefightersByShift = (shift) => {
-    return firefighters.filter(firefighter =>
-      firefighter.turno === shift ||
-      firefighter.turno === 'Día completo' ||
-      (shift === 'Mañana' && firefighter.turno === 'Mañana y tarde') ||
-      (shift === 'Tarde' && ['Mañana y tarde', 'Tarde y noche'].includes(firefighter.turno)) ||
-      (shift === 'Noche' && firefighter.turno === 'Tarde y noche')
-    );
+    return firefighters
+      .filter(firefighter =>
+        firefighter.turno === shift ||
+        firefighter.turno === 'Día completo' ||
+        (shift === 'Mañana' && firefighter.turno === 'Mañana y tarde') ||
+        (shift === 'Tarde' && ['Mañana y tarde', 'Tarde y noche'].includes(firefighter.turno)) ||
+        (shift === 'Noche' && firefighter.turno === 'Tarde y noche')
+      )
+      .sort((a, b) => puestoPriority[a.puesto] - puestoPriority[b.puesto]); // Ordenar por prioridad
   };
+  
 
   const exportToPDF = () => {
     const doc = new jsPDF();

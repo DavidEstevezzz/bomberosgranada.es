@@ -9,18 +9,17 @@ import dayjs from 'dayjs';
 
 const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
   const [formValues, setFormValues] = useState({});
-
   const [employees, setEmployees] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
   const [salaries, setSalaries] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [errorMessages, setErrorMessages] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { darkMode } = useDarkMode();
 
-  // Resetear el estado del formulario y los errores cuando el modal se abre/cierra
   useEffect(() => {
     if (isOpen) {
       fetchData();
-
       setFormValues({
         id_empleado: '',
         date: '',
@@ -28,27 +27,35 @@ const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
         horas_nocturnas: 0,
         id_salario: '',
       });
+      setSearchTerm('');
       setErrorMessages({});
-      setIsSubmitting(false);  // Asegurarse de resetear el estado de envío
+      setIsSubmitting(false);
     }
   }, [isOpen]);
-      
+
+  useEffect(() => {
+    const filtered = employees.filter((employee) => {
+      const fullName = `${employee.nombre} ${employee.apellido}`.toLowerCase();
+      return fullName.includes(searchTerm.toLowerCase());
+    });
+    setFilteredEmployees(filtered);
+  }, [searchTerm, employees]);
+
   const fetchData = async () => {
     try {
-      const employeeResponse = await UsersApiService.getUsuarios();
-      const salaryResponse = await SalariesApiService.getSalaries();
+      const [employeeResponse, salaryResponse] = await Promise.all([
+        UsersApiService.getUsuarios(),
+        SalariesApiService.getSalaries(),
+      ]);
 
       setEmployees(employeeResponse.data);
+      setFilteredEmployees(employeeResponse.data);
       setSalaries(salaryResponse.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
   };
 
-  // Verificar si el modal está abierto
-  if (!isOpen) return null;
-
-  // Manejar cambios en el formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormValues((prevValues) => ({
@@ -57,62 +64,50 @@ const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
     }));
   };
 
-  // Manejar el envío del formulario
   const handleSubmit = async (event) => {
-    event.preventDefault();  // Prevenir comportamiento por defecto
+    event.preventDefault();
 
-    // Bloquear el envío si ya está en proceso
-    if (isSubmitting) {
-      console.log("El formulario ya se está enviando.");
-      return;
-    }
+    if (isSubmitting) return;
 
-    setIsSubmitting(true);  // Bloquear el botón de envío
-    setErrorMessages({});  // Limpiar mensajes de error
-
+    setIsSubmitting(true);
+    setErrorMessages({});
     try {
-      // Formatear la fecha
       const formattedDate = dayjs(formValues.date).format('YYYY-MM-DD');
-
-      const dataToSend = {
-        ...formValues,
-        date: formattedDate,
-      };
-
-      console.log("Datos que se enviarán a la API:", dataToSend);
-
-      // Esperar la respuesta de la API
+      const dataToSend = { ...formValues, date: formattedDate };
       const response = await ExtraHourApiService.createExtraHour(dataToSend);
 
-      console.log('Respuesta de la API:', response.data);
-
-      // Esperar el resultado de onAdd antes de cerrar el modal
-      onAdd();  // Una vez creado el nuevo item mando un evento para que la tabla recargue el listado
-      // Si quisiera enviar la informacion del objeto creado pasaria al evento response.data
-
-      // Cerrar el modal solo después de que todo el proceso esté completo
+      onAdd(response.data);
       onClose();
     } catch (error) {
-      console.error('Error al añadir horas extras:', error);
       if (error.response && error.response.data) {
-        setErrorMessages(error.response.data);  // Establecer mensajes de error de la respuesta
+        setErrorMessages(error.response.data);
       } else {
         setErrorMessages({ general: 'Ocurrió un error.' });
       }
     } finally {
-      console.log("Finalizando el proceso de envío.");
-      setIsSubmitting(false);  // Desbloquear el botón de envío al final de la operación
+      setIsSubmitting(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-full bg-black bg-opacity-50">
       <div className={`p-4 w-full max-w-2xl rounded-lg shadow-lg ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'}`}>
         <div className={`flex justify-between items-center pb-4 mb-4 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-          <h3 className={`text-lg font-semibold`}>Añadir Hora Extra</h3>
+          <h3 className="text-lg font-semibold">Añadir Hora Extra</h3>
           <button onClick={onClose} className={`p-1.5 rounded-lg ${darkMode ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-400 hover:bg-gray-200'}`} disabled={isSubmitting}>
             <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
           </button>
+        </div>
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Buscar empleado"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={`w-full px-4 py-2 rounded ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'}`}
+          />
         </div>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 mb-4 sm:grid-cols-2">
@@ -127,7 +122,7 @@ const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
                 required
               >
                 <option value="">Seleccione un empleado</option>
-                {employees.map(employee => (
+                {filteredEmployees.map(employee => (
                   <option key={employee.id_empleado} value={employee.id_empleado}>
                     {employee.nombre} {employee.apellido}
                   </option>

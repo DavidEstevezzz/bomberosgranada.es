@@ -30,12 +30,12 @@ class AssignmentsApiService {
         return await BaseApiService.get(API_URL2, { date });
     }
 
-    async moveFirefighterToTop(id) {
-        return await BaseApiService.post(`${API_URL}/${id}/move-to-top`);
+    async moveFirefighterToTop(id, column = 'orden') {
+        return await BaseApiService.post(`${API_URL}/${id}/move-to-top/${column}`);
     }
-
-    async moveFirefighterToBottom(id) {
-        return await BaseApiService.post(`${API_URL}/${id}/move-to-bottom`);
+    
+    async moveFirefighterToBottom(id, column = 'orden') {
+        return await BaseApiService.post(`${API_URL}/${id}/move-to-bottom/${column}`);
     }
 }
 

@@ -191,31 +191,33 @@ class FirefighterAssignmentController extends Controller
         return $unavailableFirefighterIds;
     }
 
-    public function moveToTop($id)
+    public function moveToTop($id, $column = 'orden')
 {
-    $minOrder = User::min('orden');
+    $minOrder = User::min($column);
     $firefighter = User::find($id);
 
     if ($firefighter) {
-        $firefighter->orden = $minOrder - 1;
+        $firefighter->$column = $minOrder - 1;
         $firefighter->save();
+        return response()->json(['message' => 'Moved to bottom', 'orden' => $firefighter->$column]);
     }
 
-    return response()->json(['message' => 'Moved to bottom', 'orden' => $firefighter->orden]);
+    return response()->json(['message' => 'Firefighter not found'], 404);
     
 }
 
-public function moveToBottom($id)
+public function moveToBottom($id, $column = 'orden')
 {
-    $maxOrder = User::max('orden');
+    $maxOrder = User::max($column);
     $firefighter = User::find($id);
 
     if ($firefighter) {
-        $firefighter->orden = $maxOrder + 1;
+        $firefighter->$column = $maxOrder + 1;
         $firefighter->save();
+        return response()->json(['message' => 'Moved to top', 'orden' => $firefighter->$column]);
     }
 
-    return response()->json(['message' => 'Moved to top', 'orden' => $firefighter->orden]);
+    return response()->json(['message' => 'Firefighter not found'], 404);
 }
 
 

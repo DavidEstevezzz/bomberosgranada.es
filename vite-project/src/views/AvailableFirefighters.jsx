@@ -9,27 +9,14 @@ import { useStateContext } from '../contexts/ContextProvider';
 const AvailableFirefighters = () => {
   const { darkMode } = useDarkMode();
   const { user } = useStateContext(); // Obtener el usuario del contexto
+
   const [currentDate, setCurrentDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [firefighters, setFirefighters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('');
 
-  useEffect(() => {
-  }, [user]);
-
-  const loadGlobalOrder = (firefightersList) => {
-    const savedOrder = JSON.parse(localStorage.getItem('firefighterOrder')) || [];
-    const updatedOrder = [
-      ...savedOrder,
-      ...firefightersList
-        .filter((f) => !savedOrder.includes(f.id_empleado))
-        .map((f) => f.id_empleado),
-    ];
-    localStorage.setItem('firefighterOrder', JSON.stringify(updatedOrder));
-    return updatedOrder;
-  };
-
+  // 🔄 Cargar Bomberos desde la API
   useEffect(() => {
     const fetchAvailableFirefighters = async () => {
       setLoading(true);
@@ -37,11 +24,8 @@ const AvailableFirefighters = () => {
         const response = await AssignmentsApiService.getAvailableFirefighters(currentDate);
         const fetchedFirefighters = response.data.available_firefighters;
 
-        const globalOrder = loadGlobalOrder(fetchedFirefighters);
-        const orderedFirefighters = globalOrder
-          .map((id) => fetchedFirefighters.find((f) => f.id_empleado === id))
-          .filter((f) => f);
-
+        // Ordenar según la columna 'orden'
+        const orderedFirefighters = fetchedFirefighters.sort((a, b) => b.orden - a.orden);
         setFirefighters(orderedFirefighters);
         setError(null);
       } catch (error) {
@@ -51,9 +35,11 @@ const AvailableFirefighters = () => {
         setLoading(false);
       }
     };
+
     fetchAvailableFirefighters();
   }, [currentDate]);
 
+  // 🔄 Cambiar Fecha
   const handlePreviousDay = () => {
     setCurrentDate(dayjs(currentDate).subtract(1, 'day').format('YYYY-MM-DD'));
   };
@@ -66,44 +52,27 @@ const AvailableFirefighters = () => {
     setCurrentDate(event.target.value);
   };
 
-  const handleMoveToBottom = (id) => {
-    const globalOrder = JSON.parse(localStorage.getItem('firefighterOrder')) || [];
-    const index = globalOrder.indexOf(id);
-
-    if (index !== -1) {
-      globalOrder.splice(index, 1);
-      globalOrder.push(id);
-      localStorage.setItem('firefighterOrder', JSON.stringify(globalOrder));
-
-      setFirefighters((prevFirefighters) => {
-        const updatedList = [
-          ...prevFirefighters.filter((f) => f.id_empleado !== id),
-          prevFirefighters.find((f) => f.id_empleado === id),
-        ];
-        return updatedList;
-      });
+  // 🔼 Mover Bombero Arriba
+  const handleMoveToTop = async (id) => {
+    try {
+      await AssignmentsApiService.moveFirefighterToTop(id);
+      await fetchAvailableFirefighters();
+    } catch (error) {
+      console.error('Failed to move firefighter to top:', error);
     }
   };
 
-  const handleMoveToTop = (id) => {
-    const globalOrder = JSON.parse(localStorage.getItem('firefighterOrder')) || [];
-    const index = globalOrder.indexOf(id);
-
-    if (index !== -1) {
-      globalOrder.splice(index, 1);
-      globalOrder.unshift(id);
-      localStorage.setItem('firefighterOrder', JSON.stringify(globalOrder));
-
-      setFirefighters((prevFirefighters) => {
-        const updatedList = [
-          prevFirefighters.find((f) => f.id_empleado === id),
-          ...prevFirefighters.filter((f) => f.id_empleado !== id),
-        ];
-        return updatedList;
-      });
+  // 🔽 Mover Bombero Abajo
+  const handleMoveToBottom = async (id) => {
+    try {
+      await AssignmentsApiService.moveFirefighterToBottom(id);
+      await fetchAvailableFirefighters();
+    } catch (error) {
+      console.error('Failed to move firefighter to bottom:', error);
     }
   };
 
+  // 🔍 Filtrar Bomberos
   const handleFilterChange = (event) => {
     setFilter(event.target.value);
   };
@@ -112,6 +81,7 @@ const AvailableFirefighters = () => {
     firefighter.puesto.toLowerCase().includes(filter.toLowerCase())
   );
 
+  // 🔄 Estado de Carga
   if (!user) {
     return <div>Cargando usuario...</div>;
   }
@@ -119,6 +89,7 @@ const AvailableFirefighters = () => {
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
+  // 🚀 Renderizar UI
   return (
     <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
       <div className="max-w-4xl mx-auto">

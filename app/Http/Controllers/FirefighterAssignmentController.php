@@ -191,5 +191,32 @@ class FirefighterAssignmentController extends Controller
         return $unavailableFirefighterIds;
     }
 
+    public function moveToTop($id)
+{
+    $maxOrder = User::max('orden');
+    $firefighter = User::find($id);
+
+    if ($firefighter) {
+        $firefighter->orden = $maxOrder + 1;
+        $firefighter->save();
+    }
+
+    return response()->json(['message' => 'Moved to top', 'orden' => $firefighter->orden]);
+}
+
+public function moveToBottom($id)
+{
+    $minOrder = User::min('orden');
+    $firefighter = User::find($id);
+
+    if ($firefighter) {
+        $firefighter->orden = $minOrder - 1;
+        $firefighter->save();
+    }
+
+    return response()->json(['message' => 'Moved to bottom', 'orden' => $firefighter->orden]);
+}
+
+
 
 }

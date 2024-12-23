@@ -29,6 +29,14 @@ class AssignmentsApiService {
     async getAvailableFirefighters(date) {
         return await BaseApiService.get(API_URL2, { date });
     }
+
+    async moveFirefighterToTop(id) {
+        return await BaseApiService.post(`${API_URL}/${id}/move-to-top`);
+    }
+
+    async moveFirefighterToBottom(id) {
+        return await BaseApiService.post(`${API_URL}/${id}/move-to-bottom`);
+    }
 }
 
 export default new AssignmentsApiService();

@@ -39,7 +39,7 @@ const GuardModal = ({ isOpen, onClose, guardDate, setGuards }) => {
     e.preventDefault();
     setLoading(true);
   
-    if (!brigadeId || !salaryId || !type) {
+    if (!brigadeId || !type) {
       console.error('Error: Todos los campos son obligatorios.');
       alert('Por favor, completa todos los campos.');
       setLoading(false);
@@ -51,7 +51,7 @@ const GuardModal = ({ isOpen, onClose, guardDate, setGuards }) => {
     const guard = {
       date: dateUTC.toISOString().slice(0, 10),
       id_brigada: brigadeId,
-      id_salario: salaryId,
+      id_salario: '24',
       tipo: type,
     };
   
@@ -120,25 +120,7 @@ const GuardModal = ({ isOpen, onClose, guardDate, setGuards }) => {
                   ))}
                 </select>
                 
-                <label className={`${darkMode ? 'text-white' : 'text-gray-900'}`} htmlFor="salaryId">Tipo de salario</label>
-                <select
-                  id="salaryId"
-                  className="mt-1 mb-4 p-2 border rounded w-full"
-                  value={salaryId}
-                  onChange={e => setSalaryId(e.target.value)}
-                  required
-                >
-                  <option value="">Selecciona el salario</option>
-                  {salaries.length > 0 ? (
-                    salaries.map(salary => (
-                      <option key={salary.id_salario} value={salary.id_salario}>
-                        {salary.tipo}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="">No hay salarios disponibles</option>
-                  )}
-                </select>
+        
                 
                 <label className={`${darkMode ? 'text-white' : 'text-gray-900'}`} htmlFor="type">Tipo de día</label>
                 <select

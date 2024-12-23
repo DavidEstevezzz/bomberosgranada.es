@@ -73,6 +73,7 @@ public function store(Request $request)
         $user = User::create($data);
 
         if ($user) {
+            
             Log::info('User created successfully', ['user_id' => $user->id_empleado]);
 
             $role = $request->input('type') === 'bombero' ? 'tropa' : $request->input('type');

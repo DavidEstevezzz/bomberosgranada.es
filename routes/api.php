@@ -124,6 +124,9 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::put('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'update']);
 Route::delete('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'destroy']);
 Route::post('/firefighters-assignments', [FirefighterAssignmentController::class, 'store']);
+Route::post('/firefighters/{id}/move-to-top', [FirefighterAssignmentController::class, 'moveToTop']);
+Route::post('/firefighters/{id}/move-to-bottom', [FirefighterAssignmentController::class, 'moveToBottom']);
+
 
 
 

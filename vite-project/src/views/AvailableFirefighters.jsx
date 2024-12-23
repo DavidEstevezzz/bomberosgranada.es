@@ -16,28 +16,49 @@ const AvailableFirefighters = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('');
 
-  // 🔄 Cargar Bomberos desde la API
+  // 🔄 Función para Cargar Bomberos
+  const fetchAvailableFirefighters = async () => {
+    setLoading(true);
+    try {
+      const response = await AssignmentsApiService.getAvailableFirefighters(currentDate);
+      const fetchedFirefighters = response.data.available_firefighters;
+
+      // Ordenar de forma ascendente por la columna 'orden'
+      const orderedFirefighters = fetchedFirefighters.sort((a, b) => a.orden - b.orden);
+      setFirefighters(orderedFirefighters);
+      setError(null);
+    } catch (error) {
+      console.error('Failed to fetch available firefighters:', error);
+      setError('Failed to load available firefighters');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔄 Cargar bomberos al cambiar la fecha
   useEffect(() => {
-    const fetchAvailableFirefighters = async () => {
-      setLoading(true);
-      try {
-        const response = await AssignmentsApiService.getAvailableFirefighters(currentDate);
-        const fetchedFirefighters = response.data.available_firefighters;
-
-        // Ordenar según la columna 'orden'
-        const orderedFirefighters = fetchedFirefighters.sort((a, b) => b.orden - a.orden);
-        setFirefighters(orderedFirefighters);
-        setError(null);
-      } catch (error) {
-        console.error('Failed to fetch available firefighters:', error);
-        setError('Failed to load available firefighters');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAvailableFirefighters();
   }, [currentDate]);
+
+  // 🔼 Mover Bombero Arriba
+  const handleMoveToTop = async (id) => {
+    try {
+      await AssignmentsApiService.moveFirefighterToTop(id);
+      await fetchAvailableFirefighters(); // Vuelve a cargar los datos
+    } catch (error) {
+      console.error('Failed to move firefighter to top:', error);
+    }
+  };
+
+  // 🔽 Mover Bombero Abajo
+  const handleMoveToBottom = async (id) => {
+    try {
+      await AssignmentsApiService.moveFirefighterToBottom(id);
+      await fetchAvailableFirefighters(); // Vuelve a cargar los datos
+    } catch (error) {
+      console.error('Failed to move firefighter to bottom:', error);
+    }
+  };
 
   // 🔄 Cambiar Fecha
   const handlePreviousDay = () => {
@@ -50,26 +71,6 @@ const AvailableFirefighters = () => {
 
   const handleDateChange = (event) => {
     setCurrentDate(event.target.value);
-  };
-
-  // 🔼 Mover Bombero Arriba
-  const handleMoveToTop = async (id) => {
-    try {
-      await AssignmentsApiService.moveFirefighterToTop(id);
-      await fetchAvailableFirefighters();
-    } catch (error) {
-      console.error('Failed to move firefighter to top:', error);
-    }
-  };
-
-  // 🔽 Mover Bombero Abajo
-  const handleMoveToBottom = async (id) => {
-    try {
-      await AssignmentsApiService.moveFirefighterToBottom(id);
-      await fetchAvailableFirefighters();
-    } catch (error) {
-      console.error('Failed to move firefighter to bottom:', error);
-    }
   };
 
   // 🔍 Filtrar Bomberos
@@ -156,17 +157,11 @@ const AvailableFirefighters = () => {
                   <td className="py-4 px-6">{firefighter.puesto}</td>
                   {user.type !== 'bombero' && (
                     <td className="py-4 px-6 flex space-x-2">
-                      <button
-                        onClick={() => handleMoveToTop(firefighter.id_empleado)}
-                        className="bg-green-600 text-white px-4 py-1 rounded flex items-center space-x-1"
-                      >
+                      <button onClick={() => handleMoveToTop(firefighter.id_empleado)} className="bg-green-600 text-white px-4 py-1 rounded flex items-center space-x-1">
                         <FontAwesomeIcon icon={faArrowUp} />
                         <span>Arriba</span>
                       </button>
-                      <button
-                        onClick={() => handleMoveToBottom(firefighter.id_empleado)}
-                        className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1"
-                      >
+                      <button onClick={() => handleMoveToBottom(firefighter.id_empleado)} className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1">
                         <FontAwesomeIcon icon={faArrowDown} />
                         <span>Abajo</span>
                       </button>

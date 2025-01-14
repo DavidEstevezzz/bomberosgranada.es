@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\apiController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Extra_hourController;
 use App\Http\Controllers\ShiftChangeRequestController;
 use App\Http\Controllers\RequestController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\MessageController;
 
 
 // Rutas abiertas sin restricción de roles
@@ -31,6 +33,31 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/{id}', [UserController::class, 'show']);
     Route::put('/users/{id}', [UserController::class, 'update']);
 
+    // Bandeja de entrada
+    Route::get('/messages', [MessageController::class, 'index']);
+
+    // Bandeja de salida
+    Route::get('/messages/sent', [MessageController::class, 'sent']);
+
+    // Ver un mensaje específico
+    Route::get('/messages/{message}', [MessageController::class, 'show']);
+
+    // Enviar un mensaje
+    Route::post('/messages', [MessageController::class, 'store']);
+
+    // Marcar un mensaje como leído
+    Route::patch('/messages/{message}/mark-as-read', [MessageController::class, 'markAsRead']);
+
+    // Eliminar un mensaje (soft delete)
+    Route::delete('/messages/{message}', [MessageController::class, 'destroy']);
+
+    // Restaurar un mensaje eliminado
+    Route::patch('/messages/{id}/restore', [MessageController::class, 'restore']);
+
+    // Buscar mensajes
+    Route::get('/messages/search', [MessageController::class, 'search']);
+
+    Route::get('/messages/{id}/attachment', [MessageController::class, 'downloadAttachment']);
 
 
     Route::get('/parks', [ParkController::class, 'index']);
@@ -73,7 +100,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'show']);
     Route::post('/shift-change-requests', [ShiftChangeRequestController::class, 'store']);
     Route::put('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'update']);
-
 });
 
 // Rutas de Login y Logout (abiertas)
@@ -122,10 +148,10 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::delete('/requests/{id}', [RequestController::class, 'destroy']);
 
     Route::put('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'update']);
-Route::delete('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'destroy']);
-Route::post('/firefighters-assignments', [FirefighterAssignmentController::class, 'store']);
-Route::post('/firefighters-assignments/{id}/move-to-top/{column}', [FirefighterAssignmentController::class, 'moveToTop']);
-Route::post('/firefighters-assignments/{id}/move-to-bottom/{column}', [FirefighterAssignmentController::class, 'moveToBottom']);
+    Route::delete('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'destroy']);
+    Route::post('/firefighters-assignments', [FirefighterAssignmentController::class, 'store']);
+    Route::post('/firefighters-assignments/{id}/move-to-top/{column}', [FirefighterAssignmentController::class, 'moveToTop']);
+    Route::post('/firefighters-assignments/{id}/move-to-bottom/{column}', [FirefighterAssignmentController::class, 'moveToBottom']);
 
 
 

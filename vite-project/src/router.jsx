@@ -27,6 +27,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ForgotPassword from './views/ForgotPassword.jsx';
 import ResetPassword from './views/ResetPassword.jsx';
 import RequestAndShiftChangePage from './views/RequestAndShiftChangePage.jsx';
+import MessagesPage from './views/MessagesPage.jsx';
 
 
 const router = createBrowserRouter([
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
 
       // Mantener las demás rutas abiertas
       { path: '/brigades/:id_brigada', element: <BrigadeDetail /> },
+      {path : '/messages', element: <MessagesPage />},
       { path: 'calendario-norte', element: <CalendarPage /> },
       { path: 'calendario-sur', element: <CalendarPage2 /> },
       { path: 'requerimientos', element: <AvailableFirefighters /> },

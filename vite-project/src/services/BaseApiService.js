@@ -21,6 +21,10 @@ class BaseApiService {
         return this.axiosInstance.delete(url, this.getRequestConfig(queryParams, headers, responseType));
     }
 
+    patch(url, data, queryParams, headers, responseType) {
+        return this.axiosInstance.patch(url, data, this.getRequestConfig(queryParams, headers, responseType));
+    }
+
     getRequestConfig(
         queryParams = {},
         headers = {

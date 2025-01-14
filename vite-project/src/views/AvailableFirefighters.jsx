@@ -1,9 +1,9 @@
-import SortableFirefightersList from './SortableFirefightersList';
+import SortableFirefightersList from '../components/SortableFirefightersList';
 import AssignmentsApiService from '../services/AssignmentsApiService';
 
-const FirefightersByOrder = () => (
+const AvailableFirefighters = () => (
   <SortableFirefightersList
-    title="Bomberos Ordenados por Orden"
+    title="Lista de Rquerimientos 24h"
     fetchData={() => AssignmentsApiService.getAvailableFirefighters()}
     listType="firefighters by order"
     orderColumn="orden"

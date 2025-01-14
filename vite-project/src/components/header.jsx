@@ -9,15 +9,15 @@ import logo from '../assets/logo.png';
 
 const Header = ({ toggleAside }) => {
   const navigate = useNavigate();
-  const { user, setToken, setUser } = useStateContext(); // Asegúrate de obtener `user` del contexto
+  const { user, setToken, setUser } = useStateContext(); 
   const { darkMode, toggleDarkMode } = useDarkMode();
 
   const handleLogout = async () => {
     try {
       await LogApiService.logoutUser();
-      setUser(null); // Limpiar el usuario del contexto
-      setToken(null); // Limpiar el token del contexto y del localStorage
-      navigate('/login'); // Redirigir a la página de inicio de sesión
+      setUser(null); 
+      setToken(null); 
+      navigate('/login'); 
     } catch (error) {
       console.error('Failed to logout:', error);
     }
@@ -40,7 +40,7 @@ const Header = ({ toggleAside }) => {
         <button onClick={toggleDarkMode} className="text-gray-300 hover:text-white focus:outline-none">
           <FontAwesomeIcon icon={darkMode ? faSun : faMoon} className="w-6 h-6" />
         </button>
-        {user && ( // Asegúrate de que `user` existe antes de renderizar el enlace
+        {user && ( 
           <Link to={`/users/${user.id_empleado}`}>
             <img
               src="https://via.placeholder.com/40"

@@ -87,12 +87,12 @@
             <p>{{ $messageData->body }}</p>
 
             @if($messageData->attachment)
-                <p><strong>Adjunto:</strong> 
-                    <a href="{{ asset('storage/' . $messageData->attachment) }}" class="text-blue-500">Descargar Archivo</a>
+                <p><strong>Tiene un archivo adjunto, entre en la web para descargarlo</strong> 
+                    
                 </p>
             @endif
 
-            <a href="{{ url('/messages') }}" class="btn">Ver Mensaje</a>
+            <a href="www.bomberosgranada.es/messages" class="btn">Ver Mensaje</a>
         </div>
         <div class="footer">
             <p>Este es un correo automático generado por el sistema. Si tienes alguna pregunta, no dudes en ponerte en contacto con nosotros.</p>

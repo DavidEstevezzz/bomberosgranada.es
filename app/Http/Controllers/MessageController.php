@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Message;
 use Illuminate\Http\Request;
+use App\Mail\MessageSent;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class MessageController extends Controller
@@ -48,24 +50,28 @@ class MessageController extends Controller
      * Enviar un mensaje.
      */
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'receiver_id' => 'required|exists:users,id_empleado',
-            'subject' => 'required|string|max:255',
-            'body' => 'required|string',
-            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048'       
-         ]);
+{
+    $validated = $request->validate([
+        'receiver_id' => 'required|exists:users,id_empleado',
+        'subject' => 'required|string|max:255',
+        'body' => 'required|string',
+        'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048'       
+    ]);
 
-        $validated['sender_id'] = auth()->id();
+    $validated['sender_id'] = auth()->id();
 
-        if ($request->hasFile('attachment')) {
-            $validated['attachment'] = $request->file('attachment')->store('attachments', 'public');
-        }
-
-        $message = Message::create($validated);
-
-        return response()->json($message, 201);
+    if ($request->hasFile('attachment')) {
+        $validated['attachment'] = $request->file('attachment')->store('attachments', 'public');
     }
+
+    // Crear el mensaje
+    $message = Message::create($validated);
+
+    // Enviar el correo al destinatario
+    Mail::to($message->receiver->email)->send(new MessageSent($message));
+
+    return response()->json($message, 201);
+}
 
     public function downloadAttachment($id)
 {

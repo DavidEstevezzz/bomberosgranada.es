@@ -1,13 +1,13 @@
 import SortableFirefightersList from '../components/SortableFirefightersList';
 import AssignmentsApiService from '../services/AssignmentsApiService';
 
-const AvailableFirefighters = () => (
+const AvailableFirefighters2 = () => (
   <SortableFirefightersList
-    title="Lista de Requerimientos 24h"
+    title="Lista de Requerimientos Parque Sur"
     fetchData={() => AssignmentsApiService.getAvailableFirefighters()}
     listType="firefighters by order"
-    orderColumn="orden"
+    orderColumn="orden_sur"
 />
 );
 
-export default AvailableFirefighters;
+export default AvailableFirefighters2;

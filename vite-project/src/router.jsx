@@ -28,6 +28,7 @@ import ForgotPassword from './views/ForgotPassword.jsx';
 import ResetPassword from './views/ResetPassword.jsx';
 import RequestAndShiftChangePage from './views/RequestAndShiftChangePage.jsx';
 import MessagesPage from './views/MessagesPage.jsx';
+import AvailableFirefightersSouth from './views/AvailableFirefightersSouth.jsx';
 
 
 const router = createBrowserRouter([
@@ -56,6 +57,7 @@ const router = createBrowserRouter([
       { path: 'calendario-sur', element: <CalendarPage2 /> },
       { path: 'requerimientos', element: <AvailableFirefighters /> },
       { path: 'requerimientos-10-horas', element: <AvailableFirefighters2 /> },
+      { path: 'requerimientos-sur', element: <AvailableFirefightersSouth /> },
       { path: 'cambio-guardia', element: <ShiftChangeRequestPage /> },
       { path: 'solicitud', element: <CreateRequestPage /> },
       { path: 'lista-solicitudes', element: <RequestAndShiftChangePage /> },

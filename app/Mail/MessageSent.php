@@ -2,8 +2,9 @@
 
 namespace App\Mail;
 
-use Illuminate\Mail\Mailable;
+use App\Models\UserMessage;
 use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
 class MessageSent extends Mailable
@@ -12,29 +13,18 @@ class MessageSent extends Mailable
 
     public $message;
 
-    /**
-     * Create a new message instance.
-     *
-     * @param $message
-     */
-    public function __construct($message)
+    public function __construct(UserMessage $message)
     {
-        $this->message = $message;  // Mensaje que se está enviando
+        $this->message = $message;
     }
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
     public function build()
     {
-        return $this->subject('Nuevo mensaje recibido')
-                    ->view('emails.messages.sent')
+        return $this->view('emails.sent')
                     ->with([
-                        'subject' => $this->message->subject,
-                        'body' => $this->message->body,
-                        'sender' => $this->message->sender->name,
+                        'messageData' => $this->message,
+                        'sender'  => $this->message->sender,
+                        'receiver' => $this->message->receiver,
                     ]);
     }
 }

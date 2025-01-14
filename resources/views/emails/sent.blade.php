@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -82,14 +81,14 @@
             <h1>Nuevo Mensaje Recibido</h1>
         </div>
         <div class="message-body">
-            <p><strong>De:</strong> {{ $message->sender->name }}</p>
-            <p><strong>Asunto:</strong> {{ $message->subject }}</p>
+            <p><strong>De:</strong> {{ $sender->nombre }} ({{ $sender->email }})</p>
+            <p><strong>Asunto:</strong> {{ $messageData->subject }}</p>
             <p><strong>Mensaje:</strong></p>
-            <p>{{ $message->body }}</p>
+            <p>{{ $messageData->body }}</p>
 
-            @if($message->attachment)
+            @if($messageData->attachment)
                 <p><strong>Adjunto:</strong> 
-                    <a href="{{ $message->attachment }}" class="text-blue-500">Descargar Archivo</a>
+                    <a href="{{ asset('storage/' . $messageData->attachment) }}" class="text-blue-500">Descargar Archivo</a>
                 </p>
             @endif
 

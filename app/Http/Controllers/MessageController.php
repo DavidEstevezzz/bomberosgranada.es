@@ -76,6 +76,7 @@ class MessageController extends Controller
 
     // Obtener la ruta completa al archivo almacenado
     $filePath = public_path('storage/' . $message->attachment);
+    Log::info('File path:', ['path' => $filePath]);
 
     // Verificar si el archivo existe físicamente en el servidor
     if (!file_exists($filePath)) {

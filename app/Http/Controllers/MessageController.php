@@ -91,6 +91,8 @@ class MessageController extends Controller
     // Construir la ruta completa al archivo en el disco 'shared'
     $filePath = storage_path('app/shared/' . $message->attachment); // Usando el disco 'shared'
 
+    Log::info("Ruta de archivo adjunto: " . $filePath);
+
     // Verificar si el archivo realmente existe en el servidor
     if (!file_exists($filePath)) {
         return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);

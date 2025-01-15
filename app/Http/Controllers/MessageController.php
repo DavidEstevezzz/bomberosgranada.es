@@ -6,7 +6,6 @@ use App\Models\UserMessage;
 use Illuminate\Http\Request;
 use App\Mail\MessageSent;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 class MessageController extends Controller
@@ -35,7 +34,12 @@ class MessageController extends Controller
     {
         $this->authorize('view', $message);
 
-        return response()->json($message);
+        $fileExists = $message->attachment && file_exists(public_path('storage/' . $message->attachment));
+
+        return response()->json([
+            'message' => $message,
+            'file_url' => $fileExists ? url('storage/' . $message->attachment) : null,
+        ]);
     }
 
     public function store(Request $request)
@@ -49,8 +53,11 @@ class MessageController extends Controller
 
         $validated['sender_id'] = auth()->id();
 
+        // Almacenar archivo si se proporciona
+        $filePath = null;
         if ($request->hasFile('attachment')) {
-            $validated['attachment'] = $request->file('attachment')->store('attachments', 'public');
+            $filePath = $request->file('attachment')->store('attachments', 'public');
+            $validated['attachment'] = $filePath;
         }
 
         $message = UserMessage::create($validated);
@@ -59,35 +66,32 @@ class MessageController extends Controller
         Log::info('Sender:', ['sender' => $message->sender]);
         Log::info('Receiver:', ['receiver' => $message->receiver]);
 
-        Mail::to($message->receiver->email)->send(new MessageSent($message));
+        // Enviar correo
+        try {
+            Mail::to($message->receiver->email)->send(new MessageSent($message));
+        } catch (\Exception $e) {
+            Log::error("Error enviando correo: " . $e->getMessage());
+        }
 
         return response()->json($message, 201);
     }
 
     public function downloadAttachment(string $id)
-{
-    // Buscar el mensaje por ID
-    $message = UserMessage::find($id);
+    {
+        $message = UserMessage::find($id);
 
-    // Verificar si el mensaje existe y tiene un archivo adjunto asociado
-    if (!$message || !$message->attachment) {
-        return response()->json(['message' => 'Archivo no encontrado'], 404);
+        if (!$message || !$message->attachment) {
+            return response()->json(['message' => 'Archivo no encontrado'], 404);
+        }
+
+        $filePath = public_path('storage/' . $message->attachment);
+
+        if (!file_exists($filePath)) {
+            return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
+        }
+
+        return response()->download($filePath);
     }
-
-    // Obtener la ruta completa al archivo almacenado
-    $filePath = public_path('storage/' . $message->attachment);
-    Log::info('File path:', ['path' => $filePath]);
-
-    // Verificar si el archivo existe físicamente en el servidor
-    if (!file_exists($filePath)) {
-        return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
-    }
-
-    // Responder con el archivo para que el navegador inicie la descarga
-    return response()->download($filePath);
-}
-
-
 
     public function markAsRead(Request $request, $id)
     {

@@ -79,22 +79,27 @@ class MessageController extends Controller
         return response()->json($message, 201);
     }
 
-    public function downloadAttachment(string $id)
-    {
-        $message = UserMessage::find($id);
+    public function downloadAttachment($id)
+{
+    $message = UserMessage::find($id);
 
-        if (!$message || !$message->attachment) {
-            return response()->json(['message' => 'Archivo no encontrado'], 404);
-        }
-
-        $filePath = public_path('storage/' . $message->attachment);
-
-        if (!file_exists($filePath)) {
-            return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
-        }
-
-        return response()->download($filePath);
+    // Verificar que el mensaje exista y que tenga un archivo adjunto
+    if (!$message || !$message->attachment) {
+        return response()->json(['message' => 'Archivo no encontrado'], 404);
     }
+
+    // Construir la ruta completa al archivo en el disco 'shared'
+    $filePath = storage_path('app/shared/' . $message->attachment); // Usando el disco 'shared'
+
+    // Verificar si el archivo realmente existe en el servidor
+    if (!file_exists($filePath)) {
+        return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
+    }
+
+    // Descargar el archivo
+    return response()->download($filePath);
+}
+
 
     public function markAsRead(Request $request, $id)
     {

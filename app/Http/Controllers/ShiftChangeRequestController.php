@@ -20,12 +20,15 @@ class ShiftChangeRequestController extends Controller
 
     public function store(Request $request)
     {
+
+        Log::info('Datos recibidos:', $request->all());
+
         $rules = [
             'id_empleado1' => 'required|exists:users,id_empleado',
             'id_empleado2' => 'required|exists:users,id_empleado',
             'fecha' => 'required|date',
             'turno' => 'required|in:Mañana,Tarde,Noche,Dia Completo,Mañana y tarde,Tarde y noche',
-            'motivo' => 'required|string',
+            'motivo' => 'nullable|string',
             'estado' => 'required|in:rechazado,aceptado_por_empleados,en_tramite,aceptado'
         ];
     

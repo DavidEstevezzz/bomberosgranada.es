@@ -146,34 +146,42 @@ const Users = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id_empleado} className="border-b border-gray-700">
-                  <td className="py-2 px-2 flex items-center space-x-2">
-                    <img src="https://via.placeholder.com/40" alt="Avatar" className="w-10 h-10 rounded-full" />
-                    <div className="flex flex-col">
-                      <span className="font-bold">{user.nombre} {user.apellido}</span>
-                      <span className="text-gray-500 text-sm">{user.email}</span>
-                    </div>
-                  </td>
-                  <td className="py-2 px-2">{user.role_name}</td>
-                  <td className="py-2 px-2">{user.telefono}</td>
-                  <td className="py-2 px-2">{user.puesto}</td>
-                  <td className="py-2 px-2 flex space-x-2">
-                    <button onClick={() => handleEditClick(user)} className="bg-blue-600 text-white px-4 py-1 rounded flex items-center space-x-1">
-                      <FontAwesomeIcon icon={faEdit} />
-                      <span>Editar</span>
-                    </button>
-                    <button className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1">
-                      <FontAwesomeIcon icon={faTrash} />
-                      <span>Borrar</span>
-                    </button>
-                    <button onClick={() => handleDetailClick(user)} className="bg-gray-600 text-white px-4 py-1 rounded flex items-center space-x-1">
-                      <FontAwesomeIcon icon={faInfoCircle} />
-                      <span>Detalle</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filteredUsers.map((user) => {
+                // Extraemos la inicial del nombre
+                const userName = user.nombre || '';
+                const userInitial = userName.charAt(0).toUpperCase();
+                return (
+                  <tr key={user.id_empleado} className="border-b border-gray-700">
+                    <td className="py-2 px-2 flex items-center space-x-2">
+                      {/* Mostrar la inicial del nombre del usuario en un círculo */}
+                      <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-500 text-white text-lg font-bold">
+                        {userInitial}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold">{user.nombre} {user.apellido}</span>
+                        <span className="text-gray-500 text-sm">{user.email}</span>
+                      </div>
+                    </td>
+                    <td className="py-2 px-2">{user.role_name}</td>
+                    <td className="py-2 px-2">{user.telefono}</td>
+                    <td className="py-2 px-2">{user.puesto}</td>
+                    <td className="py-2 px-2 flex space-x-2">
+                      <button onClick={() => handleEditClick(user)} className="bg-blue-600 text-white px-4 py-1 rounded flex items-center space-x-1">
+                        <FontAwesomeIcon icon={faEdit} />
+                        <span>Editar</span>
+                      </button>
+                      <button className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1">
+                        <FontAwesomeIcon icon={faTrash} />
+                        <span>Borrar</span>
+                      </button>
+                      <button onClick={() => handleDetailClick(user)} className="bg-gray-600 text-white px-4 py-1 rounded flex items-center space-x-1">
+                        <FontAwesomeIcon icon={faInfoCircle} />
+                        <span>Detalle</span>
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -51,7 +51,7 @@ const GuardModal = ({ isOpen, onClose, guardDate, setGuards }) => {
     const guard = {
       date: dateUTC.toISOString().slice(0, 10),
       id_brigada: brigadeId,
-      id_salario: '24',
+      id_salario: '16',
       tipo: type,
     };
   

@@ -23,6 +23,9 @@ const Header = ({ toggleAside }) => {
     }
   };
 
+  const userInitial = user?.nombre ? user.nombre.charAt(0).toUpperCase() : '';
+
+
   return (
     <header className={`flex items-center justify-between p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-200 text-black'}`}>
       <div className="flex items-center">
@@ -42,12 +45,11 @@ const Header = ({ toggleAside }) => {
         </button>
         {user && ( 
           <Link to={`/users/${user.id_empleado}`}>
-            <img
-              src="https://via.placeholder.com/40"
-              alt="User Avatar"
-              className="w-10 h-10 rounded-full"
-            />
-          </Link>
+          {/* Mostrar la inicial del nombre del usuario en un círculo */}
+          <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-500 text-white text-lg font-bold">
+            {userInitial}
+          </div>
+        </Link>
         )}
       </div>
     </header>

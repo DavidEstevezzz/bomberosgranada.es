@@ -63,7 +63,7 @@ class RequestController extends Controller
     // Guardar el archivo si se proporciona
     $filePath = null;
     if ($request->hasFile('file')) {
-        $filePath = $request->file('file')->store('files', 'public');
+        $filePath = $request->file('file')->store('files', 'shared');
     }
 
     Log::info('Datos de la solicitud recibidos:', $request->all());
@@ -114,7 +114,7 @@ public function downloadFile(string $id)
     }
 
     // Obtener la ruta completa al archivo almacenado
-    $filePath = public_path('storage/' . $miRequest->file);
+    $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $miRequest->file);
 
     // Verificar si el archivo existe físicamente en el servidor
     if (!file_exists($filePath)) {

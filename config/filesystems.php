@@ -39,7 +39,7 @@ return [
         'shared' => [
         'driver' => 'local',
         'root' => '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage', // Ruta absoluta
-        'url' => env('APP_URL') . '/shared/storage', // URL pública para acceso a los archivos
+        'url' => env('APP_URL') . '/storage', // URL pública para acceso a los archivos
         'visibility' => 'public', // Asegura que los archivos sean públicos
         ],
 

@@ -56,8 +56,11 @@ class MessageController extends Controller
         // Almacenar archivo si se proporciona
         $filePath = null;
         if ($request->hasFile('attachment')) {
-            $filePath = $request->file('attachment')->store('attachments', 'public');
-            $validated['attachment'] = $filePath;
+            $validated['attachment'] = $request->file('attachment')->store('attachments', 'public');
+    
+            // Agregar el log para verificar la ruta del archivo
+            $filePath = $validated['attachment'];
+            Log::info('Archivo adjunto almacenado en: ' . $filePath);
         }
 
         $message = UserMessage::create($validated);

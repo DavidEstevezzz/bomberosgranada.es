@@ -56,7 +56,7 @@ class MessageController extends Controller
         // Almacenar archivo si se proporciona
         $filePath = null;
         if ($request->hasFile('attachment')) {
-            $validated['attachment'] = $request->file('attachment')->store('attachments', 'public');
+            $validated['attachment'] = $request->file('attachment')->store('attachments', 'shared');
     
             // Agregar el log para verificar la ruta del archivo
             $filePath = $validated['attachment'];

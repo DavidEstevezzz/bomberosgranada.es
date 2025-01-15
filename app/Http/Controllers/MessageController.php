@@ -89,7 +89,7 @@ class MessageController extends Controller
     }
 
     // Construir la ruta completa al archivo en el disco 'shared'
-    $filePath = storage_path('app/shared/attachments/' . $message->attachment);
+    $filePath = ('app/shared/attachments/' . $message->attachment);
 
     Log::info("Ruta de archivo adjunto: " . $filePath);
 

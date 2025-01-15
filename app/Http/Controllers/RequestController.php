@@ -64,6 +64,8 @@ class RequestController extends Controller
     $filePath = null;
     if ($request->hasFile('file')) {
         $filePath = $request->file('file')->store('files', 'shared');
+        Log::info("Ruta de archivo adjunto: " . $filePath);
+
     }
 
     Log::info('Datos de la solicitud recibidos:', $request->all());

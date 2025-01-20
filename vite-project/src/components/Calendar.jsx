@@ -115,25 +115,25 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
           let nameColor = '';
           switch (brigadeName) {
             case 'Brigada A':
-              brigadeColor = 'bg-green-300';
-              nameColor = 'text-green-600';
+              brigadeColor = 'bg-green-500';
+              nameColor = 'text-black';
               break;
             case 'Brigada B':
               brigadeColor = 'bg-zinc-50';
-              nameColor = 'text-zinc-600';
+              nameColor = 'text-black';
               break;
             case 'Brigada C':
-              brigadeColor = 'bg-blue-300';
-              nameColor = 'text-blue-600';
+              brigadeColor = 'bg-blue-500';
+              nameColor = 'text-black';
             
               break;
             case 'Brigada D':
-              brigadeColor = 'bg-red-300';
-              nameColor = 'text-red-600';
+              brigadeColor = 'bg-red-600';
+              nameColor = 'text-black';
               break;
             case 'Brigada E':
-              brigadeColor = 'bg-yellow-300';
-              nameColor = 'text-yellow-600';
+              brigadeColor = 'bg-yellow-400';
+              nameColor = 'text-black';
               break;
             case 'Brigada F':
               brigadeColor = 'bg-gray-300';

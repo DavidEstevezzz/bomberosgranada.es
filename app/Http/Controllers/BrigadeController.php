@@ -134,8 +134,6 @@ class BrigadeController extends Controller
             ->orderByRaw("FIELD(turno, 'Mañana', 'Tarde', 'Noche')")
             ->get();
 
-            Log::info("Asignaciones del mismo día para el usuario con ID {$user->id_empleado} el {$fecha}:", ['asignaciones' => $sameDayAssignments->toArray()]);
-
         $assignmentsByTurno = [];
         foreach ($sameDayAssignments as $assignment) {
             $assignmentsByTurno[$assignment->turno] = $assignment;
@@ -149,6 +147,8 @@ class BrigadeController extends Controller
             ->first();
 
         $firefighters = [];
+
+        Log::info("Ultima asignación del bombero con nombre: {$user->nombre} {$user->apellido}", ['last_assignment' => $lastAssignment]);
 
 
         if (isset($assignmentsByTurno['Tarde'])) {

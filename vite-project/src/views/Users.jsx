@@ -99,6 +99,7 @@ const Users = () => {
   
     return (
       (normalizeString(user.nombre).includes(normalizedSearchTerm) ||
+        normalizeString(user.apellido).includes(normalizedSearchTerm) ||
         normalizeString(user.email).includes(normalizedSearchTerm) ||
         normalizeString(user.telefono).includes(normalizedSearchTerm)) &&
       (roleFilter === '' || user.role_name === roleFilter)

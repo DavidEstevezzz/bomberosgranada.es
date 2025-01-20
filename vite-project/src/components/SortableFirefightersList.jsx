@@ -135,7 +135,7 @@ const SortableFirefightersList = ({ title, fetchData, listType, orderColumn }) =
             </tr>
           </thead>
           <tbody>
-            {filteredFirefighters.map((firefighter) => (
+          {filteredFirefighters.map((firefighter, index) => (
               <tr
                 key={firefighter.id_empleado}
                 className={`${
@@ -144,7 +144,7 @@ const SortableFirefightersList = ({ title, fetchData, listType, orderColumn }) =
                     : 'bg-white border-b hover:bg-gray-50'
                 }`}
               >
-                <td className="py-4 px-6">{firefighter.nombre} {firefighter.apellido}</td>
+                <td className="py-4 px-6">{index + 1}. {firefighter.nombre} {firefighter.apellido}</td>
                 <td className="py-4 px-6">{firefighter.telefono}</td>
                 <td className="py-4 px-6">{firefighter.puesto}</td>
                 {user?.type === 'jefe' && (

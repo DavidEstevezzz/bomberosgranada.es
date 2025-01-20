@@ -285,8 +285,9 @@ public function update(Request $request, $id)
     private function determinarTurnoInicial($turnoActual)
     {
         return match ($turnoActual) {
-            'Mañana y tarde' => 'Mañana',
-            'Tarde y noche' => 'Tarde',
+            'Mañana', 'Mañana y tarde' => 'Mañana',
+            'Tarde', 'Tarde y noche' => 'Tarde',
+            'Noche' => 'Noche',
             'Día Completo' => 'Mañana',
             default => $turnoActual,
         };
@@ -295,9 +296,9 @@ public function update(Request $request, $id)
     private function determinarTurnoDevolucion($turnoActual)
     {
         return match ($turnoActual) {
-            'Mañana', 'Mañana y tarde' => 'Noche',
-            'Tarde', 'Tarde y noche' => 'Mañana',
-            'Noche', 'Día Completo' => 'Mañana',
+            'Tarde', 'Mañana y tarde' => 'Noche',
+            'Tarde y noche','Noche', 'Día Completo' => 'Mañana',
+            'Mañana' => 'Tarde',
         };
     }
 

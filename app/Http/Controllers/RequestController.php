@@ -251,6 +251,8 @@ public function update(Request $request, $id)
         // Obtener la brigada original para devolver al empleado a su puesto
         $brigadeOriginal = $this->getOriginalBrigade($miRequest->id_empleado, $miRequest->fecha_ini);
 
+
+
         // Crear la asignación inicial
         Firefighters_assignment::create([
             'id_empleado' => $miRequest->id_empleado,
@@ -260,6 +262,8 @@ public function update(Request $request, $id)
             'fecha_ini' => $miRequest->fecha_ini,
             'turno' => $turnoAsignacion,
         ]);
+
+        Log::info("Asignación inicial - Empleado: {$miRequest->id_empleado}, Brigada Destino: {$brigadeId}, Fecha: {$miRequest->fecha_ini}, Turno: {$turnoAsignacion}");
 
         // Definir la fecha de devolución
         $fechaDevolucion = $this->determinarFechaDevolucion(
@@ -354,6 +358,7 @@ public function update(Request $request, $id)
         ]);
 
         return $assignment->id_brigada_destino;
+
     }
 
 

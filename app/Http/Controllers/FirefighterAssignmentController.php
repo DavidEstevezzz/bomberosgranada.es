@@ -23,8 +23,6 @@ class FirefighterAssignmentController extends Controller
             'brigadeDestination:id_brigada,nombre'
         ])->get();        
 
-        Log::info('Assignments retrieved:', ['assignments' => $firefighter_assignments]);
-
         return response()->json($firefighter_assignments);
     }
 

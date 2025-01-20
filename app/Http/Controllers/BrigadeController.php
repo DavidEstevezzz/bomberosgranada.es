@@ -255,6 +255,20 @@ class BrigadeController extends Controller
                     'turno' => 'Día completo'
                 ];
              }
+        } else if (empty($assignmentsByTurno)) {
+            // Si no hay asignaciones el mismo día, usamos la última asignación previa
+            if ($lastAssignment && $lastAssignment->id_brigada_destino == $id_brigada) {
+                Log::info("Usando última asignación previa para el bombero {$user->nombre} {$user->apellido}", ['last_assignment' => $lastAssignment]);
+        
+                $firefighters[] = [
+                    'id_empleado' => $user->id_empleado,
+                    'nombre' => $user->nombre,
+                    'apellido' => $user->apellido,
+                    'puesto' => $user->puesto,
+                    'telefono' => $user->telefono,
+                    'turno' => 'Día completo', // Asumimos "Día completo" como fallback
+                ];
+            }
         } else {
             // Validar si no tiene asignaciones en otro turno en otra brigada el mismo día
             $sameDayOtherBrigade = Firefighters_assignment::where('id_empleado', $user->id_empleado)

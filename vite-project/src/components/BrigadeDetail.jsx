@@ -241,17 +241,7 @@ const BrigadeDetail = () => {
         <p className="text-center"><strong>Parque:</strong> {park ? park.nombre : 'No disponible'}</p>
         <p className="text-center"><strong>Número de Bomberos:</strong> {firefighters.length}</p>
 
-        <div className="flex justify-between items-center mb-4">
-          <button onClick={handlePreviousDay} className="bg-gray-600 text-white px-4 py-2 rounded flex items-center space-x-2">
-            <FontAwesomeIcon icon={faChevronLeft} />
-            <span>Anterior</span>
-          </button>
-          <span className="text-xl font-bold">{dayjs(selectedDate).format('DD/MM/YYYY')}</span>
-          <button onClick={handleNextDay} className="bg-gray-600 text-white px-4 py-2 rounded flex items-center space-x-2">
-            <span>Siguiente</span>
-            <FontAwesomeIcon icon={faChevronRight} />
-          </button>
-        </div>
+        
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {shifts.map(shift => (

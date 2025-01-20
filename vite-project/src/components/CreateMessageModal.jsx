@@ -8,6 +8,8 @@ import { useDarkMode } from '../contexts/DarkModeContext';
 const CreateMessageModal = ({ isOpen, onClose }) => {
     const { darkMode } = useDarkMode();
     const [users, setUsers] = useState([]);
+    const [filteredUsers, setFilteredUsers] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [formData, setFormData] = useState({
         receiver_id: '',
         subject: '',
@@ -20,7 +22,9 @@ const CreateMessageModal = ({ isOpen, onClose }) => {
             const fetchUsers = async () => {
                 try {
                     const response = await UsersApiService.getUsuarios();
-                    setUsers(response.data);
+                    const allUsers = response.data;
+                    setUsers(allUsers);
+                    setFilteredUsers(allUsers); // Mostrar todos los usuarios inicialmente
                 } catch (error) {
                     console.error('Error fetching users:', error);
                 }
@@ -35,6 +39,14 @@ const CreateMessageModal = ({ isOpen, onClose }) => {
             });
         }
     }, [isOpen]);
+
+    // Actualizar la lista de usuarios filtrados cuando cambia el término de búsqueda
+    useEffect(() => {
+        const filtered = users.filter(user =>
+            `${user.nombre} ${user.apellido}`.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredUsers(filtered);
+    }, [searchTerm, users]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -89,35 +101,43 @@ const CreateMessageModal = ({ isOpen, onClose }) => {
                     </button>
                 </div>
                 <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 mb-4 sm:grid-cols-2">
-                        <div>
-                            <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Destinatario</label>
-                            <select
-                                name="receiver_id"
-                                value={formData.receiver_id}
-                                onChange={handleChange}
-                                className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
-                                required
-                            >
-                                <option value="">Seleccione un usuario</option>
-                                {users.map((user) => (
-                                    <option key={user.id_empleado} value={user.id_empleado}>
-                                        {user.nombre} {user.apellido}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Asunto</label>
-                            <input
-                                type="text"
-                                name="subject"
-                                value={formData.subject}
-                                onChange={handleChange}
-                                className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
-                                required
-                            />
-                        </div>
+                    <div className="mb-4">
+                        <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Buscar Usuario</label>
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
+                            placeholder="Escriba un nombre"
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Destinatario</label>
+                        <select
+                            name="receiver_id"
+                            value={formData.receiver_id}
+                            onChange={handleChange}
+                            className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
+                            required
+                        >
+                            <option value="">Seleccione un usuario</option>
+                            {filteredUsers.map((user) => (
+                                <option key={user.id_empleado} value={user.id_empleado}>
+                                    {user.nombre} {user.apellido}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="mb-4">
+                        <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Asunto</label>
+                        <input
+                            type="text"
+                            name="subject"
+                            value={formData.subject}
+                            onChange={handleChange}
+                            className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
+                            required
+                        />
                     </div>
                     <div className="mb-4">
                         <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Mensaje</label>

@@ -139,6 +139,7 @@ const Profile = () => {
             <p><strong>Email:</strong> {user.email}</p>
             <p><strong>Teléfono:</strong> {user.telefono}</p>
             <p><strong>Nº Funcionario:</strong> {user.dni}</p>
+            <p><strong>Puesto:</strong> {user.puesto}</p>
           </div>
 
           {/* Días Restantes */}
@@ -147,6 +148,7 @@ const Profile = () => {
             <p><strong>Vacaciones:</strong> {vacationDaysRemaining !== null ? vacationDaysRemaining : 'No disponible'} días</p>
             <p><strong>Asuntos Propios:</strong> {user.AP} jornadas </p>
             <p><strong>Salidas Personales:</strong> {user.SP} horas</p>
+            <p><strong>Módulos:</strong> {user.modulo} días</p>
           </div>
         </div>
 

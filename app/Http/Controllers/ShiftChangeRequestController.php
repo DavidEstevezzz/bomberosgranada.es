@@ -121,18 +121,36 @@ public function update(Request $request, $id)
     return response()->json($shiftChangeRequest, 200);
 }
 
+private function createAssignments($shiftChangeRequest)
+{
+    Log::info('Iniciando la creación de asignaciones para cambio de turno', [
+        'shiftChangeRequest' => $shiftChangeRequest
+    ]);
 
-    private function createAssignments($shiftChangeRequest)
-    {
+    try {
         // Determinar turno de asignación basado en el turno recibido
         $turnoAsignacion = $this->determinarTurnoInicial($shiftChangeRequest->turno);
+        Log::info('Turno de asignación determinado', [
+            'turno' => $shiftChangeRequest->turno,
+            'turnoAsignacion' => $turnoAsignacion
+        ]);
+
         $turnoDevolucion = $this->determinarTurnoDevolucion($shiftChangeRequest->turno);
-    
+        Log::info('Turno de devolución determinado', [
+            'turno' => $shiftChangeRequest->turno,
+            'turnoDevolucion' => $turnoDevolucion
+        ]);
+
         // Determinar si la devolución es el mismo día o al día siguiente
         $fechaDevolucion = ($shiftChangeRequest->turno === 'Noche' || $shiftChangeRequest->turno === 'Tarde y noche')
             ? date('Y-m-d', strtotime($shiftChangeRequest->fecha . ' +1 day'))
             : $shiftChangeRequest->fecha;
-    
+
+        Log::info('Fecha de devolución calculada', [
+            'fechaOriginal' => $shiftChangeRequest->fecha,
+            'fechaDevolucion' => $fechaDevolucion
+        ]);
+
         // Crear asignación de cambio para empleado 1
         Firefighters_assignment::create([
             'fecha_ini' => $shiftChangeRequest->fecha,
@@ -141,7 +159,10 @@ public function update(Request $request, $id)
             'id_brigada_destino' => $shiftChangeRequest->brigada2,
             'turno' => $turnoAsignacion
         ]);
-    
+        Log::info('Asignación de cambio creada para empleado 1', [
+            'id_empleado' => $shiftChangeRequest->id_empleado1
+        ]);
+
         // Crear asignación de cambio para empleado 2
         Firefighters_assignment::create([
             'fecha_ini' => $shiftChangeRequest->fecha,
@@ -150,7 +171,10 @@ public function update(Request $request, $id)
             'id_brigada_destino' => $shiftChangeRequest->brigada1,
             'turno' => $turnoAsignacion
         ]);
-    
+        Log::info('Asignación de cambio creada para empleado 2', [
+            'id_empleado' => $shiftChangeRequest->id_empleado2
+        ]);
+
         // Crear asignación de devolución para empleado 1
         Firefighters_assignment::create([
             'fecha_ini' => $fechaDevolucion,
@@ -159,7 +183,11 @@ public function update(Request $request, $id)
             'id_brigada_destino' => $shiftChangeRequest->brigada1,
             'turno' => $turnoDevolucion
         ]);
-    
+        Log::info('Asignación de devolución creada para empleado 1', [
+            'id_empleado' => $shiftChangeRequest->id_empleado1,
+            'fechaDevolucion' => $fechaDevolucion
+        ]);
+
         // Crear asignación de devolución para empleado 2
         Firefighters_assignment::create([
             'fecha_ini' => $fechaDevolucion,
@@ -168,7 +196,21 @@ public function update(Request $request, $id)
             'id_brigada_destino' => $shiftChangeRequest->brigada2,
             'turno' => $turnoDevolucion
         ]);
+        Log::info('Asignación de devolución creada para empleado 2', [
+            'id_empleado' => $shiftChangeRequest->id_empleado2,
+            'fechaDevolucion' => $fechaDevolucion
+        ]);
+
+        Log::info('Proceso de creación de asignaciones finalizado correctamente');
+    } catch (\Exception $e) {
+        Log::error('Error al crear asignaciones', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'shiftChangeRequest' => $shiftChangeRequest
+        ]);
+        throw $e; // Re-lanzar el error para que el flujo lo maneje
     }
+}
     
 
 

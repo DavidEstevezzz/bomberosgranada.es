@@ -45,7 +45,7 @@ const ShiftChangeRequestPage = () => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-  
+
     try {
       const requestData = {
         id_empleado1: user.id_empleado,
@@ -55,20 +55,27 @@ const ShiftChangeRequestPage = () => {
         motivo,
         estado: 'en_tramite',
       };
-  
-      // Log para verificar los datos enviados
+
       console.log('Datos enviados en la solicitud:', requestData);
-  
+
       const response = await ShiftChangeRequestApiService.createRequest(requestData);
-  
-      // Log para verificar la respuesta exitosa del servidor
+
       console.log('Respuesta del servidor (éxito):', response);
-  
+
       setSuccess('Solicitud de cambio de guardia enviada con éxito.');
+
+      // Limpieza del formulario
+      setSearchTerm('');
+      setSelectedEmployee('');
+      setFecha('');
+      setTurno('Mañana');
+      setMotivo('');
+
+      // Opcional: Refrescar lista de empleados para mantener coherencia
+      setFilteredEmployees(employees);
     } catch (error) {
       console.error('Error al enviar la solicitud de cambio de guardia:', error);
-  
-      // Log para capturar la respuesta del servidor en caso de error
+
       if (error.response) {
         console.error('Respuesta del servidor (error):', error.response);
         console.error('Datos del error:', error.response.data);
@@ -77,11 +84,10 @@ const ShiftChangeRequestPage = () => {
       } else {
         console.error('Error sin respuesta del servidor:', error);
       }
-  
+
       setError('Error al enviar la solicitud de cambio de guardia.');
     }
   };
-  
 
   return (
     <div className={`max-w-4xl mx-auto p-6 rounded-lg ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
@@ -167,7 +173,6 @@ const ShiftChangeRequestPage = () => {
             onChange={(e) => setMotivo(e.target.value)}
             className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'}`}
             rows="4"
-            
           />
         </div>
 

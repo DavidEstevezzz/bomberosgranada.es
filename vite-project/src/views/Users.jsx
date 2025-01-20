@@ -87,12 +87,24 @@ const Users = () => {
     navigate(`/users/${user.id_empleado}`);
   };
 
-  const filteredUsers = users.filter((user) =>
-    (user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.telefono.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (roleFilter === '' || user.role_name === roleFilter)
-  );
+  const normalizeString = (str) => {
+    return str
+      .normalize('NFD') // Descompone los caracteres con acento
+      .replace(/[\u0300-\u036f]/g, '') // Elimina los diacríticos
+      .toLowerCase(); // Convierte a minúsculas
+  };
+  
+  const filteredUsers = users.filter((user) => {
+    const normalizedSearchTerm = normalizeString(searchTerm);
+  
+    return (
+      (normalizeString(user.nombre).includes(normalizedSearchTerm) ||
+        normalizeString(user.email).includes(normalizedSearchTerm) ||
+        normalizeString(user.telefono).includes(normalizedSearchTerm)) &&
+      (roleFilter === '' || user.role_name === roleFilter)
+    );
+  });
+  
 
   const uniqueRoles = [...new Set(users.map(user => user.role_name))];
 

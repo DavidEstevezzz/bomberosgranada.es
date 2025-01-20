@@ -142,7 +142,7 @@ private function createAssignments($shiftChangeRequest)
         ]);
 
         // Determinar si la devolución es el mismo día o al día siguiente
-        $fechaDevolucion = ($shiftChangeRequest->turno === 'Noche' || $shiftChangeRequest->turno === 'Tarde y noche')
+        $fechaDevolucion = ($shiftChangeRequest->turno === 'Noche' || $shiftChangeRequest->turno === 'Tarde y noche' || $shiftChangeRequest->turno === 'Dia Completo')
             ? date('Y-m-d', strtotime($shiftChangeRequest->fecha . ' +1 day'))
             : $shiftChangeRequest->fecha;
 

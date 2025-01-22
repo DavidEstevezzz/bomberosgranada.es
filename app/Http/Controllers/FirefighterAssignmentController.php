@@ -119,7 +119,7 @@ class FirefighterAssignmentController extends Controller
     Log::info("Fecha recibida en availableFirefighters antes de procesar:", ['date' => $date]);
 
     // Definimos brigadas excluidas por defecto
-    $excludedBrigades = ['Bajas', 'Vacaciones', 'Asuntos Propios'];
+    $excludedBrigades = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licendias por Días'];
 
     // Añadimos brigadas que estuvieron en guardia ayer, hoy, o mañana
     $guards = Guard::whereIn('date', [

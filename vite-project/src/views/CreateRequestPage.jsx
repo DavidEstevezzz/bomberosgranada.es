@@ -208,7 +208,7 @@ const handleFileChange = (e) => {
     formData.append('fecha_ini', fechaIni);
     formData.append(
       'fecha_fin',
-      tipo === 'salidas personales' || tipo === 'licencias por jornadas' ? fechaIni : fechaFin
+      tipo === 'salidas personales' || tipo === 'licencias por jornadas' || tipo === 'modulo' ? fechaIni : fechaFin
     );
     formData.append('turno', tipo === 'asuntos propios' || tipo === 'licencias por jornadas' ? turno : '');
     formData.append('horas', tipo === 'salidas personales' ? horas : '');
@@ -286,7 +286,7 @@ const handleFileChange = (e) => {
           />
         </div>
 
-        {(tipo === 'vacaciones' || tipo === 'licencias por dias' || tipo === 'modulo') && (
+        {(tipo === 'vacaciones' || tipo === 'licencias por dias' ) && (
           <div className="mb-4">
             <label
               className="block text-sm font-medium mb-2"

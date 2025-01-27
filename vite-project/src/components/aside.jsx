@@ -72,7 +72,7 @@ const Aside = ({ className }) => {
         </a>
 
         {/* Usuarios */}
-        {userType !== 'bombero' && (
+        {userType === 'jefe' && (
           <a href="/users" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
             <FontAwesomeIcon icon={faUser} className="w-5 h-5 mr-2" />
             Usuarios
@@ -80,7 +80,7 @@ const Aside = ({ className }) => {
         )}
 
         {/* Brigadas */}
-        {userType !== 'bombero' && (
+        {userType === 'jefe' && (
           <div className="relative">
             <button onClick={() => toggleDropdown('pages')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
               <span className="flex items-center">
@@ -99,7 +99,7 @@ const Aside = ({ className }) => {
         )}
 
         {/* Configuración */}
-        {userType !== 'bombero' && (
+        {userType === 'jefe' && (
           <div className="relative">
             <button onClick={() => toggleDropdown('settings')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
               <span className="flex items-center">
@@ -130,7 +130,7 @@ const Aside = ({ className }) => {
               {userType !== 'bombero' && (
                 <a href="/horas-extra" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Horas Extra</a>
               )}
-              {userType !== 'bombero' && (
+              {userType === 'bombero' && (
                 <a href="/total-horas-extra" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Total Horas Extra</a>
               )}
               <a href="/requerimientos" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos 24h</a>
@@ -162,10 +162,12 @@ const Aside = ({ className }) => {
         </div>
 
         {/* Calendario */}
+        {userType === 'jefe' &&
         <a href="/calendario-norte" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
           <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 mr-2" />
           Calendario
         </a>
+  }
       </nav>
     </aside>
   );

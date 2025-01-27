@@ -18,6 +18,7 @@ class ShiftChangeRequest extends Model
         'brigada1',
         'brigada2',
         'fecha',
+        'fecha2',
         'turno',
         'motivo',
         'estado',

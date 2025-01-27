@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es'; // Para nombres de meses en español
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import RequestApiService from '../services/RequestApiService';
 import ShiftChangeRequestApiService from '../services/ShiftChangeRequestApiService';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -14,7 +12,8 @@ const RequestAndShiftChangePage = () => {
   const { user } = useStateContext();
   const { darkMode } = useDarkMode();
   const [requests, setRequests] = useState([]);
-  const [shiftChangeRequests, setShiftChangeRequests] = useState([]);
+  const [simpleShiftChanges, setSimpleShiftChanges] = useState([]);
+  const [mirrorShiftChanges, setMirrorShiftChanges] = useState([]);
   const [currentMonth, setCurrentMonth] = useState(dayjs());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,22 +41,26 @@ const RequestAndShiftChangePage = () => {
           ShiftChangeRequestApiService.getRequests(),
         ]);
 
-        // Filtrar solicitudes solo para el usuario logueado
+        // Filtrar solicitudes de permisos
         const filteredRequests = requestsResponse.data.filter(
           (req) =>
             req.id_empleado === user.id_empleado &&
             dayjs(req.fecha_ini).isSame(currentMonth, 'month')
         );
 
-        // Filtrar cambios de guardia donde el usuario esté involucrado
+        // Filtrar y dividir los cambios de guardia en simples y espejo
         const filteredShiftChanges = shiftChangeResponse.data.filter(
           (req) =>
             dayjs(req.fecha).isSame(currentMonth, 'month') &&
             (req.id_empleado1 === user.id_empleado || req.id_empleado2 === user.id_empleado)
         );
 
+        const simpleChanges = filteredShiftChanges.filter((req) => !req.fecha2);
+        const mirrorChanges = filteredShiftChanges.filter((req) => req.fecha2);
+
         setRequests(filteredRequests);
-        setShiftChangeRequests(filteredShiftChanges);
+        setSimpleShiftChanges(simpleChanges);
+        setMirrorShiftChanges(mirrorChanges);
         setError(null);
       } catch (err) {
         console.error(err);
@@ -70,6 +73,14 @@ const RequestAndShiftChangePage = () => {
     fetchData();
   }, [user, currentMonth]);
 
+  const handlePreviousMonth = () => {
+    setCurrentMonth((prev) => prev.subtract(1, 'month'));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth((prev) => prev.add(1, 'month'));
+  };
+
   const handleRequestStatusChange = async (id, newStatus) => {
     try {
       await RequestApiService.updateRequest(id, { estado: newStatus });
@@ -77,18 +88,23 @@ const RequestAndShiftChangePage = () => {
         prev.map((req) => (req.id === id ? { ...req, estado: newStatus } : req))
       );
     } catch (error) {
-      console.error('Failed to update request status:', error);
+      console.error('Error al actualizar el estado de la solicitud:', error);
     }
   };
 
   const handleShiftChangeStatusChange = async (id, newStatus) => {
     try {
       await ShiftChangeRequestApiService.updateRequest(id, { estado: newStatus });
-      setShiftChangeRequests((prev) =>
+
+      // Actualizar el estado en los cambios simples y espejo
+      setSimpleShiftChanges((prev) =>
+        prev.map((req) => (req.id === id ? { ...req, estado: newStatus } : req))
+      );
+      setMirrorShiftChanges((prev) =>
         prev.map((req) => (req.id === id ? { ...req, estado: newStatus } : req))
       );
     } catch (error) {
-      console.error('Failed to update shift change request status:', error);
+      console.error('Error al actualizar el estado del cambio de guardia:', error);
     }
   };
 
@@ -99,13 +115,15 @@ const RequestAndShiftChangePage = () => {
         onClick={() => handleRequestStatusChange(request.id, 'Cancelada')}
         className="bg-red-600 text-white px-4 py-1 rounded"
       >
-        Rechazar
+        Cancelar
       </button>
     );
   };
 
   const renderShiftChangeActions = (request) => {
     if (request.estado === 'rechazado') return null;
+
+    // Acciones específicas según el usuario involucrado
     if (request.id_empleado1 === user.id_empleado) {
       return (
         <button
@@ -116,6 +134,7 @@ const RequestAndShiftChangePage = () => {
         </button>
       );
     }
+
     if (request.id_empleado2 === user.id_empleado && request.estado === 'en_tramite') {
       return (
         <>
@@ -134,15 +153,8 @@ const RequestAndShiftChangePage = () => {
         </>
       );
     }
+
     return null;
-  };
-
-  const handlePreviousMonth = () => {
-    setCurrentMonth((prev) => prev.subtract(1, 'month'));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonth((prev) => prev.add(1, 'month'));
   };
 
   if (loading) return <div>Cargando datos...</div>;
@@ -187,14 +199,11 @@ const RequestAndShiftChangePage = () => {
               <tbody>
                 {requests.map((request) => (
                   <tr key={request.id} className="border-b border-gray-700">
-                    <td className="py-2 px-4">
-                      {request.tipo.charAt(0).toUpperCase() + request.tipo.slice(1)}
-                    </td>
+                    <td className="py-2 px-4">{request.tipo}</td>
                     <td className="py-2 px-4">{request.fecha_ini}</td>
                     <td className="py-2 px-4">{request.fecha_fin}</td>
                     <td className="py-2 px-4">{request.turno}</td>
                     <td className="py-2 px-4">{normalizeState(request.estado)}</td>
-                    
                   </tr>
                 ))}
               </tbody>
@@ -204,8 +213,8 @@ const RequestAndShiftChangePage = () => {
           <p>No hay solicitudes este mes</p>
         )}
 
-        <h2 className="text-xl font-bold mt-8 mb-4">Solicitudes de Cambio de Guardia</h2>
-        {shiftChangeRequests.length > 0 ? (
+        <h2 className="text-xl font-bold mt-8 mb-4">Cambios de Guardia Simples</h2>
+        {simpleShiftChanges.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
@@ -219,23 +228,55 @@ const RequestAndShiftChangePage = () => {
                 </tr>
               </thead>
               <tbody>
-                {shiftChangeRequests.map((request) => (
+                {simpleShiftChanges.map((request) => (
                   <tr key={request.id} className="border-b border-gray-700">
                     <td className="py-2 px-4">{request.empleado1?.nombre} {request.empleado1?.apellido}</td>
                     <td className="py-2 px-4">{request.empleado2?.nombre} {request.empleado2?.apellido}</td>
                     <td className="py-2 px-4">{request.fecha}</td>
                     <td className="py-2 px-4">{request.turno}</td>
                     <td className="py-2 px-4">{normalizeState(request.estado)}</td>
-                    <td className="py-2 px-4 flex space-x-2">
-                      {renderShiftChangeActions(request)}
-                    </td>
+                    <td className="py-2 px-4">{renderShiftChangeActions(request)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p>No hay cambios de guardia este mes</p>
+          <p>No hay cambios de guardia simples este mes</p>
+        )}
+
+        <h2 className="text-xl font-bold mt-8 mb-4">Cambios de Guardia Espejo</h2>
+        {mirrorShiftChanges.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4">Bombero 1</th>
+                  <th className="py-2 px-4">Bombero 2</th>
+                  <th className="py-2 px-4">Fecha 1</th>
+                  <th className="py-2 px-4">Fecha 2</th>
+                  <th className="py-2 px-4">Turno</th>
+                  <th className="py-2 px-4">Estado</th>
+                  <th className="py-2 px-4">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mirrorShiftChanges.map((request) => (
+                  <tr key={request.id} className="border-b border-gray-700">
+                    <td className="py-2 px-4">{request.empleado1?.nombre} {request.empleado1?.apellido}</td>
+                    <td className="py-2 px-4">{request.empleado2?.nombre} {request.empleado2?.apellido}</td>
+                    <td className="py-2 px-4">{request.fecha}</td>
+                    <td className="py-2 px-4">{request.fecha2}</td>
+                    <td className="py-2 px-4">{request.turno}</td>
+                    <td className="py-2 px-4">{normalizeState(request.estado)}</td>
+                    <td className="py-2 px-4">{renderShiftChangeActions(request)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p>No hay cambios de guardia espejo este mes</p>
         )}
       </div>
     </div>

@@ -26,7 +26,7 @@ const handleFileChange = (e) => {
 };
 
   useEffect(() => {
-    if (tipo === 'asuntos propios') {
+    if (tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales') {
       setFechaFin(fechaIni); // Sincroniza fecha de inicio y fin
     }
   }, [tipo, fechaIni]);
@@ -286,6 +286,7 @@ const handleFileChange = (e) => {
     <option value="licencias por jornadas">Licencias por Jornadas</option>
     <option value="licencias por dias">Licencias por Días</option>
     <option value="modulo">Módulo</option>
+    <option value="compensacion grupos especiales">Compensación Grupos Especiales</option>
 </select>
         </div>
 
@@ -371,7 +372,7 @@ const handleFileChange = (e) => {
           </>
         )}
 
-        {(tipo === 'asuntos propios' || tipo === 'licencias por jornadas' )&& (
+        {(tipo === 'asuntos propios' || tipo === 'licencias por jornadas' || tipo === 'compensacion grupos especiales' )&& (
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2" htmlFor="turno">
               Turno

@@ -210,6 +210,8 @@ public function update(Request $request, $id)
     {
         $brigadeId = null;
 
+        Log::info("Creando asignaciones para la solicitud de tipo: {$miRequest->tipo}");
+
         // Determinar la brigada en función del tipo de solicitud
         switch (strtolower($miRequest->tipo)) {
             case 'vacaciones':

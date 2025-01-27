@@ -12,8 +12,10 @@ const ShiftChangeRequestPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [fecha, setFecha] = useState('');
+  const [fecha2, setFecha2] = useState(''); // Nueva fecha para cambios espejo
   const [turno, setTurno] = useState('Mañana');
   const [motivo, setMotivo] = useState('');
+  const [changeType, setChangeType] = useState('simple'); // Tipo de cambio: simple o espejo
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -22,13 +24,11 @@ const ShiftChangeRequestPage = () => {
       if (!user?.puesto) return;
 
       try {
-        // Fetch employees
         const response = await UsuariosApiService.bomberosPorPuesto(user.puesto);
         const allEmployees = response.data;
         setEmployees(allEmployees);
 
-        // Filter employees based on the search term
-        const filtered = allEmployees.filter(emp =>
+        const filtered = allEmployees.filter((emp) =>
           `${emp.nombre} ${emp.apellido}`.toLowerCase().includes(searchTerm.toLowerCase())
         );
         setFilteredEmployees(filtered);
@@ -39,7 +39,7 @@ const ShiftChangeRequestPage = () => {
     };
 
     fetchAndFilterEmployees();
-  }, [user, searchTerm]); // Combina la lógica de fetching y filtrado en un solo efecto.
+  }, [user, searchTerm]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,6 +51,7 @@ const ShiftChangeRequestPage = () => {
         id_empleado1: user.id_empleado,
         id_empleado2: selectedEmployee,
         fecha,
+        fecha2: changeType === 'espejo' ? fecha2 : null, // Incluye fecha2 solo si es cambio espejo
         turno,
         motivo,
         estado: 'en_tramite',
@@ -68,23 +69,13 @@ const ShiftChangeRequestPage = () => {
       setSearchTerm('');
       setSelectedEmployee('');
       setFecha('');
+      setFecha2('');
       setTurno('Mañana');
       setMotivo('');
-
-      // Opcional: Refrescar lista de empleados para mantener coherencia
+      setChangeType('simple');
       setFilteredEmployees(employees);
     } catch (error) {
       console.error('Error al enviar la solicitud de cambio de guardia:', error);
-
-      if (error.response) {
-        console.error('Respuesta del servidor (error):', error.response);
-        console.error('Datos del error:', error.response.data);
-        console.error('Estado HTTP:', error.response.status);
-        console.error('Encabezados del error:', error.response.headers);
-      } else {
-        console.error('Error sin respuesta del servidor:', error);
-      }
-
       setError('Error al enviar la solicitud de cambio de guardia.');
     }
   };
@@ -94,7 +85,38 @@ const ShiftChangeRequestPage = () => {
       <h1 className="text-xl font-bold mb-4">Solicitar Cambio de Guardia</h1>
       {error && <div className="mb-4 text-red-500">{error}</div>}
       {success && <div className="mb-4 text-green-500">{success}</div>}
+
       <form onSubmit={handleSubmit}>
+        {/* Tipo de Cambio */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2">Tipo de Cambio</label>
+          <div className="flex space-x-4">
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="changeType"
+                value="simple"
+                checked={changeType === 'simple'}
+                onChange={(e) => setChangeType(e.target.value)}
+                className="mr-2"
+              />
+              Cambio Simple
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="changeType"
+                value="espejo"
+                checked={changeType === 'espejo'}
+                onChange={(e) => setChangeType(e.target.value)}
+                className="mr-2"
+              />
+              Cambio Espejo
+            </label>
+          </div>
+        </div>
+
+        {/* Buscar y Seleccionar Bombero */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2" htmlFor="search">
             Buscar Bombero
@@ -129,6 +151,7 @@ const ShiftChangeRequestPage = () => {
           </select>
         </div>
 
+        {/* Fecha */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2" htmlFor="fecha">
             Fecha de Guardia
@@ -143,6 +166,24 @@ const ShiftChangeRequestPage = () => {
           />
         </div>
 
+        {/* Fecha 2 (Solo para cambio espejo) */}
+        {changeType === 'espejo' && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2" htmlFor="fecha2">
+              Fecha de la Guardia de tu Compañero
+            </label>
+            <input
+              type="date"
+              id="fecha2"
+              value={fecha2}
+              onChange={(e) => setFecha2(e.target.value)}
+              className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'}`}
+              required={changeType === 'espejo'}
+            />
+          </div>
+        )}
+
+        {/* Turno */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2" htmlFor="turno">
             Turno
@@ -163,6 +204,7 @@ const ShiftChangeRequestPage = () => {
           </select>
         </div>
 
+        {/* Motivo */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2" htmlFor="motivo">
             Observaciones

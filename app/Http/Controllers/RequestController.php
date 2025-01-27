@@ -26,11 +26,11 @@ class RequestController extends Controller
     // Reglas generales
     $rules = [
         'id_empleado' => 'required|exists:users,id_empleado',
-        'tipo' => 'required|in:vacaciones,asuntos propios,salidas personales,licencias por jornadas,licencias por dias,modulo',
+        'tipo' => 'required|in:vacaciones,asuntos propios,salidas personales,licencias por jornadas,licencias por dias,modulo,compensacion grupos especiales',
         'fecha_ini' => 'required|date',
         'fecha_fin' => 'required|date',
         'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
-        'file' => 'nullable|file|mimes:pdf,jpg,png|max:2048', // Validación del archivo
+        'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048', // Validación del archivo
     ];
 
     // Reglas específicas para "asuntos propios"
@@ -230,6 +230,9 @@ public function update(Request $request, $id)
             case 'modulo':
                 $brigadeId = \App\Models\Brigade::where('nombre', 'Modulo')->value('id_brigada');
                 break;
+            case 'compensacion grupos especiales':
+                    $brigadeId = \App\Models\Brigade::where('nombre', 'Compensacion grupos especiales')->value('id_brigada');
+                    break;
         }
 
         if (!$brigadeId) {
@@ -238,7 +241,7 @@ public function update(Request $request, $id)
         }
 
         // Verificar el turno y asignarlo correctamente
-        if ($miRequest->tipo === 'asuntos propios' || $miRequest->tipo === 'licencias por jornadas') {
+        if ($miRequest->tipo === 'asuntos propios' || $miRequest->tipo === 'licencias por jornadas' || $miRequest->tipo === 'compensacion grupos especiales') {
             // Para "asuntos propios", usar el turno enviado en la solicitud
             $turnoAsignacion = $this->determinarTurnoInicial($miRequest->turno);
             $turnoDevolucion = $this->determinarTurnoDevolucion($miRequest->turno);

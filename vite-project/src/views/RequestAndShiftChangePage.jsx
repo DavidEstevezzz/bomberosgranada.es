@@ -182,7 +182,6 @@ const RequestAndShiftChangePage = () => {
                   <th className="py-2 px-4">Fecha Fin</th>
                   <th className="py-2 px-4">Turno</th>
                   <th className="py-2 px-4">Estado</th>
-                  <th className="py-2 px-4">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,9 +194,7 @@ const RequestAndShiftChangePage = () => {
                     <td className="py-2 px-4">{request.fecha_fin}</td>
                     <td className="py-2 px-4">{request.turno}</td>
                     <td className="py-2 px-4">{normalizeState(request.estado)}</td>
-                    <td className="py-2 px-4 flex space-x-2">
-                      {renderRequestActions(request)}
-                    </td>
+                    
                   </tr>
                 ))}
               </tbody>

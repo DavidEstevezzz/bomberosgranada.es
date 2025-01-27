@@ -26,6 +26,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Usuario autenticado
     Route::get('/user', [UserController::class, 'getUserByToken']);
     Route::get('/firefighters-assignments/available-firefighters', [FirefighterAssignmentController::class, 'availableFirefighters']);
+    Route::get('/firefighters-assignments/available-firefighters-without-mands', [FirefighterAssignmentController::class, 'availableFirefightersWithoutMands']);
 
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);

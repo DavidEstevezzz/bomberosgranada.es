@@ -29,6 +29,11 @@ const RequestListPage = () => {
     return user ? user.AP : 0;
   };
 
+  const getCompensacionDaysRemaining = (userId) => {
+    const user = users.find((user) => user.id_empleado === userId);
+    return user ? user.compensacion_grupos : 0;
+  }
+
   const updateUserAPDays = async (userId, daysChange) => {
     try {
       const user = users.find((user) => user.id_empleado === userId);
@@ -83,7 +88,7 @@ const RequestListPage = () => {
     try {
       const request = requests.find((req) => req.id === id);
       const currentStatus = request?.estado;
-
+  
       if (tipo === 'asuntos propios') {
         let requestedAPDays;
         if (turno === 'Día Completo') {
@@ -93,10 +98,9 @@ const RequestListPage = () => {
         } else {
           requestedAPDays = 1;
         }
-
-        // Asegúrate de usar el nombre correcto de la función
+  
         const remainingAPDays = getAPDaysRemaining(idEmpleado);
-
+  
         if (newStatus === 'Confirmada' && currentStatus !== 'Confirmada') {
           if (requestedAPDays > remainingAPDays) {
             alert('No te quedan suficientes días de asuntos propios (AP) para aceptar esta solicitud.');
@@ -106,19 +110,41 @@ const RequestListPage = () => {
         } else if (newStatus !== 'Confirmada' && currentStatus === 'Confirmada') {
           await updateUserAPDays(idEmpleado, requestedAPDays);
         }
+      } else if (tipo === 'compensación') {
+        let requestedCompensacionDays;
+        if (turno === 'Día Completo') {
+          requestedCompensacionDays = 3;
+        } else if (turno === 'Mañana y tarde' || turno === 'Tarde y noche') {
+          requestedCompensacionDays = 2;
+        } else {
+          requestedCompensacionDays = 1;
+        }
+  
+        const remainingCompensacionDays = getCompensacionDaysRemaining(idEmpleado);
+  
+        if (newStatus === 'Confirmada' && currentStatus !== 'Confirmada') {
+          if (requestedCompensacionDays > remainingCompensacionDays) {
+            alert('No te quedan suficientes días de compensación para aceptar esta solicitud.');
+            return;
+          }
+          await updateUserAPDays(idEmpleado, -requestedCompensacionDays); // Cambia a una función específica si es necesario
+        } else if (newStatus !== 'Confirmada' && currentStatus === 'Confirmada') {
+          await updateUserAPDays(idEmpleado, requestedCompensacionDays); // Cambia a una función específica si es necesario
+        }
       }
-
+  
       const payload = { estado: newStatus };
-      if (tipo === 'asuntos propios') {
+      if (tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales') {
         payload.turno = turno;
       }
-
+  
       await RequestApiService.updateRequest(id, payload);
       fetchRequests();
     } catch (error) {
       console.error('Error al actualizar el estado de la solicitud:', error);
     }
-  };  
+  };
+  
 
 
   const handlePreviousMonth = () => {

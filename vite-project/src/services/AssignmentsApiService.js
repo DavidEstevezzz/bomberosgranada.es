@@ -2,6 +2,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const API_URL = `${API_BASE_URL}/firefighters-assignments`;
 const API_URL2 = `${API_BASE_URL}/firefighters-assignments/available-firefighters`;
+const API_URL3 = `${API_BASE_URL}/firefighters-assignments/available-firefighters-without-mands`;
 
 import BaseApiService from './BaseApiService';
 
@@ -28,6 +29,10 @@ class AssignmentsApiService {
 
     async getAvailableFirefighters(date) {
         return await BaseApiService.get(API_URL2, { date });
+    }
+
+    async getAvailableFirefightersWithoutMands(date) {
+        return await BaseApiService.get(API_URL3, { date });
     }
 
     async moveFirefighterToTop(id, column = 'orden') {

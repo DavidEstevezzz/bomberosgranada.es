@@ -32,7 +32,7 @@ class MessagesApiService {
 
     async downloadAttachment(id) {
         const url = `${API_URL}/${id}/attachment`;
-        return await BaseApiService.get(url, null, {}, 'blob'); // Indicamos que queremos un blob
+        return await BaseApiService.get(url, null, {}, 'blob'); 
     }
 
     // Marcar un mensaje como leído

@@ -58,17 +58,39 @@ const handleFileChange = (e) => {
     }
   };
 
-  const validatePersonalLeaveDays = async () => {
-    const availableAPDays = user.AP || 0;
-    const requestedDays = 1;
-    console.log('Días de asuntos propios disponibles:', availableAPDays);
-
-    if (requestedDays > availableAPDays) {
-      setError('No te quedan suficientes turnos de asuntos propios.');
+  const validateDaysAvailable = (tipo) => {
+    const requiredDays = calculateRequiredDays(turno);
+    let availableDays;
+  
+    if (tipo === 'asuntos propios') {
+      availableDays = user.AP || 0;
+    } else if (tipo === 'compensacion grupos especiales') {
+      availableDays = user.compensacion_grupos || 0;
+    }
+  
+    console.log(`Días disponibles (${tipo}):`, availableDays);
+    console.log(`Días requeridos (${tipo}):`, requiredDays);
+  
+    if (requiredDays > availableDays) {
+      setError(
+        `No tienes suficientes días disponibles para esta solicitud de ${tipo}.`
+      );
       return false;
     }
     return true;
   };
+
+  
+  const calculateRequiredDays = (turno) => {
+    if (turno === 'Día Completo') {
+      return 3;
+    } else if (turno === 'Mañana y tarde' || turno === 'Tarde y noche') {
+      return 2;
+    } else {
+      return 1;
+    }
+  };
+  
 
   const validateVacationDays = () => {
     const availableVacationDays = user.vacaciones || 0; // Días disponibles
@@ -163,9 +185,9 @@ const handleFileChange = (e) => {
   
     let horas = null;
   
-    if (tipo === 'asuntos propios') {
-      const hasEnoughAPDays = await validatePersonalLeaveDays();
-      if (!hasEnoughAPDays) {
+    if (tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales') {
+      const hasEnoughDays = validateDaysAvailable(tipo);
+      if (!hasEnoughDays) {
         setIsLoading(false);
         return;
       }
@@ -210,12 +232,12 @@ const handleFileChange = (e) => {
       'fecha_fin',
       tipo === 'salidas personales' || tipo === 'licencias por jornadas' || tipo === 'modulo' ? fechaIni : fechaFin
     );
-    formData.append('turno', tipo === 'asuntos propios' || tipo === 'licencias por jornadas' ? turno : '');
-    formData.append('horas', tipo === 'salidas personales' ? horas : '');
+    formData.append('turno', tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales' ? turno : '');
+    formData.append('horas', tipo === 'salidas personales' ? validateSPHours() : '');
     formData.append('estado', 'Pendiente');
   
     if (file) {
-      formData.append('file', file); // Adjuntar archivo si existe
+      formData.append('file', file);
     }
   
     try {

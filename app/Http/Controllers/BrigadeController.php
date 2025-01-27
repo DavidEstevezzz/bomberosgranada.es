@@ -149,7 +149,7 @@ class BrigadeController extends Controller
         $firefighters = [];
 
         if (isset($assignmentsByTurno['Tarde'])) {
-            if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada && isset($assignmentsByTurno['Noche']) && $assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {
+            if (($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada && isset($assignmentsByTurno['Noche']) && $assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) || ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada && isset($assignmentsByTurno['Noche']) && $assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada)) {
                 // Mostrar el turno "Noche" solo si la brigada de destino coincide con la brigada actual
                 $firefighters[] = [
                     'id_empleado' => $user->id_empleado,

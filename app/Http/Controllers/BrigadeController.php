@@ -149,6 +149,12 @@ class BrigadeController extends Controller
         $firefighters = [];
 
         if (isset($assignmentsByTurno['Tarde'])) {
+            Log::info("Evaluando IF 1 para el usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado})", [
+                'Tarde_id_brigada_destino' => $assignmentsByTurno['Tarde']->id_brigada_destino ?? null,
+                'Noche_existe' => isset($assignmentsByTurno['Noche']),
+                'Noche_id_brigada_destino' => $assignmentsByTurno['Noche']->id_brigada_destino ?? null,
+                'id_brigada_consultada' => $id_brigada,
+            ]);
             if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada 
                 && isset($assignmentsByTurno['Noche']) 
                 && $assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {

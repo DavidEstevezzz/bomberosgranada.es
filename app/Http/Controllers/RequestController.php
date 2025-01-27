@@ -344,7 +344,7 @@ public function update(Request $request, $id)
 
         // Ordenar por fecha en descendente y luego según la prioridad de turno
         $assignments = Firefighters_assignment::where('id_empleado', $idEmpleado)
-            ->where('fecha_ini', '<', $fechaInicio)
+            ->where('fecha_ini', '<=', $fechaInicio)
             ->orderBy('fecha_ini', 'desc')
             ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get();

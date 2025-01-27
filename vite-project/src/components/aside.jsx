@@ -54,8 +54,16 @@ const Aside = ({ className }) => {
   const userType = user.type; // Asume que el campo `type` contiene el rol del usuario
 
   return (
-    <aside className={`w-64 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'} ${className}`}>
-      <nav className="mt-6">
+<aside
+  className={`w-64 h-full overflow-y-scroll ${
+    darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'
+  } ${className}`}
+  style={{
+    WebkitOverflowScrolling: 'touch', // Habilita scroll suave en dispositivos iOS
+    overflowY: 'scroll', // Forzar scroll vertical
+  }}
+>
+  <nav className="mt-6">
         {/* Inicio */}
         <a href="/dashboard" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
           <FontAwesomeIcon icon={faTachometerAlt} className="w-5 h-5 mr-2" />

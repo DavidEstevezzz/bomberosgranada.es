@@ -64,7 +64,7 @@ export default function DefaultLayout() {
         <div className="flex flex-col h-screen">
             <Header toggleAside={toggleAside} onLogout={onLogout} user={user} />
             <div className="flex flex-1 overflow-hidden">
-                {isAsideOpen && <Aside />}
+                {isAsideOpen && <Aside className="h-full" />}
                 <main className={`flex-1 p-6 overflow-auto ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                     <Outlet />
                 </main>

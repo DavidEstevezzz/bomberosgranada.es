@@ -125,8 +125,6 @@ class BrigadeController extends Controller
 
     $users = \App\Models\User::whereIn('type', ['bombero', 'mando'])->get();
 
-    Log::info("Usuarios obtenidos del sistema:", ['users' => $users->toArray()]);
-
     $filteredUsers = $users->flatMap(function ($user) use ($fecha, $id_brigada) {
         // Buscar las asignaciones del usuario el mismo día
         $sameDayAssignments = Firefighters_assignment::where('id_empleado', $user->id_empleado)
@@ -139,6 +137,8 @@ class BrigadeController extends Controller
             $assignmentsByTurno[$assignment->turno] = $assignment;
         }
 
+        Log::info("Asignaciones por turno para el usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado})", $assignmentsByTurno);
+
         // Buscar la última asignación previa si no tiene asignaciones para el mismo día
         $lastAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)
             ->whereDate('fecha_ini', '<=', $fecha)
@@ -147,9 +147,6 @@ class BrigadeController extends Controller
             ->first();
 
         $firefighters = [];
-
-        Log::info("Ultima asignación del bombero con nombre: {$user->nombre} {$user->apellido}", ['last_assignment' => $lastAssignment]);
-
 
         if (isset($assignmentsByTurno['Tarde'])) {
             if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada && isset($assignmentsByTurno['Noche']) && $assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {

@@ -278,8 +278,16 @@ class BrigadeController extends Controller
                 ];
             }
         }
+        Log::info("Bomberos procesados para el usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado})", [
+            'firefighters' => $firefighters,
+        ]);
 
+        
         return $firefighters;
+
+
+
+
     });
 
     return response()->json([

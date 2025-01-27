@@ -149,18 +149,12 @@ class BrigadeController extends Controller
         $firefighters = [];
 
         if (isset($assignmentsByTurno['Tarde'])) {
-            if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada) {
-                Log::info("Turno Tarde: El destino no coincide con la brigada actual");
-            }
-            if (isset($assignmentsByTurno['Noche'])) {
-                Log::info("Turno Noche: Existe asignación para la noche");
-            }
-            if ($assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {
-                Log::info("Turno Noche: La brigada destino coincide con la actual");
-            }
             if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada 
-            && isset($assignmentsByTurno['Noche']) 
-            && $assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {                // Mostrar el turno "Noche" solo si la brigada de destino coincide con la brigada actual
+                && isset($assignmentsByTurno['Noche']) 
+                && $assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {
+                
+                Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 1 - Turno Mañana y noche");
+        
                 $firefighters[] = [
                     'id_empleado' => $user->id_empleado,
                     'nombre' => $user->nombre,
@@ -169,8 +163,10 @@ class BrigadeController extends Controller
                     'telefono' => $user->telefono,
                     'turno' => 'Mañana y noche'
                 ];
-            } else if($assignmentsByTurno['Tarde']->id_brigada_destino == $id_brigada && !isset($assignmentsByTurno['Noche'])){
-
+            } else if ($assignmentsByTurno['Tarde']->id_brigada_destino == $id_brigada && !isset($assignmentsByTurno['Noche'])) {
+                
+                Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 2 - Turno Tarde y noche");
+        
                 $firefighters[] = [
                     'id_empleado' => $user->id_empleado,
                     'nombre' => $user->nombre,
@@ -179,9 +175,10 @@ class BrigadeController extends Controller
                     'telefono' => $user->telefono,
                     'turno' => 'Tarde y noche'
                 ];
-            
-            }  else if($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada && isset($assignmentsByTurno['Mañana']) && $assignmentsByTurno['Mañana']->id_brigada_destino == $id_brigada){
-
+            } else if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada && isset($assignmentsByTurno['Mañana']) && $assignmentsByTurno['Mañana']->id_brigada_destino == $id_brigada) {
+                
+                Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 3 - Turno Mañana");
+        
                 $firefighters[] = [
                     'id_empleado' => $user->id_empleado,
                     'nombre' => $user->nombre,
@@ -190,9 +187,9 @@ class BrigadeController extends Controller
                     'telefono' => $user->telefono,
                     'turno' => 'Mañana'
                 ];
-            
-            }  else {
-                // Si hay un cambio de brigada en el turno "Noche", mostrar los turnos anteriores en la brigada original
+            } else {
+                Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el ELSE 1 - Turno Tarde");
+        
                 $firefighters[] = [
                     'id_empleado' => $user->id_empleado,
                     'nombre' => $user->nombre,
@@ -202,11 +199,11 @@ class BrigadeController extends Controller
                     'turno' => 'Tarde'
                 ];
             }
-        }
-        // Si hay asignación de turno "Noche", mantener los turnos previos en la brigada original
-        else if (isset($assignmentsByTurno['Noche'])) {
+        } else if (isset($assignmentsByTurno['Noche'])) {
             if ($assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {
-                // Mostrar el turno "Noche" solo si la brigada de destino coincide con la brigada actual
+                
+                Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 4 - Turno Noche");
+        
                 $firefighters[] = [
                     'id_empleado' => $user->id_empleado,
                     'nombre' => $user->nombre,
@@ -216,7 +213,8 @@ class BrigadeController extends Controller
                     'turno' => 'Noche'
                 ];
             } else {
-                // Si hay un cambio de brigada en el turno "Noche", mostrar los turnos anteriores en la brigada original
+                Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el ELSE 2 - Turno Mañana y tarde");
+        
                 $firefighters[] = [
                     'id_empleado' => $user->id_empleado,
                     'nombre' => $user->nombre,
@@ -226,33 +224,11 @@ class BrigadeController extends Controller
                     'turno' => 'Mañana y tarde'
                 ];
             }
-        } elseif (isset($assignmentsByTurno['Tarde'])) {
-            if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada) {
-                // Mostrar el turno "Mañana" en la brigada original si cambia de brigada en la tarde
-                $firefighters[] = [
-                    'id_empleado' => $user->id_empleado,
-                    'nombre' => $user->nombre,
-                    'apellido' => $user->apellido,
-                    'puesto' => $user->puesto,
-                    'telefono' => $user->telefono,
-                    'turno' => 'Mañana y noche'
-                ];
-                
-            }
-            // Mostrar el turno "Tarde" en la brigada de destino
-            if ($assignmentsByTurno['Tarde']->id_brigada_destino == $id_brigada) {
-            $firefighters[] = [
-                'id_empleado' => $user->id_empleado,
-                'nombre' => $user->nombre,
-                'apellido' => $user->apellido,
-                'puesto' => $user->puesto,
-                'telefono' => $user->telefono,
-                'turno' => 'Tarde'
-            ];
-        }
         } elseif (isset($assignmentsByTurno['Mañana'])) {
-            // Si tiene asignación en turno de "Mañana", se muestra solo esa
             if ($assignmentsByTurno['Mañana']->id_brigada_destino == $id_brigada) {
+                
+                Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 5 - Turno Día completo");
+        
                 $firefighters[] = [
                     'id_empleado' => $user->id_empleado,
                     'nombre' => $user->nombre,
@@ -261,11 +237,11 @@ class BrigadeController extends Controller
                     'telefono' => $user->telefono,
                     'turno' => 'Día completo'
                 ];
-             }
+            }
         } else if (empty($assignmentsByTurno)) {
-            // Si no hay asignaciones el mismo día, usamos la última asignación previa
             if ($lastAssignment && $lastAssignment->id_brigada_destino == $id_brigada) {
-                Log::info("Usando última asignación previa para el bombero {$user->nombre} {$user->apellido}", ['last_assignment' => $lastAssignment]);
+                
+                Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 6 - Última asignación previa, Día completo");
         
                 $firefighters[] = [
                     'id_empleado' => $user->id_empleado,
@@ -273,10 +249,11 @@ class BrigadeController extends Controller
                     'apellido' => $user->apellido,
                     'puesto' => $user->puesto,
                     'telefono' => $user->telefono,
-                    'turno' => 'Día completo', // Asumimos "Día completo" como fallback
+                    'turno' => 'Día completo'
                 ];
             }
-        } else {
+        }
+         else {
             // Validar si no tiene asignaciones en otro turno en otra brigada el mismo día
             $sameDayOtherBrigade = Firefighters_assignment::where('id_empleado', $user->id_empleado)
                 ->whereDate('fecha_ini', '=', $fecha)

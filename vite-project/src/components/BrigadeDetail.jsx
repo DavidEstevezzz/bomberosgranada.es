@@ -165,14 +165,15 @@ const BrigadeDetail = () => {
   const filterFirefightersByShift = (shift) => {
     return firefighters
       .filter(firefighter =>
-        firefighter.turno === shift ||
-        firefighter.turno === 'Día completo' ||
-        (shift === 'Mañana' && firefighter.turno === 'Mañana y tarde') ||
-        (shift === 'Tarde' && ['Mañana y tarde', 'Tarde y noche'].includes(firefighter.turno)) ||
-        (shift === 'Noche' && firefighter.turno === 'Tarde y noche')
+        firefighter.turno === shift || // Turno exacto
+        firefighter.turno === 'Día completo' || // Día completo aplica a todos los turnos
+        (shift === 'Mañana' && ['Mañana y tarde', 'Mañana y noche'].includes(firefighter.turno)) || // Turno combinado que incluye la mañana
+        (shift === 'Tarde' && ['Mañana y tarde', 'Tarde y noche'].includes(firefighter.turno)) || // Turno combinado que incluye la tarde
+        (shift === 'Noche' && ['Tarde y noche', 'Mañana y noche'].includes(firefighter.turno)) // Turno combinado que incluye la noche
       )
       .sort((a, b) => puestoPriority[a.puesto] - puestoPriority[b.puesto]); // Ordenar por prioridad
   };
+  
   
 
   const exportToPDF = () => {

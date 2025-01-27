@@ -60,6 +60,7 @@ class ShiftChangeRequestController extends Controller
             'brigada1' => $brigada1,
             'brigada2' => $brigada2,
             'fecha' => $request->fecha,
+            'fecha2' => $request->fecha2,
             'turno' => $request->turno,
             'motivo' => $request->motivo,
             'estado' => $request->estado,
@@ -104,7 +105,7 @@ public function update(Request $request, $id)
 
     // Si el estado ha cambiado de "aceptado" a "rechazado", eliminar asignaciones
     if ($oldEstado === 'aceptado' && $shiftChangeRequest->estado === 'rechazado') {
-        $this->deleteAssignments($shiftChangeRequest);
+        $this->deleteAssignmentsForChangeRequest($shiftChangeRequest);
     }
 
     // Enviar notificación a los dos empleados
@@ -153,6 +154,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $fechaInicio->format('Y-m-d'),
                 'id_empleado' => $shiftChangeRequest->id_empleado1,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
                 'turno' => 'Mañana'
@@ -161,6 +163,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $fechaDevolucion->format('Y-m-d'),
                 'id_empleado' => $shiftChangeRequest->id_empleado1,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
                 'turno' => 'Mañana'
@@ -170,6 +173,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $fechaInicio->format('Y-m-d'),
                 'id_empleado' => $shiftChangeRequest->id_empleado2,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
                 'turno' => 'Mañana'
@@ -178,6 +182,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $fechaDevolucion->format('Y-m-d'),
                 'id_empleado' => $shiftChangeRequest->id_empleado2,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
                 'turno' => 'Mañana'
@@ -207,6 +212,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $fechaInicioBombero1,
                 'id_empleado' => $shiftChangeRequest->id_empleado1,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
                 'turno' => $turnoAsignacion
@@ -216,6 +222,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $fechaInicioBombero2,
                 'id_empleado' => $shiftChangeRequest->id_empleado2,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
                 'turno' => $turnoAsignacion
@@ -225,6 +232,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $fechaDevolucion,
                 'id_empleado' => $shiftChangeRequest->id_empleado1,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
                 'turno' => $turnoDevolucion
@@ -234,6 +242,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $fechaDevolucion,
                 'id_empleado' => $shiftChangeRequest->id_empleado2,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
                 'turno' => $turnoDevolucion
@@ -260,6 +269,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $shiftChangeRequest->fecha,
                 'id_empleado' => $shiftChangeRequest->id_empleado1,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
                 'turno' => $turnoAsignacion
@@ -269,6 +279,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $shiftChangeRequest->fecha,
                 'id_empleado' => $shiftChangeRequest->id_empleado2,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
                 'turno' => $turnoAsignacion
@@ -278,6 +289,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $fechaDevolucion,
                 'id_empleado' => $shiftChangeRequest->id_empleado1,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
                 'turno' => $turnoDevolucion
@@ -287,6 +299,7 @@ private function createAssignments($shiftChangeRequest)
             Firefighters_assignment::create([
                 'fecha_ini' => $fechaDevolucion,
                 'id_empleado' => $shiftChangeRequest->id_empleado2,
+                'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
                 'turno' => $turnoDevolucion
@@ -304,7 +317,13 @@ private function createAssignments($shiftChangeRequest)
     }
 }
 
-    
+private function deleteAssignmentsForChangeRequest($shiftChangeRequest)
+{
+    Log::info("Eliminando asignaciones vinculadas al cambio de guardia ID: {$shiftChangeRequest->id}");
+
+    Firefighters_assignment::where('id_change_request', $shiftChangeRequest->id)->delete();
+}
+
 
 
     private function deleteAssignments($shiftChangeRequest)

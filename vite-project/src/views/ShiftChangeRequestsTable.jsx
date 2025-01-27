@@ -117,7 +117,10 @@ const ShiftChangeRequestsTable = () => {
                         <td className="py-2 px-2">
                           {request.empleado2?.nombre} {request.empleado2?.apellido}
                         </td>
-                        <td className="py-2 px-2">{request.fecha}</td>
+                        <td className="py-2 px-2">
+                          {request.fecha}
+                          {request.fecha2 && ` / ${request.fecha2}`} {/* Mostrar fecha2 si existe */}
+                        </td>
                         <td className="py-2 px-2">{request.turno}</td>
                         <td className="py-2 px-2 flex space-x-2">
                           <button
@@ -131,6 +134,7 @@ const ShiftChangeRequestsTable = () => {
                       </tr>
                     ))}
                   </tbody>
+
                 </table>
               )}
               <div className="flex justify-between mt-4">

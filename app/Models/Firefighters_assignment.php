@@ -17,7 +17,8 @@ class Firefighters_assignment extends Model
         'id_brigada_origen',
         'id_brigada_destino',
         'turno',
-        'id_request'
+        'id_request',
+        'id_change_request'
     ];
 
     public function firefighter()

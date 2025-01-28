@@ -195,52 +195,61 @@ public function availableFirefightersWithoutMands(Request $request)
      * Método privado para obtener IDs de bomberos cuya última brigada asignada es una brigada excluida.
      */
     private function getFirefightersAssignedToExcludedBrigades($date, $excludedBrigades)
-    {
-        Log::info("Fecha y brigadas excluidas en getFirefightersAssignedToExcludedBrigades:", ['date' => $date, 'excludedBrigades' => $excludedBrigades]);
-    
-        // Definimos las brigadas temporales especiales
-        $temporaryBrigades = ['Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licendias por Días', 'Compensacion grupos especiales'];
-    
-        // Obtener todas las asignaciones válidas hasta la fecha específica
-        $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
-            ->orderBy('fecha_ini', 'desc') // Ordenar por fecha de inicio (más recientes primero)
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')") // Priorizar turnos
-            ->get()
-            ->groupBy('id_empleado'); // Agrupar por bombero para analizar uno por uno
-    
-        Log::info("Asignaciones agrupadas por bombero:", ['assignments' => $assignments]);
-    
-        $unavailableFirefighterIds = [];
-    
-        foreach ($assignments as $firefighterId => $firefighterAssignments) {
-            $isAvailable = false;
-    
-            // Buscar asignaciones relevantes para el día anterior, actual y siguiente
-            foreach ($firefighterAssignments as $assignment) {
-                if ($assignment->fecha_ini == $date || 
-                    $assignment->fecha_ini == date('Y-m-d', strtotime("$date -1 day")) || 
-                    $assignment->fecha_ini == date('Y-m-d', strtotime("$date +1 day"))) {
-                    // Si alguna asignación coincide con una brigada temporal especial, marcar como disponible
-                    if (in_array($assignment->brigadeDestination->nombre, $temporaryBrigades)) {
-                        $isAvailable = true;
-                        break;
-                    }
-                }
-            }
-    
-            if (!$isAvailable) {
-                // Si no está disponible por brigadas temporales, verificar exclusión por brigadas normales
-                $relevantAssignment = $firefighterAssignments->first();
-                if ($relevantAssignment && in_array($relevantAssignment->brigadeDestination->nombre, $excludedBrigades)) {
-                    $unavailableFirefighterIds[] = $firefighterId;
-                }
+{
+    Log::info("Fecha y brigadas excluidas en getFirefightersAssignedToExcludedBrigades:", ['date' => $date, 'excludedBrigades' => $excludedBrigades]);
+
+    // Definimos las brigadas temporales especiales
+    $temporaryBrigades = ['Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licendias por Días', 'Compensacion grupos especiales'];
+
+    // Obtener todas las asignaciones válidas hasta la fecha específica
+    $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
+        ->orderBy('fecha_ini', 'desc') // Ordenar por fecha de inicio (más recientes primero)
+        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')") // Priorizar turnos
+        ->get()
+        ->groupBy('id_empleado'); // Agrupar por bombero para analizar uno por uno
+
+    Log::info("Asignaciones agrupadas por bombero:", ['assignments' => $assignments]);
+
+    $unavailableFirefighterIds = [];
+
+    foreach ($assignments as $firefighterId => $firefighterAssignments) {
+        $isAvailable = false;
+
+        // Buscar asignación para el día evaluado
+        $currentDayAssignment = $firefighterAssignments->firstWhere('fecha_ini', $date);
+
+        if ($currentDayAssignment) {
+            // Si está asignado a una brigada temporal en el día evaluado, está no disponible
+            if (in_array($currentDayAssignment->brigadeDestination->nombre, $temporaryBrigades)) {
+                $unavailableFirefighterIds[] = $firefighterId;
+                continue;
             }
         }
-    
-        Log::info("Bomberos no disponibles tras evaluación contextual:", ['unavailableFirefighterIds' => $unavailableFirefighterIds]);
-    
-        return $unavailableFirefighterIds;
+
+        // Buscar asignaciones para el día anterior y siguiente
+        $previousDayAssignment = $firefighterAssignments->firstWhere('fecha_ini', date('Y-m-d', strtotime("$date -1 day")));
+        $nextDayAssignment = $firefighterAssignments->firstWhere('fecha_ini', date('Y-m-d', strtotime("$date +1 day")));
+
+        // Verificar si el bombero estuvo asignado a una brigada temporal el día anterior o siguiente
+        if (($previousDayAssignment && in_array($previousDayAssignment->brigadeDestination->nombre, $temporaryBrigades)) ||
+            ($nextDayAssignment && in_array($nextDayAssignment->brigadeDestination->nombre, $temporaryBrigades))) {
+            // Si estuvo en una brigada temporal el día anterior o siguiente, está disponible
+            $isAvailable = true;
+        }
+
+        if (!$isAvailable) {
+            // Si no se marcó como disponible, verificamos la exclusión normal
+            if ($currentDayAssignment && in_array($currentDayAssignment->brigadeDestination->nombre, $excludedBrigades)) {
+                $unavailableFirefighterIds[] = $firefighterId;
+            }
+        }
     }
+
+    Log::info("Bomberos no disponibles tras evaluación contextual:", ['unavailableFirefighterIds' => $unavailableFirefighterIds]);
+
+    return $unavailableFirefighterIds;
+}
+
     
 
     public function moveToTop($id, $column = 'orden')

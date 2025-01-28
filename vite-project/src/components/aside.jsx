@@ -135,10 +135,10 @@ const Aside = ({ className }) => {
           </button>
           {dropdownOpen.extraHours && (
             <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-              {userType !== 'bombero' && (
+              {userType === 'jefe' && (
                 <a href="/horas-extra" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Horas Extra</a>
               )}
-              {userType === 'bombero' && (
+              {userType === 'jefe' && (
                 <a href="/total-horas-extra" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Total Horas Extra</a>
               )}
               <a href="/requerimientos" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos 24h</a>

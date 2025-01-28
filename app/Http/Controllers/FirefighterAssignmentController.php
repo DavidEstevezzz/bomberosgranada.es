@@ -157,7 +157,7 @@ public function availableFirefightersWithoutMands(Request $request)
     Log::info("Fecha recibida en availableFirefighters antes de procesar:", ['date' => $date]);
 
     // Definimos brigadas excluidas por defecto
-    $excludedBrigades = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licendias por Días'];
+    $excludedBrigades = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licendias por Días', 'Compensacion grupos especiales'];
 
     // Añadimos brigadas que estuvieron en guardia ayer, hoy, o mañana
     $guards = Guard::whereIn('date', [
@@ -198,34 +198,50 @@ public function availableFirefightersWithoutMands(Request $request)
     {
         Log::info("Fecha y brigadas excluidas en getFirefightersAssignedToExcludedBrigades:", ['date' => $date, 'excludedBrigades' => $excludedBrigades]);
     
-        // Obtener asignaciones en la fecha actual y luego en fechas anteriores
-        $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
-            ->orderByRaw("CASE WHEN fecha_ini = '$date' THEN 0 ELSE 1 END")  // Priorizar asignaciones en el día actual
-            ->orderBy('fecha_ini', 'desc')  // Luego ordenar descendentemente por fecha
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")  // Priorizar turnos
-            ->get()
-            ->unique('id_empleado');
+        // Definimos las brigadas temporales especiales
+        $temporaryBrigades = ['Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licendias por Días', 'Compensacion grupos especiales'];
     
-        Log::info("Asignaciones filtradas por fecha y ordenadas:", ['assignments' => $assignments]);
+        // Obtener todas las asignaciones válidas hasta la fecha específica
+        $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
+            ->orderBy('fecha_ini', 'desc') // Ordenar por fecha de inicio (más recientes primero)
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')") // Priorizar turnos
+            ->get()
+            ->groupBy('id_empleado'); // Agrupar por bombero para analizar uno por uno
+    
+        Log::info("Asignaciones agrupadas por bombero:", ['assignments' => $assignments]);
     
         $unavailableFirefighterIds = [];
     
-        foreach ($assignments as $assignment) {
-            if ($assignment->brigadeDestination) {
-                Log::info("Última brigada asignada para bombero {$assignment->id_empleado} en el día {$date} : " . $assignment->brigadeDestination->nombre);
+        foreach ($assignments as $firefighterId => $firefighterAssignments) {
+            $isAvailable = false;
     
-                if (in_array($assignment->brigadeDestination->nombre, $excludedBrigades)) {
-                    $unavailableFirefighterIds[] = $assignment->id_empleado;
+            // Buscar asignaciones relevantes para el día anterior, actual y siguiente
+            foreach ($firefighterAssignments as $assignment) {
+                if ($assignment->fecha_ini == $date || 
+                    $assignment->fecha_ini == date('Y-m-d', strtotime("$date -1 day")) || 
+                    $assignment->fecha_ini == date('Y-m-d', strtotime("$date +1 day"))) {
+                    // Si alguna asignación coincide con una brigada temporal especial, marcar como disponible
+                    if (in_array($assignment->brigadeDestination->nombre, $temporaryBrigades)) {
+                        $isAvailable = true;
+                        break;
+                    }
                 }
-            } else {
-                Log::info("Última brigada asignada para bombero {$assignment->id_empleado} es null");
+            }
+    
+            if (!$isAvailable) {
+                // Si no está disponible por brigadas temporales, verificar exclusión por brigadas normales
+                $relevantAssignment = $firefighterAssignments->first();
+                if ($relevantAssignment && in_array($relevantAssignment->brigadeDestination->nombre, $excludedBrigades)) {
+                    $unavailableFirefighterIds[] = $firefighterId;
+                }
             }
         }
     
-        Log::info("Bomberos no disponibles:", ['unavailableFirefighterIds' => $unavailableFirefighterIds]);
+        Log::info("Bomberos no disponibles tras evaluación contextual:", ['unavailableFirefighterIds' => $unavailableFirefighterIds]);
     
         return $unavailableFirefighterIds;
     }
+    
 
     public function moveToTop($id, $column = 'orden')
 {

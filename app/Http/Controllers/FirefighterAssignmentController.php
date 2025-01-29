@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Models\Guard;
+use App\Models\Request as RequestModel;
 
 
 class FirefighterAssignmentController extends Controller
@@ -191,64 +192,91 @@ public function availableFirefightersWithoutMands(Request $request)
 
 
 
-    /**
-     * Método privado para obtener IDs de bomberos cuya última brigada asignada es una brigada excluida.
-     */
-    private function getFirefightersAssignedToExcludedBrigades($date, $excludedBrigades)
+/**
+ * Método privado para obtener IDs de bomberos cuya última brigada asignada
+ * es una brigada excluida, con lógica adicional para verificar solicitudes
+ * "Confirmadas" el día anterior o siguiente.
+ */
+private function getFirefightersAssignedToExcludedBrigades($date, $excludedBrigades)
 {
-    Log::info("Fecha y brigadas excluidas en getFirefightersAssignedToExcludedBrigades:", ['date' => $date, 'excludedBrigades' => $excludedBrigades]);
-
-    // Definimos las brigadas temporales especiales
-    $temporaryBrigades = ['Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licendias por Días', 'Compensacion grupos especiales'];
+    Log::info("Fecha y brigadas excluidas en getFirefightersAssignedToExcludedBrigades:", [
+        'date' => $date,
+        'excludedBrigades' => $excludedBrigades
+    ]);
 
     // Obtener todas las asignaciones válidas hasta la fecha específica
     $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
-        ->orderBy('fecha_ini', 'desc') // Ordenar por fecha de inicio (más recientes primero)
+        ->orderBy('fecha_ini', 'desc')  // Más recientes primero
         ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')") // Priorizar turnos
         ->get()
-        ->groupBy('id_empleado'); // Agrupar por bombero para analizar uno por uno
+        ->groupBy('id_empleado'); // Agrupar por bombero
 
     Log::info("Asignaciones agrupadas por bombero:", ['assignments' => $assignments]);
 
     $unavailableFirefighterIds = [];
 
+    // Para simplificar, calculamos fecha anterior y posterior
+    $previousDay = date('Y-m-d', strtotime("$date -1 day"));
+    $nextDay     = date('Y-m-d', strtotime("$date +1 day"));
+
     foreach ($assignments as $firefighterId => $firefighterAssignments) {
+        // Asumimos que inicialmente NO está protegido por ninguna solicitud
         $isAvailable = false;
 
-        // Buscar asignación para el día evaluado
+        // 1) Obtenemos la asignación para el día actual
         $currentDayAssignment = $firefighterAssignments->firstWhere('fecha_ini', $date);
 
-        if ($currentDayAssignment) {
-            // Si está asignado a una brigada temporal en el día evaluado, está no disponible
-            if (in_array($currentDayAssignment->brigadeDestination->nombre, $temporaryBrigades)) {
-                $unavailableFirefighterIds[] = $firefighterId;
-                continue;
-            }
-        }
-
-        // Buscar asignaciones para el día anterior y siguiente
-        $previousDayAssignment = $firefighterAssignments->firstWhere('fecha_ini', date('Y-m-d', strtotime("$date -1 day")));
-        $nextDayAssignment = $firefighterAssignments->firstWhere('fecha_ini', date('Y-m-d', strtotime("$date +1 day")));
-
-        // Verificar si el bombero estuvo asignado a una brigada temporal el día anterior o siguiente
-        if (($previousDayAssignment && in_array($previousDayAssignment->brigadeDestination->nombre, $temporaryBrigades)) ||
-            ($nextDayAssignment && in_array($nextDayAssignment->brigadeDestination->nombre, $temporaryBrigades))) {
-            // Si estuvo en una brigada temporal el día anterior o siguiente, está disponible
+        // 2) Verificamos si el día anterior hay una solicitud Confirmada con turno Tarde y noche o Día Completo
+        if ($this->hasConfirmedRequestOnDay($firefighterId, $previousDay, ['Tarde y noche', 'Día Completo'])) {
             $isAvailable = true;
         }
 
+        // 3) Verificamos si el día siguiente hay una solicitud Confirmada con turno Mañana y tarde o Día Completo
+        if ($this->hasConfirmedRequestOnDay($firefighterId, $nextDay, ['Mañana y tarde', 'Día Completo'])) {
+            $isAvailable = true;
+        }
+
+        // 4) Si NO está protegido por solicitudes (isAvailable = false),
+        //    revisamos si su brigada de hoy está en las excluidas
         if (!$isAvailable) {
-            // Si no se marcó como disponible, verificamos la exclusión normal
-            if ($currentDayAssignment && in_array($currentDayAssignment->brigadeDestination->nombre, $excludedBrigades)) {
+            // Si existe una asignación para hoy y está en brigadas excluidas, se marca como no disponible
+            if (
+                $currentDayAssignment
+                && $currentDayAssignment->brigadeDestination
+                && in_array($currentDayAssignment->brigadeDestination->nombre, $excludedBrigades)
+            ) {
                 $unavailableFirefighterIds[] = $firefighterId;
             }
         }
     }
 
-    Log::info("Bomberos no disponibles tras evaluación contextual:", ['unavailableFirefighterIds' => $unavailableFirefighterIds]);
+    Log::info("Bomberos no disponibles tras evaluación:", [
+        'unavailableFirefighterIds' => $unavailableFirefighterIds
+    ]);
 
     return $unavailableFirefighterIds;
 }
+
+
+/**
+ * Verifica si el bombero tiene alguna solicitud en estado Confirmada,
+ * de tipo 'asuntos propios' o 'licencias por jornadas',
+ * que abarque la fecha dada y cuyo turno esté en la lista de $turns.
+ */
+private function hasConfirmedRequestOnDay($firefighterId, $day, array $turns)
+{
+    return \App\Models\Request::where('id_empleado', $firefighterId)
+        ->where('estado', 'Confirmada')
+        ->whereIn('tipo', ['asuntos propios', 'licencias por jornadas'])
+        ->where(function ($query) use ($day) {
+            // El día consultado está entre fecha_ini y fecha_fin
+            $query->where('fecha_ini', '<=', $day)
+                  ->where('fecha_fin', '>=', $day);
+        })
+        ->whereIn('turno', $turns)
+        ->exists();
+}
+
 
     
 

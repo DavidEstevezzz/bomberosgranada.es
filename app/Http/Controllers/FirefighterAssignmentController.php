@@ -258,6 +258,14 @@ private function getFirefightersAssignedToExcludedBrigades($date, $excludedBriga
                     // Finalmente, lo marcamos como no disponible
                     $unavailableFirefighterIds[] = $firefighterId;
                 }
+                else{
+                    $user = $lastAssignment->firefighter; 
+                    $brigadeName = $lastAssignment->brigadeDestination->nombre;
+                    
+                    Log::info(
+                        "Bombero excluido: {$user->nombre} {$user->apellido}. Brigada: {$brigadeName}"
+                    );
+                }
         }
     }
 

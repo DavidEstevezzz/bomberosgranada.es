@@ -194,12 +194,12 @@ public function availableFirefightersWithoutMands(Request $request)
 
 private function getFirefightersAssignedToExcludedBrigades($date, $excludedBrigades)
 {
-    Log::info("Fecha y brigadas excluidas en getFirefightersAssignedToExcludedBrigades:", [
+    Log::info("Fecha y brigadas excluidas:", [
         'date' => $date,
         'excludedBrigades' => $excludedBrigades
     ]);
 
-    // Obtener asignaciones (hasta la fecha que nos interese) ordenadas
+    // Agrupamos las asignaciones hasta la fecha consultada
     $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
         ->orderBy('fecha_ini', 'desc')
         ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
@@ -210,36 +210,48 @@ private function getFirefightersAssignedToExcludedBrigades($date, $excludedBriga
 
     $unavailableFirefighterIds = [];
 
-    // Definimos días anteriores, actual y siguiente
+    // Calculamos días anterior y siguiente (si mantienes la lógica de 'protección')
     $previousDay = date('Y-m-d', strtotime("$date -1 day"));
     $nextDay     = date('Y-m-d', strtotime("$date +1 day"));
 
     foreach ($assignments as $firefighterId => $firefighterAssignments) {
-        // 1) Verificamos protección por solicitudes
+        // 1) Verificar si el bombero está protegido por alguna solicitud
+        //    (ejemplo: día anterior con turno Tarde y noche o día siguiente con turno Mañana y tarde)
         $isProtected = $this->isProtectedByRequests($firefighterId, $previousDay, $date, $nextDay);
 
-        // 2) Si NO está protegido, revisamos si aparece en una brigada excluida
-        //    en el día anterior, el propio día o el siguiente
         if (!$isProtected) {
-            // Sacamos las asignaciones de X-1, X, X+1
-            $daysToCheck = [$previousDay, $date, $nextDay];
-
-            $hasExcludedAssignment = $firefighterAssignments
-                ->whereIn('fecha_ini', $daysToCheck)
-                ->filter(function ($assignment) use ($excludedBrigades) {
-                    // Retornamos sólo las que su brigada esté en las excluidas
-                    return $assignment->brigadeDestination 
-                        && in_array($assignment->brigadeDestination->nombre, $excludedBrigades);
+            // 2) Como NO está protegido, buscamos su última asignación antes o en la fecha $date
+            //    es decir, la más reciente con fecha_ini <= $date
+            $lastAssignment = $firefighterAssignments
+                ->filter(function ($assignment) use ($date) {
+                    return $assignment->fecha_ini <= $date;
                 })
-                ->isNotEmpty(); // true si hay al menos una asignación excluida
+                ->sortByDesc('fecha_ini') // primero por fecha descendente
+                ->sortByDesc(function ($a) {
+                    // Si quieres respetar el orden de turno 'Noche','Tarde','Mañana'
+                    // puedes hacer una pequeña lógica de prioridad:
+                    return match ($a->turno) {
+                        'Noche' => 3,
+                        'Tarde' => 2,
+                        'Mañana' => 1,
+                        default => 0,
+                    };
+                })
+                ->first();
 
-            if ($hasExcludedAssignment) {
+            if (
+                $lastAssignment &&
+                $lastAssignment->brigadeDestination &&
+                in_array($lastAssignment->brigadeDestination->nombre, $excludedBrigades)
+            ) {
+                // Si la última asignación previa al día consultado está en una brigada excluida,
+                // entonces lo marcamos como NO disponible.
                 $unavailableFirefighterIds[] = $firefighterId;
             }
         }
     }
 
-    Log::info("Bomberos no disponibles:", [
+    Log::info("IDs de bomberos no disponibles:", [
         'unavailableFirefighterIds' => $unavailableFirefighterIds
     ]);
 

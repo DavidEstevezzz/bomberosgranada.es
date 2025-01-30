@@ -261,9 +261,9 @@ private function getFirefightersAssignedToExcludedBrigades($date, $excludedBriga
                 else{
                     $user = $lastAssignment->firefighter; 
                     $brigadeName = $lastAssignment->brigadeDestination->nombre;
-                    
+
                     Log::info(
-                        "Bombero excluido: {$user->nombre} {$user->apellido}. Brigada: {$brigadeName}"
+                        "Bombero incluido: {$user->nombre} {$user->apellido}. Brigada: {$brigadeName}"
                     );
                 }
         }

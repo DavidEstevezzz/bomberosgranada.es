@@ -50,6 +50,7 @@ public function store(Request $request)
         'AP' => 'required_if:type,bombero,mando',
         'vacaciones' => 'required',
         'modulo' => 'required',    
+        
     ];
 
     $validator = Validator::make($request->all(), $rules);

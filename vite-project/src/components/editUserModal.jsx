@@ -17,7 +17,8 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
     puesto: user.puesto || '',
     AP: user.AP || '',
     vacaciones: user.vacaciones || '',
-    modulo: user.modulo || ''
+    modulo: user.modulo || '',
+    compensacion_grupos: user.compensacion_grupos || ''
   });
 
   // Update form values when modal opens with existing user data
@@ -35,7 +36,8 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
         id_parque: user.id_parque || '',
         AP: user.AP || '',
         vacaciones: user.vacaciones || '',
-        modulo: user.modulo || ''
+        modulo: user.modulo || '',
+        compensacion_grupos: user.compensacion_grupos || ''
       });
     }
   }, [isOpen, user]);
@@ -147,6 +149,10 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
           <div>
             <label htmlFor="modulo" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Módulo</label>
             <input type="number" name="modulo" id="modulo" value={formValues.modulo} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500" required />
+          </div>
+          <div>
+            <label htmlFor="compensacion_grupos" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Compensación Grupos</label>
+            <input type="number" name="compensacion_grupos" id="compensacion_grupos" value={formValues.compensacion_grupos} onChange={handleChange} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500" required />
           </div>
         </div>
           <div className="flex items-center space-x-4">

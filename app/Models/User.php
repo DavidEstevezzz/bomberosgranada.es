@@ -31,6 +31,7 @@ class User extends Authenticatable
         'email2',
         'vacaciones',
         'modulo',
+        'compensacion_grupos',
     ];
 
     protected $hidden = [

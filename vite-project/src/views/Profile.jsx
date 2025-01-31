@@ -145,10 +145,11 @@ const Profile = () => {
           {/* Días Restantes */}
           <div className="p-4  rounded-lg  bg-gradient-to-r from-gray-900 to-gray-700 text-white">
             <h2 className="text-xl font-semibold mb-2">Permisos Restantes</h2>
-            <p><strong>Vacaciones:</strong> {vacationDaysRemaining !== null ? vacationDaysRemaining : 'No disponible'} días</p>
+            <p><strong>Vacaciones:</strong> {user.vacaciones} días</p>
             <p><strong>Asuntos Propios:</strong> {user.AP} jornadas </p>
             <p><strong>Salidas Personales:</strong> {user.SP} horas</p>
             <p><strong>Módulos:</strong> {user.modulo} días</p>
+            <p><strong>Compensación grupos:</strong> {user.compensacion_grupos} jornadas</p>
           </div>
         </div>
 

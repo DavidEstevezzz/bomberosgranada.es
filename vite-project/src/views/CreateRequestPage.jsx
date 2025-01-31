@@ -192,7 +192,7 @@ const handleFileChange = (e) => {
         return;
       }
     }
-
+  
     if (tipo === 'modulo') {
       const hasEnoughModuloDays = validateModuloDays();
       if (!hasEnoughModuloDays) {
@@ -230,9 +230,14 @@ const handleFileChange = (e) => {
     formData.append('fecha_ini', fechaIni);
     formData.append(
       'fecha_fin',
-      tipo === 'salidas personales' || tipo === 'licencias por jornadas' || tipo === 'modulo' ? fechaIni : fechaFin
+      tipo === 'salidas personales' || tipo === 'licencias por jornadas' || tipo === 'modulo'
+        ? fechaIni
+        : fechaFin
     );
-    formData.append('turno', tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales' ? turno : '');
+    formData.append(
+      'turno',
+      tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales' ? turno : ''
+    );
     formData.append('horas', tipo === 'salidas personales' ? validateSPHours() : '');
     formData.append('estado', 'Pendiente');
   
@@ -246,7 +251,19 @@ const handleFileChange = (e) => {
           'Content-Type': 'multipart/form-data',
         },
       });
+  
       setSuccess('Solicitud enviada con éxito.');
+  
+      // <-- ¡Aquí reiniciamos todos los campos! -->
+      setTipo('vacaciones');
+      setMotivo('');
+      setFechaIni('');
+      setFechaFin('');
+      setHoraIni('');
+      setHoraFin('');
+      setTurno('');
+      setFile(null);
+  
     } catch (error) {
       console.error('Error al enviar la solicitud:', error);
       setError('Error al enviar la solicitud.');
@@ -254,6 +271,7 @@ const handleFileChange = (e) => {
       setIsLoading(false);
     }
   };
+  
   
   
 

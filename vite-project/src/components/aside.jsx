@@ -55,13 +55,13 @@ const Aside = ({ className }) => {
 
   return (
 <aside
-  className={`w-64 h-full overflow-y-scroll ${
-    darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'
-  } ${className}`}
-  style={{
-    WebkitOverflowScrolling: 'touch', // Habilita scroll suave en dispositivos iOS
-    overflowY: 'scroll', // Forzar scroll vertical
-  }}
+  className={`
+    w-64 h-full
+    overflow-y-auto        /* Por defecto, scroll vertical */
+    md:overflow-y-visible  /* A partir de 'md' (768px), overflow visible */
+    ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'}
+    ${className}
+  `}
 >
   <nav className="mt-6">
         {/* Inicio */}

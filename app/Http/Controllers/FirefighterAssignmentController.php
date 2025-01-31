@@ -158,7 +158,7 @@ public function availableFirefightersWithoutMands(Request $request)
     Log::info("Fecha recibida en availableFirefighters antes de procesar:", ['date' => $date]);
 
     // Definimos brigadas excluidas por defecto
-    $excludedBrigades = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licendias por Días', 'Compensacion grupos especiales'];
+    $excludedBrigades = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales'];
 
     // Añadimos brigadas que estuvieron en guardia ayer, hoy, o mañana
     $guards = Guard::whereIn('date', [

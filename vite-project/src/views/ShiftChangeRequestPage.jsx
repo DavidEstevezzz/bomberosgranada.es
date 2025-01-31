@@ -4,6 +4,10 @@ import ShiftChangeRequestApiService from '../services/ShiftChangeRequestApiServi
 import { useStateContext } from '../contexts/ContextProvider';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
+function removeDiacritics(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 const ShiftChangeRequestPage = () => {
   const { user } = useStateContext();
   const { darkMode } = useDarkMode();
@@ -12,26 +16,31 @@ const ShiftChangeRequestPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [fecha, setFecha] = useState('');
-  const [fecha2, setFecha2] = useState(''); // Nueva fecha para cambios espejo
+  const [fecha2, setFecha2] = useState('');
   const [turno, setTurno] = useState('Día Completo');
   const [motivo, setMotivo] = useState('');
-  const [changeType, setChangeType] = useState('simple'); // Tipo de cambio: simple o espejo
+  const [changeType, setChangeType] = useState('simple');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
   useEffect(() => {
     const fetchAndFilterEmployees = async () => {
       if (!user?.puesto) return;
-
       try {
         const response = await UsuariosApiService.bomberosPorPuesto(user.puesto);
         const allEmployees = response.data;
         setEmployees(allEmployees);
 
-        const filtered = allEmployees.filter((emp) =>
-          `${emp.nombre} ${emp.apellido}`.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        // Normalizar tanto la searchTerm como el nombre del empleado
+        const searchTermNormalized = removeDiacritics(searchTerm.toLowerCase());
+
+        const filtered = allEmployees.filter((emp) => {
+          const fullName = `${emp.nombre} ${emp.apellido}`.toLowerCase();
+          const fullNameNormalized = removeDiacritics(fullName);
+          return fullNameNormalized.includes(searchTermNormalized);
+        });
         setFilteredEmployees(filtered);
+
       } catch (error) {
         console.error('Error fetching employees by puesto:', error);
         setError('Error al obtener los empleados por puesto.');

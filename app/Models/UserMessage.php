@@ -17,6 +17,7 @@ class UserMessage extends Model
         'body',
         'attachment',
         'is_read',
+        'massive',
     ];
 
     protected $table = 'messages';

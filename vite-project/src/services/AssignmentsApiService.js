@@ -42,6 +42,10 @@ class AssignmentsApiService {
     async moveFirefighterToBottom(id, column = 'orden') {
         return await BaseApiService.post(`${API_URL}/${id}/move-to-bottom/${column}`);
     }
+
+    async requireFirefighter(payload) {
+        return await BaseApiService.post(`${API_URL}/require-firefighter`, payload);
+      }
 }
 
 export default new AssignmentsApiService();

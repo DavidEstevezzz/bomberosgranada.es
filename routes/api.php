@@ -153,6 +153,8 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('/firefighters-assignments', [FirefighterAssignmentController::class, 'store']);
     Route::post('/firefighters-assignments/{id}/move-to-top/{column}', [FirefighterAssignmentController::class, 'moveToTop']);
     Route::post('/firefighters-assignments/{id}/move-to-bottom/{column}', [FirefighterAssignmentController::class, 'moveToBottom']);
+    Route::post('firefighters-assignments/require-firefighter', [FirefighterAssignmentController::class, 'requireFirefighter']);
+
 
 
 

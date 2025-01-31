@@ -351,6 +351,99 @@ public function moveToBottom($id, $column = 'orden')
     return response()->json(['message' => 'Firefighter not found'], 404);
 }
 
+public function requireFirefighter(Request $request)
+{
+    Log::info("requireFirefighter - Datos recibidos:", $request->all());
+
+    // Validar los campos recibidos
+    $validator = Validator::make($request->all(), [
+        'id_empleado' => 'required|exists:users,id_empleado',
+        'id_brigada_destino' => 'required|exists:brigades,id_brigada',
+        'fecha' => 'required|date',
+        'turno' => 'required|in:Mañana,Tarde,Noche,Día Completo,Mañana y tarde,Tarde y noche',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 400);
+    }
+
+    $idEmpleado = $request->input('id_empleado');
+    $idBrigadaDestino = $request->input('id_brigada_destino');
+    $fecha = $request->input('fecha');
+    $turnoRequest = $request->input('turno');
+
+    // 1. Determinar la brigada original (última antes de $fecha)
+    $assignmentAnterior = Firefighters_assignment::where('id_empleado', $idEmpleado)
+        ->where('fecha_ini', '<=', $fecha)
+        ->orderBy('fecha_ini', 'desc')
+        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+        ->first();
+
+    $brigadaOrigen = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
+
+    // 2. Calcular el turno de ida
+    $turnoIda = match ($turnoRequest) {
+        'Mañana', 'Día Completo', 'Mañana y tarde' => 'Mañana',
+        'Tarde', 'Tarde y noche' => 'Tarde',
+        'Noche' => 'Noche',
+        default => 'Mañana',  // Por si acaso
+    };
+
+    // 3. Crear la asignación de ida
+    $asignacionIda = Firefighters_assignment::create([
+        'id_empleado' => $idEmpleado,
+        'id_brigada_origen' => $brigadaOrigen,
+        'id_brigada_destino' => $idBrigadaDestino,
+        'fecha_ini' => $fecha,
+        'turno' => $turnoIda,
+    ]);
+
+    // 4. Calcular el turno de vuelta
+    // y la fecha de vuelta
+    switch ($turnoRequest) {
+        case 'Mañana':
+            $turnoVuelta = 'Tarde';
+            $fechaVuelta = $fecha; 
+            break;
+        case 'Tarde':
+        case 'Mañana y tarde':
+            $turnoVuelta = 'Noche';
+            $fechaVuelta = $fecha;
+            break;
+        case 'Tarde y noche':
+        case 'Noche':
+            $turnoVuelta = 'Mañana';
+            // Fecha siguiente
+            $fechaVuelta = date('Y-m-d', strtotime($fecha . ' +1 day'));
+            break;
+        case 'Día Completo':
+            // Podrías decidir si la vuelta es al día siguiente o mismo día. 
+            // Como no estaba especificado, asumimos vuelve al día siguiente por la mañana:
+            $turnoVuelta = 'Mañana';
+            $fechaVuelta = date('Y-m-d', strtotime($fecha . ' +1 day'));
+            break;
+        default:
+            $turnoVuelta = 'Tarde';
+            $fechaVuelta = $fecha; 
+            break;
+    }
+
+    // 5. Crear la asignación de vuelta
+    $asignacionVuelta = Firefighters_assignment::create([
+        'id_empleado' => $idEmpleado,
+        'id_brigada_origen' => $idBrigadaDestino,
+        'id_brigada_destino' => $brigadaOrigen,
+        'fecha_ini' => $fechaVuelta,
+        'turno' => $turnoVuelta,
+    ]);
+
+    return response()->json([
+        'asignacion_ida' => $asignacionIda,
+        'asignacion_vuelta' => $asignacionVuelta,
+    ], 201);
+}
+
+
 
 
 }

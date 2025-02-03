@@ -204,7 +204,14 @@ class BrigadeController extends Controller
                     'telefono' => $user->telefono,
                     'turno' => 'Tarde'
                 ];
-            } else if($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada && !isset($assignmentsByTurno['Noche']) && !isset($assignmentsByTurno['Mañana'])) {
+            } else if (
+                isset($assignmentsByTurno['Tarde']) &&
+                $assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada &&
+                !isset($assignmentsByTurno['Noche']) &&
+                !isset($assignmentsByTurno['Mañana']) &&
+                $lastAssignment && 
+                $lastAssignment->id_brigada_destino == $id_brigada
+            ) {
                 Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el ELSE 2 - Turno Tarde");
         
                 $firefighters[] = [

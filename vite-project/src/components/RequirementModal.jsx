@@ -207,7 +207,7 @@ const RequirementModal = ({ isOpen, onClose, employee }) => {
                 <option value="">-- Selecciona una brigada --</option>
                 {brigades.map((b) => (
                   <option key={b.id_brigada} value={b.id_brigada}>
-                    {b.nombre} ({b.id_brigada})
+                    {b.nombre} ({b.id_parque})
                   </option>
                 ))}
               </select>

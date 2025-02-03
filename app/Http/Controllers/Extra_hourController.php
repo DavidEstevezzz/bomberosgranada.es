@@ -78,18 +78,11 @@ class Extra_hourController extends Controller
     public function update(Request $request, $id)
     {
         $rules = [
-            'date' => [
-                'required',
-                'date',
-                Rule::unique('guards')->where(function ($query) use ($request, $id) {
-                    return $query->where('date', $request->date)
-                                 ->where('id_brigada', $request->id_brigada)
-                                 ->where('id', '<>', $id);
-                }),
-            ],
-            'id_brigada' => 'required|exists:brigades,id_brigada',
-            'id_salario' => 'required|exists:salaries,id_salario',
-            'tipo' => 'required|string',
+            'id_empleado'     => 'required|exists:users,id_empleado', // o la tabla que corresponda
+            'date'            => 'required|date',
+            'horas_diurnas'   => 'required|numeric',
+            'horas_nocturnas' => 'required|numeric',
+            'id_salario'      => 'required|exists:salaries,id_salario',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -98,9 +91,9 @@ class Extra_hourController extends Controller
             return response()->json($validator->errors(), 400);
         }
 
-        $guard = Guard::findOrFail($id);
-        $guard->update($request->all());
-        return response()->json($guard, 200);
+        $extra_hour = Extra_hour::findOrFail($id);
+        $extra_hour->update($request->all());
+        return response()->json($extra_hour, 200);
     }
 
     // Eliminar un registro

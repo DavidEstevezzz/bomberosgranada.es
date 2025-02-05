@@ -284,42 +284,65 @@ private function getFirefightersAssignedToExcludedBrigades($date, $excludedBriga
  */
 private function isProtectedByRequests($firefighterId, $previousDay, $currentDay, $nextDay)
 {
-    // Definimos los tipos de solicitudes que protegen al bombero
-    $protectedTypes = [
-        'asuntos propios',
+    // Tipos de solicitud que **no** tienen turno y por tanto, se protegen solo con la condición de fecha
+    $typesWithoutTurno = [
         'vacaciones',
-        'licencias por dias',
         'modulo',
+        'licencias por dias'
+    ];
+
+    // Tipos de solicitud que **requieren** verificación del turno para proteger
+    $typesWithTurno = [
+        'asuntos propios',
         'compensacion grupos especiales',
         'licencias por jornadas'
     ];
 
-    // Comprueba día anterior: se protege si existe una solicitud confirmada con alguno de los tipos indicados,
-    // que cubra el día anterior y tenga turno 'Tarde y noche' o 'Día Completo'
+    // Consulta para el día anterior:
+    // Se protege si existe una solicitud Confirmada para el día anterior que:
+    // - Sea de un tipo que no requiere turno (solo se comprueba que el día anterior esté entre fecha_ini y fecha_fin), o
+    // - Sea de un tipo que requiere turno y además tenga turno en ['Tarde y noche', 'Día Completo']
     $protectedPrevious = \App\Models\Request::where('id_empleado', $firefighterId)
         ->where('estado', 'Confirmada')
-        ->whereIn('tipo', $protectedTypes)
-        ->where(function ($query) use ($previousDay) {
-            $query->where('fecha_ini', '<=', $previousDay)
+        ->where(function ($query) use ($previousDay, $typesWithoutTurno, $typesWithTurno) {
+            $query->where(function ($q) use ($previousDay, $typesWithoutTurno) {
+                $q->whereIn('tipo', $typesWithoutTurno)
+                  ->where('fecha_ini', '<=', $previousDay)
                   ->where('fecha_fin', '>=', $previousDay);
+            })
+            ->orWhere(function ($q) use ($previousDay, $typesWithTurno) {
+                $q->whereIn('tipo', $typesWithTurno)
+                  ->where('fecha_ini', '<=', $previousDay)
+                  ->where('fecha_fin', '>=', $previousDay)
+                  ->whereIn('turno', ['Tarde y noche', 'Día Completo']);
+            });
         })
-        ->whereIn('turno', ['Tarde y noche','Día Completo'])
         ->exists();
 
-    // Comprueba día siguiente: se protege si existe una solicitud confirmada con alguno de los tipos indicados,
-    // que cubra el día siguiente y tenga turno 'Mañana y tarde' o 'Día Completo'
+    // Consulta para el día siguiente:
+    // Se protege si existe una solicitud Confirmada para el día siguiente que:
+    // - Sea de un tipo que no requiere turno (solo se comprueba que el día siguiente esté entre fecha_ini y fecha_fin), o
+    // - Sea de un tipo que requiere turno y además tenga turno en ['Mañana y tarde', 'Día Completo']
     $protectedNext = \App\Models\Request::where('id_empleado', $firefighterId)
         ->where('estado', 'Confirmada')
-        ->whereIn('tipo', $protectedTypes)
-        ->where(function ($query) use ($nextDay) {
-            $query->where('fecha_ini', '<=', $nextDay)
+        ->where(function ($query) use ($nextDay, $typesWithoutTurno, $typesWithTurno) {
+            $query->where(function ($q) use ($nextDay, $typesWithoutTurno) {
+                $q->whereIn('tipo', $typesWithoutTurno)
+                  ->where('fecha_ini', '<=', $nextDay)
                   ->where('fecha_fin', '>=', $nextDay);
+            })
+            ->orWhere(function ($q) use ($nextDay, $typesWithTurno) {
+                $q->whereIn('tipo', $typesWithTurno)
+                  ->where('fecha_ini', '<=', $nextDay)
+                  ->where('fecha_fin', '>=', $nextDay)
+                  ->whereIn('turno', ['Mañana y tarde', 'Día Completo']);
+            });
         })
-        ->whereIn('turno', ['Mañana y tarde','Día Completo'])
         ->exists();
 
     return $protectedPrevious || $protectedNext;
 }
+
    
 
     public function moveToTop($id, $column = 'orden')

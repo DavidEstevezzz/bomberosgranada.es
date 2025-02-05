@@ -4,30 +4,105 @@ import UsersApiService from '../services/UsuariosApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import CreateMessageModal from '../components/CreateMessageModal';
 import dayjs from 'dayjs';
-
-// Si usas tu context:
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { useStateContext } from '../contexts/ContextProvider';
+
+// Componente recursivo para mostrar el hilo de conversación (estilo chat)
+const MessageThread = ({ message, onReply, users }) => {
+  const { user } = useStateContext(); // Usuario actual
+  const { darkMode } = useDarkMode(); // Soporte para modo oscuro
+
+  const getUserName = (userId) => {
+    const id = Number(userId);
+    const user = users.find((u) => Number(u.id_empleado) === id);
+    return user ? `${user.nombre} ${user.apellido}` : 'Desconocido';
+  };
+
+  const isOwnMessage = Number(message.sender_id) === Number(user.id_empleado);
+  
+  // Determinar si este mensaje es el último mensaje en la conversación
+  const isLastMessage = !message.replies || message.replies.length === 0;
+
+  return (
+    <div className="flex flex-col w-full">
+      {/* Contenedor del mensaje con alineación corregida */}
+      <div className={`flex w-full my-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+        <div
+          className={`relative max-w-[75%] p-3 rounded-xl shadow-md text-sm transition-all ${
+            isOwnMessage
+              ? `bg-green-500 text-white ${darkMode ? 'dark:bg-green-600' : ''}`
+              : `bg-gray-200 text-gray-800 ${darkMode ? 'dark:bg-gray-700 dark:text-white' : ''}`
+          }`}
+          style={{ alignSelf: isOwnMessage ? 'flex-end' : 'flex-start' }} // Asegura la alineación correcta
+        >
+          {/* Nombre del remitente (solo para mensajes de otros) */}
+          {!isOwnMessage && (
+            <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+              {getUserName(message.sender_id)}
+            </p>
+          )}
+
+          {/* Mensaje */}
+          <p>{message.body}</p>
+
+          {/* Hora del mensaje */}
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 text-right">
+            {dayjs(message.created_at).format('HH:mm')}
+          </p>
+
+          {/* Botón para responder solo en el último mensaje de la conversación */}
+          {isLastMessage && (
+            <button
+              onClick={() => onReply(message)}
+              className="mt-2 text-xs bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 transition-all"
+            >
+              Responder
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Contenedor de respuestas alineado correctamente */}
+      <div className="flex flex-col w-full">
+        {message.replies && message.replies.length > 0 && (
+          message.replies.map((reply) => (
+            <MessageThread
+              key={reply.id}
+              message={reply}
+              onReply={onReply}
+              users={users}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
 
 const MessagesPage = () => {
   const { darkMode } = useDarkMode();
-  // Si necesitas el rol del usuario para ver si puede enviar masivo:
-  const { user } = useStateContext(); // user.role_name, etc.
+  const { user } = useStateContext();
 
   const [inbox, setInbox] = useState([]);
   const [sent, setSent] = useState([]);
   const [users, setUsers] = useState([]);
-
   const [view, setView] = useState('inbox');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
-
-  // Para descargar adjuntos
-  const [downloading, setDownloading] = useState(false);
-  // Para filtrar por mes
+  const [replyMessage, setReplyMessage] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(dayjs());
 
+  // Función para obtener el nombre del usuario
+  const getUserName = (userId) => {
+    const id = Number(userId);
+    const found = users.find((u) => Number(u.id_empleado) === id);
+    return found ? `${found.nombre} ${found.apellido}` : 'Desconocido';
+  };
+
   useEffect(() => {
+    console.log("Fetching users and messages...");
     fetchUsers();
     fetchMessages();
   }, [view, currentMonth]);
@@ -35,6 +110,7 @@ const MessagesPage = () => {
   const fetchUsers = async () => {
     try {
       const response = await UsersApiService.getUsuarios();
+      console.log("Usuarios obtenidos:", response.data);
       setUsers(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -44,23 +120,17 @@ const MessagesPage = () => {
   const fetchMessages = async () => {
     setLoading(true);
     try {
-      let messages;
-      if (view === 'inbox') {
-        messages = await MessagesApiService.getInbox();
-      } else {
-        messages = await MessagesApiService.getSent();
-      }
-
-      // Filtrar mensajes al mes actual
+      const messages =
+        view === 'inbox'
+          ? await MessagesApiService.getInbox()
+          : await MessagesApiService.getSent();
+      console.log("Mensajes obtenidos:", messages.data);
       const filteredMessages = messages.data.filter((message) =>
         dayjs(message.created_at).isSame(currentMonth, 'month')
       );
-
-      if (view === 'inbox') {
-        setInbox(filteredMessages);
-      } else {
-        setSent(filteredMessages);
-      }
+      console.log("Mensajes filtrados:", filteredMessages);
+      if (view === 'inbox') setInbox(filteredMessages);
+      else setSent(filteredMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
@@ -68,9 +138,76 @@ const MessagesPage = () => {
     }
   };
 
-  const getUserName = (userId) => {
-    const findUser = users.find((u) => u.id_empleado === userId);
-    return findUser ? `${findUser.nombre} ${findUser.apellido}` : 'Desconocido';
+  const fetchRootMessage = async (message) => {
+    // Si el mensaje actual no tiene padre, es el raíz
+    if (!message.parent_id) return message;
+  
+    // Si tiene padre, consultamos el mensaje padre
+    const response = await MessagesApiService.getMessageThread(message.parent_id);
+    const parentMessage = response.data.message ? response.data.message : response.data;
+    
+    // Llamada recursiva hasta llegar al mensaje raíz
+    return fetchRootMessage(parentMessage);
+  };
+
+  const handleOpenMessage = async (message) => {
+    console.log("Abriendo mensaje:", message);
+    if (!message.is_read) { // Evita llamadas innecesarias a la API
+      await MessagesApiService.markAsRead(message.id);
+      // Actualizar la UI localmente para reflejar el cambio
+      setInbox((prevInbox) =>
+        prevInbox.map((msg) =>
+          msg.id === message.id ? { ...msg, is_read: true } : msg
+        )
+      );
+      setSent((prevSent) =>
+        prevSent.map((msg) =>
+          msg.id === message.id ? { ...msg, is_read: true } : msg
+        )
+      );
+    }
+    
+    try {
+      // Buscamos el mensaje raíz, en caso de que el mensaje seleccionado sea una respuesta
+      const fullMessage = await fetchRootMessage(message);
+  
+      // Validamos que la propiedad replies esté definida
+      if (!fullMessage.replies) {
+        fullMessage.replies = [];
+      }
+  
+      setSelectedMessage(fullMessage);
+    } catch (error) {
+      console.error('Error fetching message thread:', error);
+    }
+  };
+  
+  
+  
+
+  // Al hacer clic en "Responder", se cierra el modal de conversación y se prepara la respuesta
+  const handleReply = (message) => {
+    console.log("Respondiendo al mensaje:", message);
+    // Cierra el modal de conversación para evitar superposición
+    setSelectedMessage(null);
+
+    // Verificamos la propiedad subject, comprobando ambos posibles niveles
+    const subject = message.subject || (message.message && message.message.subject);
+    if (!subject) {
+      console.error("El mensaje o su asunto es undefined:", message);
+      return;
+    }
+    const replySubject = subject.startsWith('Re:') ? subject : 'Re: ' + subject;
+    const replyData = {
+      // Para responder, el destinatario es el remitente original
+      receiver_id: message.sender_id || (message.message && message.message.sender_id),
+      subject: replySubject,
+      parent_id: message.id || (message.message && message.message.id),
+      body: ''
+    };
+    console.log("Datos para respuesta:", replyData);
+    setReplyMessage(replyData);
+    setShowModal(true);
   };
 
   const handleDelete = async (id) => {
@@ -82,25 +219,7 @@ const MessagesPage = () => {
     }
   };
 
-  const handleOpenMessage = async (message) => {
-    if (!message.is_read && view === 'inbox') {
-      // Marcar como leído si está en la bandeja de entrada
-      try {
-        await MessagesApiService.markAsRead(message.id);
-        setInbox((prevInbox) =>
-          prevInbox.map((msg) =>
-            msg.id === message.id ? { ...msg, is_read: true } : msg
-          )
-        );
-      } catch (error) {
-        console.error('Error marking message as read:', error);
-      }
-    }
-    setSelectedMessage(message);
-  };
-
   const handleDownloadAttachment = async (id, filename) => {
-    setDownloading(true);
     try {
       const response = await MessagesApiService.downloadAttachment(id);
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -112,8 +231,6 @@ const MessagesPage = () => {
       link.remove();
     } catch (error) {
       console.error('Error downloading attachment:', error);
-    } finally {
-      setDownloading(false);
     }
   };
 
@@ -127,6 +244,7 @@ const MessagesPage = () => {
 
   const closeModal = () => {
     setShowModal(false);
+    setReplyMessage(null);
     fetchMessages();
   };
 
@@ -135,15 +253,11 @@ const MessagesPage = () => {
   const messages = view === 'inbox' ? inbox : sent;
 
   return (
-    <div
-      className={`p-4 min-h-screen ${
-        darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'
-      }`}
-    >
+    <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Mensajes</h1>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => { setReplyMessage(null); setShowModal(true); }}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           Crear Mensaje
@@ -154,36 +268,26 @@ const MessagesPage = () => {
         <div className="flex space-x-4">
           <button
             onClick={() => setView('inbox')}
-            className={`px-4 py-2 rounded ${
-              view === 'inbox' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'
-            }`}
+            className={`px-4 py-2 rounded ${view === 'inbox' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'}`}
           >
             Bandeja de Entrada
           </button>
           <button
             onClick={() => setView('sent')}
-            className={`px-4 py-2 rounded ${
-              view === 'sent' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'
-            }`}
+            className={`px-4 py-2 rounded ${view === 'sent' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'}`}
           >
             Bandeja de Salida
           </button>
         </div>
         <div className="flex space-x-4">
-          <button
-            onClick={handlePreviousMonth}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-          >
+          <button onClick={handlePreviousMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
             Mes Anterior
           </button>
           <span className="text-lg mt-2 font-semibold">
             {currentMonth.format('MMMM YYYY').charAt(0).toUpperCase() +
               currentMonth.format('MMMM YYYY').slice(1)}
           </span>
-          <button
-            onClick={handleNextMonth}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-          >
+          <button onClick={handleNextMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
             Mes Siguiente
           </button>
         </div>
@@ -191,11 +295,7 @@ const MessagesPage = () => {
 
       <div className="overflow-x-auto">
         <table className="w-full table-auto text-center">
-          <thead
-            className={`${
-              darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-800'
-            }`}
-          >
+          <thead className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-800'}`}>
             <tr>
               <th className="py-2 px-4">Fecha</th>
               <th className="py-2 px-4">Asunto</th>
@@ -206,46 +306,39 @@ const MessagesPage = () => {
           </thead>
           <tbody>
             {messages.length > 0 ? (
-              messages.map((message) => {
-                const isRead = message.is_read ? 'Leído' : 'No leído';
-                return (
-                  <tr
-                    key={message.id}
-                    className={`border-b ${
-                      message.is_read
-                        ? darkMode
-                          ? 'bg-gray-700'
-                          : 'bg-gray-100'
-                        : ''
-                    }`}
-                  >
-                    <td className="py-2 px-4">
-                      {new Date(message.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="py-2 px-4">{message.subject}</td>
-                    <td className="py-2 px-4">
-                      {view === 'inbox'
-                        ? getUserName(message.sender_id)
-                        : getUserName(message.receiver_id)}
-                    </td>
-                    <td className="py-2 px-4">{isRead}</td>
-                    <td className="py-2 px-4 flex space-x-2 justify-center">
-                      <button
-                        onClick={() => handleOpenMessage(message)}
-                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                      >
-                        Abrir
-                      </button>
-                      <button
-                        onClick={() => handleDelete(message.id)}
-                        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+              messages.map((message) => (
+                <tr
+                  key={message.id}
+                  className={`border-b ${message.is_read ? (darkMode ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
+                >
+                  <td className="py-2 px-4">
+                    {new Date(message.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="py-2 px-4">{message.subject || 'Sin asunto'}</td>
+                  <td className="py-2 px-4">
+                    {view === 'inbox'
+                      ? getUserName(message.sender_id)
+                      : getUserName(message.receiver_id)}
+                  </td>
+                  <td className="py-2 px-4">
+                    {message.is_read ? 'Leído' : 'No leído'}
+                  </td>
+                  <td className="py-2 px-4 flex space-x-2 justify-center">
+                    <button
+                      onClick={() => handleOpenMessage(message)}
+                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      Abrir
+                    </button>
+                    <button
+                      onClick={() => handleDelete(message.id)}
+                      className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                    >
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))
             ) : (
               <tr>
                 <td colSpan="5" className="text-center py-4">
@@ -257,78 +350,44 @@ const MessagesPage = () => {
         </table>
       </div>
 
-      {/* Modal para crear mensaje */}
       {showModal && (
         <CreateMessageModal
           isOpen={showModal}
           onClose={closeModal}
-          currentUserRole={user?.role_name} // si tu user tiene role_name
+          currentUserRole={user?.role_name}
+          replyMessage={replyMessage}
         />
       )}
 
-      {/* Modal para ver detalles del mensaje */}
-      {selectedMessage && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div
-            className={`p-8 w-full max-w-3xl rounded-lg shadow-lg ${
-              darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'
-            }`}
-          >
-            <div className="flex justify-between items-center pb-6 border-b">
-              <h2 className="text-xl font-bold">Detalles del Mensaje</h2>
-              <button
-                onClick={() => setSelectedMessage(null)}
-                className={`p-2 rounded ${
-                  darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
-                }`}
-              >
-                Cerrar
-              </button>
-            </div>
-            <div className="mt-6 space-y-4">
-              <div>
-                <p className="font-bold text-lg">Asunto:</p>
-                <p className="text-base">{selectedMessage.subject}</p>
-              </div>
-              <div>
-                <p className="font-bold text-lg">De:</p>
-                <p className="text-base">{getUserName(selectedMessage.sender_id)}</p>
-              </div>
-              <div>
-                <p className="font-bold text-lg">Para:</p>
-                {selectedMessage.massive ? (
-                  <p className="text-base">Mensaje Masivo (todos los usuarios)</p>
-                ) : (
-                  <p className="text-base">{getUserName(selectedMessage.receiver_id)}</p>
-                )}
-              </div>
-              <div>
-                <p className="font-bold text-lg">Mensaje:</p>
-                <p className="text-base">{selectedMessage.body}</p>
-              </div>
-              {selectedMessage.attachment && (
-                <div>
-                  <p className="font-bold text-lg">Adjunto:</p>
-                  <button
-                    onClick={() =>
-                      handleDownloadAttachment(
-                        selectedMessage.id,
-                        selectedMessage.attachment.split('/').pop()
-                      )
-                    }
-                    className="text-blue-500 hover:underline"
-                  >
-                    Descargar Archivo
-                  </button>
-                </div>
-              )}
-              {downloading && (
-                <p className="text-blue-500 mt-4">Descargando archivo...</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+{selectedMessage && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 transition-opacity">
+    <div
+      className={`p-6 w-full max-w-2xl rounded-lg shadow-lg transition-all ${
+        darkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200'
+      }`}
+    >
+      {/* Encabezado de la modal */}
+      <div className={`flex justify-between items-center pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-300'}`}>
+        <h2 className="text-lg font-bold">Chat</h2>
+        <button
+          onClick={() => setSelectedMessage(null)}
+          className={`p-2 rounded-full focus:outline-none focus:ring-2 ${
+            darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <FontAwesomeIcon icon={faTimes} />
+        </button>
+      </div>
+
+      {/* Contenido del chat con scrollbar y mayor ancho */}
+      <div className="overflow-y-auto max-h-[500px] p-4 space-y-2">
+        <MessageThread message={selectedMessage} onReply={handleReply} users={users} />
+      </div>
+    </div>
+  </div>
+)}
+
+
     </div>
   );
 };

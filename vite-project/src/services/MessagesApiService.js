@@ -54,6 +54,10 @@ class MessagesApiService {
     async searchMessages(query) {
         return await BaseApiService.get(`${API_URL}/search`, { params: { query } });
     }
+
+    async getMessageThread(id) {
+        return await BaseApiService.get(`${API_URL}/${id}`);
+    }
 }
 
 export default new MessagesApiService();

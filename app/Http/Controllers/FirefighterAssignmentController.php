@@ -163,7 +163,7 @@ class FirefighterAssignmentController extends Controller
         Log::info("Fecha recibida en availableFirefightersWithoutMands:", ['date' => $date]);
 
         $staticExcluded = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales'];
-        $guards = Guard::where('date', $date)->get();
+        $guards = Guard::with('brigade')->where('date', $date)->get();
         $guardExcluded = $guards->pluck('brigade.nombre')->unique()->toArray();
         $excludedBrigades = array_merge($staticExcluded, $guardExcluded);
         Log::info("Brigadas excluidas (estáticas y por guardia hoy):", ['excludedBrigades' => $excludedBrigades]);

@@ -284,43 +284,43 @@ private function getFirefightersAssignedToExcludedBrigades($date, $excludedBriga
  */
 private function isProtectedByRequests($firefighterId, $previousDay, $currentDay, $nextDay)
 {
-    // Ejemplo: un bombero está protegido si:
-    // - El día anterior tiene una solicitud Confirmada de tipo "asuntos propios" o "licencias por jornadas"
-    //   con turno en ['Tarde y noche','Día Completo'], O
-    // - El día siguiente tiene una solicitud Confirmada de tipo "asuntos propios" o "licencias por jornadas"
-    //   con turno en ['Mañana y tarde','Día Completo'].
-    // (Ajusta según tu propia condición)
+    // Definimos los tipos de solicitudes que protegen al bombero
+    $protectedTypes = [
+        'asuntos propios',
+        'vacaciones',
+        'licencias por dias',
+        'modulo',
+        'compensacion grupos especiales',
+        'licencias por jornadas'
+    ];
 
-    // Comprueba día anterior
+    // Comprueba día anterior: se protege si existe una solicitud confirmada con alguno de los tipos indicados,
+    // que cubra el día anterior y tenga turno 'Tarde y noche' o 'Día Completo'
     $protectedPrevious = \App\Models\Request::where('id_empleado', $firefighterId)
         ->where('estado', 'Confirmada')
-        ->whereIn('tipo', ['asuntos propios','licencias por jornadas'])
+        ->whereIn('tipo', $protectedTypes)
         ->where(function ($query) use ($previousDay) {
-            // El previousDay cae entre fecha_ini y fecha_fin
             $query->where('fecha_ini', '<=', $previousDay)
                   ->where('fecha_fin', '>=', $previousDay);
         })
         ->whereIn('turno', ['Tarde y noche','Día Completo'])
         ->exists();
 
-    // Comprueba día siguiente
+    // Comprueba día siguiente: se protege si existe una solicitud confirmada con alguno de los tipos indicados,
+    // que cubra el día siguiente y tenga turno 'Mañana y tarde' o 'Día Completo'
     $protectedNext = \App\Models\Request::where('id_empleado', $firefighterId)
         ->where('estado', 'Confirmada')
-        ->whereIn('tipo', ['asuntos propios','licencias por jornadas'])
+        ->whereIn('tipo', $protectedTypes)
         ->where(function ($query) use ($nextDay) {
-            // El nextDay cae entre fecha_ini y fecha_fin
             $query->where('fecha_ini', '<=', $nextDay)
                   ->where('fecha_fin', '>=', $nextDay);
         })
         ->whereIn('turno', ['Mañana y tarde','Día Completo'])
         ->exists();
 
-    return $protectedPrevious || $protectedNext ;
+    return $protectedPrevious || $protectedNext;
 }
-
-
-
-    
+   
 
     public function moveToTop($id, $column = 'orden')
 {

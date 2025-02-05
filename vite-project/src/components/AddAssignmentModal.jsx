@@ -9,6 +9,7 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
         id_empleado: '',
         id_brigada_origen: '',
         id_brigada_destino: '',
+        turno: '', // Nuevo campo agregado
     });
     const [usuarios, setUsuarios] = useState([]);
     const [filteredUsuarios, setFilteredUsuarios] = useState([]);
@@ -76,7 +77,14 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
             <div className="relative bg-gray-800 p-6 rounded-lg z-10 max-w-md w-full mx-4 my-8">
                 <h2 className="text-2xl font-bold text-white mb-4">Añadir Asignación</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <input type="date" name="fecha_ini" placeholder="Fecha Inicio" onChange={handleChange} required className="w-full p-2 rounded bg-gray-700 text-white" />
+                    <input
+                        type="date"
+                        name="fecha_ini"
+                        placeholder="Fecha Inicio"
+                        onChange={handleChange}
+                        required
+                        className="w-full p-2 rounded bg-gray-700 text-white"
+                    />
                     <div className="space-y-4">
                         <input
                             type="text"
@@ -85,7 +93,12 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full p-2 rounded bg-gray-700 text-white"
                         />
-                        <select name="id_empleado" onChange={handleChange} required className="w-full p-2 rounded bg-gray-700 text-white">
+                        <select
+                            name="id_empleado"
+                            onChange={handleChange}
+                            required
+                            className="w-full p-2 rounded bg-gray-700 text-white"
+                        >
                             <option value="">Seleccione un Empleado</option>
                             {filteredUsuarios.map(usuario => (
                                 <option key={usuario.id_empleado} value={usuario.id_empleado}>
@@ -94,7 +107,11 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
                             ))}
                         </select>
                     </div>
-                    <select name="id_brigada_origen" onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white">
+                    <select
+                        name="id_brigada_origen"
+                        onChange={handleChange}
+                        className="w-full p-2 rounded bg-gray-700 text-white"
+                    >
                         <option value="">Seleccione Brigada Origen</option>
                         {brigades.map(brigada => (
                             <option key={brigada.id_brigada} value={brigada.id_brigada}>
@@ -102,7 +119,12 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
                             </option>
                         ))}
                     </select>
-                    <select name="id_brigada_destino" onChange={handleChange} required className="w-full p-2 rounded bg-gray-700 text-white">
+                    <select
+                        name="id_brigada_destino"
+                        onChange={handleChange}
+                        required
+                        className="w-full p-2 rounded bg-gray-700 text-white"
+                    >
                         <option value="">Seleccione Brigada Destino</option>
                         {brigades.map(brigada => (
                             <option key={brigada.id_brigada} value={brigada.id_brigada}>
@@ -110,9 +132,29 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
                             </option>
                         ))}
                     </select>
+                    {/* Nuevo campo para seleccionar el turno */}
+                    <select
+                        name="turno"
+                        onChange={handleChange}
+                        required
+                        className="w-full p-2 rounded bg-gray-700 text-white"
+                    >
+                        <option value="">Seleccione Turno</option>
+                        <option value="Mañana">Mañana</option>
+                        <option value="Tarde">Tarde</option>
+                        <option value="Noche">Noche</option>
+                    </select>
                     <div className="flex justify-end space-x-2">
-                        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Añadir</button>
-                        <button type="button" onClick={onClose} className="bg-gray-600 text-white px-4 py-2 rounded">Cancelar</button>
+                        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+                            Añadir
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="bg-gray-600 text-white px-4 py-2 rounded"
+                        >
+                            Cancelar
+                        </button>
                     </div>
                 </form>
             </div>

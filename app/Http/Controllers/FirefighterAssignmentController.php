@@ -180,7 +180,7 @@ public function availableFirefightersWithoutMands(Request $request)
 
 
 
-private function getFirefightersAssignedToExcludedBrigades($date, $excludedBrigades, $guards)
+    private function getFirefightersAssignedToExcludedBrigades($date, $excludedBrigades, $guards)
     {
         Log::info("Fecha y brigadas excluidas:", [
             'date' => $date,
@@ -201,6 +201,9 @@ private function getFirefightersAssignedToExcludedBrigades($date, $excludedBriga
 
         foreach ($assignments as $firefighterId => $firefighterAssignments) {
             $isProtected = $this->isProtectedByRequests($firefighterId, $previousDay, $date, $nextDay);
+            $isProtectedNextDay = $this->isProtectedByRequests($firefighterId, $date, $nextDay, date('Y-m-d', strtotime("$nextDay +1 day")));
+            $isProtectedPreviousDay = $this->isProtectedByRequests($firefighterId, date('Y-m-d', strtotime("$previousDay -1 day")), $previousDay, $date);
+            
             $lastAssignment = $firefighterAssignments->first();
 
             if ($lastAssignment && $lastAssignment->brigadeDestination) {
@@ -215,6 +218,10 @@ private function getFirefightersAssignedToExcludedBrigades($date, $excludedBriga
                     $unavailableFirefighterIds[] = $firefighterId;
                 } elseif ($excludedTomorrow && !$isProtected) {
                     $unavailableFirefighterIds[] = $firefighterId;
+                } elseif ($excludedYesterday && $isProtectedNextDay) {
+                    Log::info("Bombero protegido por solicitud de módulo para el día siguiente:", ['firefighterId' => $firefighterId]);
+                } elseif ($excludedToday && $isProtectedPreviousDay) {
+                    Log::info("Bombero protegido por solicitud de módulo en el día anterior:", ['firefighterId' => $firefighterId]);
                 }
             }
         }

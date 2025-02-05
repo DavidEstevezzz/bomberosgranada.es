@@ -118,7 +118,7 @@ class FirefighterAssignmentController extends Controller
         $staticExcluded = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales'];
 
         // Se obtienen las brigadas que tienen guardia en el día consultado.
-        $guards = Guard::where('date', $date)->get();
+        $guards = Guard::with('brigade')->where('date', $date)->get();
         $guardExcluded = $guards->pluck('brigade.nombre')->unique()->toArray();
 
         // Combinamos la lista estática y las brigadas con guardia hoy.

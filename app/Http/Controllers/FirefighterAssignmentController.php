@@ -110,49 +110,47 @@ class FirefighterAssignmentController extends Controller
      * Devuelve los bomberos disponibles (tipo bombero y mando) para la fecha consultada.
      */
     public function availableFirefighters(Request $request)
-    {
-        $date = $request->query('date', date('Y-m-d'));
-        Log::info("Fecha recibida en availableFirefighters:", ['date' => $date]);
+{
+    $date = $request->query('date', date('Y-m-d'));
+    Log::info("Fecha recibida en availableFirefighters:", ['date' => $date]);
 
-        // Lista estática de estados (o brigadas) que excluyen inmediatamente:
-        $staticExcluded = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales'];
-
-        // Se obtienen las brigadas que tienen guardia en el día consultado.
+    $staticExcluded = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales'];
         $guards = Guard::with('brigade')->where('date', $date)->get();
         $guardExcluded = $guards->pluck('brigade.nombre')->unique()->toArray();
-
-        // Combinamos la lista estática y las brigadas con guardia hoy.
         $excludedBrigades = array_merge($staticExcluded, $guardExcluded);
         Log::info("Brigadas excluidas (estáticas y por guardia hoy):", ['excludedBrigades' => $excludedBrigades]);
 
-        // Se agrupan las asignaciones de bomberos hasta $date.
-        $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
-            ->get()
-            ->groupBy('id_empleado');
-        Log::info("Asignaciones agrupadas por bombero:", ['assignments' => $assignments]);
 
-        $unavailableFirefighterIds = [];
-        foreach ($assignments as $firefighterId => $firefighterAssignments) {
-            if (!$this->isFirefighterRequerible($firefighterId, $date, $excludedBrigades)) {
-                $unavailableFirefighterIds[] = $firefighterId;
-                Log::info("Bombero {$firefighterId} marcado como NO disponible para {$date}.");
-            } else {
-                Log::info("Bombero {$firefighterId} marcado como DISPONIBLE para {$date}.");
-            }
+    // Se agrupan las asignaciones de bomberos hasta la fecha consultada
+    $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
+        ->orderBy('fecha_ini', 'desc')
+        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')") // Prioridad de turnos
+        ->get()
+        ->groupBy('id_empleado');
+
+    Log::info("Asignaciones agrupadas por bombero:", ['assignments' => $assignments]);
+
+    $unavailableFirefighterIds = [];
+    foreach ($assignments as $firefighterId => $firefighterAssignments) {
+        if (!$this->isFirefighterRequerible($firefighterId, $date, $excludedBrigades)) {
+            $unavailableFirefighterIds[] = $firefighterId;
+            Log::info("Bombero {$firefighterId} marcado como NO disponible para {$date}.");
+        } else {
+            Log::info("Bombero {$firefighterId} marcado como DISPONIBLE para {$date}.");
         }
-
-        $availableFirefighters = User::whereIn('type', ['bombero', 'mando'])
-            ->whereNotIn('id_empleado', $unavailableFirefighterIds)
-            ->get();
-        Log::info("Bomberos disponibles obtenidos:", ['available_firefighters' => $availableFirefighters]);
-
-        return response()->json([
-            'date' => $date,
-            'available_firefighters' => $availableFirefighters,
-        ]);
     }
+
+    $availableFirefighters = User::whereIn('type', ['bombero', 'mando'])
+        ->whereNotIn('id_empleado', $unavailableFirefighterIds)
+        ->get();
+    Log::info("Bomberos disponibles obtenidos:", ['available_firefighters' => $availableFirefighters]);
+
+    return response()->json([
+        'date' => $date,
+        'available_firefighters' => $availableFirefighters,
+    ]);
+}
+
 
     /**
      * Devuelve los bomberos disponibles (solo tipo bombero) para la fecha consultada.

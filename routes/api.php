@@ -76,6 +76,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/firefighters-assignments', [FirefighterAssignmentController::class, 'index']);
     Route::get('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'show']);
     Route::get('/firefighters-assignments/{id}/firefighters', [FirefighterAssignmentController::class, 'getFirefightersByAssignment']);
+    Route::get('/firefighters-assignments/available-firefighters-no-adjacent-days', [FirefighterAssignmentController::class, 'availableFirefightersNoAdjacentDays']);
+
 
 
     Route::get('/guards', [GuardController::class, 'index']);

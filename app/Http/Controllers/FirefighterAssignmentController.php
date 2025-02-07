@@ -484,6 +484,83 @@ public function requireFirefighter(Request $request)
     ], 201);
 }
 
+public function availableFirefightersNoAdjacentDays(Request $request)
+{
+    $date = $request->query('date', date('Y-m-d'));
+    Log::info("Fecha recibida en availableFirefightersNoAdjacentDays:", ['date' => $date]);
+
+    // Lista estática de exclusión
+    $staticExcluded = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales'];
+
+    // Obtenemos las brigadas que tienen guardia SOLO en el día consultado
+    $guards = Guard::with('brigade')->where('date', $date)->get();
+    $guardExcluded = $guards->pluck('brigade.nombre')->unique()->toArray();
+
+    // Combinamos ambas listas
+    $excludedBrigades = array_merge($staticExcluded, $guardExcluded);
+    Log::info("Brigadas excluidas (estáticas y por guardia en {$date}):", ['excludedBrigades' => $excludedBrigades]);
+
+    // Obtenemos IDs de bomberos **no disponibles** sin considerar ayer/mañana.
+    $unavailableFirefighterIds = $this->getFirefightersAssignedToExcludedBrigadesNoAdjacentDays($date, $excludedBrigades);
+
+    $availableFirefighters = User::whereIn('type', ['bombero', 'mando'])
+        ->whereNotIn('id_empleado', $unavailableFirefighterIds)
+        ->get();
+
+    Log::info("Bomberos disponibles (No Adjacent) obtenidos:", ['available_firefighters' => $availableFirefighters]);
+
+    return response()->json([
+        'date' => $date,
+        'available_firefighters' => $availableFirefighters,
+    ]);
+}
+
+
+private function getFirefightersAssignedToExcludedBrigadesNoAdjacentDays($date, $excludedBrigades)
+{
+    Log::info("Fecha y brigadas excluidas (NO Adjacent):", [
+        'date' => $date,
+        'excludedBrigades' => $excludedBrigades
+    ]);
+
+    // Traemos todas las asignaciones vigentes a la fecha actual (como hacías antes)
+    $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
+        ->orderBy('fecha_ini', 'desc')
+        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+        ->get()
+        ->groupBy('id_empleado');
+
+    Log::info("Asignaciones agrupadas por bombero (NO Adjacent):", [
+        'assignments' => $assignments
+    ]);
+
+    $unavailableFirefighterIds = [];
+
+    foreach ($assignments as $firefighterId => $firefighterAssignments) {
+        $lastAssignment = $firefighterAssignments->first();
+
+        // Lo marcamos como no disponible si la última brigada destino está en la lista de excluidas
+        if ($lastAssignment && $lastAssignment->brigadeDestination) {
+            $brigadeName = $lastAssignment->brigadeDestination->nombre;
+            if (in_array($brigadeName, $excludedBrigades)) {
+                Log::info("Bombero {$firefighterId} EXCLUIDO (NO Adjacent) por estar en brigada '{$brigadeName}' el día actual.");
+                $unavailableFirefighterIds[] = $firefighterId;
+                continue;
+            }
+        } else {
+            // Si no tiene asignación previa, lo excluimos (o puedes decidir lo contrario)
+            Log::info("Bombero {$firefighterId} no tiene asignación previa para {$date}, excluyendo (NO Adjacent).");
+            $unavailableFirefighterIds[] = $firefighterId;
+        }
+    }
+
+    Log::info("IDs de bomberos no disponibles:", [
+        'unavailableFirefighterIds' => $unavailableFirefighterIds
+    ]);
+
+    return $unavailableFirefighterIds;
+}
+
 
 
 

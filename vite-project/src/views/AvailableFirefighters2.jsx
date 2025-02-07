@@ -4,7 +4,7 @@ import AssignmentsApiService from '../services/AssignmentsApiService';
 
 const AvailableFirefighters2 = () => {
   const fetchAvailableFirefighters = (date) => {
-    return AssignmentsApiService.getAvailableFirefighters(date); // Pasar la fecha al servicio
+    return AssignmentsApiService.getAvailableFirefightersNoAdjacentDays(date); // Pasar la fecha al servicio
   };
 
   return (

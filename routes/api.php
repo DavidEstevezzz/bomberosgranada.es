@@ -57,7 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Buscar mensajes
     Route::get('/messages/search', [MessageController::class, 'search']);
-
+    Route::get('/messages/{id}', [MessageController::class, 'getMessageThread']);
     Route::get('/messages/{id}/attachment', [MessageController::class, 'downloadAttachment']);
 
 

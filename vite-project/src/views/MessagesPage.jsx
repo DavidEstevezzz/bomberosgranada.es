@@ -102,7 +102,6 @@ const MessagesPage = () => {
   };
 
   useEffect(() => {
-    console.log("Fetching users and messages...");
     fetchUsers();
     fetchMessages();
   }, [view, currentMonth]);
@@ -110,7 +109,6 @@ const MessagesPage = () => {
   const fetchUsers = async () => {
     try {
       const response = await UsersApiService.getUsuarios();
-      console.log("Usuarios obtenidos:", response.data);
       setUsers(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -124,11 +122,9 @@ const MessagesPage = () => {
         view === 'inbox'
           ? await MessagesApiService.getInbox()
           : await MessagesApiService.getSent();
-      console.log("Mensajes obtenidos:", messages.data);
       const filteredMessages = messages.data.filter((message) =>
         dayjs(message.created_at).isSame(currentMonth, 'month')
       );
-      console.log("Mensajes filtrados:", filteredMessages);
       if (view === 'inbox') setInbox(filteredMessages);
       else setSent(filteredMessages);
     } catch (error) {
@@ -151,43 +147,48 @@ const MessagesPage = () => {
   };
 
   const handleOpenMessage = async (message) => {
-    console.log("Abriendo mensaje:", message);
-    if (!message.is_read) { // Evita llamadas innecesarias a la API
-      await MessagesApiService.markAsRead(message.id);
-      // Actualizar la UI localmente para reflejar el cambio
-      setInbox((prevInbox) =>
-        prevInbox.map((msg) =>
-          msg.id === message.id ? { ...msg, is_read: true } : msg
-        )
-      );
-      setSent((prevSent) =>
-        prevSent.map((msg) =>
-          msg.id === message.id ? { ...msg, is_read: true } : msg
-        )
-      );
+    
+    // Solo marcar como leído si el mensaje es recibido por el usuario actual
+    if (!message.is_read && message.receiver_id === user.id_empleado) {
+        try {
+            await MessagesApiService.markAsRead(message.id);
+            // Actualizar la UI localmente para reflejar el cambio
+            setInbox((prevInbox) =>
+                prevInbox.map((msg) =>
+                    msg.id === message.id ? { ...msg, is_read: true } : msg
+                )
+            );
+            setSent((prevSent) =>
+                prevSent.map((msg) =>
+                    msg.id === message.id ? { ...msg, is_read: true } : msg
+                )
+            );
+        } catch (error) {
+            console.error("Error al marcar mensaje como leído:", error);
+        }
     }
     
+    // Obtener el mensaje raíz si es una respuesta
     try {
-      // Buscamos el mensaje raíz, en caso de que el mensaje seleccionado sea una respuesta
-      const fullMessage = await fetchRootMessage(message);
-  
-      // Validamos que la propiedad replies esté definida
-      if (!fullMessage.replies) {
-        fullMessage.replies = [];
-      }
-  
-      setSelectedMessage(fullMessage);
+        const fullMessage = await fetchRootMessage(message);
+
+        // Validamos que la propiedad replies esté definida
+        if (!fullMessage.replies) {
+            fullMessage.replies = [];
+        }
+
+        setSelectedMessage(fullMessage);
     } catch (error) {
-      console.error('Error fetching message thread:', error);
+        console.error('Error fetching message thread:', error);
     }
-  };
+};
+
   
   
   
 
   // Al hacer clic en "Responder", se cierra el modal de conversación y se prepara la respuesta
   const handleReply = (message) => {
-    console.log("Respondiendo al mensaje:", message);
     // Cierra el modal de conversación para evitar superposición
     setSelectedMessage(null);
 
@@ -205,7 +206,6 @@ const MessagesPage = () => {
       parent_id: message.id || (message.message && message.message.id),
       body: ''
     };
-    console.log("Datos para respuesta:", replyData);
     setReplyMessage(replyData);
     setShowModal(true);
   };

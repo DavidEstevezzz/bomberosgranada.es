@@ -236,7 +236,7 @@ const handleFileChange = (e) => {
     );
     formData.append(
       'turno',
-      tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales' ? turno : ''
+      tipo === 'asuntos propios' || tipo === 'licencias por jornadas' ||   tipo === 'compensacion grupos especiales' ? turno : ''
     );
     formData.append('horas', tipo === 'salidas personales' ? validateSPHours() : '');
     formData.append('estado', 'Pendiente');
@@ -244,6 +244,11 @@ const handleFileChange = (e) => {
     if (file) {
       formData.append('file', file);
     }
+
+    console.log('Enviando FormData al backend:');
+  for (let [key, value] of formData.entries()) {
+    console.log(key + ':', value);
+  }
   
     try {
       const response = await RequestApiService.createRequest(formData, {

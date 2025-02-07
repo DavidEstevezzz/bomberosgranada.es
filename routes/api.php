@@ -27,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [UserController::class, 'getUserByToken']);
     Route::get('/firefighters-assignments/available-firefighters', [FirefighterAssignmentController::class, 'availableFirefighters']);
     Route::get('/firefighters-assignments/available-firefighters-without-mands', [FirefighterAssignmentController::class, 'availableFirefightersWithoutMands']);
+    Route::get('/firefighters-assignments/available-firefighters-no-adjacent-days', [FirefighterAssignmentController::class, 'availableFirefightersNoAdjacentDays']);
 
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);
@@ -76,7 +77,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/firefighters-assignments', [FirefighterAssignmentController::class, 'index']);
     Route::get('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'show']);
     Route::get('/firefighters-assignments/{id}/firefighters', [FirefighterAssignmentController::class, 'getFirefightersByAssignment']);
-    Route::get('/firefighters-assignments/available-firefighters-no-adjacent-days', [FirefighterAssignmentController::class, 'availableFirefightersNoAdjacentDays']);
 
 
 

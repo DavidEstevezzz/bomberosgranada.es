@@ -249,17 +249,37 @@ class BrigadeController extends Controller
                     'turno' => 'Noche'
                 ];
             } else {
-                Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el ELSE 2 - Turno Mañana y tarde");
-        
-                $firefighters[] = [
-                    'id_empleado' => $user->id_empleado,
-                    'nombre' => $user->nombre,
-                    'apellido' => $user->apellido,
-                    'puesto' => $user->puesto,
-                    'telefono' => $user->telefono,
-                    'turno' => 'Mañana y tarde'
-                ];
+                // Verificar si hay asignación para 'Mañana'
+                $mananaEstaBrigada = false;
+            
+                // Si existe 'Mañana' en $assignmentsByTurno, comprobamos si es la brigada actual
+                if (isset($assignmentsByTurno['Mañana']) 
+                    && $assignmentsByTurno['Mañana']->id_brigada_destino == $id_brigada) {
+                    $mananaEstaBrigada = true;
+                } 
+                // Si no hay asignación de 'Mañana', comprobamos la última asignación previa
+                elseif (!isset($assignmentsByTurno['Mañana']) 
+                    && $lastAssignment 
+                    && $lastAssignment->id_brigada_destino == $id_brigada) {
+                    $mananaEstaBrigada = true;
+                }
+            
+                // Si para la mañana está en la brigada actual, lo metemos como "Mañana y tarde"
+                if ($mananaEstaBrigada) {
+                    Log::info("El usuario {$user->nombre} ... (ID: {$user->id_empleado}) ".
+                        "ha entrado en ELSE 2 - Turno Mañana y tarde, validado correctamente");
+                    
+                    $firefighters[] = [
+                        'id_empleado' => $user->id_empleado,
+                        'nombre' => $user->nombre,
+                        'apellido' => $user->apellido,
+                        'puesto' => $user->puesto,
+                        'telefono' => $user->telefono,
+                        'turno' => 'Mañana y tarde'
+                    ];
+                }
             }
+            
         } elseif (isset($assignmentsByTurno['Mañana'])) {
             if ($assignmentsByTurno['Mañana']->id_brigada_destino == $id_brigada) {
                 

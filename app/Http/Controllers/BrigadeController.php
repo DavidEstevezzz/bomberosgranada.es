@@ -235,8 +235,6 @@ class BrigadeController extends Controller
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 3 - Turno Mañana a la brigada con id {$id_brigada} que debe de ser igual que id_brigada_destino: {$assignmentsByTurno['Mañana']->id_brigada_destino}");
 
-
-                    Log::info("HOLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
                     $firefighters[] = [
                         'id_empleado' => $user->id_empleado,
                         'nombre' => $user->nombre,
@@ -245,9 +243,12 @@ class BrigadeController extends Controller
                         'telefono' => $user->telefono,
                         'turno' => 'Mañana'
                     ];
-                } else if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada && (!isset($assignmentsByTurno['Noche']))) {
+                } else if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada 
+                && !isset($assignmentsByTurno['Noche'])
+                && $lastAssignment
+                && $lastAssignment->id_brigada_destino == $id_brigada) {
 
-                    Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 3 - Turno Mañana");
+                    Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 4 - Turno Mañana");
 
                     $firefighters[] = [
                         'id_empleado' => $user->id_empleado,

@@ -4,12 +4,29 @@ import EditShiftChangeModal from '../components/EditShiftChangeModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit } from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
+import dayjs from 'dayjs'; // <-- Importamos dayjs
 
 const ShiftChangeRequestsTable = () => {
   const [shiftChangeRequests, setShiftChangeRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState({ en_tramite: 1, aceptado_por_empleados: 1, rechazado: 1, aceptado: 1 });
+
+  // Paginación por estado
+  const [currentPage, setCurrentPage] = useState({
+    en_tramite: 1,
+    aceptado_por_empleados: 1,
+    rechazado: 1,
+    aceptado: 1,
+  });
+
+  // Mes actual por estado (inicializamos todos en el mes corriente)
+  const [currentMonth, setCurrentMonth] = useState({
+    en_tramite: dayjs(),
+    aceptado_por_empleados: dayjs(),
+    rechazado: dayjs(),
+    aceptado: dayjs(),
+  });
+
   const itemsPerPage = 10;
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedShiftChangeRequest, setSelectedShiftChangeRequest] = useState(null);
@@ -70,6 +87,40 @@ const ShiftChangeRequestsTable = () => {
     }
   };
 
+  // Manejadores para cambiar de mes (por estado)
+  const handlePreviousMonth = (status) => {
+    setCurrentMonth((prev) => ({
+      ...prev,
+      [status]: prev[status].subtract(1, 'month'),
+    }));
+    setCurrentPage((prev) => ({
+      ...prev,
+      [status]: 1,
+    }));
+  };
+
+  const handleNextMonth = (status) => {
+    setCurrentMonth((prev) => ({
+      ...prev,
+      [status]: prev[status].add(1, 'month'),
+    }));
+    setCurrentPage((prev) => ({
+      ...prev,
+      [status]: 1,
+    }));
+  };
+
+  // Función para obtener los requests de acuerdo al mes actual por estado
+  const filterRequestsByMonth = (requests, status) => {
+    return requests.filter((request) => {
+      if (!request.fecha) return false;
+
+      const requestDate = dayjs(request.fecha);
+      return requestDate.isSame(currentMonth[status], 'month');
+    });
+  };
+
+  // Paginación
   const paginate = (data, page) => {
     const startIndex = (page - 1) * itemsPerPage;
     return data.slice(startIndex, startIndex + itemsPerPage);
@@ -82,21 +133,67 @@ const ShiftChangeRequestsTable = () => {
     }));
   };
 
+  if (loading) {
+    return <div>Cargando solicitudes...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
   return (
     <div className={`p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
       <h1 className="text-2xl font-bold mb-4">Solicitudes de Cambio de Guardia</h1>
 
+      {/* Mapeamos por cada estado y renderizamos su bloque */}
       {['en_tramite', 'aceptado_por_empleados', 'rechazado', 'aceptado'].map((status) => {
-        const filteredRequests = shiftChangeRequests.filter((request) => request.estado === status);
-        const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1; // Ensure totalPages is at least 1
+        // Filtra primero por estado
+        const requestsByStatus = shiftChangeRequests.filter((req) => req.estado === status);
+        // Filtra adicionalmente por mes
+        const filteredRequests = filterRequestsByMonth(requestsByStatus, status);
+
+        // Paginación
+        const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1;
         const currentRequests = paginate(filteredRequests, currentPage[status]);
 
         return (
-          <div key={status} className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <h2 className="text-xl font-semibold mb-4">{normalizeStatus(status)}</h2>
+          <div
+            key={status}
+            className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+          >
+            {/* Encabezado de la sección */}
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                {normalizeStatus(status)}
+              </h2>
+
+              {/* Controles de mes (anteriores/siguientes) */}
+              <div className="flex space-x-4 items-center">
+                <button
+                  onClick={() => handlePreviousMonth(status)}
+                  className="bg-blue-500 text-white px-3 py-1 rounded"
+                >
+                  Mes Anterior
+                </button>
+                <span className="text-lg font-semibold">
+                  {currentMonth[status].format('MMMM YYYY').charAt(0).toUpperCase() +
+                    currentMonth[status].format('MMMM YYYY').slice(1)}
+                </span>
+                <button
+                  onClick={() => handleNextMonth(status)}
+                  className="bg-blue-500 text-white px-3 py-1 rounded"
+                >
+                  Mes Siguiente
+                </button>
+              </div>
+            </div>
+
+            {/* Tabla de solicitudes */}
             <div className="overflow-x-auto">
               {filteredRequests.length === 0 ? (
-                <div className="text-center py-4">No hay solicitudes en este estado.</div>
+                <div className="text-center py-4">
+                  No hay solicitudes en este estado para el mes seleccionado.
+                </div>
               ) : (
                 <table className="w-full text-left">
                   <thead>
@@ -134,9 +231,10 @@ const ShiftChangeRequestsTable = () => {
                       </tr>
                     ))}
                   </tbody>
-
                 </table>
               )}
+
+              {/* Controles de paginación */}
               <div className="flex justify-between mt-4">
                 <button
                   onClick={() => handlePageChange(status, -1, totalPages)}
@@ -163,6 +261,7 @@ const ShiftChangeRequestsTable = () => {
         );
       })}
 
+      {/* Modal de edición */}
       {selectedShiftChangeRequest && (
         <EditShiftChangeModal
           isOpen={isEditModalOpen}

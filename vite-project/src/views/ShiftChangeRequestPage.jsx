@@ -17,7 +17,7 @@ const ShiftChangeRequestPage = () => {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [fecha, setFecha] = useState('');
   const [fecha2, setFecha2] = useState('');
-  const [turno, setTurno] = useState('Día Completo');
+  const [turno, setTurno] = useState('Dia Completo');
   const [motivo, setMotivo] = useState('');
   const [changeType, setChangeType] = useState('simple');
   const [error, setError] = useState(null);
@@ -61,7 +61,7 @@ const ShiftChangeRequestPage = () => {
         id_empleado2: selectedEmployee,
         fecha,
         fecha2: changeType === 'espejo' ? fecha2 : null, // Incluye fecha2 solo si es cambio espejo
-        turno: changeType === 'espejo' ? 'Día Completo' : turno, // Día Completo si espejo, turno seleccionado si no
+        turno: changeType === 'espejo' ? 'Dia Completo' : turno, // Día Completo si espejo, turno seleccionado si no
         motivo,
         estado: 'en_tramite',
       };

@@ -235,6 +235,8 @@ class BrigadeController extends Controller
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 3 - Turno Mañana a la brigada con id {$id_brigada} que debe de ser igual que id_brigada_destino: {$assignmentsByTurno['Mañana']->id_brigada_destino}");
 
+
+                    Log::info("HOLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
                     $firefighters[] = [
                         'id_empleado' => $user->id_empleado,
                         'nombre' => $user->nombre,

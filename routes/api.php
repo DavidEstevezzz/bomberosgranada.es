@@ -28,6 +28,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/firefighters-assignments/available-firefighters', [FirefighterAssignmentController::class, 'availableFirefighters']);
     Route::get('/firefighters-assignments/available-firefighters-without-mands', [FirefighterAssignmentController::class, 'availableFirefightersWithoutMands']);
     Route::get('/firefighters-assignments/available-firefighters-no-adjacent-days', [FirefighterAssignmentController::class, 'availableFirefightersNoAdjacentDays']);
+    Route::get('/firefighters/no-today-and-tomorrow', [FirefighterAssignmentController::class, 'availableFirefightersNoTodayAndTomorrow']);
+    Route::get('/firefighters/no-today-and-yesterday', [FirefighterAssignmentController::class, 'availableFirefightersNoTodayAndYesterday']);
 
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);

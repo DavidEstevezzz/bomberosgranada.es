@@ -58,6 +58,8 @@ const router = createBrowserRouter([
       { path: 'requerimientos', element: <AvailableFirefighters /> },
       { path: 'requerimientos-10-horas', element: <AvailableFirefighters2 /> },
       { path: 'requerimientos-sur', element: <AvailableFirefightersSouth /> },
+      { path: 'requerimientos-operadores-mañana', element: <AvailableOperatorsMorning /> },
+      { path: 'requerimientos-operadores-noche', element: <AvailableOperatorsNight /> },
       { path: 'cambio-guardia', element: <ShiftChangeRequestPage /> },
       { path: 'solicitud', element: <CreateRequestPage /> },
       { path: 'lista-solicitudes', element: <RequestAndShiftChangePage /> },

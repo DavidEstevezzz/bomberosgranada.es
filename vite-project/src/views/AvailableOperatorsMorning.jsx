@@ -9,7 +9,7 @@ const AvailableFirefighters2 = () => {
 
   return (
     <SortableFirefightersList
-      title="Lista de Requerimientos Parque Sur"
+      title="Lista de Requerimientos Operadores Mañana"
       fetchData={fetchAvailableFirefighters} // Función corregida para manejar fecha
       listType="firefighters by order"
       orderColumn="orden"

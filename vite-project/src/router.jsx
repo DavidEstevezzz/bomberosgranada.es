@@ -29,6 +29,8 @@ import ResetPassword from './views/ResetPassword.jsx';
 import RequestAndShiftChangePage from './views/RequestAndShiftChangePage.jsx';
 import MessagesPage from './views/MessagesPage.jsx';
 import AvailableFirefightersSouth from './views/AvailableFirefightersSouth.jsx';
+import AvailableOperatorsMorning from './views/AvailableOperatorsMorning.jsx';
+import AvailableOperatorsNight from './views/AvailableOperatorsNight.jsx';
 
 
 const router = createBrowserRouter([

@@ -242,6 +242,7 @@ class FirefighterAssignmentController extends Controller
                 $lastAssignmentYesterday = Firefighters_assignment::where('id_empleado', $firefighterId)
                     ->where('fecha_ini', '<=', $previousDay)
                     ->orderBy('fecha_ini', 'desc')
+                    ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
                     ->first();
 
                 Log::info("Bombero {$firefighterId} - lastAssignmentYesterday encontrado: ", [
@@ -277,6 +278,7 @@ class FirefighterAssignmentController extends Controller
                 $lastAssignmentTomorrow = Firefighters_assignment::where('id_empleado', $firefighterId)
                     ->where('fecha_ini', '<=', $nextDay)
                     ->orderBy('fecha_ini', 'desc')
+                    ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
                     ->first();
                 if ($lastAssignmentTomorrow && $lastAssignmentTomorrow->brigadeDestination) {
                     $brigadeTomorrow = $lastAssignmentTomorrow->brigadeDestination->nombre;

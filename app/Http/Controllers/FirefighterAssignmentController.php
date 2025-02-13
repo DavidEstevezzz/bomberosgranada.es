@@ -215,6 +215,9 @@ class FirefighterAssignmentController extends Controller
             ->unique()
             ->toArray();
 
+        $staticExcluded = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales'];
+
+
         foreach ($assignments as $firefighterId => $firefighterAssignments) {
             // Evaluamos la protección global (usando la función isProtectedByRequests)
             $isProtected = $this->isProtectedByRequests($firefighterId, $previousDay, $date, $nextDay);
@@ -226,7 +229,7 @@ class FirefighterAssignmentController extends Controller
                 Log::info("Bombero {$firefighterId}: Última asignación para {$date} en brigada '{$brigadeName}'.");
             
                 // Caso 1: Si la brigada tiene guardia HOY y NO está protegido, lo excluimos
-                if (in_array($brigadeName, $guardToday)) {
+                if (in_array($brigadeName, $guardToday) || in_array($brigadeName, $staticExcluded) ){
                     Log::info(
                         "Bombero {$firefighterId} EXCLUIDO por pertenecer a brigada '{$brigadeName}' (guard hoy) ".
                         "en {$date} y NO está protegido."

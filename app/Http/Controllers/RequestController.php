@@ -14,10 +14,31 @@ use Illuminate\Support\Facades\Mail;
 class RequestController extends Controller
 {
     public function index()
-    {
-        $request = MiRequest::all();
-        return response()->json($request);
-    }
+{
+    // 1) Obtenemos las solicitudes ordenadas por 'fecha_ini' en orden ascendente
+    $requests = MiRequest::orderBy('fecha_ini', 'asc')->get();
+
+    // 2) Transformamos cada solicitud para agregar 'creacion' con solo la fecha
+    //    y conservamos el resto de campos habituales
+    $data = $requests->map(function ($req) {
+        return [
+            'id'            => $req->id,
+            'id_empleado'   => $req->id_empleado,
+            'tipo'          => $req->tipo,
+            'motivo'        => $req->motivo,
+            'fecha_ini'     => $req->fecha_ini,
+            'fecha_fin'     => $req->fecha_fin,
+            'estado'        => $req->estado,
+            'turno'         => $req->turno,
+            'file'          => $req->file,
+            // Este es el campo nuevo que mostrará solo la fecha de created_at
+            'creacion'      => $req->created_at ? $req->created_at->format('Y-m-d') : null,
+        ];
+    });
+
+    return response()->json($data);
+}
+
 
     public function store(Request $request)
 {

@@ -219,6 +219,7 @@ const RequestListPage = () => {
                     <th className="py-2 px-2">Fecha Inicio</th>
                     <th className="py-2 px-2">Fecha Fin</th>
                     <th className="py-2 px-2">Turno</th>
+                    <th className="py-2 px-2">Creación</th>
                     <th className="py-2 px-2">Estado</th>
                     <th className="py-2 px-2">Archivo</th>
                     <th className="py-2 px-2">Acciones</th>
@@ -234,6 +235,7 @@ const RequestListPage = () => {
                         <td className="py-2 px-2">{request.fecha_ini}</td>
                         <td className="py-2 px-2">{request.fecha_fin}</td>
                         <td className="py-2 px-2">{request.turno}</td>
+                        <td className="py-2 px-2">{request.creacion}</td>
                         <td className="py-2 px-2">{request.estado}</td>
                         <td className="py-2 px-2">
                           {request.file ? (
@@ -281,7 +283,7 @@ const RequestListPage = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="9" className="text-center py-4">No hay solicitudes para este estado este mes</td>
+                      <td colSpan="10" className="text-center py-4">No hay solicitudes para este estado este mes</td>
                     </tr>
                   )}
                 </tbody>

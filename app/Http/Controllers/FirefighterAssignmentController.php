@@ -378,10 +378,10 @@ class FirefighterAssignmentController extends Controller
             ->where('estado', 'Confirmada')
             ->where(function ($query) use ($dayToCheck, $dayToCheckMinus1, $typesWithoutTurno, $typesWithTurno) {
                 // 1a) Tipos sin turno => fecha_fin == (dayToCheck - 1)
-                $query->where(function ($q) use ($dayToCheckMinus1, $typesWithoutTurno) {
+                $query->where(function ($q) use ($dayToCheckMinus1, $dayToCheck, $typesWithoutTurno) {
                     $q->whereIn('tipo', $typesWithoutTurno)
                         ->where('fecha_ini', '<=', $dayToCheckMinus1)  // Opcional: que haya empezado antes o justo ese día-1
-                        ->where('fecha_fin', '=', $dayToCheckMinus1);  // Termina exactamente el día anterior
+                        ->where('fecha_fin', '=', $dayToCheck);  // Termina exactamente el día anterior
                 })
                     // 1b) Tipos con turno => misma lógica de antes
                     ->orWhere(function ($q) use ($dayToCheck, $typesWithTurno) {

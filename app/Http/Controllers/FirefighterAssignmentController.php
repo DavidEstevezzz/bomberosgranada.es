@@ -539,20 +539,20 @@ class FirefighterAssignmentController extends Controller
             'Mañana', 'Día Completo', 'Mañana y tarde' => 'Mañana',
             'Tarde', 'Tarde y noche' => 'Tarde',
             'Noche' => 'Noche',
-            default => 'Mañana',  // Por si acaso
+            default => 'Mañana',
         };
 
-        // 3. Crear la asignación de ida
+        // 3. Crear la asignación de ida (requerimiento = true)
         $asignacionIda = Firefighters_assignment::create([
             'id_empleado' => $idEmpleado,
             'id_brigada_origen' => $brigadaOrigen,
             'id_brigada_destino' => $idBrigadaDestino,
             'fecha_ini' => $fecha,
             'turno' => $turnoIda,
+            'requerimiento' => true,
         ]);
 
-        // 4. Calcular el turno de vuelta
-        // y la fecha de vuelta
+        // 4. Calcular el turno de vuelta y la fecha de vuelta
         switch ($turnoRequest) {
             case 'Mañana':
                 $turnoVuelta = 'Tarde';
@@ -566,12 +566,9 @@ class FirefighterAssignmentController extends Controller
             case 'Tarde y noche':
             case 'Noche':
                 $turnoVuelta = 'Mañana';
-                // Fecha siguiente
                 $fechaVuelta = date('Y-m-d', strtotime($fecha . ' +1 day'));
                 break;
             case 'Día Completo':
-                // Podrías decidir si la vuelta es al día siguiente o mismo día. 
-                // Como no estaba especificado, asumimos vuelve al día siguiente por la mañana:
                 $turnoVuelta = 'Mañana';
                 $fechaVuelta = date('Y-m-d', strtotime($fecha . ' +1 day'));
                 break;
@@ -581,13 +578,14 @@ class FirefighterAssignmentController extends Controller
                 break;
         }
 
-        // 5. Crear la asignación de vuelta
+        // 5. Crear la asignación de vuelta (requerimiento = false)
         $asignacionVuelta = Firefighters_assignment::create([
             'id_empleado' => $idEmpleado,
             'id_brigada_origen' => $idBrigadaDestino,
             'id_brigada_destino' => $brigadaOrigen,
             'fecha_ini' => $fechaVuelta,
             'turno' => $turnoVuelta,
+            'requerimiento' => false,
         ]);
 
         return response()->json([
@@ -595,6 +593,7 @@ class FirefighterAssignmentController extends Controller
             'asignacion_vuelta' => $asignacionVuelta,
         ], 201);
     }
+
 
     public function availableFirefightersNoAdjacentDays(Request $request)
     {

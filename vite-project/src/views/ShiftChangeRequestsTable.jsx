@@ -110,17 +110,16 @@ const ShiftChangeRequestsTable = () => {
     }));
   };
 
-  // Función para obtener los requests de acuerdo al mes actual por estado
+  // (1) Función para filtrar por mes
   const filterRequestsByMonth = (requests, status) => {
     return requests.filter((request) => {
       if (!request.fecha) return false;
-
       const requestDate = dayjs(request.fecha);
       return requestDate.isSame(currentMonth[status], 'month');
     });
   };
 
-  // Paginación
+  // (2) Paginación
   const paginate = (data, page) => {
     const startIndex = (page - 1) * itemsPerPage;
     return data.slice(startIndex, startIndex + itemsPerPage);
@@ -147,14 +146,20 @@ const ShiftChangeRequestsTable = () => {
 
       {/* Mapeamos por cada estado y renderizamos su bloque */}
       {['en_tramite', 'aceptado_por_empleados', 'rechazado', 'aceptado'].map((status) => {
-        // Filtra primero por estado
+        // (1) Filtrar por estado
         const requestsByStatus = shiftChangeRequests.filter((req) => req.estado === status);
-        // Filtra adicionalmente por mes
+
+        // (2) Filtrar adicionalmente por mes
         const filteredRequests = filterRequestsByMonth(requestsByStatus, status);
 
-        // Paginación
-        const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1;
-        const currentRequests = paginate(filteredRequests, currentPage[status]);
+        // (3) Ordenar por fecha (ascendente)
+        const sortedRequests = [...filteredRequests].sort((a, b) =>
+          dayjs(a.fecha).diff(dayjs(b.fecha))
+        );
+
+        // (4) Paginación
+        const totalPages = Math.ceil(sortedRequests.length / itemsPerPage) || 1;
+        const currentRequests = paginate(sortedRequests, currentPage[status]);
 
         return (
           <div
@@ -190,7 +195,7 @@ const ShiftChangeRequestsTable = () => {
 
             {/* Tabla de solicitudes */}
             <div className="overflow-x-auto">
-              {filteredRequests.length === 0 ? (
+              {sortedRequests.length === 0 ? (
                 <div className="text-center py-4">
                   No hay solicitudes en este estado para el mes seleccionado.
                 </div>
@@ -244,13 +249,13 @@ const ShiftChangeRequestsTable = () => {
                   Anterior
                 </button>
                 <span className="text-center py-2">
-                  {filteredRequests.length === 0
+                  {sortedRequests.length === 0
                     ? '0 de 0'
                     : `Página ${currentPage[status]} de ${totalPages}`}
                 </span>
                 <button
                   onClick={() => handlePageChange(status, 1, totalPages)}
-                  disabled={currentPage[status] === totalPages || filteredRequests.length === 0}
+                  disabled={currentPage[status] === totalPages || sortedRequests.length === 0}
                   className="px-4 py-2 rounded bg-blue-500 text-white disabled:bg-gray-400"
                 >
                   Siguiente

@@ -30,6 +30,22 @@ const RequestAndShiftChangePage = () => {
     return stateMap[state] || state;
   };
 
+  // Función para cancelar solicitudes:
+  // Solo mostrar botón si la solicitud está en estado "Pendiente"
+  const renderRequestActions = (request) => {
+    if (request.estado !== 'Pendiente') {
+      return null; 
+    }
+    return (
+      <button
+        onClick={() => handleRequestStatusChange(request.id, 'Cancelada')}
+        className="bg-red-600 text-white px-4 py-1 rounded"
+      >
+        Cancelar
+      </button>
+    );
+  };
+
   useEffect(() => {
     if (!user || !user.id_empleado) return;
 
@@ -41,20 +57,23 @@ const RequestAndShiftChangePage = () => {
           ShiftChangeRequestApiService.getRequests(),
         ]);
 
-        // Filtrar solicitudes de permisos
+        // Filtrar solicitudes de permisos para el usuario conectado y el mes actual
         const filteredRequests = requestsResponse.data.filter(
           (req) =>
             req.id_empleado === user.id_empleado &&
             dayjs(req.fecha_ini).isSame(currentMonth, 'month')
         );
 
-        // Filtrar y dividir los cambios de guardia en simples y espejo
-        const filteredShiftChanges = shiftChangeResponse.data.filter(
-          (req) =>
-            dayjs(req.fecha).isSame(currentMonth, 'month') &&
-            (req.id_empleado1 === user.id_empleado || req.id_empleado2 === user.id_empleado)
-        );
+        // Filtrar los cambios de guardia que involucren al usuario y el mes actual
+        const filteredShiftChanges = shiftChangeResponse.data.filter((req) => {
+          if (!req.fecha) return false;
+          const sameMonth = dayjs(req.fecha).isSame(currentMonth, 'month');
+          const involvesUser =
+            req.id_empleado1 === user.id_empleado || req.id_empleado2 === user.id_empleado;
+          return sameMonth && involvesUser;
+        });
 
+        // Dividir cambios de guardia en simples (sin fecha2) y espejo (con fecha2)
         const simpleChanges = filteredShiftChanges.filter((req) => !req.fecha2);
         const mirrorChanges = filteredShiftChanges.filter((req) => req.fecha2);
 
@@ -81,9 +100,11 @@ const RequestAndShiftChangePage = () => {
     setCurrentMonth((prev) => prev.add(1, 'month'));
   };
 
+  // Para cambiar de estado una solicitud (permiso)
   const handleRequestStatusChange = async (id, newStatus) => {
     try {
       await RequestApiService.updateRequest(id, { estado: newStatus });
+      // Actualizamos el estado local
       setRequests((prev) =>
         prev.map((req) => (req.id === id ? { ...req, estado: newStatus } : req))
       );
@@ -92,11 +113,12 @@ const RequestAndShiftChangePage = () => {
     }
   };
 
+  // Para cambiar de estado un cambio de guardia
   const handleShiftChangeStatusChange = async (id, newStatus) => {
     try {
       await ShiftChangeRequestApiService.updateRequest(id, { estado: newStatus });
 
-      // Actualizar el estado en los cambios simples y espejo
+      // Actualizamos los arrays de cambios de guardia
       setSimpleShiftChanges((prev) =>
         prev.map((req) => (req.id === id ? { ...req, estado: newStatus } : req))
       );
@@ -108,23 +130,12 @@ const RequestAndShiftChangePage = () => {
     }
   };
 
-  const renderRequestActions = (request) => {
-    if (request.estado === 'Cancelada') return null;
-    return (
-      <button
-        onClick={() => handleRequestStatusChange(request.id, 'Cancelada')}
-        className="bg-red-600 text-white px-4 py-1 rounded"
-      >
-        Cancelar
-      </button>
-    );
-  };
-
   const renderShiftChangeActions = (request) => {
     if (request.estado === 'rechazado') return null;
 
-    // Acciones específicas según el usuario involucrado
+    // Acciones específicas según el usuario involucrado y el estado
     if (request.id_empleado1 === user.id_empleado) {
+      // El empleado 1 puede rechazar
       return (
         <button
           onClick={() => handleShiftChangeStatusChange(request.id, 'rechazado')}
@@ -136,11 +147,12 @@ const RequestAndShiftChangePage = () => {
     }
 
     if (request.id_empleado2 === user.id_empleado && request.estado === 'en_tramite') {
+      // El empleado 2 puede aceptar o rechazar
       return (
         <>
           <button
             onClick={() => handleShiftChangeStatusChange(request.id, 'aceptado_por_empleados')}
-            className="bg-green-600 text-white px-4 py-1 rounded"
+            className="bg-green-600 text-white px-4 py-1 rounded mr-2"
           >
             Aceptar
           </button>
@@ -183,6 +195,7 @@ const RequestAndShiftChangePage = () => {
       </div>
 
       <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
+        {/* --- SOLICITUDES DE PERMISO --- */}
         <h2 className="text-xl font-bold mb-4">Solicitudes de Permiso</h2>
         {requests.length > 0 ? (
           <div className="overflow-x-auto">
@@ -194,6 +207,7 @@ const RequestAndShiftChangePage = () => {
                   <th className="py-2 px-4">Fecha Fin</th>
                   <th className="py-2 px-4">Turno</th>
                   <th className="py-2 px-4">Estado</th>
+                  <th className="py-2 px-4">Acciones</th> {/* Nueva columna */}
                 </tr>
               </thead>
               <tbody>
@@ -204,6 +218,8 @@ const RequestAndShiftChangePage = () => {
                     <td className="py-2 px-4">{request.fecha_fin}</td>
                     <td className="py-2 px-4">{request.turno}</td>
                     <td className="py-2 px-4">{normalizeState(request.estado)}</td>
+                    {/* Usamos la función para cancelar (solo si está en Pendiente) */}
+                    <td className="py-2 px-4">{renderRequestActions(request)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -213,6 +229,7 @@ const RequestAndShiftChangePage = () => {
           <p>No hay solicitudes este mes</p>
         )}
 
+        {/* --- CAMBIOS DE GUARDIA SIMPLES --- */}
         <h2 className="text-xl font-bold mt-8 mb-4">Cambios de Guardia Simples</h2>
         {simpleShiftChanges.length > 0 ? (
           <div className="overflow-x-auto">
@@ -230,8 +247,12 @@ const RequestAndShiftChangePage = () => {
               <tbody>
                 {simpleShiftChanges.map((request) => (
                   <tr key={request.id} className="border-b border-gray-700">
-                    <td className="py-2 px-4">{request.empleado1?.nombre} {request.empleado1?.apellido}</td>
-                    <td className="py-2 px-4">{request.empleado2?.nombre} {request.empleado2?.apellido}</td>
+                    <td className="py-2 px-4">
+                      {request.empleado1?.nombre} {request.empleado1?.apellido}
+                    </td>
+                    <td className="py-2 px-4">
+                      {request.empleado2?.nombre} {request.empleado2?.apellido}
+                    </td>
                     <td className="py-2 px-4">{request.fecha}</td>
                     <td className="py-2 px-4">{request.turno}</td>
                     <td className="py-2 px-4">{normalizeState(request.estado)}</td>
@@ -245,6 +266,7 @@ const RequestAndShiftChangePage = () => {
           <p>No hay cambios de guardia simples este mes</p>
         )}
 
+        {/* --- CAMBIOS DE GUARDIA ESPEJO --- */}
         <h2 className="text-xl font-bold mt-8 mb-4">Cambios de Guardia Espejo</h2>
         {mirrorShiftChanges.length > 0 ? (
           <div className="overflow-x-auto">
@@ -263,8 +285,12 @@ const RequestAndShiftChangePage = () => {
               <tbody>
                 {mirrorShiftChanges.map((request) => (
                   <tr key={request.id} className="border-b border-gray-700">
-                    <td className="py-2 px-4">{request.empleado1?.nombre} {request.empleado1?.apellido}</td>
-                    <td className="py-2 px-4">{request.empleado2?.nombre} {request.empleado2?.apellido}</td>
+                    <td className="py-2 px-4">
+                      {request.empleado1?.nombre} {request.empleado1?.apellido}
+                    </td>
+                    <td className="py-2 px-4">
+                      {request.empleado2?.nombre} {request.empleado2?.apellido}
+                    </td>
                     <td className="py-2 px-4">{request.fecha}</td>
                     <td className="py-2 px-4">{request.fecha2}</td>
                     <td className="py-2 px-4">{request.turno}</td>

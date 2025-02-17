@@ -31,29 +31,31 @@ class FirefighterAssignmentController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
-        $request->merge([
-            'turno' => $request->input('turno', 'Mañana')
-        ]);
+{
+    $request->merge([
+        'turno' => $request->input('turno', 'Mañana')
+    ]);
 
-        $rules = [
-            'id_asignacion' => 'unique:firefighters_assignments,id_asignacion',
-            'fecha_ini' => 'required|date',
-            'id_empleado' => 'required|exists:users,id_empleado',
-            'id_brigada_origen' => 'nullable|exists:brigades,id_brigada',
-            'id_brigada_destino' => 'required|exists:brigades,id_brigada',
-            'turno' => 'in:Mañana,Tarde,Noche',  // Validación del turno
-        ];
+    $rules = [
+        'id_asignacion' => 'unique:firefighters_assignments,id_asignacion',
+        'fecha_ini' => 'required|date',
+        'id_empleado' => 'required|exists:users,id_empleado',
+        'id_brigada_origen' => 'nullable|exists:brigades,id_brigada',
+        'id_brigada_destino' => 'required|exists:brigades,id_brigada',
+        'turno' => 'in:Mañana,Tarde,Noche',  // Validación del turno
+        'requerimiento' => 'boolean' 
+    ];
 
-        $validator = Validator::make($request->all(), $rules);
+    $validator = Validator::make($request->all(), $rules);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 400);
-        }
-
-        $firefighter_assignment = Firefighters_assignment::create($request->all());
-        return response()->json($firefighter_assignment, 201);
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 400);
     }
+
+    $firefighter_assignment = Firefighters_assignment::create($request->all());
+    return response()->json($firefighter_assignment, 201);
+}
+
 
     /**
      * Display the specified resource.
@@ -73,31 +75,33 @@ class FirefighterAssignmentController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request, $id_asignacion)
-    {
-        $rules = [
-            'id_asignacion' => 'unique:firefighters_assignments,id_asignacion,' . $id_asignacion . ',id_asignacion',
-            'fecha_ini' => 'required|date',
-            'id_empleado' => 'required|exists:users,id_empleado',
-            'id_brigada_origen' => 'nullable|exists:brigades,id_brigada',
-            'id_brigada_destino' => 'required|exists:brigades,id_brigada',
-            'turno' => 'required|in:Mañana,Tarde,Noche',  // Validación del turno
-        ];
+{
+    $rules = [
+        'id_asignacion' => 'unique:firefighters_assignments,id_asignacion,' . $id_asignacion . ',id_asignacion',
+        'fecha_ini' => 'required|date',
+        'id_empleado' => 'required|exists:users,id_empleado',
+        'id_brigada_origen' => 'nullable|exists:brigades,id_brigada',
+        'id_brigada_destino' => 'required|exists:brigades,id_brigada',
+        'turno' => 'required|in:Mañana,Tarde,Noche',  // Validación del turno
+        'requerimiento' => 'boolean' // Nuevo: para update también
+    ];
 
-        $validator = Validator::make($request->all(), $rules);
+    $validator = Validator::make($request->all(), $rules);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 400);
-        }
-
-        $firefighter_assignment = Firefighters_assignment::where('id_asignacion', $id_asignacion)->first();
-
-        if (!$firefighter_assignment) {
-            return response()->json(['message' => 'Firefighter assignment not found'], 404);
-        }
-
-        $firefighter_assignment->update($request->all());
-        return response()->json($firefighter_assignment, 200);
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 400);
     }
+
+    $firefighter_assignment = Firefighters_assignment::where('id_asignacion', $id_asignacion)->first();
+
+    if (!$firefighter_assignment) {
+        return response()->json(['message' => 'Firefighter assignment not found'], 404);
+    }
+
+    $firefighter_assignment->update($request->all());
+    return response()->json($firefighter_assignment, 200);
+}
+
 
     /**
      * Remove the specified resource from storage.

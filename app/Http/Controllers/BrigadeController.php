@@ -188,7 +188,7 @@ class BrigadeController extends Controller
             Log::info("Asignaciones por turno para el usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado})", $assignmentsByTurno);
 
                 $lastAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)
-                    ->whereDate('fecha_ini', '<=', $fecha)
+                    ->whereDate('fecha_ini', '<', $fecha)
                     ->orderBy('fecha_ini', 'desc')
                     ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
                     ->first();

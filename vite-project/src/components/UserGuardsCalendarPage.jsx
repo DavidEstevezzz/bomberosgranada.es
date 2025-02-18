@@ -251,7 +251,7 @@ const UserGuardsCalendarPage = ({ user }) => {
             const label = r.turno ? `${formattedTipo} (${r.turno})` : formattedTipo;
             events.push({
               date: current.format('YYYY-MM-DD'),
-              color: r.tipo === 'vacaciones' ? 'bg-red-500' : 'bg-yellow-500',
+              color: r.tipo === 'vacaciones' ? 'bg-red-500' : 'bg-yellow-300',
               label,
               eventType: 'request'
             });

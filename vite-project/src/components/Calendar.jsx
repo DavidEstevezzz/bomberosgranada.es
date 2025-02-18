@@ -132,7 +132,7 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
               nameColor = 'text-black';
               break;
             case 'Brigada E':
-              brigadeColor = 'bg-yellow-400';
+              brigadeColor = 'bg-yellow-300';
               nameColor = 'text-black';
               break;
             case 'Brigada F':

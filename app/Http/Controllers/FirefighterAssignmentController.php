@@ -771,7 +771,7 @@ class FirefighterAssignmentController extends Controller
                 }
 
                 // Luego, si la brigada está en las excluidas y no está protegido, se excluye
-                if (in_array($brigadeName, $excludedBrigades) && !$isProtected) {
+                if (in_array($brigadeName, $excludedBrigades) ) {
                     Log::info("EXCLUYENDO a Bombero {$firefighterId} por brigada '{$brigadeName}' HOY y NO está protegido.");
                     $unavailableFirefighterIds[] = $firefighterId;
                     continue; // Ya excluido por hoy, no chequeamos mañana
@@ -909,7 +909,7 @@ class FirefighterAssignmentController extends Controller
                     continue;
                 }
 
-                if (in_array($brigadeNameToday, $excludedBrigades) && !$isProtected) {
+                if (in_array($brigadeNameToday, $excludedBrigades)) {
                     Log::info("EXCLUYENDO a Bombero {$firefighterId} por brigada '{$brigadeNameToday}' HOY y NO está protegido.");
                     $unavailableFirefighterIds[] = $firefighterId;
                     continue; // Excluido por hoy

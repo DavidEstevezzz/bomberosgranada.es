@@ -256,7 +256,7 @@ class FirefighterAssignmentController extends Controller
 
             // CASO 2: Verificamos brigada de AYER
             $lastAssignmentYesterday = Firefighters_assignment::where('id_empleado', $firefighterId)
-                ->where('fecha_ini', '<=', $previousDay)
+                ->where('fecha_ini', '=', $previousDay)
                 ->orderBy('fecha_ini', 'desc')
                 ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
                 ->first();

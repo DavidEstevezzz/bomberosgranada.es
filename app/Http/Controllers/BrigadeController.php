@@ -193,6 +193,14 @@ class BrigadeController extends Controller
                 ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
                 ->first();
 
+            if ($lastAssignment) {
+                Log::info("Última asignación encontrada para el empleado {$user->id_empleado}", [
+                    'lastAssignment' => $lastAssignment->toArray()
+                ]);
+            } else {
+                Log::info("No se encontró última asignación para el empleado {$user->id_empleado} con fecha <= {$fecha}");
+            }
+
             $firefighters = [];
 
             if (isset($assignmentsByTurno['Tarde'])) {
@@ -242,10 +250,12 @@ class BrigadeController extends Controller
                         'telefono' => $user->telefono,
                         'turno' => 'Mañana'
                     ];
-                } else if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada 
-                && !isset($assignmentsByTurno['Noche'])
-                && $lastAssignment
-                && $lastAssignment->id_brigada_destino == $id_brigada) {
+                } else if (
+                    $assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada
+                    && !isset($assignmentsByTurno['Noche'])
+                    && $lastAssignment
+                    && $lastAssignment->id_brigada_destino == $id_brigada
+                ) {
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 4 - Turno Mañana");
 
@@ -289,9 +299,9 @@ class BrigadeController extends Controller
                 }
             } else if (isset($assignmentsByTurno['Noche'])) {
                 if ($assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {
-            
+
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 4 - Turno Noche");
-            
+
                     $firefighters[] = [
                         'id_empleado' => $user->id_empleado,
                         'nombre'     => $user->nombre,
@@ -303,7 +313,7 @@ class BrigadeController extends Controller
                 } else {
                     // Verificar si hay asignación para 'Mañana'
                     $mananaEstaBrigada = false;
-            
+
                     if (
                         isset($assignmentsByTurno['Mañana']) &&
                         $assignmentsByTurno['Mañana']->id_brigada_destino == $id_brigada
@@ -318,9 +328,10 @@ class BrigadeController extends Controller
                         $mananaEstaBrigada = true;
                         Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) no tiene asignación en Mañana, pero la última asignación previa tiene brigada destino {$lastAssignment->id_brigada_destino} que coincide con la consultada {$id_brigada}");
                     } else {
+                        Log::info("ULTIMA ASIGNACION: ", $lastAssignment);
                         Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) no cumple con las condiciones de Mañana: ni tiene asignación en Mañana ni la última asignación previa coincide con la brigada consultada.");
                     }
-            
+
                     if ($mananaEstaBrigada) {
                         Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en ELSE 2 - Turno Mañana y tarde, validado correctamente");
                         $firefighters[] = [
@@ -333,8 +344,7 @@ class BrigadeController extends Controller
                         ];
                     }
                 }
-            }
-             elseif (isset($assignmentsByTurno['Mañana'])) {
+            } elseif (isset($assignmentsByTurno['Mañana'])) {
                 if ($assignmentsByTurno['Mañana']->id_brigada_destino == $id_brigada) {
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 5 - Turno Día completo");

@@ -187,19 +187,19 @@ class BrigadeController extends Controller
 
             Log::info("Asignaciones por turno para el usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado})", $assignmentsByTurno);
 
-            $lastAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)
-                ->whereDate('fecha_ini', '<=', $fecha)
-                ->orderBy('fecha_ini', 'desc')
-                ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
-                ->first();
+                $lastAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)
+                    ->whereDate('fecha_ini', '<=', $fecha)
+                    ->orderBy('fecha_ini', 'desc')
+                    ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+                    ->first();
 
-            if ($lastAssignment) {
-                Log::info("ULTIMA ASIGNACION para el empleado {$user->id_empleado}", [
-                    'lastAssignment' => $lastAssignment ? $lastAssignment->toArray() : null
-                ]);
-            } else {
-                Log::info("No se encontró última asignación para el empleado {$user->id_empleado} con fecha <= {$fecha}");
-            }
+                if ($lastAssignment) {
+                    Log::info("ULTIMA ASIGNACION para el empleado {$user->id_empleado}", [
+                        'lastAssignment' => $lastAssignment ? $lastAssignment->toArray() : null
+                    ]);
+                } else {
+                    Log::info("No se encontró última asignación para el empleado {$user->id_empleado} con fecha <= {$fecha}");
+                }
 
             $firefighters = [];
 
@@ -328,7 +328,6 @@ class BrigadeController extends Controller
                         $mananaEstaBrigada = true;
                         Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) no tiene asignación en Mañana, pero la última asignación previa tiene brigada destino {$lastAssignment->id_brigada_destino} que coincide con la consultada {$id_brigada}");
                     } else {
-                        Log::info("ULTIMA ASIGNACION: ", $lastAssignment);
                         Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) no cumple con las condiciones de Mañana: ni tiene asignación en Mañana ni la última asignación previa coincide con la brigada consultada.");
                     }
 

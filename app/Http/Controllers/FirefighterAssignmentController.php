@@ -268,11 +268,9 @@ class FirefighterAssignmentController extends Controller
 
             if ($lastAssignmentYesterday) {
                 // Si el turno AYER fue 'Noche', el bombero pasó el día en la brigada_origen (no la destino).
-                if ($lastAssignmentYesterday->turno === 'Noche') {
-                    $brigadeYesterday = optional($lastAssignmentYesterday->brigadeOrigin)->nombre;
-                } else {
+                
                     $brigadeYesterday = optional($lastAssignmentYesterday->brigadeDestination)->nombre;
-                }
+                
 
                 $guardYesterday = Guard::with('brigade')
                     ->where('date', $previousDay)

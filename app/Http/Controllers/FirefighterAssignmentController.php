@@ -286,7 +286,7 @@ class FirefighterAssignmentController extends Controller
                 ]);
 
                 // Si la brigada de AYER estaba en guardia y no está protegido, excluirlo
-                if ($brigadeYesterday && in_array($brigadeYesterday, $guardYesterday) && !$isProtected) {
+                if ($brigadeYesterday && in_array($brigadeYesterday, $guardYesterday) && !$isProtected && $lastAssignmentYesterday->fecha_ini == $previousDay) {
                     Log::info(
                         "Bombero {$firefighterId} EXCLUIDO porque su asignación para {$previousDay} " .
                         "indica brigada '{$brigadeYesterday}' (guardia ayer) y no está protegido."

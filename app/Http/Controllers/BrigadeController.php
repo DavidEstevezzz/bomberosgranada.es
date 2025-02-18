@@ -194,8 +194,8 @@ class BrigadeController extends Controller
                 ->first();
 
             if ($lastAssignment) {
-                Log::info("Última asignación encontrada para el empleado {$user->id_empleado}", [
-                    'lastAssignment' => $lastAssignment->toArray()
+                Log::info("ULTIMA ASIGNACION para el empleado {$user->id_empleado}", [
+                    'lastAssignment' => $lastAssignment ? $lastAssignment->toArray() : null
                 ]);
             } else {
                 Log::info("No se encontró última asignación para el empleado {$user->id_empleado} con fecha <= {$fecha}");

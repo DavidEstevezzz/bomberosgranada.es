@@ -318,7 +318,6 @@ class BrigadeController extends Controller
                         $mananaEstaBrigada = true;
                         Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) no tiene asignación en Mañana, pero la última asignación previa tiene brigada destino {$lastAssignment->id_brigada_destino} que coincide con la consultada {$id_brigada}");
                     } else {
-                        Log::info("ULTIMA ASIGNACION: ", $lastAssignment);
                         Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) no cumple con las condiciones de Mañana: ni tiene asignación en Mañana ni la última asignación previa coincide con la brigada consultada.");
                     }
             

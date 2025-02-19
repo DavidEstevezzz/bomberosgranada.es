@@ -140,7 +140,6 @@ class FirefighterAssignmentController extends Controller
             ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get()
             ->groupBy('id_empleado');
-        Log::info("Asignaciones agrupadas por bombero:", ['assignments' => $assignments]);
 
         $unavailableFirefighterIds = $this->getFirefightersAssignedToExcludedBrigades($date, $excludedBrigades, $guards);
 
@@ -148,7 +147,6 @@ class FirefighterAssignmentController extends Controller
             ->where('puesto', '!=', 'Operador')
             ->whereNotIn('id_empleado', $unavailableFirefighterIds)
             ->get();
-        Log::info("Bomberos disponibles obtenidos:", ['available_firefighters' => $availableFirefighters]);
 
         return response()->json([
             'date' => $date,
@@ -222,11 +220,7 @@ class FirefighterAssignmentController extends Controller
 
     Log::info("Brigadas en guardia mañana:", ['guardTomorrow' => $guardTomorrow]);
 
-    // Actualizamos la lista de brigadas excluidas para incluir las de ayer y mañana
-    $excludedBrigades = array_merge($excludedBrigades, $guardYesterday, $guardTomorrow);
-    Log::info("Lista final de brigadas excluidas (incluyendo guardia ayer y mañana):", [
-        'excludedBrigades' => $excludedBrigades
-    ]);
+   
 
     // Obtenemos las asignaciones vigentes hasta $date, agrupadas por bombero
     $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
@@ -245,16 +239,12 @@ class FirefighterAssignmentController extends Controller
         ->unique()
         ->toArray();
 
-    // Lista estática de brigadas excluidas
-    $staticExcluded = [
-        'Bajas',
-        'Vacaciones',
-        'Asuntos Propios',
-        'Modulo',
-        'Licencias por Jornadas',
-        'Licencias por Días',
-        'Compensacion grupos especiales'
-    ];
+
+     // Actualizamos la lista de brigadas excluidas para incluir las de ayer y mañana
+     $excludedBrigades = array_merge($excludedBrigades, $guardYesterday, $guardTomorrow);
+     Log::info("Lista final de brigadas excluidas (incluyendo guardia ayer y mañana):", [
+         'excludedBrigades' => $excludedBrigades
+     ]);
 
     foreach ($assignments as $firefighterId => $firefighterAssignments) {
         // Se obtiene la protección (basada en las requests) para este bombero
@@ -274,7 +264,7 @@ class FirefighterAssignmentController extends Controller
             }
 
             // Condición B: Si la brigada está en la lista estática y además no está protegido, se excluye.
-            if (in_array($brigadeName, $staticExcluded) && !$isProtected) {
+            if (in_array($brigadeName, $excludedBrigades) && !$isProtected) {
                 Log::info("Bombero {$firefighterId} EXCLUIDO por pertenecer a brigada '{$brigadeName}' (estática) y NO está protegido.");
                 $unavailableFirefighterIds[] = $firefighterId;
                 continue;

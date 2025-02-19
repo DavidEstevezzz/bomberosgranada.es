@@ -210,6 +210,8 @@ class FirefighterAssignmentController extends Controller
         ->unique()
         ->toArray();
 
+    Log::info("Brigadas en guardia ayer:", ['guardYesterday' => $guardYesterday]);
+
     // Obtenemos las brigadas que estarán en guardia mañana
     $guardTomorrow = Guard::with('brigade')
         ->where('date', $nextDay)
@@ -217,6 +219,8 @@ class FirefighterAssignmentController extends Controller
         ->pluck('brigade.nombre')
         ->unique()
         ->toArray();
+
+    Log::info("Brigadas en guardia mañana:", ['guardTomorrow' => $guardTomorrow]);
 
     // Actualizamos la lista de brigadas excluidas para incluir las de ayer y mañana
     $excludedBrigades = array_merge($excludedBrigades, $guardYesterday, $guardTomorrow);
@@ -230,8 +234,6 @@ class FirefighterAssignmentController extends Controller
         ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
         ->get()
         ->groupBy('id_empleado');
-
-    Log::info("Asignaciones agrupadas por bombero:", ['assignments' => $assignments]);
 
     $unavailableFirefighterIds = [];
 

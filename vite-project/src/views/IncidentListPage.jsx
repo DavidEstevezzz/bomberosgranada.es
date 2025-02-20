@@ -6,6 +6,7 @@ import IncidentApiService from '../services/IncidentApiService';
 import AddIncidentModal from '../components/AddIncidentModal';
 import IncidentDetailModal from '../components/IncidentDetailModal';
 import { useDarkMode } from '../contexts/DarkModeContext';
+import { useStateContext } from '../contexts/ContextProvider';
 
 const IncidentListPage = () => {
   const [incidents, setIncidents] = useState([]);
@@ -13,6 +14,7 @@ const IncidentListPage = () => {
   const [error, setError] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(dayjs());
   const { darkMode } = useDarkMode();
+  const { user } = useStateContext();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [detailIncident, setDetailIncident] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -25,13 +27,14 @@ const IncidentListPage = () => {
     setLoading(true);
     try {
       const response = await IncidentApiService.getIncidents();
-      // Ordena por fecha ascendente
+      console.log("Incidencias recibidas:", response.data); // Log para depuración
+      // Ordena por fecha ascendente usando el campo "fecha"
       const sorted = response.data.sort((a, b) => dayjs(a.fecha).diff(dayjs(b.fecha)));
       setIncidents(sorted);
       setError(null);
     } catch (err) {
-      console.error(err);
-      setError('Error al cargar incidencias');
+      console.error("Error al cargar incidencias:", err);
+      setError("Error al cargar incidencias");
     } finally {
       setLoading(false);
     }
@@ -50,10 +53,10 @@ const IncidentListPage = () => {
     dayjs(incident.fecha).isSame(currentMonth, 'month')
   );
   const pendingIncidents = filteredIncidents.filter(
-    (incident) => incident.estado === 'Pendiente'
+    (incident) => incident.estado.toLowerCase() === 'pendiente'
   );
   const resolvedIncidents = filteredIncidents.filter(
-    (incident) => incident.estado === 'Resuelta'
+    (incident) => incident.estado.toLowerCase() === 'resuelta'
   );
 
   // Funciones auxiliares para mostrar nombres
@@ -70,7 +73,17 @@ const IncidentListPage = () => {
       await IncidentApiService.resolveIncident(incidentId, resolverData);
       fetchIncidents();
     } catch (err) {
-      console.error('Error al resolver incidencia:', err);
+      console.error("Error al resolver incidencia:", err);
+    }
+  };
+
+  // Marcar incidencia como leída (solo para jefes)
+  const handleMarkAsRead = async (incidentId) => {
+    try {
+      await IncidentApiService.markAsRead(incidentId);
+      fetchIncidents();
+    } catch (err) {
+      console.error("Error al marcar incidencia como leída:", err);
     }
   };
 
@@ -133,7 +146,9 @@ const IncidentListPage = () => {
                 pendingIncidents.map((incident) => (
                   <tr key={incident.id_incidencia} className="border-b border-gray-700">
                     <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
+                    <td className="py-2 px-2">
+                      {incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}
+                    </td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
                       {incident.leido ? (
@@ -156,7 +171,7 @@ const IncidentListPage = () => {
                         onClick={() => handleResolve(incident.id_incidencia)}
                         className="bg-green-600 text-white px-3 py-1 rounded"
                       >
-                        Marcar Resuelta
+                        Resuelta
                       </button>
                       <button
                         onClick={() => openDetailModal(incident)}
@@ -165,6 +180,14 @@ const IncidentListPage = () => {
                         <FontAwesomeIcon icon={faInfoCircle} />
                         <span>Detalle</span>
                       </button>
+                      {user?.type === 'jefe' && !incident.leido && (
+                        <button
+                          onClick={() => handleMarkAsRead(incident.id_incidencia)}
+                          className="bg-yellow-600 text-white px-3 py-1 rounded"
+                        >
+                          Marcar Leída
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -201,7 +224,9 @@ const IncidentListPage = () => {
                 resolvedIncidents.map((incident) => (
                   <tr key={incident.id_incidencia} className="border-b border-gray-700">
                     <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
+                    <td className="py-2 px-2">
+                      {incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}
+                    </td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
                       {incident.leido ? (

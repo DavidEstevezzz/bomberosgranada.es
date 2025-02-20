@@ -31,7 +31,8 @@ import MessagesPage from './views/MessagesPage.jsx';
 import AvailableFirefightersSouth from './views/AvailableFirefightersSouth.jsx';
 import AvailableOperatorsMorning from './views/AvailableOperatorsMorning.jsx';
 import AvailableOperatorsNight from './views/AvailableOperatorsNight.jsx';
-import Vehicles from './views/Vehicles.jsx'; // <-- Importa la vista de Vehículos
+import Vehicles from './views/Vehicles.jsx'; 
+import Incidents from './views/IncidentListPage.jsx';
 
 const router = createBrowserRouter([
   {
@@ -51,9 +52,8 @@ const router = createBrowserRouter([
       { path: 'solicitudes', element: <ProtectedRoute element={<RequestListPage />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'guardia-activa', element: <ProtectedRoute element={<ActiveFirefighters />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'aprobacion-cambio-guardia', element: <ProtectedRoute element={<ShiftChangeApprovalPage />} rolesAllowed={['Jefe', 'Mando']} /> },
-      
-      // Nueva ruta para Vehículos
       { path: 'vehicles', element: <ProtectedRoute element={<Vehicles />} rolesAllowed={['Jefe', 'Mando']} /> },
+      { path: 'incidents', element: <ProtectedRoute element={<Incidents />} rolesAllowed={['Jefe', 'Mando']} /> },
 
       // Rutas existentes
       { path: '/brigades/:id_brigada', element: <BrigadeDetail /> },

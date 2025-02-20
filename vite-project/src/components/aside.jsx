@@ -10,7 +10,8 @@ import {
   faClock, 
   faCalendar, 
   faCaretDown,
-  faTruck  // <-- Nuevo icono de camión
+  faTruck,  
+  faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -91,10 +92,12 @@ const Aside = ({ className }) => {
         </a>
 
         {/* Nuevo menú: Vehículos */}
+        {userType === 'jefe' && (
         <a href="/vehicles" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
           <FontAwesomeIcon icon={faTruck} className="w-5 h-5 mr-2" />
           Vehículos
         </a>
+        )}
 
         {/* Usuarios */}
         {userType === 'jefe' && (
@@ -186,6 +189,13 @@ const Aside = ({ className }) => {
             </div>
           )}
         </div>
+
+        {(userType === 'jefe' || userType === 'mando') && (
+          <a href="/incidents" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 mr-2" />
+            Incidencias
+          </a>
+        )}
 
         {/* Calendario */}
         {userType === 'jefe' &&

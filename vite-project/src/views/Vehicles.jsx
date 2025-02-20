@@ -149,8 +149,8 @@ const Vehicles = () => {
           <table className="w-full text-left">
             <thead>
               <tr>
+                <th className="py-2 px-2">Nombre</th>
                 <th className="py-2 px-2">Matrícula</th>
-                <th className="py-2 px-2">Nombre Vehículo</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Año</th>
                 <th className="py-2 px-2">Tipo</th>
@@ -160,8 +160,8 @@ const Vehicles = () => {
             <tbody>
               {filteredVehicles.map((vehicle) => (
                 <tr key={vehicle.matricula} className="border-b border-gray-700">
-                  <td className="py-2 px-2">{vehicle.matricula}</td>
                   <td className="py-2 px-2">{vehicle.nombre}</td>
+                  <td className="py-2 px-2">{vehicle.matricula}</td>
                   <td className="py-2 px-2">{vehicle.park ? vehicle.park.nombre : vehicle.id_parque}</td>
                   <td className="py-2 px-2">{vehicle.año}</td>
                   <td className="py-2 px-2">{vehicle.tipo}</td>

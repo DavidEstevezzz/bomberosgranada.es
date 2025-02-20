@@ -6,72 +6,94 @@ use App\Models\Incident;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-
 class IncidentController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Muestra todas las incidencias.
      */
     public function index()
     {
-        $incident = Incident::all();
-
-        return response()->json($incident);
+        $incidents = Incident::all();
+        return response()->json($incidents);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Almacena una nueva incidencia.
      */
     public function store(Request $request)
     {
+        // Reglas básicas
         $rules = [
-            'id_incidencia' => 'required',
-            'id_empleado' => 'required',
-            'estado' => 'required',
-            'parque' => 'required',
-            'descripcion' => 'required',
-            'fecha' => 'required',
+            'id_incidencia' => 'required|unique:incidents,id_incidencia',
+            'id_empleado'   => 'required',
+            'tipo'          => 'required|in:vehiculo,personal,instalacion',
+            'estado'        => 'required',
+            'id_parque'     => 'required',
+            'fecha'         => 'required|date',
+            'descripcion'   => 'required|string',
+            'leido'         => 'required|boolean',
+            // 'resulta_por' es opcional
         ];
 
-        $validator = Validator::make($request->input(), $rules);
-
-        if($validator->fails()){
+        // Reglas condicionales según el tipo
+        $tipo = $request->input('tipo');
+        if ($tipo === 'vehiculo') {
+            $rules['matricula'] = 'required';
+        } elseif ($tipo === 'personal') {
+            $rules['id_empleado2'] = 'required';
+        }
+        
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()){
             return response()->json($validator->errors(), 400);
         }
 
         $incident = Incident::create($request->all());
-        $incident->save();
         return response()->json($incident, 201);
-    
     }
 
     /**
-     * Display the specified resource.
+     * Muestra una incidencia específica.
      */
-    public function show(string $id)
+    public function show($id)
     {
-        $id = Incident::find($id);
-
-        return response()->json($id);
+        $incident = Incident::find($id);
+        if (!$incident) {
+            return response()->json(['error' => 'Incidencia no encontrada'], 404);
+        }
+        return response()->json($incident);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualiza una incidencia existente.
      */
-    public function update(Request $request, Incident $incident)
+    public function update(Request $request, $id)
     {
+        $incident = Incident::find($id);
+        if (!$incident) {
+            return response()->json(['error' => 'Incidencia no encontrada'], 404);
+        }
+
         $rules = [
-            'id_incidencia' => 'required',
-            'id_empleado' => 'required',
-            'estado' => 'required',
-            'parque' => 'required',
-            'descripcion' => 'required',
-            'fecha' => 'required',
+            'id_empleado'   => 'required',
+            'tipo'          => 'required|in:vehiculo,personal,instalacion',
+            'estado'        => 'required',
+            'id_parque'     => 'required',
+            'fecha'         => 'required|date',
+            'descripcion'   => 'required|string',
+            'leido'         => 'required|boolean',
+            // 'resulta_por' es opcional
         ];
 
-        $validator = Validator::make($request->input(), $rules);
+        $tipo = $request->input('tipo');
+        if ($tipo === 'vehiculo') {
+            $rules['matricula'] = 'required';
+        } elseif ($tipo === 'personal') {
+            $rules['id_empleado2'] = 'required';
+        }
 
-        if($validator->fails()){
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()){
             return response()->json($validator->errors(), 400);
         }
 
@@ -80,11 +102,53 @@ class IncidentController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Elimina una incidencia.
      */
-    public function destroy(Incident $id)
+    public function destroy($id)
     {
-        $id->delete();
+        $incident = Incident::find($id);
+        if (!$incident) {
+            return response()->json(['error' => 'Incidencia no encontrada'], 404);
+        }
+        $incident->delete();
         return response()->json(null, 204);
     }
+
+    /**
+ * Marca una incidencia como leída.
+ */
+public function markAsRead($id)
+{
+    $incident = Incident::find($id);
+    if (!$incident) {
+        return response()->json(['error' => 'Incidencia no encontrada'], 404);
+    }
+    $incident->leido = true;
+    $incident->save();
+    return response()->json($incident, 200);
+}
+
+
+public function resolve(Request $request, $id)
+{
+    $incident = Incident::find($id);
+    if (!$incident) {
+        return response()->json(['error' => 'Incidencia no encontrada'], 404);
+    }
+
+    // Validar que se proporcione el id del empleado que resuelve la incidencia
+    $validator = Validator::make($request->all(), [
+         'resulta_por' => 'required'
+    ]);
+    if ($validator->fails()){
+         return response()->json($validator->errors(), 400);
+    }
+
+    $incident->estado = 'resuelta';
+    $incident->resulta_por = $request->input('resulta_por');
+    $incident->save();
+
+    return response()->json($incident, 200);
+}
+
 }

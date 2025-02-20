@@ -16,6 +16,7 @@ use App\Http\Controllers\RequestController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\IncidentController;
 
 
 
@@ -163,7 +164,9 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('/firefighters-assignments/{id}/move-to-bottom/{column}', [FirefighterAssignmentController::class, 'moveToBottom']);
     Route::post('firefighters-assignments/require-firefighter', [FirefighterAssignmentController::class, 'requireFirefighter']);
 
-
+    Route::patch('/incidents/{id}/resolve', [IncidentController::class, 'resolve']);
+    Route::patch('/incidents/{id}/mark-as-read', [IncidentController::class, 'markAsRead']);
+    Route::apiResource('incidents', IncidentController::class);
 
 
 

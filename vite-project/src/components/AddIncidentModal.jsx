@@ -6,25 +6,31 @@ import UsersApiService from '../services/UsuariosApiService';
 import VehiclesApiService from '../services/VehiclesApiService';
 import ParksApiService from '../services/ParkApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
+import { useStateContext } from '../contexts/ContextProvider';
 
 const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   if (!isOpen) return null;
 
   const { darkMode } = useDarkMode();
+  const { user } = useStateContext();
 
   const [formValues, setFormValues] = useState({
-    id_incidencia: '',
+    // Se elimina id_incidencia, pues es autoincrementable
     tipo: '',
     fecha: '',
     descripcion: '',
     id_parque: '',
     matricula: '',
-    id_empleado2: ''
+    id_empleado2: '',
+    // Campos añadidos automáticamente:
+    id_empleado: '',
+    estado: '',
+    leido: false
   });
   const [errorMessages, setErrorMessages] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Datos para los dropdowns con buscador
+  // Dropdowns con buscador
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -36,20 +42,22 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   useEffect(() => {
     if (isOpen) {
       setFormValues({
-        id_incidencia: '',
         tipo: '',
         fecha: '',
         descripcion: '',
         id_parque: '',
         matricula: '',
-        id_empleado2: ''
+        id_empleado2: '',
+        id_empleado: user ? user.id_empleado : '',
+        estado: 'Pendiente',
+        leido: false
       });
       setErrorMessages({});
       setIsSubmitting(false);
       setUserSearch('');
       setVehicleSearch('');
     }
-  }, [isOpen]);
+  }, [isOpen, user]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,6 +104,10 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     setErrorMessages({});
+  
+    // Mostrar en consola los datos que se enviarán
+    console.log("Enviando incidencia:", formValues);
+  
     try {
       const response = await IncidentApiService.createIncident(formValues);
       onAdd(response.data);
@@ -103,6 +115,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     } catch (error) {
       console.error('Error creating incident:', error);
       if (error.response && error.response.data) {
+        console.log("Respuesta del error:", error.response.data);
         setErrorMessages(error.response.data);
       } else {
         setErrorMessages({ general: 'Ocurrió un error al crear la incidencia.' });
@@ -111,6 +124,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
       setIsSubmitting(false);
     }
   };
+  
 
   return (
     <div className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-full bg-black bg-opacity-50">
@@ -122,7 +136,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
           </button>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 mb-4 sm:grid-cols-2">            
+          <div className="grid gap-4 mb-4 sm:grid-cols-2">
             {/* Tipo de Incidencia */}
             <div>
               <label htmlFor="tipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Tipo de Incidencia</label>

@@ -2,9 +2,12 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
+import { useStateContext } from '../contexts/ContextProvider';
 import dayjs from 'dayjs';
 
 const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
+      const { user } = useStateContext();
+      console.log(incident);
   const { darkMode } = useDarkMode();
   if (!isOpen) return null;
   return (
@@ -17,18 +20,20 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
           </button>
         </div>
         <div className="space-y-3">
-          <p><strong>ID Incidencia:</strong> {incident.id_incidencia}</p>
           <p><strong>Creado por:</strong> {incident.creator ? `${incident.creator.nombre} ${incident.creator.apellido}` : incident.id_empleado}</p>
           <p><strong>Tipo:</strong> {incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</p>
           <p><strong>Fecha:</strong> {dayjs(incident.fecha).format('DD/MM/YYYY')}</p>
           <p><strong>Leído:</strong> {incident.leido ? 'Sí' : 'No'}</p>
           <p><strong>Parque:</strong> {incident.park ? incident.park.nombre : incident.id_parque}</p>
           {incident.tipo === 'vehiculo' && (
-            <p><strong>Vehículo:</strong> {incident.matricula}</p>
+            <p><strong>Vehículo:</strong> {incident.vehicle.nombre}</p>
           )}
           {incident.tipo === 'personal' && (
             <p><strong>Empleado:</strong> {incident.employee2 ? `${incident.employee2.nombre} ${incident.employee2.apellido}` : ''}</p>
           )}
+          <p>
+            <strong>Resuelto por:</strong> {incident.resolver ? `${incident.resolver.nombre} ${incident.resolver.apellido}` : 'No resuelto'}
+          </p>
           <p><strong>Descripción:</strong></p>
           <p>{incident.descripcion}</p>
         </div>

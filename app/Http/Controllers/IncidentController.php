@@ -13,7 +13,7 @@ class IncidentController extends Controller
      */
     public function index()
     {
-        $incidents = Incident::with(['creator', 'employee2', 'vehicle', 'park'])->get();
+        $incidents = Incident::with(['creator', 'employee2', 'vehicle', 'park', 'resolver'])->get();
         return response()->json($incidents);
     }
 

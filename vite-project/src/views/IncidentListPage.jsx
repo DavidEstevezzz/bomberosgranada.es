@@ -69,7 +69,8 @@ const IncidentListPage = () => {
   const handleResolve = async (incidentId) => {
     try {
       // En un escenario real, se usaría el id del usuario autenticado
-      const resolverData = { resulta_por: "CURRENT_USER_ID" };
+      const resolverData = { resulta_por: user.id_empleado };
+      console.log("Datos de resolución:", resolverData); // Log para depuración
       await IncidentApiService.resolveIncident(incidentId, resolverData);
       fetchIncidents();
     } catch (err) {
@@ -160,10 +161,10 @@ const IncidentListPage = () => {
                     <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
                     <td className="py-2 px-2">
                       {incident.tipo === 'vehiculo' && incident.matricula && (
-                        <span>Vehículo: {incident.matricula}</span>
+                        <span>{incident.vehicle.nombre}</span>
                       )}
                       {incident.tipo === 'personal' && incident.employee2 && (
-                        <span>Empleado: {getEmployee2Name(incident)}</span>
+                        <span>{getEmployee2Name(incident)}</span>
                       )}
                     </td>
                     <td className="py-2 px-2 flex space-x-2">

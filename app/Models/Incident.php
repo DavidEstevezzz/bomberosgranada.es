@@ -14,8 +14,6 @@ class Incident extends Model
 
     // La clave primaria es id_incidencia, que no es autoincremental
     protected $primaryKey = 'id_incidencia';
-    public $incrementing = false;
-    protected $keyType = 'string';
 
     protected $fillable = [
         'id_incidencia',

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash, faPlus, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faPlus, faEllipsisH, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import IncidentApiService from '../services/IncidentApiService';
-import AddIncidentModal from '../components/AddIncidentModal'; // Modal para nueva incidencia (a diseñar)
+import AddIncidentModal from '../components/AddIncidentModal';
+import IncidentDetailModal from '../components/IncidentDetailModal';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
 const IncidentListPage = () => {
@@ -13,6 +14,8 @@ const IncidentListPage = () => {
   const [currentMonth, setCurrentMonth] = useState(dayjs());
   const { darkMode } = useDarkMode();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [detailIncident, setDetailIncident] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     fetchIncidents();
@@ -22,7 +25,7 @@ const IncidentListPage = () => {
     setLoading(true);
     try {
       const response = await IncidentApiService.getIncidents();
-      // Ordenar por fecha ascendente
+      // Ordena por fecha ascendente
       const sorted = response.data.sort((a, b) => dayjs(a.fecha).diff(dayjs(b.fecha)));
       setIncidents(sorted);
       setError(null);
@@ -42,11 +45,10 @@ const IncidentListPage = () => {
     setCurrentMonth(currentMonth.add(1, 'month'));
   };
 
-  // Filtrar las incidencias según el mes actual (comparando la fecha de la incidencia)
+  // Filtrar incidencias del mes actual
   const filteredIncidents = incidents.filter((incident) =>
     dayjs(incident.fecha).isSame(currentMonth, 'month')
   );
-
   const pendingIncidents = filteredIncidents.filter(
     (incident) => incident.estado === 'Pendiente'
   );
@@ -54,10 +56,16 @@ const IncidentListPage = () => {
     (incident) => incident.estado === 'Resuelta'
   );
 
-  // Función para marcar una incidencia como resuelta (se asume que el API requiere enviar el id del empleado que resuelve)
+  // Funciones auxiliares para mostrar nombres
+  const getCreatorName = (incident) =>
+    incident.creator ? `${incident.creator.nombre} ${incident.creator.apellido}` : incident.id_empleado;
+  const getEmployee2Name = (incident) =>
+    incident.employee2 ? `${incident.employee2.nombre} ${incident.employee2.apellido}` : '';
+
+  // Marcar incidencia como resuelta
   const handleResolve = async (incidentId) => {
     try {
-      // En un escenario real, el id del empleado que resuelve se obtendría del contexto de autenticación.
+      // En un escenario real, se usaría el id del usuario autenticado
       const resolverData = { resulta_por: "CURRENT_USER_ID" };
       await IncidentApiService.resolveIncident(incidentId, resolverData);
       fetchIncidents();
@@ -66,20 +74,10 @@ const IncidentListPage = () => {
     }
   };
 
-  // Función auxiliar para mostrar el nombre del usuario creador
-  const getCreatorName = (incident) => {
-    if (incident.creator) {
-      return `${incident.creator.nombre} ${incident.creator.apellido}`;
-    }
-    return incident.id_empleado;
-  };
-
-  // Función auxiliar para mostrar el nombre del empleado referenciado en incidencias de tipo personal
-  const getEmployee2Name = (incident) => {
-    if (incident.employee2) {
-      return `${incident.employee2.nombre} ${incident.employee2.apellido}`;
-    }
-    return '';
+  // Abrir modal de detalle
+  const openDetailModal = (incident) => {
+    setDetailIncident(incident);
+    setIsDetailModalOpen(true);
   };
 
   if (loading) return <div>Loading...</div>;
@@ -105,9 +103,7 @@ const IncidentListPage = () => {
         >
           Mes Anterior
         </button>
-        <span className="text-xl font-semibold">
-          {currentMonth.format('MMMM YYYY')}
-        </span>
+        <span className="text-xl font-semibold">{currentMonth.format('MMMM YYYY')}</span>
         <button
           onClick={handleNextMonth}
           className="bg-blue-500 text-white px-4 py-2 rounded"
@@ -127,7 +123,6 @@ const IncidentListPage = () => {
                 <th className="py-2 px-2">Tipo</th>
                 <th className="py-2 px-2">Fecha</th>
                 <th className="py-2 px-2">Leído</th>
-                <th className="py-2 px-2">Descripción</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Extras</th>
                 <th className="py-2 px-2">Acciones</th>
@@ -138,9 +133,7 @@ const IncidentListPage = () => {
                 pendingIncidents.map((incident) => (
                   <tr key={incident.id_incidencia} className="border-b border-gray-700">
                     <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">
-                      {incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}
-                    </td>
+                    <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
                       {incident.leido ? (
@@ -149,31 +142,35 @@ const IncidentListPage = () => {
                         <FontAwesomeIcon icon={faEyeSlash} title="No leído" />
                       )}
                     </td>
-                    <td className="py-2 px-2">{incident.descripcion}</td>
-                    <td className="py-2 px-2">
-                      {incident.park ? incident.park.nombre : incident.id_parque}
-                    </td>
+                    <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
                     <td className="py-2 px-2">
                       {incident.tipo === 'vehiculo' && incident.matricula && (
-                        <span>Mat: {incident.matricula}</span>
+                        <span>Vehículo: {incident.matricula}</span>
                       )}
                       {incident.tipo === 'personal' && incident.employee2 && (
-                        <span>{getEmployee2Name(incident)}</span>
+                        <span>Empleado: {getEmployee2Name(incident)}</span>
                       )}
                     </td>
-                    <td className="py-2 px-2">
+                    <td className="py-2 px-2 flex space-x-2">
                       <button
                         onClick={() => handleResolve(incident.id_incidencia)}
                         className="bg-green-600 text-white px-3 py-1 rounded"
                       >
                         Marcar Resuelta
                       </button>
+                      <button
+                        onClick={() => openDetailModal(incident)}
+                        className="bg-gray-600 text-white px-3 py-1 rounded flex items-center space-x-1"
+                      >
+                        <FontAwesomeIcon icon={faInfoCircle} />
+                        <span>Detalle</span>
+                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" className="py-4 text-center">
+                  <td colSpan="7" className="py-4 text-center">
                     No hay incidencias pendientes en este mes.
                   </td>
                 </tr>
@@ -194,9 +191,9 @@ const IncidentListPage = () => {
                 <th className="py-2 px-2">Tipo</th>
                 <th className="py-2 px-2">Fecha</th>
                 <th className="py-2 px-2">Leído</th>
-                <th className="py-2 px-2">Descripción</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Extras</th>
+                <th className="py-2 px-2">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -204,9 +201,7 @@ const IncidentListPage = () => {
                 resolvedIncidents.map((incident) => (
                   <tr key={incident.id_incidencia} className="border-b border-gray-700">
                     <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">
-                      {incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}
-                    </td>
+                    <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
                       {incident.leido ? (
@@ -215,17 +210,23 @@ const IncidentListPage = () => {
                         <FontAwesomeIcon icon={faEyeSlash} title="No leído" />
                       )}
                     </td>
-                    <td className="py-2 px-2">{incident.descripcion}</td>
-                    <td className="py-2 px-2">
-                      {incident.park ? incident.park.nombre : incident.id_parque}
-                    </td>
+                    <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
                     <td className="py-2 px-2">
                       {incident.tipo === 'vehiculo' && incident.matricula && (
-                        <span>Mat: {incident.matricula}</span>
+                        <span>Vehículo: {incident.matricula}</span>
                       )}
                       {incident.tipo === 'personal' && incident.employee2 && (
-                        <span>{getEmployee2Name(incident)}</span>
+                        <span>Empleado: {getEmployee2Name(incident)}</span>
                       )}
+                    </td>
+                    <td className="py-2 px-2">
+                      <button
+                        onClick={() => openDetailModal(incident)}
+                        className="bg-gray-600 text-white px-3 py-1 rounded flex items-center space-x-1"
+                      >
+                        <FontAwesomeIcon icon={faInfoCircle} />
+                        <span>Detalle</span>
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -246,6 +247,14 @@ const IncidentListPage = () => {
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           onAdd={fetchIncidents}
+        />
+      )}
+
+      {isDetailModalOpen && detailIncident && (
+        <IncidentDetailModal
+          incident={detailIncident}
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
         />
       )}
     </div>

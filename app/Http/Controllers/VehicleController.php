@@ -7,28 +7,24 @@ use Illuminate\Support\Facades\Validator;
 
 class VehicleController extends Controller
 {
-    /**
-     * Muestra todos los vehículos.
-     */
     public function index()
     {
-        $vehicles = Vehicle::all();
+        $vehicles = Vehicle::with('park')->get(); // Cargar relación con Park
         return response()->json($vehicles);
     }
 
-    /**
-     * Almacena un nuevo vehículo.
-     */
     public function store(Request $request)
     {
         $rules = [
             'matricula' => 'required|unique:vehicles,matricula',
+            'nombre'    => 'required|string',
             'id_parque' => 'required',
             'año'       => 'required',
             'tipo'      => 'required',
         ];
 
         $validator = Validator::make($request->all(), $rules);
+        
         if($validator->fails()){
             return response()->json($validator->errors(), 400);
         }
@@ -37,31 +33,25 @@ class VehicleController extends Controller
         return response()->json($vehicle, 201);
     }
 
-    /**
-     * Muestra un vehículo específico.
-     */
-    public function show($matricula)
+    public function show(string $id)
     {
-        $vehicle = Vehicle::find($matricula);
+        $vehicle = Vehicle::with('park')->find($id);
         if (!$vehicle) {
             return response()->json(['error' => 'Vehículo no encontrado'], 404);
         }
         return response()->json($vehicle);
     }
 
-    /**
-     * Actualiza un vehículo existente.
-     */
-    public function update(Request $request, $matricula)
+    public function update(Request $request, string $matricula)
     {
         $vehicle = Vehicle::find($matricula);
         if (!$vehicle) {
             return response()->json(['error' => 'Vehículo no encontrado'], 404);
         }
 
-        // Permite que la validación reconozca el valor actual de matricula
         $rules = [
             'matricula' => 'required|unique:vehicles,matricula,'.$vehicle->matricula.',matricula',
+            'nombre'    => 'required|string',
             'id_parque' => 'required',
             'año'       => 'required',
             'tipo'      => 'required',
@@ -76,10 +66,7 @@ class VehicleController extends Controller
         return response()->json($vehicle, 200);
     }
 
-    /**
-     * Elimina un vehículo.
-     */
-    public function destroy($matricula)
+    public function destroy(string $matricula)
     {
         $vehicle = Vehicle::find($matricula);
         if (!$vehicle) {

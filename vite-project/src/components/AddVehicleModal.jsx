@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import VehiclesApiService from '../services/VehiclesApiService';
+import ParksApiService from '../services/ParkApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
 const AddVehicleModal = ({ isOpen, onClose, onAdd }) => {
@@ -9,11 +10,12 @@ const AddVehicleModal = ({ isOpen, onClose, onAdd }) => {
 
   const [formValues, setFormValues] = useState({
     matricula: '',
+    nombre: '', // Nuevo campo
     id_parque: '',
     año: '',
     tipo: ''
   });
-
+  const [parks, setParks] = useState([]);
   const [errorMessages, setErrorMessages] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { darkMode } = useDarkMode();
@@ -22,6 +24,7 @@ const AddVehicleModal = ({ isOpen, onClose, onAdd }) => {
     if (isOpen) {
       setFormValues({
         matricula: '',
+        nombre: '',
         id_parque: '',
         año: '',
         tipo: ''
@@ -30,6 +33,18 @@ const AddVehicleModal = ({ isOpen, onClose, onAdd }) => {
       setIsSubmitting(false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const fetchParks = async () => {
+      try {
+        const response = await ParksApiService.getParks();
+        setParks(response.data);
+      } catch (error) {
+        console.error('Error fetching parks:', error);
+      }
+    };
+    fetchParks();
+  }, []);
 
   const handleChange = (e) => {
     setFormValues({
@@ -71,6 +86,7 @@ const AddVehicleModal = ({ isOpen, onClose, onAdd }) => {
         </div>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 mb-4 sm:grid-cols-2">
+            {/* Matrícula */}
             <div>
               <label htmlFor="matricula" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Matrícula</label>
               <input
@@ -84,19 +100,39 @@ const AddVehicleModal = ({ isOpen, onClose, onAdd }) => {
               />
               {errorMessages.matricula && <span className="text-red-500 text-sm">{errorMessages.matricula}</span>}
             </div>
+            {/* Nombre del Vehículo */}
             <div>
-              <label htmlFor="id_parque" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>ID Parque</label>
+              <label htmlFor="nombre" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Nombre del Vehículo</label>
               <input
                 type="text"
-                name="id_parque"
-                id="id_parque"
-                value={formValues.id_parque}
+                name="nombre"
+                id="nombre"
+                value={formValues.nombre}
                 onChange={handleChange}
                 className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
                 required
               />
+              {errorMessages.nombre && <span className="text-red-500 text-sm">{errorMessages.nombre}</span>}
+            </div>
+            {/* Parque: Selector de parque */}
+            <div>
+              <label htmlFor="id_parque" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Parque</label>
+              <select
+                name="id_parque"
+                id="id_parque"
+                value={formValues.id_parque}
+                onChange={handleChange}
+                required
+                className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
+              >
+                <option value="">Selecciona un parque</option>
+                {parks.map((park) => (
+                  <option key={park.id_parque} value={park.id_parque}>{park.nombre}</option>
+                ))}
+              </select>
               {errorMessages.id_parque && <span className="text-red-500 text-sm">{errorMessages.id_parque}</span>}
             </div>
+            {/* Año */}
             <div>
               <label htmlFor="año" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Año</label>
               <input
@@ -110,6 +146,7 @@ const AddVehicleModal = ({ isOpen, onClose, onAdd }) => {
               />
               {errorMessages.año && <span className="text-red-500 text-sm">{errorMessages.año}</span>}
             </div>
+            {/* Tipo */}
             <div>
               <label htmlFor="tipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Tipo</label>
               <input

@@ -25,6 +25,7 @@ const Vehicles = () => {
   const fetchVehicles = async () => {
     setLoading(true);
     try {
+      // Se asume que el controlador carga la relación 'park'
       const response = await VehiclesApiService.getVehicles();
       if (response.data) {
         setVehicles(response.data);
@@ -44,7 +45,6 @@ const Vehicles = () => {
     setSearchTerm(event.target.value);
   };
 
-  // Función para normalizar cadenas y así facilitar la búsqueda sin distinguir acentos y mayúsculas
   const normalizeString = (str) => {
     return String(str)
       .normalize('NFD')
@@ -52,13 +52,14 @@ const Vehicles = () => {
       .toLowerCase();
   };
 
-  // Filtra los vehículos por matrícula o tipo (puedes agregar otros campos si lo requieres)
+  // Filtra vehículos por matrícula, tipo, parque (nombre) o año
   const filteredVehicles = vehicles.filter((vehicle) => {
     const normalizedSearch = normalizeString(searchTerm);
+    const parkName = vehicle.park ? normalizeString(vehicle.park.nombre) : normalizeString(String(vehicle.id_parque));
     return (
       normalizeString(vehicle.matricula).includes(normalizedSearch) ||
       normalizeString(vehicle.tipo).includes(normalizedSearch) ||
-      normalizeString(String(vehicle.id_parque)).includes(normalizedSearch) ||
+      parkName.includes(normalizedSearch) ||
       normalizeString(String(vehicle.año)).includes(normalizedSearch)
     );
   });
@@ -78,7 +79,6 @@ const Vehicles = () => {
 
     try {
       await VehiclesApiService.deleteVehicle(vehicle.matricula);
-      // Actualizamos la lista filtrando el vehículo eliminado
       setVehicles((prev) => prev.filter((v) => v.matricula !== vehicle.matricula));
     } catch (error) {
       console.error('Error al eliminar vehículo:', error);
@@ -103,8 +103,6 @@ const Vehicles = () => {
 
   const handleAddVehicle = async (newVehicle) => {
     try {
-      // Puedes optar por agregar directamente el nuevo vehículo a la lista
-      // o volver a cargar todos los vehículos desde el API.
       await fetchVehicles();
       setIsAddModalOpen(false);
     } catch (error) {
@@ -137,7 +135,7 @@ const Vehicles = () => {
         <div className="flex flex-col md:flex-row items-center justify-between border-b border-gray-600 pb-2 mb-4 space-y-4 md:space-y-0 md:space-x-4">
           <input
             type="text"
-            placeholder="Buscar vehículos (matrícula, tipo, etc.)"
+            placeholder="Buscar vehículos (matrícula, tipo, parque, etc.)"
             value={searchTerm}
             onChange={handleSearchChange}
             className={`${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'} px-4 py-2 rounded w-full md:w-3/4`}
@@ -152,7 +150,8 @@ const Vehicles = () => {
             <thead>
               <tr>
                 <th className="py-2 px-2">Matrícula</th>
-                <th className="py-2 px-2">ID Parque</th>
+                <th className="py-2 px-2">Nombre Vehículo</th>
+                <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Año</th>
                 <th className="py-2 px-2">Tipo</th>
                 <th className="py-2 px-2" style={{ width: '200px' }}></th>
@@ -162,7 +161,8 @@ const Vehicles = () => {
               {filteredVehicles.map((vehicle) => (
                 <tr key={vehicle.matricula} className="border-b border-gray-700">
                   <td className="py-2 px-2">{vehicle.matricula}</td>
-                  <td className="py-2 px-2">{vehicle.id_parque}</td>
+                  <td className="py-2 px-2">{vehicle.nombre}</td>
+                  <td className="py-2 px-2">{vehicle.park ? vehicle.park.nombre : vehicle.id_parque}</td>
                   <td className="py-2 px-2">{vehicle.año}</td>
                   <td className="py-2 px-2">{vehicle.tipo}</td>
                   <td className="py-2 px-2 flex space-x-2">
@@ -185,7 +185,7 @@ const Vehicles = () => {
               ))}
               {filteredVehicles.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="py-4 text-center">
+                  <td colSpan="6" className="py-4 text-center">
                     No se encontraron vehículos.
                   </td>
                 </tr>

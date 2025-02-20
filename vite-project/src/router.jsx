@@ -31,7 +31,7 @@ import MessagesPage from './views/MessagesPage.jsx';
 import AvailableFirefightersSouth from './views/AvailableFirefightersSouth.jsx';
 import AvailableOperatorsMorning from './views/AvailableOperatorsMorning.jsx';
 import AvailableOperatorsNight from './views/AvailableOperatorsNight.jsx';
-
+import Vehicles from './views/Vehicles.jsx'; // <-- Importa la vista de Vehículos
 
 const router = createBrowserRouter([
   {
@@ -51,10 +51,13 @@ const router = createBrowserRouter([
       { path: 'solicitudes', element: <ProtectedRoute element={<RequestListPage />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'guardia-activa', element: <ProtectedRoute element={<ActiveFirefighters />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'aprobacion-cambio-guardia', element: <ProtectedRoute element={<ShiftChangeApprovalPage />} rolesAllowed={['Jefe', 'Mando']} /> },
+      
+      // Nueva ruta para Vehículos
+      { path: 'vehicles', element: <ProtectedRoute element={<Vehicles />} rolesAllowed={['Jefe', 'Mando']} /> },
 
-      // Mantener las demás rutas abiertas
+      // Rutas existentes
       { path: '/brigades/:id_brigada', element: <BrigadeDetail /> },
-      {path : '/messages', element: <MessagesPage />},
+      { path: '/messages', element: <MessagesPage /> },
       { path: 'calendario-norte', element: <CalendarPage /> },
       { path: 'calendario-sur', element: <CalendarPage2 /> },
       { path: 'requerimientos', element: <AvailableFirefighters /> },
@@ -74,7 +77,7 @@ const router = createBrowserRouter([
       { path: '', element: <Login /> },
     ],
   },
-  // Rutas abiertas para restablecimiento de contraseña
+  // Rutas para restablecimiento de contraseña
   { path: '/forgot-password', element: <ForgotPassword /> },
   { path: '/reset-password/:token', element: <ResetPassword /> },
   { path: '*', element: <NotFound /> },

@@ -15,6 +15,8 @@ use App\Http\Controllers\ShiftChangeRequestController;
 use App\Http\Controllers\RequestController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\VehicleController;
+
 
 
 // Rutas abiertas sin restricción de roles
@@ -66,6 +68,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/parks', [ParkController::class, 'index']);
     Route::get('/parks/{id_parque}', [ParkController::class, 'show']);
+
+    Route::apiResource('vehicles', VehicleController::class);
 
     Route::get('/brigades', [BrigadeController::class, 'index']);
     Route::get('/brigades/{id}', [BrigadeController::class, 'show']);

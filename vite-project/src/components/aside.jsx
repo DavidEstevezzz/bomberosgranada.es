@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTachometerAlt, faInbox, faUser, faPeopleGroup, faGear, faFile, faClock, faCalendar, faCaretDown } from '@fortawesome/free-solid-svg-icons';
+import { 
+  faTachometerAlt, 
+  faInbox, 
+  faUser, 
+  faPeopleGroup, 
+  faGear, 
+  faFile, 
+  faClock, 
+  faCalendar, 
+  faCaretDown,
+  faTruck  // <-- Nuevo icono de camión
+} from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
 import MessagesApiService from '../services/MessagesApiService';
@@ -54,16 +65,16 @@ const Aside = ({ className }) => {
   const userType = user.type; // Asume que el campo `type` contiene el rol del usuario
 
   return (
-<aside
-  className={`
-    w-64 h-full
-    overflow-y-auto        /* Por defecto, scroll vertical */
-    md:overflow-y-visible  /* A partir de 'md' (768px), overflow visible */
-    ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'}
-    ${className}
-  `}
->
-  <nav className="mt-6">
+    <aside
+      className={`
+        w-64 h-full
+        overflow-y-auto
+        md:overflow-y-visible
+        ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'}
+        ${className}
+      `}
+    >
+      <nav className="mt-6">
         {/* Inicio */}
         <a href="/dashboard" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
           <FontAwesomeIcon icon={faTachometerAlt} className="w-5 h-5 mr-2" />
@@ -77,6 +88,12 @@ const Aside = ({ className }) => {
           {unreadCount > 0 && (
             <span className="ml-auto bg-blue-600 text-white text-sm font-semibold px-2.5 py-0.5 rounded-full">{unreadCount}</span>
           )}
+        </a>
+
+        {/* Nuevo menú: Vehículos */}
+        <a href="/vehicles" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+          <FontAwesomeIcon icon={faTruck} className="w-5 h-5 mr-2" />
+          Vehículos
         </a>
 
         {/* Usuarios */}
@@ -172,11 +189,11 @@ const Aside = ({ className }) => {
 
         {/* Calendario */}
         {userType === 'jefe' &&
-        <a href="/calendario-norte" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-          <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 mr-2" />
-          Calendario
-        </a>
-  }
+          <a href="/calendario-norte" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 mr-2" />
+            Calendario
+          </a>
+        }
       </nav>
     </aside>
   );

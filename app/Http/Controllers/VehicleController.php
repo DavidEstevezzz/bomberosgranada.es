@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -9,71 +8,84 @@ use Illuminate\Support\Facades\Validator;
 class VehicleController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Muestra todos los vehículos.
      */
     public function index()
     {
         $vehicles = Vehicle::all();
-
         return response()->json($vehicles);
     }
+
     /**
-     * Store a newly created resource in storage.
+     * Almacena un nuevo vehículo.
      */
     public function store(Request $request)
     {
         $rules = [
-            'matricula' => 'required',
+            'matricula' => 'required|unique:vehicles,matricula',
             'id_parque' => 'required',
-            'año' => 'required',
-            'tipo' => 'required',
+            'año'       => 'required',
+            'tipo'      => 'required',
         ];
 
-        $validator = Validator::make($request->input(), $rules);
-        
+        $validator = Validator::make($request->all(), $rules);
         if($validator->fails()){
             return response()->json($validator->errors(), 400);
         }
 
         $vehicle = Vehicle::create($request->all());
-        $vehicle->save(); 
         return response()->json($vehicle, 201);
-
     }
 
     /**
-     * Display the specified resource.
+     * Muestra un vehículo específico.
      */
-    public function show(string $id)
+    public function show($matricula)
     {
-        $id = Vehicle::find($id);
-
-        return response()->json($id);
+        $vehicle = Vehicle::find($matricula);
+        if (!$vehicle) {
+            return response()->json(['error' => 'Vehículo no encontrado'], 404);
+        }
+        return response()->json($vehicle);
     }
 
-
     /**
-     * Update the specified resource in storage.
+     * Actualiza un vehículo existente.
      */
-    public function update(Request $request, Vehicle $id)
+    public function update(Request $request, $matricula)
     {
-        $request->validate([
-            'matricula' => 'required',
+        $vehicle = Vehicle::find($matricula);
+        if (!$vehicle) {
+            return response()->json(['error' => 'Vehículo no encontrado'], 404);
+        }
+
+        // Permite que la validación reconozca el valor actual de matricula
+        $rules = [
+            'matricula' => 'required|unique:vehicles,matricula,'.$vehicle->matricula.',matricula',
             'id_parque' => 'required',
-            'año' => 'required',
-            'tipo' => 'required',
-        ]);
+            'año'       => 'required',
+            'tipo'      => 'required',
+        ];
 
-        $id->update($request->all());
+        $validator = Validator::make($request->all(), $rules);
+        if($validator->fails()){
+            return response()->json($validator->errors(), 400);
+        }
 
-        return response()->json($id, 200);
+        $vehicle->update($request->all());
+        return response()->json($vehicle, 200);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Elimina un vehículo.
      */
-    public function destroy(Vehicle $id)
+    public function destroy($matricula)
     {
-        $id->delete();
+        $vehicle = Vehicle::find($matricula);
+        if (!$vehicle) {
+            return response()->json(['error' => 'Vehículo no encontrado'], 404);
+        }
+        $vehicle->delete();
+        return response()->json(null, 204);
     }
 }

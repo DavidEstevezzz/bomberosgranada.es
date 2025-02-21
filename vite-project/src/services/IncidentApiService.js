@@ -27,6 +27,10 @@ class IncidentApiService {
   async resolveIncident(id, resolverData) {
     return await BaseApiService.patch(`${API_URL}/${id}/resolve`, resolverData);
   }
+
+  async countPending() {
+    return await BaseApiService.get(`${API_URL}/count-pending`);
+  }
 }
 
 export default new IncidentApiService();

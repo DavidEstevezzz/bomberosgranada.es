@@ -105,9 +105,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     setIsSubmitting(true);
     setErrorMessages({});
   
-    // Mostrar en consola los datos que se enviarán
-    console.log("Enviando incidencia:", formValues);
-  
+    // Mostrar en consola los datos que se enviarán  
     try {
       const response = await IncidentApiService.createIncident(formValues);
       onAdd(response.data);

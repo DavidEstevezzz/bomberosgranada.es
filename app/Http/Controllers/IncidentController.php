@@ -150,4 +150,10 @@ public function resolve(Request $request, $id)
     return response()->json($incident, 200);
 }
 
+public function countPending()
+{
+    $pendingCount = Incident::where('estado', 'pendiente')->count();
+    return response()->json(['pending' => $pendingCount], 200);
+}
+
 }

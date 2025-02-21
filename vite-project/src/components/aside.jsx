@@ -16,6 +16,7 @@ import {
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
 import MessagesApiService from '../services/MessagesApiService';
+import IncidentApiService from '../services/IncidentApiService'; // Importamos el servicio de incidencias
 
 const Aside = ({ className }) => {
   const { user } = useStateContext(); // Obtén el usuario del contexto
@@ -27,12 +28,14 @@ const Aside = ({ className }) => {
     solicitudes: false,
   });
   const [unreadCount, setUnreadCount] = useState(0); // Contador de mensajes no leídos
+  const [pendingIncidentsCount, setPendingIncidentsCount] = useState(0); // Contador de incidencias pendientes
 
   const { darkMode } = useDarkMode();
 
   useEffect(() => {
     if (user) {
       fetchUnreadMessages();
+      fetchPendingIncidentsCount();
     }
   }, [user]);
 
@@ -43,6 +46,16 @@ const Aside = ({ className }) => {
       setUnreadCount(unreadMessages.length);
     } catch (error) {
       console.error('Error fetching unread messages:', error);
+    }
+  };
+
+  const fetchPendingIncidentsCount = async () => {
+    try {
+      const response = await IncidentApiService.countPending();
+      // Suponemos que la respuesta es { pending: <número> }
+      setPendingIncidentsCount(response.data.pending);
+    } catch (error) {
+      console.error('Error fetching pending incidents count:', error);
     }
   };
 
@@ -87,16 +100,18 @@ const Aside = ({ className }) => {
           <FontAwesomeIcon icon={faInbox} className="w-5 h-5 mr-2" />
           Mensajes
           {unreadCount > 0 && (
-            <span className="ml-auto bg-blue-600 text-white text-sm font-semibold px-2.5 py-0.5 rounded-full">{unreadCount}</span>
+            <span className="ml-auto bg-blue-600 text-white text-sm font-semibold px-2.5 py-0.5 rounded-full">
+              {unreadCount}
+            </span>
           )}
         </a>
 
         {/* Nuevo menú: Vehículos */}
         {userType === 'jefe' && (
-        <a href="/vehicles" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-          <FontAwesomeIcon icon={faTruck} className="w-5 h-5 mr-2" />
-          Vehículos
-        </a>
+          <a href="/vehicles" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <FontAwesomeIcon icon={faTruck} className="w-5 h-5 mr-2" />
+            Vehículos
+          </a>
         )}
 
         {/* Usuarios */}
@@ -190,20 +205,26 @@ const Aside = ({ className }) => {
           )}
         </div>
 
+        {/* Incidencias */}
         {(userType === 'jefe' || userType === 'mando') && (
           <a href="/incidents" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
             <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 mr-2" />
             Incidencias
+            {pendingIncidentsCount > 0 && (
+              <span className="ml-auto bg-red-600 text-white text-sm font-semibold px-2.5 py-0.5 rounded-full">
+                {pendingIncidentsCount}
+              </span>
+            )}
           </a>
         )}
 
         {/* Calendario */}
-        {userType === 'jefe' &&
+        {userType === 'jefe' && (
           <a href="/calendario-norte" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
             <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 mr-2" />
             Calendario
           </a>
-        }
+        )}
       </nav>
     </aside>
   );

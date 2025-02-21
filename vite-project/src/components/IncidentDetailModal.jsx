@@ -7,7 +7,6 @@ import dayjs from 'dayjs';
 
 const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
       const { user } = useStateContext();
-      console.log(incident);
   const { darkMode } = useDarkMode();
   if (!isOpen) return null;
   return (

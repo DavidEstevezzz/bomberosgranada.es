@@ -110,6 +110,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'show']);
     Route::post('/shift-change-requests', [ShiftChangeRequestController::class, 'store']);
     Route::put('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'update']);
+
+    Route::get('/incidents/count-pending', [IncidentController::class, 'countPending']);
+    Route::patch('/incidents/{id}/resolve', [IncidentController::class, 'resolve']);
+    Route::patch('/incidents/{id}/mark-as-read', [IncidentController::class, 'markAsRead']);
+    Route::apiResource('incidents', IncidentController::class);
 });
 
 // Rutas de Login y Logout (abiertas)
@@ -164,10 +169,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('/firefighters-assignments/{id}/move-to-bottom/{column}', [FirefighterAssignmentController::class, 'moveToBottom']);
     Route::post('firefighters-assignments/require-firefighter', [FirefighterAssignmentController::class, 'requireFirefighter']);
 
-    Route::get('/incidents/count-pending', [IncidentController::class, 'countPending']);
-    Route::patch('/incidents/{id}/resolve', [IncidentController::class, 'resolve']);
-    Route::patch('/incidents/{id}/mark-as-read', [IncidentController::class, 'markAsRead']);
-    Route::apiResource('incidents', IncidentController::class);
+    
 
 
 

@@ -102,6 +102,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Requests y ShiftChangeRequests abiertos para index, show y store
     Route::get('/requests', [RequestController::class, 'index']);
     Route::get('/requests/{id}', [RequestController::class, 'show']);
+    Route::put('/requests/{id}', [RequestController::class, 'update']);
     Route::post('/requests', [RequestController::class, 'store']);
     Route::get('/requests/{id}/file', [RequestController::class, 'downloadFile']);
 
@@ -159,7 +160,6 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::delete('/settings/{id}', [SettingController::class, 'destroy']);
 
     // Restricción de Request y ShiftChangeRequest para update y delete
-    Route::put('/requests/{id}', [RequestController::class, 'update']);
     Route::delete('/requests/{id}', [RequestController::class, 'destroy']);
 
     Route::put('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'update']);

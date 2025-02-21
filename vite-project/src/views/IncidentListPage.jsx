@@ -241,7 +241,7 @@ const IncidentListPage = () => {
                                         <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
                                         <td className="py-2 px-2">
                                             {incident.tipo === 'vehiculo' && incident.matricula && (
-                                                <span>Vehículo: {incident.matricula}</span>
+                                                <span>Vehículo: {incident.vehicle.nombre}</span>
                                             )}
                                             {incident.tipo === 'personal' && incident.employee2 && (
                                                 <span>Empleado: {getEmployee2Name(incident)}</span>

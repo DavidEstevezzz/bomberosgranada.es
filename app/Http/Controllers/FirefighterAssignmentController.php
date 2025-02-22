@@ -258,7 +258,8 @@ class FirefighterAssignmentController extends Controller
 
                 $hasGuardAssignment = false;
                 foreach ($firefighterAssignments as $assignment) {
-                    if ($assignment->brigadeDestination && in_array($assignment->brigadeDestination->nombre, $guardToday)) {
+                    // Solo consideramos asignaciones cuyo 'fecha_ini' sea igual a la fecha actual
+                    if ($assignment->fecha_ini == $date && $assignment->brigadeDestination && in_array($assignment->brigadeDestination->nombre, $guardToday)) {
                         Log::info("Bombero {$firefighterId} EXCLUIDO por tener asignación en la brigada de guardia '{$assignment->brigadeDestination->nombre}' HOY.");
                         $hasGuardAssignment = true;
                         break;

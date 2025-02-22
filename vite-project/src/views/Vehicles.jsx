@@ -57,6 +57,7 @@ const Vehicles = () => {
     const normalizedSearch = normalizeString(searchTerm);
     const parkName = vehicle.park ? normalizeString(vehicle.park.nombre) : normalizeString(String(vehicle.id_parque));
     return (
+      normalizeString(vehicle.nombre).includes(normalizedSearch) ||
       normalizeString(vehicle.matricula).includes(normalizedSearch) ||
       normalizeString(vehicle.tipo).includes(normalizedSearch) ||
       parkName.includes(normalizedSearch) ||

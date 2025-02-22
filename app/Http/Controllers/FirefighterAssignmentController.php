@@ -365,10 +365,10 @@ class FirefighterAssignmentController extends Controller
         $queryNext = \App\Models\Request::where('id_empleado', $firefighterId)
             ->where('estado', 'Confirmada')
             ->where(function ($query) use ($dayToCheck, $dayToCheckMinus1, $typesWithoutTurno, $typesWithTurno) {
-                $query->where(function ($q) use ($dayToCheckMinus1, $typesWithoutTurno) {
+                $query->where(function ($q) use ($dayToCheckMinus1, $dayToCheck, $typesWithoutTurno) {
                     $q->whereIn('tipo', $typesWithoutTurno)
-                        ->where('fecha_ini', '<=', $dayToCheckMinus1)
-                        ->where('fecha_fin', '=', $dayToCheckMinus1);
+                        ->where('fecha_ini', '<=', $dayToCheck);
+                        
                 })
                     ->orWhere(function ($q) use ($dayToCheck, $typesWithTurno) {
                         $q->whereIn('tipo', $typesWithTurno)

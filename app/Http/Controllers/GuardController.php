@@ -52,7 +52,7 @@ class GuardController extends Controller
     }
 
     // 👉 Método para actualizar SOLO campos de comentarios
-    public function updateGuard(Request $request, $id)
+    public function updateSchedule(Request $request, $id)
     {
         $rules = [
             'revision' => 'sometimes|nullable|string',

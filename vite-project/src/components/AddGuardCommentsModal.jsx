@@ -61,7 +61,7 @@ const AddGuardCommentsModal = ({ isOpen, onClose, onUpdate, id_brigada, selected
             ...formValues,
           });
           
-          const response = await GuardsApiService.updateGuard(guardId, commentsData);
+          const response = await GuardsApiService.updateSchedule(id_brigada, formValues);
           onUpdate(response.data); // Actualiza los comentarios en la vista padre
       onClose(); // Cierra el modal tras submit exitoso
     } catch (error) {

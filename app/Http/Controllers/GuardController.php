@@ -22,10 +22,17 @@ class GuardController extends Controller
     public function store(Request $request)
     {
         $rules = [
-            'date' => 'required|date',
+            'date'       => 'required|date',
             'id_brigada' => 'required|exists:brigades,id_brigada',
             'id_salario' => 'exists:salaries,id_salario',
-            'tipo' => 'required|string',
+            'tipo'       => 'required|string',
+            // Nuevos campos opcionales:
+            'revision'              => 'sometimes|nullable|string',
+            'practica'              => 'sometimes|nullable|string',
+            'basura'                => 'sometimes|nullable|string',
+            'anotaciones'           => 'sometimes|nullable|string',
+            'incidencias_de_trafico'=> 'sometimes|nullable|string',
+            'mando'                 => 'sometimes|nullable|string',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -46,28 +53,27 @@ class GuardController extends Controller
 
     public function update(Request $request, $id)
     {
+        $guard = Guard::findOrFail($id);
         $rules = [
-            'date' => [
-                'required',
-                'date',
-                Rule::unique('guards')->where(function ($query) use ($request, $id) {
-                    return $query->where('date', $request->date)
-                                 ->where('id_brigada', $request->id_brigada)
-                                 ->where('id', '<>', $id);
-                }),
-            ],
-            'id_brigada' => 'required|exists:brigades,id_brigada',
-            'id_salario' => 'required|exists:salaries,id_salario',
-            'tipo' => 'required|string',
+            'date'       => 'sometimes|date',
+            'id_brigada' => 'sometimes|exists:brigades,id_brigada',
+            'id_salario' => 'sometimes|exists:salaries,id_salario',
+            'tipo'       => 'sometimes|string',
+            // Nuevos campos opcionales:
+            'revision'              => 'sometimes|nullable|string',
+            'practica'              => 'sometimes|nullable|string',
+            'basura'                => 'sometimes|nullable|string',
+            'anotaciones'           => 'sometimes|nullable|string',
+            'incidencias_de_trafico'=> 'sometimes|nullable|string',
+            'mando'                 => 'sometimes|nullable|string',
         ];
-    
+
         $validator = Validator::make($request->all(), $rules);
-    
+
         if ($validator->fails()) {
             return response()->json($validator->errors(), 400);
         }
-    
-        $guard = Guard::findOrFail($id);
+
         $guard->update($request->all());
         return response()->json($guard, 200);
     }
@@ -169,49 +175,6 @@ public function getGuardByBrigadeAndDate(Request $request)
         'guard' => $guard
     ], 200);
 }
-
-
-
-// public function availableFirefighters(Request $request)
-// {
-    // return response()->json(['message' => 'Route accessed successfully']);
-
-    // $date = $request->input('date', date('Y-m-d'));
-
-    // $excludedBrigades = ['Bajas', 'Vacaciones', 'Asuntos Propios'];
-
-    // // Buscar guardias en la fecha seleccionada y días adyacentes
-    // $guards = Guard::whereIn('date', [
-    //     $date,
-    //     date('Y-m-d', strtotime("$date -1 day")),
-    //     date('Y-m-d', strtotime("$date +1 day"))
-    // ])
-    // ->whereHas('brigade', function ($query) use ($excludedBrigades) {
-    //     $query->whereNotIn('nombre', $excludedBrigades);
-    // })
-    // ->get();
-
-    // // Obtener IDs de brigadas activas en las fechas seleccionadas
-    // $brigadesWithGuards = $guards->pluck('id_brigada')->unique();
-
-    // // Obtener los IDs de los bomberos no disponibles
-    // $unavailableFirefighterIds = Firefighters_assignment::whereIn('id_brigada_destino', $brigadesWithGuards)
-    //     ->where('fecha_ini', '<=', $date) 
-    //     ->orderBy('fecha_ini', 'desc') 
-    //     ->get()
-    //     ->unique('id_empleado') 
-    //     ->pluck('id_empleado');
-
-    // // Filtrar los bomberos disponibles excluyendo los no disponibles
-    // $availableFirefighters = User::whereIn('type', ['bombero', 'mando'])
-    //     ->whereNotIn('id_empleado', $unavailableFirefighterIds)
-    //     ->get();
-
-    // return response()->json([
-    //     'date' => $date,
-    //     'available_firefighters' => $availableFirefighters,
-    //]);
-// }
 
 public function availableFirefighters(Request $request)
 {

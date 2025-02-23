@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BrigadesApiService from '../services/BrigadesApiService';
 import GuardsApiService from '../services/GuardsApiService';
+import AddGuardCommentsModal from './AddGuardCommentsModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
@@ -19,6 +20,7 @@ const BrigadeDetail = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const initialDate = searchParams.get('date') || dayjs().format('YYYY-MM-DD');
   const [selectedDate, setSelectedDate] = useState(initialDate);
@@ -37,21 +39,21 @@ const BrigadeDetail = () => {
   };
 
   const vehicleMapping = { // Mapeo para vehículos
-   'B1': 'BUL-3-7 / BRP-1',
-   'B2': 'BUL-3-7 / BRP-1',
-   'B3': 'FSV-3 / BIP-1 / BUL-1 / UMC-1 / UPI-1',
-   'B4': 'FSV-3 / BIP-1 / BUL-1 / UMC-1 / UPI-1',
-   'B5': 'AEA-3 / VAT-1 / UBH-1 / UPC-1-3 / BNP-1',
-   'B6': 'AEA-3 / VAT-1 / UBH-1 / UPC-1-3 / BNP-1',
-   'B7': 'Apoyo equipo 2 (B3 y B4)',
-   'B8': 'Apoyo equipo 3 (B5 y B6)',
-   'B9': 'Apoyo',
-   'C1': 'BUL-1-3 / BRP-1 / UPC-1-3',
-   'C2': 'AEA-3 / UBH-1 / BIP-1 / UPI-1',
-   'C3': 'FSV-3 / UMC-1 / BNP-1 / BUL-7 / VAT-1',
-   'C4': 'Apoyo',
-   'C5': 'Apoyo',
- };
+    'B1': 'BUL-3-7 / BRP-1',
+    'B2': 'BUL-3-7 / BRP-1',
+    'B3': 'FSV-3 / BIP-1 / BUL-1 / UMC-1 / UPI-1',
+    'B4': 'FSV-3 / BIP-1 / BUL-1 / UMC-1 / UPI-1',
+    'B5': 'AEA-3 / VAT-1 / UBH-1 / UPC-1-3 / BNP-1',
+    'B6': 'AEA-3 / VAT-1 / UBH-1 / UPC-1-3 / BNP-1',
+    'B7': 'Apoyo equipo 2 (B3 y B4)',
+    'B8': 'Apoyo equipo 3 (B5 y B6)',
+    'B9': 'Apoyo',
+    'C1': 'BUL-1-3 / BRP-1 / UPC-1-3',
+    'C2': 'AEA-3 / UBH-1 / BIP-1 / UPI-1',
+    'C3': 'FSV-3 / UMC-1 / BNP-1 / BUL-7 / VAT-1',
+    'C4': 'Apoyo',
+    'C5': 'Apoyo',
+  };
 
   useEffect(() => {
     const fetchBrigadeDetails = async () => {
@@ -73,11 +75,11 @@ const BrigadeDetail = () => {
         setFirefighters(Object.values(response.data.firefighters));
 
         const commentsResponse = await GuardsApiService.getGuard(id_brigada, selectedDate);
-      if (commentsResponse.data.comentarios) {
-        setComentarios(commentsResponse.data.comentarios);
-      } else {
-        setComentarios(''); // Resetear comentarios si no hay ninguno
-      }
+        if (commentsResponse.data.comentarios) {
+          setComentarios(commentsResponse.data.comentarios);
+        } else {
+          setComentarios(''); // Resetear comentarios si no hay ninguno
+        }
 
         setError(null);
       } catch (error) {
@@ -97,6 +99,12 @@ const BrigadeDetail = () => {
     Noche: {},
   });
   const options = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'C1', 'C2', 'C3', 'C4', 'C5', 'Operador 1', 'Operador 2'];
+
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+  const handleUpdateComments = (updatedData) => {
+    setComentarios(updatedData.comentarios);
+  };
 
   const handleAssignmentChange = (shift, employeeId, value) => {
     setAssignments((prev) => {
@@ -193,52 +201,52 @@ const BrigadeDetail = () => {
 
 
 
-   const exportToPDF = () => {
-       const doc = new jsPDF();
-       doc.setFont('helvetica', 'bold');
-       const pageWidth = doc.internal.pageSize.getWidth();
-       doc.setFontSize(16);
-       doc.text('BOMBEROS POR TURNO', pageWidth / 2, 20, { align: 'center' });
-   
-       shifts.forEach((shift) => {
-           const previousY = doc.previousAutoTable?.finalY || 20;
-           doc.setFontSize(14);
-           doc.text(`${shift.label}`, pageWidth / 2, previousY + 15, { align: 'center' });
-   
-           let headers = ['Nombre', 'Puesto', 'Teléfono', 'Turno asignado', 'Asignación'];
-           if (shift.key === 'Mañana') {
-               headers.push('Vehículos'); // Añade la columna de vehículos solo para el turno de mañana
-           }
-   
-           const body = filterFirefightersByShift(shift.key).map((firefighter) => {
-               let row = [
-                   `${firefighter.nombre} ${firefighter.apellido}`,
-                   firefighter.puesto,
-                   firefighter.telefono,
-                   firefighter.turno,
-                   assignments[shift.key][firefighter.id_empleado] || 'No asignado',
-               ];
-   
-               if (shift.key === 'Mañana') {
-                 let assignedVehicle = vehicleMapping[assignments[shift.key][firefighter.id_empleado]] || '';
-                 row.push(assignedVehicle); // Añade información de vehículos o deja en blanco
-               }
-               return row;
-           });
-   
-           doc.autoTable({
-               startY: previousY + 20,
-               head: [headers],
-               body: body,
-               theme: 'striped',
-               styles: { halign: 'center' },
-               headStyles: { fillColor: [22, 160, 133], halign: 'center' },
-               bodyStyles: { textColor: [44, 62, 80], halign: 'center' },
-               alternateRowStyles: { fillColor: [240, 240, 240] },
-           });
-       });
-       doc.save('Bomberos_Por_Turno.pdf');
-   };
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.setFont('helvetica', 'bold');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFontSize(16);
+    doc.text('BOMBEROS POR TURNO', pageWidth / 2, 20, { align: 'center' });
+
+    shifts.forEach((shift) => {
+      const previousY = doc.previousAutoTable?.finalY || 20;
+      doc.setFontSize(14);
+      doc.text(`${shift.label}`, pageWidth / 2, previousY + 15, { align: 'center' });
+
+      let headers = ['Nombre', 'Puesto', 'Teléfono', 'Turno asignado', 'Asignación'];
+      if (shift.key === 'Mañana') {
+        headers.push('Vehículos'); // Añade la columna de vehículos solo para el turno de mañana
+      }
+
+      const body = filterFirefightersByShift(shift.key).map((firefighter) => {
+        let row = [
+          `${firefighter.nombre} ${firefighter.apellido}`,
+          firefighter.puesto,
+          firefighter.telefono,
+          firefighter.turno,
+          assignments[shift.key][firefighter.id_empleado] || 'No asignado',
+        ];
+
+        if (shift.key === 'Mañana') {
+          let assignedVehicle = vehicleMapping[assignments[shift.key][firefighter.id_empleado]] || '';
+          row.push(assignedVehicle); // Añade información de vehículos o deja en blanco
+        }
+        return row;
+      });
+
+      doc.autoTable({
+        startY: previousY + 20,
+        head: [headers],
+        body: body,
+        theme: 'striped',
+        styles: { halign: 'center' },
+        headStyles: { fillColor: [22, 160, 133], halign: 'center' },
+        bodyStyles: { textColor: [44, 62, 80], halign: 'center' },
+        alternateRowStyles: { fillColor: [240, 240, 240] },
+      });
+    });
+    doc.save('Bomberos_Por_Turno.pdf');
+  };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -264,7 +272,7 @@ const BrigadeDetail = () => {
         <p className="text-center"><strong>Parque:</strong> {park ? park.nombre : 'No disponible'}</p>
         <p className="text-center"><strong>Número de Bomberos:</strong> {firefighters.length}</p>
 
-        
+
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {shifts.map(shift => (
@@ -388,6 +396,23 @@ const BrigadeDetail = () => {
               <p className="text-white">{comentarios || 'No hay comentarios disponibles.'}</p>
             )}
           </div>
+
+          {['mando', 'jefe'].includes(user.type) && (
+            <button
+              onClick={handleOpenModal}
+              className="mt-4 px-5 py-2.5 bg-green-500 text-white rounded-lg"
+            >
+              Añadir Comentarios Adicionales
+            </button>
+          )}
+
+          <AddGuardCommentsModal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onUpdate={handleUpdateComments}
+            id_brigada={id_brigada}
+            selectedDate={selectedDate}
+          />
         </div>
       </div>
     </div>

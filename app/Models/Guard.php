@@ -1,5 +1,4 @@
 <?php
-// App\Models\Guard.php
 
 namespace App\Models;
 
@@ -11,14 +10,21 @@ class Guard extends Model
     use HasFactory;
 
     protected $fillable = [
-        'date',        
+        'date',
         'id_brigada',
         'id_salario',
         'tipo',
         'comentarios',
+        // Nuevos campos de texto
+        'revision',
+        'practica',
+        'basura',
+        'anotaciones',
+        'incidencias_de_trafico',
+        'mando',
     ];
 
-    // Clave primaria autoincrementable
+    // Clave primaria autoincrementable (por defecto es "id")
     protected $primaryKey = 'id';
     public $incrementing = true;
     protected $keyType = 'int';
@@ -28,10 +34,10 @@ class Guard extends Model
         return $this->hasManyThrough(
             'App\Models\Firefighters_assignment',
             'App\Models\Brigade',
-            'id_brigada', // Foreign key on Brigades table...
-            'id_brigada_destino', // Foreign key on Firefighters_assignments table...
-            'id_brigada', // Local key on Guards table...
-            'id_brigada' // Local key on Brigades table...
+            'id_brigada', // FK en la tabla de brigadas
+            'id_brigade_destino', // FK en la tabla de asignaciones
+            'id_brigada', // Clave local en guards
+            'id_brigada'  // Clave local en brigades
         );
     }
 
@@ -45,5 +51,3 @@ class Guard extends Model
         return $this->belongsTo('App\Models\Brigade', 'id_brigada', 'id_brigada');
     }
 }
-
-

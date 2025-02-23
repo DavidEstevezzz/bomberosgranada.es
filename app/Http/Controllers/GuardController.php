@@ -55,10 +55,7 @@ class GuardController extends Controller
     {
         $guard = Guard::findOrFail($id);
         $rules = [
-            'date'       => 'sometimes|date',
-            'id_brigada' => 'sometimes|exists:brigades,id_brigada',
-            'id_salario' => 'sometimes|exists:salaries,id_salario',
-            'tipo'       => 'sometimes|string',
+            
             // Nuevos campos opcionales:
             'revision'              => 'sometimes|nullable|string',
             'practica'              => 'sometimes|nullable|string',

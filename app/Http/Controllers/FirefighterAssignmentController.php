@@ -322,7 +322,7 @@ class FirefighterAssignmentController extends Controller
             ->where(function ($query) use ($dayToCheck, $dayToCheckMinus1, $typesWithoutTurno, $typesWithTurno) {
                 $query->where(function ($q) use ($dayToCheckMinus1, $dayToCheck, $typesWithoutTurno) {
                     $q->whereIn('tipo', $typesWithoutTurno)
-                        ->where('fecha_ini', '<=', $dayToCheckMinus1)
+                        ->where('fecha_ini', '<=', $dayToCheck)
                         ->where('fecha_fin', '=', $dayToCheck);
                 })
                     ->orWhere(function ($q) use ($dayToCheck, $typesWithTurno) {
@@ -368,7 +368,8 @@ class FirefighterAssignmentController extends Controller
             ->where(function ($query) use ($dayToCheck, $dayToCheckMinus1, $typesWithoutTurno, $typesWithTurno) {
                 $query->where(function ($q) use ($dayToCheckMinus1, $dayToCheck, $typesWithoutTurno) {
                     $q->whereIn('tipo', $typesWithoutTurno)
-                        ->where('fecha_ini', '<=', $dayToCheck);
+                        ->where('fecha_ini', '<=', $dayToCheck)
+                        ->where('fecha_fin', '>=', $dayToCheck);
                         
                 })
                     ->orWhere(function ($q) use ($dayToCheck, $typesWithTurno) {

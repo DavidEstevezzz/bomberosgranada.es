@@ -113,8 +113,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'update']);
 
     Route::get('/incidents/count-pending', [IncidentController::class, 'countPending']);
-    Route::patch('/incidents/{id}/resolve', [IncidentController::class, 'resolve']);
-    Route::patch('/incidents/{id}/mark-as-read', [IncidentController::class, 'markAsRead']);
     Route::apiResource('incidents', IncidentController::class);
 });
 
@@ -125,6 +123,8 @@ Route::middleware('auth:sanctum')->post('/logout', [apiController::class, 'logou
 // Rutas protegidas por rol jefe
 Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     // CRUD de Usuarios
+    Route::patch('/incidents/{id}/resolve', [IncidentController::class, 'resolve']);
+    Route::patch('/incidents/{id}/mark-as-read', [IncidentController::class, 'markAsRead']);
     Route::post('/users/create', [UserController::class, 'store']);
     Route::put('/users/{id}/update-ap', [UserController::class, 'updateAP']);
 

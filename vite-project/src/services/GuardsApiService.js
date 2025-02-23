@@ -49,6 +49,10 @@ async getAvailableFirefighters(date) {
   return await BaseApiService.get(url, params);
 }
 
+async updateGuard(id, commentsData) {
+  return await BaseApiService.put(`${API_URL}/${id}/update-comments`, commentsData);
+}
+
 async updateGuardComments(idBrigada, date, comentarios) {
   const url = `${API_URL}/update-comments`;
   return await BaseApiService.put(url, {

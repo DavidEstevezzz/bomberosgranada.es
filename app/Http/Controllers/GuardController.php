@@ -31,7 +31,7 @@ class GuardController extends Controller
             'practica'              => 'sometimes|nullable|string',
             'basura'                => 'sometimes|nullable|string',
             'anotaciones'           => 'sometimes|nullable|string',
-            'incidencias_de_trafico'=> 'sometimes|nullable|string',
+            'incidencias_de_trafico' => 'sometimes|nullable|string',
             'mando'                 => 'sometimes|nullable|string',
         ];
 
@@ -51,30 +51,48 @@ class GuardController extends Controller
         return response()->json($guard);
     }
 
-    public function update(Request $request, $id)
+    // 👉 Método para actualizar SOLO campos de comentarios
+    public function updateGuard(Request $request, $id)
     {
-        $guard = Guard::findOrFail($id);
         $rules = [
-            
-            // Nuevos campos opcionales:
-            'revision'              => 'sometimes|nullable|string',
-            'practica'              => 'sometimes|nullable|string',
-            'basura'                => 'sometimes|nullable|string',
-            'anotaciones'           => 'sometimes|nullable|string',
-            'incidencias_de_trafico'=> 'sometimes|nullable|string',
-            'mando'                 => 'sometimes|nullable|string',
+            'revision' => 'sometimes|nullable|string',
+            'practica' => 'sometimes|nullable|string',
+            'basura' => 'sometimes|nullable|string',
+            'anotaciones' => 'sometimes|nullable|string',
+            'incidencias_de_trafico' => 'sometimes|nullable|string',
+            'mando' => 'sometimes|nullable|string',
         ];
 
-        $validator = Validator::make($request->all(), $rules);
+        $validated = $request->validate($rules);
+        $guard = Guard::findOrFail($id);
+        $guard->update($validated);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 400);
-        }
-
-        $guard->update($request->all());
-        return response()->json($guard, 200);
+        return response()->json(['message' => 'Comentarios actualizados', 'guard' => $guard]);
     }
-    
+
+    // 👉 Método para actualizar todos los campos (incluyendo fecha y brigada)
+    public function update(Request $request, $id)
+    {
+        $rules = [
+            'date' => 'sometimes|date',
+            'id_brigada' => 'sometimes|exists:brigades,id_brigada',
+            'tipo' => 'sometimes|string',
+            'revision' => 'sometimes|nullable|string',
+            'practica' => 'sometimes|nullable|string',
+            'basura' => 'sometimes|nullable|string',
+            'anotaciones' => 'sometimes|nullable|string',
+            'incidencias_de_trafico' => 'sometimes|nullable|string',
+            'mando' => 'sometimes|nullable|string',
+        ];
+
+        $validated = $request->validate($rules);
+        $guard = Guard::findOrFail($id);
+        $guard->update($validated);
+
+        return response()->json(['message' => 'Guardia actualizada', 'guard' => $guard]);
+    }
+
+
 
     public function destroy($id)
     {
@@ -97,86 +115,84 @@ class GuardController extends Controller
         $brigadesArray = explode(',', $brigades);
 
         $guards = Guard::whereIn('id_brigada', $brigadesArray)
-        ->whereBetween('date', [$startDate, $endDate])
-        ->with('brigade:id_brigada,nombre') // Incluir la relación con la brigada para obtener el nombre
-        ->with('salary') // Incluir datos del salario si es necesario
-        ->get();
+            ->whereBetween('date', [$startDate, $endDate])
+            ->with('brigade:id_brigada,nombre') // Incluir la relación con la brigada para obtener el nombre
+            ->with('salary') // Incluir datos del salario si es necesario
+            ->get();
 
         return response()->json($guards);
     }
 
     public function getGuardsByDate(Request $request)
-{
-    // Validar que la fecha se haya enviado y sea una fecha válida
-    $request->validate([
-        'date' => 'required|date'
-    ]);
+    {
+        // Validar que la fecha se haya enviado y sea una fecha válida
+        $request->validate([
+            'date' => 'required|date'
+        ]);
 
-    $date = $request->date;
+        $date = $request->date;
 
-    // Recuperar todas las guardias que coinciden con la fecha especificada
-    $guards = Guard::where('date', $date)->with('brigade')->get();
+        // Recuperar todas las guardias que coinciden con la fecha especificada
+        $guards = Guard::where('date', $date)->with('brigade')->get();
 
-    // Enviar respuesta con los datos de las guardias
-    return response()->json($guards);
-}
-
-public function updateComments(Request $request)
-{
-    // Validar la entrada
-    $request->validate([
-        'id_brigada' => 'required|exists:guards,id_brigada',
-        'date' => 'required|date',
-        'comentarios' => 'required|string',
-    ]);
-
-    // Buscar la guardia por fecha y brigada
-    $guard = Guard::where('id_brigada', $request->id_brigada)
-                  ->where('date', $request->date)
-                  ->first();
-
-    if (!$guard) {
-        return response()->json(['message' => 'Guardia no encontrada'], 404);
+        // Enviar respuesta con los datos de las guardias
+        return response()->json($guards);
     }
 
-    // Actualizar comentarios
-    $guard->comentarios = $request->comentarios;
-    $guard->save();
+    public function updateComments(Request $request)
+    {
+        // Validar la entrada
+        $request->validate([
+            'id_brigada' => 'required|exists:guards,id_brigada',
+            'date' => 'required|date',
+            'comentarios' => 'required|string',
+        ]);
 
-    return response()->json([
-        'message' => 'Comentarios actualizados con éxito',
-        'comentarios' => $guard->comentarios
-    ], 200);
-}
+        // Buscar la guardia por fecha y brigada
+        $guard = Guard::where('id_brigada', $request->id_brigada)
+            ->where('date', $request->date)
+            ->first();
 
+        if (!$guard) {
+            return response()->json(['message' => 'Guardia no encontrada'], 404);
+        }
 
-public function getGuardByBrigadeAndDate(Request $request)
-{
-    // Validar los parámetros
-    $request->validate([
-        'id_brigada' => 'required|exists:guards,id_brigada',
-        'date' => 'required|date',
-    ]);
+        // Actualizar comentarios
+        $guard->comentarios = $request->comentarios;
+        $guard->save();
 
-    // Buscar la guardia por id_brigada y fecha
-    $guard = Guard::where('id_brigada', $request->id_brigada)
-                  ->where('date', $request->date)
-                  ->first();
-
-    if (!$guard) {
-        return response()->json(['message' => 'Guardia no encontrada'], 404);
+        return response()->json([
+            'message' => 'Comentarios actualizados con éxito',
+            'comentarios' => $guard->comentarios
+        ], 200);
     }
 
-    return response()->json([
-        'comentarios' => $guard->comentarios,
-        'guard' => $guard
-    ], 200);
-}
 
-public function availableFirefighters(Request $request)
-{
-    return response()->json(['message' => 'Route accessed successfully']);
-}
+    public function getGuardByBrigadeAndDate(Request $request)
+    {
+        // Validar los parámetros
+        $request->validate([
+            'id_brigada' => 'required|exists:guards,id_brigada',
+            'date' => 'required|date',
+        ]);
 
-}
+        // Buscar la guardia por id_brigada y fecha
+        $guard = Guard::where('id_brigada', $request->id_brigada)
+            ->where('date', $request->date)
+            ->first();
 
+        if (!$guard) {
+            return response()->json(['message' => 'Guardia no encontrada'], 404);
+        }
+
+        return response()->json([
+            'comentarios' => $guard->comentarios,
+            'guard' => $guard
+        ], 200);
+    }
+
+    public function availableFirefighters(Request $request)
+    {
+        return response()->json(['message' => 'Route accessed successfully']);
+    }
+}

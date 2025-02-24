@@ -15,6 +15,7 @@ const BrigadeDetail = () => {
   const { user } = useStateContext();
   const { id_brigada } = useParams();
   const [brigade, setBrigade] = useState(null);
+  const [guardDetails, setGuardDetails] = useState(null);
   const [firefighters, setFirefighters] = useState([]);
   const [comentarios, setComentarios] = useState(''); // Estado para los comentarios
   const [isUpdating, setIsUpdating] = useState(false);
@@ -75,11 +76,14 @@ const BrigadeDetail = () => {
         setFirefighters(Object.values(response.data.firefighters));
 
         const commentsResponse = await GuardsApiService.getGuard(id_brigada, selectedDate);
-        if (commentsResponse.data.comentarios) {
-          setComentarios(commentsResponse.data.comentarios);
-        } else {
-          setComentarios(''); // Resetear comentarios si no hay ninguno
-        }
+      // Se espera que la respuesta incluya un objeto "guard" con los nuevos campos
+      if (commentsResponse.data.guard) {
+        setGuardDetails(commentsResponse.data.guard);
+        setComentarios(commentsResponse.data.guard.comentarios || '');
+      } else {
+        setGuardDetails(null);
+        setComentarios('');
+      }
 
         setError(null);
       } catch (error) {
@@ -155,7 +159,7 @@ const BrigadeDetail = () => {
         const isCategory = firefighter.puesto === category;
         const hasShift = [shift, 'Día completo'].includes(firefighter.turno);
         const isCombinedShift = firefighter.turno === 'Mañana y tarde' && (shift === 'Mañana' || shift === 'Tarde')
-          || firefighter.turno === 'Tarde y noche' && (shift === 'Tarde' || shift === 'Noche');
+          || firefighter.turno === 'Tarde y noche' && (shift === 'Tarde' || shift === 'Noche') || firefighter.turno === 'Mañana y noche' && (shift === 'Mañana' || shift === 'Noche');
         return isCategory && (hasShift || isCombinedShift);
       }).length;
       return { category, count };
@@ -205,48 +209,106 @@ const BrigadeDetail = () => {
     const doc = new jsPDF();
     doc.setFont('helvetica', 'bold');
     const pageWidth = doc.internal.pageSize.getWidth();
+  
+    // Encabezado: Nombre del parque, nombre de la brigada y fecha completa
+    const parqueNombre = brigade?.park ? brigade.park.nombre : 'Parque no disponible';
+    const brigadeNombre = brigade ? brigade.nombre : 'Brigada no disponible';
+    const fechaCompleta = dayjs(selectedDate).format('[Día] D [de] MMMM [de] YYYY');
+    
     doc.setFontSize(16);
-    doc.text('BOMBEROS POR TURNO', pageWidth / 2, 20, { align: 'center' });
-
-    shifts.forEach((shift) => {
-      const previousY = doc.previousAutoTable?.finalY || 20;
-      doc.setFontSize(14);
-      doc.text(`${shift.label}`, pageWidth / 2, previousY + 15, { align: 'center' });
-
-      let headers = ['Nombre', 'Puesto', 'Teléfono', 'Turno asignado', 'Asignación'];
-      if (shift.key === 'Mañana') {
-        headers.push('Vehículos'); // Añade la columna de vehículos solo para el turno de mañana
+    doc.text(parqueNombre, pageWidth / 2, 15, { align: 'center' });
+    doc.text(brigadeNombre, pageWidth / 2, 25, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text(fechaCompleta, pageWidth / 2, 35, { align: 'center' });
+  
+    // Salto de línea antes de la tabla principal
+    const startY = 45;
+  
+    // Generar la lista de bomberos ordenada por prioridad de puesto
+    const sortedFirefighters = [...firefighters].sort(
+      (a, b) => puestoPriority[a.puesto] - puestoPriority[b.puesto]
+    );
+  
+    const headers = ['Nombre', 'Puesto', 'Teléfono', 'Turno', 'Asignación', 'Vehículos'];
+    const body = sortedFirefighters.map((firefighter) => {
+      let assignmentValue = 'No asignado';
+      if (firefighter.turno in assignments && assignments[firefighter.turno][firefighter.id_empleado]) {
+        assignmentValue = assignments[firefighter.turno][firefighter.id_empleado];
       }
-
-      const body = filterFirefightersByShift(shift.key).map((firefighter) => {
-        let row = [
-          `${firefighter.nombre} ${firefighter.apellido}`,
-          firefighter.puesto,
-          firefighter.telefono,
-          firefighter.turno,
-          assignments[shift.key][firefighter.id_empleado] || 'No asignado',
-        ];
-
-        if (shift.key === 'Mañana') {
-          let assignedVehicle = vehicleMapping[assignments[shift.key][firefighter.id_empleado]] || '';
-          row.push(assignedVehicle); // Añade información de vehículos o deja en blanco
-        }
-        return row;
-      });
-
-      doc.autoTable({
-        startY: previousY + 20,
-        head: [headers],
-        body: body,
-        theme: 'striped',
-        styles: { halign: 'center' },
-        headStyles: { fillColor: [22, 160, 133], halign: 'center' },
-        bodyStyles: { textColor: [44, 62, 80], halign: 'center' },
-        alternateRowStyles: { fillColor: [240, 240, 240] },
-      });
+      // Para el turno "Mañana", se muestra la información del vehículo asignado según el mapeo
+      const vehicleInfo = firefighter.turno === 'Mañana' ? (vehicleMapping[assignmentValue] || '') : '';
+      return [
+        `${firefighter.nombre} ${firefighter.apellido}`,
+        firefighter.puesto,
+        firefighter.turno,
+        assignmentValue,
+        vehicleInfo,
+      ];
     });
+  
+    // Crear la tabla principal con un poco más de espaciado
+    doc.autoTable({
+      startY,
+      head: [headers],
+      body: body,
+      theme: 'striped',
+      styles: { halign: 'center', cellPadding: 3.6, fontSize: 10 },
+      headStyles: { fillColor: [22, 160, 133], textColor: 255 },
+      alternateRowStyles: { fillColor: [240, 240, 240] },
+      margin: { top: startY },
+    });
+  
+    // Posición final de la tabla principal
+    const finalY = doc.previousAutoTable.finalY + 10;
+  
+    // Sección de comentarios (se muestran en dos filas de 3 columnas cada una)
+    if (guardDetails) {
+      const commentFields = [
+        'revision',
+        'practica',
+        'basura',
+        'anotaciones',
+        'incidencias_de_trafico',
+        'mando',
+      ];
+      // Primer grupo: Revisión, Práctica, Basura
+      const commentHeaders1 = commentFields.slice(0, 3).map(field =>
+        field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+      );
+      const commentValues1 = commentFields.slice(0, 3).map(field => guardDetails[field] || '');
+    
+      // Segundo grupo: Anotaciones, Incidencias De Tráfico, Mando
+      const commentHeaders2 = commentFields.slice(3).map(field =>
+        field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+      );
+      const commentValues2 = commentFields.slice(3).map(field => guardDetails[field] || '');
+    
+      // Tabla para el primer grupo de comentarios
+      doc.autoTable({
+        startY: finalY,
+        head: [commentHeaders1],
+        body: [commentValues1],
+        theme: 'grid',
+        styles: { halign: 'center', cellPadding: 6, fontSize: 11 },
+        headStyles: { fillColor: [52, 73, 94], textColor: 255 },
+        margin: { left: 14, right: 14 },
+      });
+    
+      // Tabla para el segundo grupo de comentarios, con un pequeño margen superior
+      doc.autoTable({
+        startY: doc.previousAutoTable.finalY + 5,
+        head: [commentHeaders2],
+        body: [commentValues2],
+        theme: 'grid',
+        styles: { halign: 'center', cellPadding: 6, fontSize: 11 },
+        headStyles: { fillColor: [52, 73, 94], textColor: 255 },
+        margin: { left: 14, right: 14 },
+      });
+    }
+  
     doc.save('Bomberos_Por_Turno.pdf');
   };
+  
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;

@@ -66,7 +66,9 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
           UsersApiService.getUsuarios(),
           VehiclesApiService.getVehicles(),
           ParksApiService.getParks()
+          
         ]);
+        console.log(parksResponse.data)
         setUsers(usersResponse.data);
         setFilteredUsers(usersResponse.data);
         setVehicles(vehiclesResponse.data);
@@ -105,7 +107,8 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     setIsSubmitting(true);
     setErrorMessages({});
   
-    // Mostrar en consola los datos que se enviarán  
+    // Mostrar en consola los datos que se enviarán
+    console.log('Form values a enviar:', formValues);  
     try {
       const response = await IncidentApiService.createIncident(formValues);
       onAdd(response.data);

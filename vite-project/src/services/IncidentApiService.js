@@ -20,6 +20,10 @@ class IncidentApiService {
     return await BaseApiService.put(`${API_URL}/${id}`, incident);
   }
 
+  async deleteIncident(id) {
+    return await BaseApiService.delete(`${API_URL}/${id}`);
+  }
+
   async markAsRead(id) {
     return await BaseApiService.patch(`${API_URL}/${id}/mark-as-read`);
   }

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import dayjs from 'dayjs';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash, faPlus, faEllipsisH, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import BrigadesApiService from '../services/BrigadesApiService';
+import GuardsApiService from '../services/GuardsApiService';
 import IncidentApiService from '../services/IncidentApiService';
 import AddIncidentModal from '../components/AddIncidentModal';
 import IncidentDetailModal from '../components/IncidentDetailModal';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faEyeSlash, faTimes, faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import dayjs from 'dayjs';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
 
@@ -18,6 +21,7 @@ const IncidentListPage = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [detailIncident, setDetailIncident] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [searchParams] = useSearchParams();
 
     useEffect(() => {
         fetchIncidents();
@@ -27,7 +31,7 @@ const IncidentListPage = () => {
         setLoading(true);
         try {
             const response = await IncidentApiService.getIncidents();
-            console.log("Incidencias recibidas:", response.data); // Log para depuración
+            console.log("Incidencias recibidas:", response.data);
             // Ordena por fecha ascendente usando el campo "fecha"
             const sorted = response.data.sort((a, b) => dayjs(a.fecha).diff(dayjs(b.fecha)));
             setIncidents(sorted);
@@ -68,9 +72,8 @@ const IncidentListPage = () => {
     // Marcar incidencia como resuelta
     const handleResolve = async (incidentId) => {
         try {
-            // En un escenario real, se usaría el id del usuario autenticado
             const resolverData = { resulta_por: user.id_empleado };
-            console.log("Datos de resolución:", resolverData); // Log para depuración
+            console.log("Datos de resolución:", resolverData);
             await IncidentApiService.resolveIncident(incidentId, resolverData);
             fetchIncidents();
         } catch (err) {
@@ -85,6 +88,18 @@ const IncidentListPage = () => {
             fetchIncidents();
         } catch (err) {
             console.error("Error al marcar incidencia como leída:", err);
+        }
+    };
+
+    // Eliminar incidencia
+    const handleDelete = async (incidentId) => {
+        if (window.confirm("¿Estás seguro de que deseas eliminar esta incidencia?")) {
+            try {
+                await IncidentApiService.deleteIncident(incidentId);
+                fetchIncidents();
+            } catch (err) {
+                console.error("Error al eliminar incidencia:", err);
+            }
         }
     };
 
@@ -118,7 +133,8 @@ const IncidentListPage = () => {
                     Mes Anterior
                 </button>
                 <span className="text-xl font-semibold">
-                    {currentMonth.format('MMMM YYYY').charAt(0).toUpperCase() + currentMonth.format('MMMM YYYY').slice(1)}
+                    {currentMonth.format('MMMM YYYY').charAt(0).toUpperCase() +
+                        currentMonth.format('MMMM YYYY').slice(1)}
                 </span>
                 <button
                     onClick={handleNextMonth}
@@ -191,6 +207,12 @@ const IncidentListPage = () => {
                                                     Marcar Leída
                                                 </button>
                                             )}
+                                            <button
+                                                onClick={() => handleDelete(incident.id_incidencia)}
+                                                className="bg-red-600 text-white px-3 py-1 rounded"
+                                            >
+                                                Borrar
+                                            </button>
                                         </td>
                                     </tr>
                                 ))
@@ -247,13 +269,20 @@ const IncidentListPage = () => {
                                                 <span>Empleado: {getEmployee2Name(incident)}</span>
                                             )}
                                         </td>
-                                        <td className="py-2 px-2">
+                                        <td className="py-2 px-2 flex space-x-2">
                                             <button
                                                 onClick={() => openDetailModal(incident)}
                                                 className="bg-gray-600 text-white px-3 py-1 rounded flex items-center space-x-1"
                                             >
                                                 <FontAwesomeIcon icon={faInfoCircle} />
                                                 <span>Detalle</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(incident.id_incidencia)}
+                                                className="bg-red-600 text-white px-3 py-1 rounded flex items-center space-x-1"
+                                            >
+                                                <FontAwesomeIcon icon={faTimes} />
+                                                <span>Borrar</span>
                                             </button>
                                         </td>
                                     </tr>
@@ -266,6 +295,7 @@ const IncidentListPage = () => {
                                 </tr>
                             )}
                         </tbody>
+
                     </table>
                 </div>
             </div>

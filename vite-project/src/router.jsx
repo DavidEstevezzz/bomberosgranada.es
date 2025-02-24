@@ -53,10 +53,9 @@ const router = createBrowserRouter([
       { path: 'guardia-activa', element: <ProtectedRoute element={<ActiveFirefighters />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'aprobacion-cambio-guardia', element: <ProtectedRoute element={<ShiftChangeApprovalPage />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'vehicles', element: <ProtectedRoute element={<Vehicles />} rolesAllowed={['Jefe', 'Mando']} /> },
-
+      { path: 'incidents', element: <ProtectedRoute element={<Incidents />} rolesAllowed={['Jefe', 'Mando']} /> },
 
       // Rutas existentes
-      { path: 'incidents', element: <Incidents /> },
       { path: '/brigades/:id_brigada', element: <BrigadeDetail /> },
       { path: '/messages', element: <MessagesPage /> },
       { path: 'calendario-norte', element: <CalendarPage /> },

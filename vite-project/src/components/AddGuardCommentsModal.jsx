@@ -18,6 +18,7 @@ const AddGuardCommentsModal = ({ isOpen, onClose, onUpdate, id_brigada, selected
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { darkMode } = useDarkMode();
+  const [guardId, setGuardId] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -35,6 +36,9 @@ const AddGuardCommentsModal = ({ isOpen, onClose, onUpdate, id_brigada, selected
               incidencias_de_trafico: guard.incidencias_de_trafico || '',
               mando: guard.mando || '',
             });
+
+            setGuardId(guard.id);
+
           }
         } catch (error) {
           console.error('Error al cargar los comentarios:', error);
@@ -61,7 +65,7 @@ const AddGuardCommentsModal = ({ isOpen, onClose, onUpdate, id_brigada, selected
             ...formValues,
           });
           
-          const response = await GuardsApiService.updateSchedule(id_brigada, formValues);
+          const response = await GuardsApiService.updateSchedule(guardId, formValues);
           onUpdate(response.data); // Actualiza los comentarios en la vista padre
       onClose(); // Cierra el modal tras submit exitoso
     } catch (error) {

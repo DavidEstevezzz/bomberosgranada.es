@@ -49,8 +49,8 @@ async getAvailableFirefighters(date) {
   return await BaseApiService.get(url, params);
 }
 
-async updateSchedule(id, commentsData) {
-  return await BaseApiService.put(`${API_URL}/${id}/update-schedule`, commentsData);
+async updateSchedule(guardId, commentsData) {
+  return await BaseApiService.put(`${API_URL}/${guardId}/update-schedule`, commentsData);
 }
 
 async updateGuardComments(idBrigada, date, comentarios) {

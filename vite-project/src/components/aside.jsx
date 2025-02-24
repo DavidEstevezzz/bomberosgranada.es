@@ -205,7 +205,8 @@ const Aside = ({ className }) => {
           )}
         </div>
 
-        
+        {/* Incidencias */}
+        {(userType === 'jefe' || userType === 'mando') && (
           <a href="/incidents" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
             <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 mr-2" />
             Incidencias
@@ -215,7 +216,7 @@ const Aside = ({ className }) => {
               </span>
             )}
           </a>
-        
+        )}
 
         {/* Calendario */}
         {userType === 'jefe' && (

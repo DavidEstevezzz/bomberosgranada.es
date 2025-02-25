@@ -263,7 +263,7 @@ namespace App\Http\Controllers;
         $lastToday = $assignmentsToday[$firefighterId]->first() ?? null;
         if ($lastToday && $lastToday->brigadeDestination) {
             $brigadeNameToday = $lastToday->brigadeDestination->nombre;
-            if (in_array($brigadeNameToday, $excludedBrigades) && !$isProtected) {
+            if (in_array($brigadeNameToday, $excludedBrigades)) {
                 $unavailableFirefighterIds[] = $firefighterId;
                 continue;
             }

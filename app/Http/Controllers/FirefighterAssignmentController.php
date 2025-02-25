@@ -220,6 +220,7 @@ namespace App\Http\Controllers;
 
     // Si deseas excluir también las brigadas que tuvieron guardia ayer o tendrán mañana,
     // las unes a tu lista de exclusión:
+    $excludedTodayBrigades = $excludedBrigades;
     $excludedBrigades = array_merge($excludedBrigades, $guardYesterday, $guardTomorrow);
     Log::info("Lista final de brigadas excluidas (ayer/hoy/mañana):", [
         'excludedBrigades' => $excludedBrigades
@@ -263,7 +264,7 @@ namespace App\Http\Controllers;
         $lastToday = $assignmentsToday[$firefighterId]->first() ?? null;
         if ($lastToday && $lastToday->brigadeDestination) {
             $brigadeNameToday = $lastToday->brigadeDestination->nombre;
-            if (in_array($brigadeNameToday, $excludedBrigades)) {
+            if (in_array($brigadeNameToday, $excludedTodayBrigades)) {
                 $unavailableFirefighterIds[] = $firefighterId;
                 continue;
             }

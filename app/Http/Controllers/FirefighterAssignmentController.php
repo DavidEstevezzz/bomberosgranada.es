@@ -897,7 +897,7 @@ class FirefighterAssignmentController extends Controller
         return $unavailableFirefighterIds;
     }
 
-    public function incrementUserColumn($id_empleado, Request $request)
+    public function increaseUserColumnValue($id_empleado, Request $request)
     {
         $validated = $request->validate([
             'column' => 'required|string',

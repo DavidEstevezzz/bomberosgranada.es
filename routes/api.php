@@ -164,13 +164,13 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     // Restricción de Request y ShiftChangeRequest para update y delete
     Route::delete('/requests/{id}', [RequestController::class, 'destroy']);
 
+    Route::post('/firefighters-assignments/{id_asignacion}/increment-user-column', [FirefighterAssignmentController::class, 'increaseUserColumnValue']);
     Route::put('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'update']);
     Route::delete('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'destroy']);
     Route::post('/firefighters-assignments', [FirefighterAssignmentController::class, 'store']);
     Route::post('/firefighters-assignments/{id}/move-to-top/{column}', [FirefighterAssignmentController::class, 'moveToTop']);
     Route::post('/firefighters-assignments/{id}/move-to-bottom/{column}', [FirefighterAssignmentController::class, 'moveToBottom']);
     Route::post('firefighters-assignments/require-firefighter', [FirefighterAssignmentController::class, 'requireFirefighter']);
-    Route::post('/firefighters-assignments/{id_asignacion}/increment-user-column', [FirefighterAssignmentController::class, 'increaseUserColumnValue']);
 
     
 

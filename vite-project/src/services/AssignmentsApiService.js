@@ -61,6 +61,11 @@ class AssignmentsApiService {
   async requireFirefighter(payload) {
     return await BaseApiService.post(`${API_URL}/require-firefighter`, payload);
   }
+
+  async incrementUserColumn(id, payload) {
+    return await BaseApiService.put(`${API_URL}/${id}/increment-user-column`, payload);
+  }
+  
 }
 
 export default new AssignmentsApiService();

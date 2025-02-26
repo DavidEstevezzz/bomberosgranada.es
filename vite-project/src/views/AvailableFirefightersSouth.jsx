@@ -1,6 +1,6 @@
 import React from 'react';
-import SortableFirefightersList from '../components/SortableFirefightersList';
 import AssignmentsApiService from '../services/AssignmentsApiService';
+import IncrementableFirefightersList from '../components/IncrementableFirefightersList';
 
 const AvailableFirefighters2 = () => {
   const fetchAvailableFirefighters = (date) => {
@@ -8,7 +8,7 @@ const AvailableFirefighters2 = () => {
   };
 
   return (
-    <SortableFirefightersList
+    <IncrementableFirefightersList
       title="Lista de Requerimientos Parque Sur"
       fetchData={fetchAvailableFirefighters} // Función corregida para manejar fecha
       listType="firefighters by order"

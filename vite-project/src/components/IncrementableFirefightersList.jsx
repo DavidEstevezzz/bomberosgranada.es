@@ -24,8 +24,14 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
     try {
       const response = await fetchData(selectedDate);
       const fetchedFirefighters = response.data.available_firefighters;
-      // Ordenar de mayor a menor según la columna orderColumn
-      const orderedFirefighters = fetchedFirefighters.sort((a, b) => b[orderColumn] - a[orderColumn]);
+      // Ordenar de menor a mayor según orderColumn, y en caso de empate, por dni (descendente)
+      const orderedFirefighters = fetchedFirefighters.sort((a, b) => {
+        const diff = a[orderColumn] - b[orderColumn];
+        if (diff === 0) {
+          return Number(b.dni) - Number(a.dni);
+        }
+        return diff;
+      });
       setFirefighters(orderedFirefighters);
       setError(null);
     } catch (error) {
@@ -127,7 +133,7 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
               <th className="py-3 px-6">Nombre</th>
               <th className="py-3 px-6">Teléfono</th>
               <th className="py-3 px-6">Puesto</th>
-              <th className="py-3 px-6">Orden</th>
+              <th className="py-3 px-6">Horas</th>
               {user?.type === 'jefe' && <th className="py-3 px-6">Acción</th>}
             </tr>
           </thead>
@@ -149,8 +155,8 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
                       type="number"
                       value={increments[firefighter.id_empleado] || ''}
                       onChange={(e) => handleIncrementChange(firefighter.id_empleado, e.target.value)}
-                      className="w-16 p-1 border rounded"
-                      placeholder="+"
+                      className="w-16 p-1 border rounded bg-gray-800 text-gray-200"
+                      placeholder=""
                     />
                     <button
                       onClick={() => handleIncrementSubmit(firefighter.id_empleado)}

@@ -21,13 +21,18 @@ const CreateRequestPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [file, setFile] = useState(null); // Estado para almacenar el archivo
 
-const handleFileChange = (e) => {
-  setFile(e.target.files[0]);
-};
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
 
+  // Sincronizar fechaFin con fechaIni para ciertos tipos de solicitud:
   useEffect(() => {
-    if (tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales') {
-      setFechaFin(fechaIni); // Sincroniza fecha de inicio y fin
+    if (
+      tipo === 'asuntos propios' ||
+      tipo === 'licencias por jornadas' ||
+      tipo === 'horas sindicales'
+    ) {
+      setFechaFin(fechaIni);
     }
   }, [tipo, fechaIni]);
 
@@ -61,26 +66,23 @@ const handleFileChange = (e) => {
   const validateDaysAvailable = (tipo) => {
     const requiredDays = calculateRequiredDays(turno);
     let availableDays;
-  
+
     if (tipo === 'asuntos propios') {
       availableDays = user.AP || 0;
     } else if (tipo === 'compensacion grupos especiales') {
       availableDays = user.compensacion_grupos || 0;
     }
-  
+
     console.log(`Días disponibles (${tipo}):`, availableDays);
     console.log(`Días requeridos (${tipo}):`, requiredDays);
-  
+
     if (requiredDays > availableDays) {
-      setError(
-        `No tienes suficientes días disponibles para esta solicitud de ${tipo}.`
-      );
+      setError(`No tienes suficientes días disponibles para esta solicitud de ${tipo}.`);
       return false;
     }
     return true;
   };
 
-  
   const calculateRequiredDays = (turno) => {
     if (turno === 'Día Completo') {
       return 3;
@@ -90,17 +92,14 @@ const handleFileChange = (e) => {
       return 1;
     }
   };
-  
 
   const validateVacationDays = () => {
-    const availableVacationDays = user.vacaciones || 0; // Días disponibles
+    const availableVacationDays = user.vacaciones || 0;
     const startDate = dayjs(fechaIni);
     const endDate = dayjs(fechaFin);
-    const requestedDays = endDate.diff(startDate, 'day') + 1; // Incluye ambos días
-  
+    const requestedDays = endDate.diff(startDate, 'day') + 1;
     console.log('Días de vacaciones disponibles:', availableVacationDays);
     console.log('Días solicitados:', requestedDays);
-  
     if (requestedDays > availableVacationDays) {
       setError('No tienes suficientes días de vacaciones disponibles.');
       return false;
@@ -111,10 +110,8 @@ const handleFileChange = (e) => {
   const validateSPHours = () => {
     const [horaInicio, minutoInicio] = horaIni.split(':').map(Number);
     const [horaFinal, minutoFinal] = horaFin.split(':').map(Number);
-
     const inicio = dayjs().hour(horaInicio).minute(minutoInicio);
     const fin = dayjs().hour(horaFinal).minute(minutoFinal);
-
     const diff = fin.diff(inicio, 'hour', true);
     if (diff <= 0) {
       setError('La hora de fin debe ser posterior a la hora de inicio.');
@@ -128,14 +125,12 @@ const handleFileChange = (e) => {
   };
 
   const validateModuloDays = () => {
-    const availableModuloDays = user.modulo || 0; // Días disponibles
+    const availableModuloDays = user.modulo || 0;
     const startDate = dayjs(fechaIni);
     const endDate = dayjs(fechaFin);
-    const requestedDays = endDate.diff(startDate, 'day') + 1; // Incluye ambos días
-  
+    const requestedDays = endDate.diff(startDate, 'day') + 1;
     console.log('Días de módulo disponibles:', availableModuloDays);
     console.log('Días solicitados:', requestedDays);
-  
     if (requestedDays > availableModuloDays) {
       setError('No tienes suficientes días en tu módulo disponibles.');
       return false;
@@ -149,24 +144,19 @@ const handleFileChange = (e) => {
       const endBrigade = await fetchUserBrigadeForDate(
         dayjs(fechaFin).add(1, 'day').format('YYYY-MM-DD')
       );
-
       const startDateGuards = await GuardsApiService.getGuardsByDate(fechaIni);
       const endDateGuards = await GuardsApiService.getGuardsByDate(
         dayjs(fechaFin).add(1, 'day').format('YYYY-MM-DD')
       );
-
       const isStartDateValid = startDateGuards.data.some(
         (guard) => guard.id_brigada === startBrigade
       );
       const isEndDateValid = endDateGuards.data.some(
         (guard) => guard.id_brigada === endBrigade
       );
-
       if (!isStartDateValid || !isEndDateValid) {
         console.error('Restricciones de fechas no cumplidas');
-        setError(
-          'No se cumplen las condiciones para solicitar vacaciones en estas fechas.'
-        );
+        setError('No se cumplen las condiciones para solicitar vacaciones en estas fechas.');
         return false;
       }
       return true;
@@ -182,9 +172,9 @@ const handleFileChange = (e) => {
     setError(null);
     setSuccess(null);
     setIsLoading(true);
-  
+
     let horas = null;
-  
+
     if (tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales') {
       const hasEnoughDays = validateDaysAvailable(tipo);
       if (!hasEnoughDays) {
@@ -192,7 +182,7 @@ const handleFileChange = (e) => {
         return;
       }
     }
-  
+
     if (tipo === 'modulo') {
       const hasEnoughModuloDays = validateModuloDays();
       if (!hasEnoughModuloDays) {
@@ -200,29 +190,29 @@ const handleFileChange = (e) => {
         return;
       }
     }
-  
+
     if (tipo === 'vacaciones') {
       const hasEnoughVacationDays = validateVacationDays();
       if (!hasEnoughVacationDays) {
         setIsLoading(false);
         return;
       }
-  
       const areDatesValid = await validateDates();
       if (!areDatesValid) {
         setIsLoading(false);
         return;
       }
     }
-  
-    if (tipo === 'salidas personales') {
+
+    // Tanto para "salidas personales" como para "horas sindicales" se calcula el número de horas
+    if (tipo === 'salidas personales' || tipo === 'horas sindicales') {
       horas = validateSPHours();
       if (!horas) {
         setIsLoading(false);
         return;
       }
     }
-  
+
     const formData = new FormData();
     formData.append('id_empleado', user.id_empleado);
     formData.append('tipo', tipo);
@@ -230,36 +220,47 @@ const handleFileChange = (e) => {
     formData.append('fecha_ini', fechaIni);
     formData.append(
       'fecha_fin',
-      tipo === 'salidas personales' || tipo === 'licencias por jornadas' || tipo === 'modulo'
+      (tipo === 'salidas personales' ||
+        tipo === 'horas sindicales' ||
+        tipo === 'licencias por jornadas' ||
+        tipo === 'modulo')
         ? fechaIni
         : fechaFin
     );
     formData.append(
       'turno',
-      tipo === 'asuntos propios' || tipo === 'licencias por jornadas' ||   tipo === 'compensacion grupos especiales' ? turno : ''
+      (tipo === 'asuntos propios' ||
+        tipo === 'licencias por jornadas' ||
+        tipo === 'compensacion grupos especiales' ||
+        tipo === 'horas sindicales')
+        ? turno
+        : ''
     );
-    formData.append('horas', tipo === 'salidas personales' ? validateSPHours() : '');
+    formData.append(
+      'horas',
+      (tipo === 'salidas personales' || tipo === 'horas sindicales') ? horas : ''
+    );
     formData.append('estado', 'Pendiente');
-  
+
     if (file) {
       formData.append('file', file);
     }
 
     console.log('Enviando FormData al backend:');
-  for (let [key, value] of formData.entries()) {
-    console.log(key + ':', value);
-  }
-  
+    for (let [key, value] of formData.entries()) {
+      console.log(key + ':', value);
+    }
+
     try {
       const response = await RequestApiService.createRequest(formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-  
+
       setSuccess('Solicitud enviada con éxito.');
-  
-      // <-- ¡Aquí reiniciamos todos los campos! -->
+
+      // Reiniciar todos los campos
       setTipo('vacaciones');
       setMotivo('');
       setFechaIni('');
@@ -268,7 +269,6 @@ const handleFileChange = (e) => {
       setHoraFin('');
       setTurno('');
       setFile(null);
-  
     } catch (error) {
       console.error('Error al enviar la solicitud:', error);
       setError('Error al enviar la solicitud.');
@@ -276,9 +276,6 @@ const handleFileChange = (e) => {
       setIsLoading(false);
     }
   };
-  
-  
-  
 
   return (
     <div
@@ -295,29 +292,27 @@ const handleFileChange = (e) => {
             Tipo de Solicitud
           </label>
           <select
-    id="tipo"
-    value={tipo}
-    onChange={(e) => setTipo(e.target.value)}
-    className={`w-full p-2 border rounded ${
-        darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-    }`}
-    required
->
-    <option value="vacaciones">Vacaciones</option>
-    <option value="asuntos propios">Asuntos Propios</option>
-    <option value="salidas personales">Salidas Personales</option>
-    <option value="licencias por jornadas">Licencias por Jornadas</option>
-    <option value="licencias por dias">Licencias por Días</option>
-    <option value="modulo">Módulo</option>
-    <option value="compensacion grupos especiales">Compensación Grupos Especiales</option>
-</select>
+            id="tipo"
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value)}
+            className={`w-full p-2 border rounded ${
+              darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
+            }`}
+            required
+          >
+            <option value="vacaciones">Vacaciones</option>
+            <option value="asuntos propios">Asuntos Propios</option>
+            <option value="salidas personales">Salidas Personales</option>
+            <option value="licencias por jornadas">Licencias por Jornadas</option>
+            <option value="licencias por dias">Licencias por Días</option>
+            <option value="modulo">Módulo</option>
+            <option value="compensacion grupos especiales">Compensación Grupos Especiales</option>
+            <option value="horas sindicales">Horas Sindicales</option>
+          </select>
         </div>
 
         <div className="mb-4">
-          <label
-            className="block text-sm font-medium mb-2"
-            htmlFor="fechaIni"
-          >
+          <label className="block text-sm font-medium mb-2" htmlFor="fechaIni">
             Fecha de Inicio
           </label>
           <input
@@ -332,12 +327,9 @@ const handleFileChange = (e) => {
           />
         </div>
 
-        {(tipo === 'vacaciones' || tipo === 'licencias por dias' ) && (
+        {(tipo === 'vacaciones' || tipo === 'licencias por dias') && (
           <div className="mb-4">
-            <label
-              className="block text-sm font-medium mb-2"
-              htmlFor="fechaFin"
-            >
+            <label className="block text-sm font-medium mb-2" htmlFor="fechaFin">
               Fecha de Fin
             </label>
             <input
@@ -353,13 +345,10 @@ const handleFileChange = (e) => {
           </div>
         )}
 
-        {tipo === 'salidas personales' && (
+        {(tipo === 'salidas personales' || tipo === 'horas sindicales') && (
           <>
             <div className="mb-4">
-              <label
-                className="block text-sm font-medium mb-2"
-                htmlFor="horaIni"
-              >
+              <label className="block text-sm font-medium mb-2" htmlFor="horaIni">
                 Hora de Inicio
               </label>
               <input
@@ -375,10 +364,7 @@ const handleFileChange = (e) => {
             </div>
 
             <div className="mb-4">
-              <label
-                className="block text-sm font-medium mb-2"
-                htmlFor="horaFin"
-              >
+              <label className="block text-sm font-medium mb-2" htmlFor="horaFin">
                 Hora de Fin
               </label>
               <input
@@ -395,7 +381,10 @@ const handleFileChange = (e) => {
           </>
         )}
 
-        {(tipo === 'asuntos propios' || tipo === 'licencias por jornadas' || tipo === 'compensacion grupos especiales' )&& (
+        {(tipo === 'asuntos propios' ||
+          tipo === 'licencias por jornadas' ||
+          tipo === 'compensacion grupos especiales' ||
+          tipo === 'horas sindicales') && (
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2" htmlFor="turno">
               Turno
@@ -436,19 +425,18 @@ const handleFileChange = (e) => {
         </div>
 
         <div className="mb-4">
-  <label className="block text-sm font-medium mb-2" htmlFor="file">
-    Adjuntar Archivo (opcional)
-  </label>
-  <input
-    type="file"
-    id="file"
-    onChange={handleFileChange}
-    className={`w-full p-3 border rounded ${
-      darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-    }`}
-  />
-</div>
-
+          <label className="block text-sm font-medium mb-2" htmlFor="file">
+            Adjuntar Archivo (opcional)
+          </label>
+          <input
+            type="file"
+            id="file"
+            onChange={handleFileChange}
+            className={`w-full p-3 border rounded ${
+              darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
+            }`}
+          />
+        </div>
 
         <button
           type="submit"

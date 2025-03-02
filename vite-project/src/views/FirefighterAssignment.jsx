@@ -3,11 +3,12 @@ import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import 'dayjs/locale/es';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faChevronLeft, faChevronRight, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
 import AssignmentsTable from '../components/AssignmentsTable';
 import AddAssignmentModal from '../components/AddAssignmentModal';
 import EditAssignmentModal from '../components/EditAssignmentModal';
 import AssignmentsApiService from '../services/AssignmentsApiService';
+import UsuariosApiService from '../services/UsuariosApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
 dayjs.locale('es');
@@ -23,6 +24,12 @@ const FirefighterAssignment = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(dayjs());
     const [currentPage, setCurrentPage] = useState(1);
+    const [usuarios, setUsuarios] = useState([]);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [sortConfig, setSortConfig] = useState({
+        key: null,
+        direction: 'asc'
+    });
     const itemsPerPage = 15;
 
     const { darkMode } = useDarkMode();
@@ -34,6 +41,30 @@ const FirefighterAssignment = () => {
     useEffect(() => {
         filterAssignmentsByMonth();
     }, [assignments, currentMonth]);
+
+    useEffect(() => {
+        const fetchAllData = async () => {
+            setLoading(true);
+            try {
+                // Cargar asignaciones y usuarios en paralelo
+                const [assignmentsResponse, usuariosResponse] = await Promise.all([
+                    AssignmentsApiService.getAssignments(),
+                    UsuariosApiService.getUsuarios()
+                ]);
+                
+                setAssignments(assignmentsResponse.data);
+                setUsuarios(usuariosResponse.data);
+                setError(null);
+            } catch (error) {
+                console.error('Failed to fetch data:', error);
+                setError('Failed to load data');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchAllData();
+    }, []);
 
     const fetchAssignments = async () => {
         setLoading(true);
@@ -64,9 +95,55 @@ const FirefighterAssignment = () => {
         setCurrentMonth(currentMonth.add(direction, 'month'));
     };
 
+    const getUsuarioNombre = (id_empleado) => {
+        const usuario = usuarios.find(usuario => usuario.id_empleado === id_empleado);
+        return usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Desconocido';
+    };
+
+    // Función para ordenar los datos
+    const sortData = (data, sortConfig) => {
+        if (!sortConfig.key) return data;
+        
+        return [...data].sort((a, b) => {
+            if (sortConfig.key === 'nombre') {
+                // Ordenar por nombre real del usuario
+                const aValue = getUsuarioNombre(a.id_empleado);
+                const bValue = getUsuarioNombre(b.id_empleado);
+                
+                if (sortConfig.direction === 'asc') {
+                    return aValue.localeCompare(bValue);
+                } else {
+                    return bValue.localeCompare(aValue);
+                }
+            } else if (sortConfig.key === 'fecha_ini') {
+                // Ordenar por fecha de inicio
+                const aValue = dayjs(a.fecha_ini);
+                const bValue = dayjs(b.fecha_ini);
+                
+                if (sortConfig.direction === 'asc') {
+                    return aValue.diff(bValue);
+                } else {
+                    return bValue.diff(aValue);
+                }
+            }
+            return 0;
+        });
+    };
+    
+    // Manejador para ordenar al hacer clic en encabezados de columna
+    const handleSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
     const paginate = (data) => {
+        // Aplicar ordenación antes de la paginación
+        const sortedData = sortData(data, sortConfig);
         const startIndex = (currentPage - 1) * itemsPerPage;
-        return data.slice(startIndex, startIndex + itemsPerPage);
+        return sortedData.slice(startIndex, startIndex + itemsPerPage);
     };
 
     const totalPages = Math.ceil(filteredAssignments.length / itemsPerPage);
@@ -79,8 +156,31 @@ const FirefighterAssignment = () => {
         fetchAssignments();
     };
 
-    const handleDelete = (id) => {
-        setAssignments(assignments.filter((a) => a.id !== id));
+    const handleDelete = async (id) => {
+        // Evitar múltiples solicitudes de eliminación
+        if (deleteLoading) return;
+        
+        setDeleteLoading(true);
+        try {
+            // Llamar a la API para eliminar la asignación
+            await AssignmentsApiService.deleteAssignment(id);
+            
+            // Actualizar el estado local una vez que la eliminación sea exitosa
+            setAssignments(assignments.filter((a) => a.id !== id));
+            setFilteredAssignments(filteredAssignments.filter((a) => a.id !== id));
+            
+            // Mostrar mensaje de éxito (opcional)
+            console.log('Asignación eliminada con éxito');
+        } catch (error) {
+            console.error('Error al eliminar la asignación:', error);
+            // Aquí podrías mostrar un mensaje de error al usuario
+            setError('No se pudo eliminar la asignación');
+            
+            // Opcionalmente recargar todas las asignaciones para asegurar consistencia
+            fetchAssignments();
+        } finally {
+            setDeleteLoading(false);
+        }
     };
 
     if (loading) return <div className="text-center py-8">Cargando...</div>;
@@ -131,13 +231,15 @@ const FirefighterAssignment = () => {
                         <div className="text-center py-4">No hay asignaciones para este mes.</div>
                     ) : (
                         <AssignmentsTable
-    assignments={paginate(filteredAssignments)}
-    setSelectedAssignment={setSelectedAssignment}
-    setShowEditModal={setShowEditModal}
-    handleDelete={handleDelete}
-    darkMode={darkMode} // Pasamos el valor de darkMode como prop
-/>
-
+                            assignments={paginate(filteredAssignments)}
+                            setSelectedAssignment={setSelectedAssignment}
+                            setShowEditModal={setShowEditModal}
+                            handleDelete={handleDelete}
+                            darkMode={darkMode}
+                            deleteLoading={deleteLoading}
+                            sortConfig={sortConfig}
+                            handleSort={handleSort}
+                        />
                     )}
 
                     {/* Pagination */}
@@ -151,13 +253,16 @@ const FirefighterAssignment = () => {
                             Anterior
                         </button>
                         <span>
-                            Página {currentPage} de {totalPages}
+                            Página {currentPage} de {totalPages || 1}
                         </span>
                         <button
                             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages}
-                            className={`px-4 py-2 rounded ${currentPage === totalPages ? 'bg-gray-500' : 'bg-blue-600 text-white'
-                                }`}
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            className={`px-4 py-2 rounded ${
+                                currentPage === totalPages || totalPages === 0 
+                                ? 'bg-gray-500' 
+                                : 'bg-blue-600 text-white'
+                            }`}
                         >
                             Siguiente
                         </button>

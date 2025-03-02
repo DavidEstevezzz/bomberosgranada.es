@@ -129,6 +129,8 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::patch('/incidents/{id}/mark-as-read', [IncidentController::class, 'markAsRead']);
     Route::post('/users/create', [UserController::class, 'store']);
     Route::put('/users/{id}/update-ap', [UserController::class, 'updateAP']);
+    Route::put('/users/{id}/{field}', [UserController::class, 'updateUserField']);
+
 
     // CRUD de Parques
     Route::post('/parks', [ParkController::class, 'store']);

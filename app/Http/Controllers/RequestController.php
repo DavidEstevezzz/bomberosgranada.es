@@ -47,7 +47,7 @@ class RequestController extends Controller
     // Reglas generales
     $rules = [
         'id_empleado' => 'required|exists:users,id_empleado',
-        'tipo' => 'required|in:vacaciones,asuntos propios,salidas personales,licencias por jornadas,licencias por dias,modulo,compensacion grupos especiales',
+        'tipo' => 'required|in:vacaciones,asuntos propios,horas sindicales,salidas personales,licencias por jornadas,licencias por dias,modulo,compensacion grupos especiales',
         'fecha_ini' => 'required|date',
         'fecha_fin' => 'required|date',
         'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
@@ -60,7 +60,8 @@ class RequestController extends Controller
     }
 
     // Reglas específicas para "salidas personales"
-    if ($request->tipo === 'salidas personales') {
+    if ($request->tipo === 'salidas personales' || $request->tipo === 'horas sindicales') {
+    
         $rules['horas'] = 'required|numeric|min:1|max:24'; // Validar las horas
         $request->merge([
             'fecha_fin' => $request->fecha_ini, // Asegurar que fecha_ini y fecha_fin sean iguales
@@ -200,6 +201,8 @@ public function update(Request $request, $id)
 
     if ($miRequest->tipo === 'salidas personales') {
         $this->adjustSPHours($miRequest, $oldEstado, $newEstado);
+    }else if ($miRequest->tipo === 'horas sindicales') {
+        $this->adjustSindicalHours($miRequest, $oldEstado, $newEstado);
     } else {
         // Crear o eliminar asignaciones solo para otros tipos de solicitudes
         if ($newEstado === 'Confirmada') {
@@ -241,6 +244,9 @@ public function update(Request $request, $id)
             case 'asuntos propios':
                 $brigadeId = \App\Models\Brigade::where('nombre', 'Asuntos Propios')->value('id_brigada');
                 break;
+            case 'horas sindicales':
+                $brigadeId = \App\Models\Brigade::where('nombre', 'Horas Sindicales')->value('id_brigada');
+                break;
             case 'salidas personales':
                 $brigadeId = \App\Models\Brigade::where('nombre', 'Salidas Personales')->value('id_brigada');
                 break;
@@ -264,7 +270,7 @@ public function update(Request $request, $id)
         }
 
         // Verificar el turno y asignarlo correctamente
-        if ($miRequest->tipo === 'asuntos propios' || $miRequest->tipo === 'licencias por jornadas' || $miRequest->tipo === 'compensacion grupos especiales') {
+        if (in_array($miRequest->tipo, ['asuntos propios', 'licencias por jornadas', 'compensacion grupos especiales', 'horas sindicales'])) {
             // Para "asuntos propios", usar el turno enviado en la solicitud
             $turnoAsignacion = $this->determinarTurnoInicial($miRequest->turno);
             $turnoDevolucion = $this->determinarTurnoDevolucion($miRequest->turno);
@@ -425,6 +431,13 @@ public function update(Request $request, $id)
         $this->adjustModuloDays($miRequest, $oldEstado, $newEstado, $diasSolicitados);
     }
 
+    if ($miRequest->tipo === 'horas sindicales') {
+        $requestedHours = $miRequest->horas;
+        if ($user->horas_sindicales < $requestedHours) {
+            return response()->json(['error' => 'El usuario no tiene suficientes horas sindicales disponibles'], 400);
+        }
+    }
+
     $user->save();
     Log::info("Columna ajustada para el usuario ID: {$user->id_empleado}, días ajustados: {$diasSolicitados}");
 }
@@ -451,6 +464,29 @@ private function adjustModuloDays($miRequest, $oldEstado, $newEstado, $diasSolic
     Log::info("Columna modulo ajustada para el usuario ID: {$user->id_empleado}, días ajustados: {$diasSolicitados}");
 }
 
+private function adjustSindicalHours($miRequest, $oldEstado, $newEstado)
+{
+    $user = $miRequest->EnviadaPor; // Relación con el modelo User
+    if (!$user) {
+        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+        return;
+    }
+
+    $hours = $miRequest->horas; // Asegúrate de que este campo esté presente y sea válido
+
+    // Restar horas de `horas_sindicales` si la solicitud pasa de Pendiente a Confirmada
+    if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
+        $user->horas_sindicales = max(0, $user->horas_sindicales - $hours);
+    }
+
+    // Sumar horas de `horas_sindicales` si la solicitud pasa de Confirmada a Cancelada
+    if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+        $user->horas_sindicales += $hours;
+    }
+
+    $user->save();
+    Log::info("Columna horas_sindicales ajustada para el usuario ID: {$user->id_empleado}, horas ajustadas: {$hours}");
+}
 
 
     private function adjustSPHours($miRequest, $oldEstado, $newEstado)

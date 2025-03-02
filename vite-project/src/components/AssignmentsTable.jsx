@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faTrash, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
 import UsuariosApiService from '../services/UsuariosApiService';
 import BrigadesApiService from '../services/BrigadesApiService';
 
@@ -10,6 +10,9 @@ const AssignmentsTable = ({
   setShowEditModal,
   handleDelete,
   darkMode,
+  deleteLoading,
+  sortConfig,
+  handleSort
 }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [brigades, setBrigades] = useState([]);
@@ -59,6 +62,16 @@ const AssignmentsTable = ({
     return brigada ? brigada.nombre : 'Desconocida';
   };
 
+  // Renderiza el indicador de ordenamiento
+  const getSortIcon = (columnName) => {
+    if (sortConfig && sortConfig.key === columnName) {
+      return sortConfig.direction === 'asc' ? 
+        <FontAwesomeIcon icon={faSortUp} className="ml-1" /> : 
+        <FontAwesomeIcon icon={faSortDown} className="ml-1" />;
+    }
+    return null;
+  };
+
   if (loading) return <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Cargando...</p>;
   if (error) return <p className={`text-center ${darkMode ? 'text-red-300' : 'text-red-500'}`}>Error: {error}</p>;
 
@@ -83,8 +96,22 @@ const AssignmentsTable = ({
       >
         <thead>
           <tr className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-900'}`}>
-            <th className="py-2 px-2">Fecha Inicio</th>
-            <th className="py-2 px-2">Empleado</th>
+            <th 
+              className="py-2 px-2 cursor-pointer"
+              onClick={() => handleSort('fecha_ini')}
+            >
+              <div className="flex items-center">
+                Fecha Inicio {getSortIcon('fecha_ini')}
+              </div>
+            </th>
+            <th 
+              className="py-2 px-2 cursor-pointer"
+              onClick={() => handleSort('nombre')}
+            >
+              <div className="flex items-center">
+                Empleado {getSortIcon('nombre')}
+              </div>
+            </th>
             <th className="py-2 px-2">Brigada Origen</th>
             <th className="py-2 px-2">Brigada Destino</th>
             <th className="py-2 px-2" style={{ width: '200px' }}>Acciones</th>
@@ -116,10 +143,11 @@ const AssignmentsTable = ({
                   </button>
                   <button
                     onClick={() => handleDelete(assignment.id_asignacion)}
-                    className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700 flex items-center space-x-1"
+                    disabled={deleteLoading}
+                    className={`${deleteLoading ? 'bg-red-400' : 'bg-red-600 hover:bg-red-700'} text-white px-4 py-1 rounded flex items-center space-x-1`}
                   >
                     <FontAwesomeIcon icon={faTrash} />
-                    <span>Borrar</span>
+                    <span>{deleteLoading ? 'Borrando...' : 'Borrar'}</span>
                   </button>
                 </td>
               </tr>

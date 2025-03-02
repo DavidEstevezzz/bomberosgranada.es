@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import AssignmentsApiService from '../services/AssignmentsApiService';
-// IMPORTA tu servicio de brigadas
 import BrigadesApiService from '../services/BrigadesApiService'; 
 
 const RequirementModal = ({ isOpen, onClose, employee }) => {
@@ -41,13 +40,17 @@ const RequirementModal = ({ isOpen, onClose, employee }) => {
   const fetchBrigades = async () => {
     try {
       const response = await BrigadesApiService.getBrigades(); 
-      // Suponiendo que response.data es un array de brigadas
-      setBrigades(response.data);
+      // Ordenar las brigadas alfabéticamente (considerando mayúsculas/minúsculas y acentos)
+      const sortedBrigades = response.data.sort((a, b) =>
+        a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+      );
+      setBrigades(sortedBrigades);
     } catch (err) {
       console.error('Error fetching brigades:', err);
       setError('No se pudo cargar la lista de brigadas');
     }
   };
+  
 
   if (!isOpen) return null;
 

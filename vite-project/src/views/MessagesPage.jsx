@@ -5,7 +5,7 @@ import { useDarkMode } from '../contexts/DarkModeContext';
 import CreateMessageModal from '../components/CreateMessageModal';
 import dayjs from 'dayjs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import { useStateContext } from '../contexts/ContextProvider';
 
 // Componente recursivo para mostrar el hilo de conversación (estilo chat)
@@ -15,18 +15,34 @@ const MessageThread = ({ message, onReply, users }) => {
 
   const getUserName = (userId) => {
     const id = Number(userId);
-    const user = users.find((u) => Number(u.id_empleado) === id);
-    return user ? `${user.nombre} ${user.apellido}` : 'Desconocido';
+    const foundUser = users.find((u) => Number(u.id_empleado) === id);
+    return foundUser ? `${foundUser.nombre} ${foundUser.apellido}` : 'Desconocido';
   };
 
   const isOwnMessage = Number(message.sender_id) === Number(user.id_empleado);
-  
-  // Determinar si este mensaje es el último mensaje en la conversación
+  // Si no tiene replies, consideramos que es el último mensaje
   const isLastMessage = !message.replies || message.replies.length === 0;
+
+  // Función para descargar el adjunto (si lo tiene)
+  const handleDownloadAttachment = async () => {
+    try {
+      const response = await MessagesApiService.downloadAttachment(message.id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      // Usa el nombre del archivo si existe, o 'attachment.pdf' por defecto
+      link.setAttribute('download', message.attachment_filename || 'attachment.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Error al descargar el adjunto:", error);
+    }
+  };
 
   return (
     <div className="flex flex-col w-full">
-      {/* Contenedor del mensaje con alineación corregida */}
+      {/* Contenedor del mensaje */}
       <div className={`flex w-full my-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
         <div
           className={`relative max-w-[75%] p-3 rounded-xl shadow-md text-sm transition-all ${
@@ -34,24 +50,31 @@ const MessageThread = ({ message, onReply, users }) => {
               ? `bg-green-500 text-white ${darkMode ? 'dark:bg-green-600' : ''}`
               : `bg-gray-200 text-gray-800 ${darkMode ? 'dark:bg-gray-700 dark:text-white' : ''}`
           }`}
-          style={{ alignSelf: isOwnMessage ? 'flex-end' : 'flex-start' }} // Asegura la alineación correcta
+          style={{ alignSelf: isOwnMessage ? 'flex-end' : 'flex-start' }}
         >
-          {/* Nombre del remitente (solo para mensajes de otros) */}
+          {/* Mostrar nombre del remitente solo si NO es tu mensaje */}
           {!isOwnMessage && (
             <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
               {getUserName(message.sender_id)}
             </p>
           )}
-
-          {/* Mensaje */}
+          {/* Cuerpo del mensaje */}
           <p>{message.body}</p>
-
           {/* Hora del mensaje */}
           <p className="text-[10px] text-gray-500 dark:text-gray-400 text-right">
             {dayjs(message.created_at).format('HH:mm')}
           </p>
-
-          {/* Botón para responder solo en el último mensaje de la conversación */}
+          {/* Si el mensaje tiene adjunto, mostrar botón para descargarlo */}
+          {message.attachment && (
+            <button
+              onClick={handleDownloadAttachment}
+              className="mt-2 text-xs text-blue-500 hover:underline"
+            >
+              <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4 inline-block mr-1" />
+              Descargar Adjunto
+            </button>
+          )}
+          {/* Botón para responder, solo en el último mensaje del hilo */}
           {isLastMessage && (
             <button
               onClick={() => onReply(message)}
@@ -63,7 +86,7 @@ const MessageThread = ({ message, onReply, users }) => {
         </div>
       </div>
 
-      {/* Contenedor de respuestas alineado correctamente */}
+      {/* Renderizado recursivo de respuestas */}
       <div className="flex flex-col w-full">
         {message.replies && message.replies.length > 0 && (
           message.replies.map((reply) => (
@@ -79,6 +102,7 @@ const MessageThread = ({ message, onReply, users }) => {
     </div>
   );
 };
+
 
 const MessagesPage = () => {
   const { darkMode } = useDarkMode();

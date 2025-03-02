@@ -9,7 +9,7 @@ const isMobileDevice = () => {
 };
 
 const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
-  // Estado para formulario
+  // Estado para formulario (se añade "horas_sindicales")
   const [formValues, setFormValues] = useState({
     nombre: user.nombre || '',
     apellido: user.apellido || '',
@@ -22,7 +22,8 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
     AP: user.AP || '',
     vacaciones: user.vacaciones || '',
     modulo: user.modulo || '',
-    compensacion_grupos: user.compensacion_grupos || ''
+    compensacion_grupos: user.compensacion_grupos || '',
+    horas_sindicales: user.horas_sindicales || ''
   });
 
   // Estado para indicar si se está enviando (loader)
@@ -49,7 +50,8 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
         AP: user.AP || '',
         vacaciones: user.vacaciones || '',
         modulo: user.modulo || '',
-        compensacion_grupos: user.compensacion_grupos || ''
+        compensacion_grupos: user.compensacion_grupos || '',
+        horas_sindicales: user.horas_sindicales || ''
       });
 
       setIsSubmitting(false); // reiniciamos loader
@@ -67,7 +69,7 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
 
     const updatedUser = {
       ...formValues,
-      // Solo incluimos password si existe en formValues (no se ve en el code, pero es la lógica que tenías)
+      // Solo incluimos password si existe en formValues (según tu lógica anterior)
       ...(formValues.password && { password: formValues.password })
     };
 
@@ -111,10 +113,7 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 mb-4 sm:grid-cols-2">
             <div>
-              <label
-                htmlFor="nombre"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="nombre" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Nombre
               </label>
               <input
@@ -123,18 +122,12 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="nombre"
                 value={formValues.nombre}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm 
-                           rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
-                           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                           dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 disabled={isSubmitting}
               />
             </div>
             <div>
-              <label
-                htmlFor="apellido"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="apellido" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Apellido
               </label>
               <input
@@ -143,18 +136,12 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="apellido"
                 value={formValues.apellido}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm 
-                           rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
-                           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                           dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 disabled={isSubmitting}
               />
             </div>
             <div>
-              <label
-                htmlFor="email"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Email
               </label>
               <input
@@ -163,18 +150,12 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="email"
                 value={formValues.email}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm 
-                           rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
-                           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                           dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 disabled={isSubmitting}
               />
             </div>
             <div>
-              <label
-                htmlFor="email2"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="email2" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Email Secundario
               </label>
               <input
@@ -183,19 +164,12 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="email2"
                 value={formValues.email2 || ''}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm 
-                           rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
-                           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                           dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 disabled={isSubmitting}
               />
             </div>
-
             <div>
-              <label
-                htmlFor="telefono"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="telefono" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Teléfono
               </label>
               <input
@@ -204,18 +178,12 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="telefono"
                 value={formValues.telefono}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm 
-                           rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
-                           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                           dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 disabled={isSubmitting}
               />
             </div>
             <div>
-              <label
-                htmlFor="dni"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="dni" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Nº Funcionario
               </label>
               <input
@@ -224,18 +192,12 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="dni"
                 value={formValues.dni}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm 
-                           rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
-                           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                           dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 disabled={isSubmitting}
               />
             </div>
             <div>
-              <label
-                htmlFor="type"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="type" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Puesto
               </label>
               <select
@@ -243,8 +205,7 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="type"
                 value={formValues.type}
                 onChange={handleChange}
-                className="bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600
-                           block w-full p-2.5 dark:bg-gray-700 border-gray-600 text-gray-900 dark:text-white"
+                className="bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 border-gray-600 text-gray-900 dark:text-white"
                 disabled={isSubmitting}
               >
                 <option value="">Selecciona un tipo</option>
@@ -256,10 +217,7 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
             </div>
             {(formValues.type === 'bombero' || formValues.type === 'mando') && (
               <div>
-                <label
-                  htmlFor="puesto"
-                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                >
+                <label htmlFor="puesto" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                   Categoría
                 </label>
                 <select
@@ -267,8 +225,7 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                   id="puesto"
                   value={formValues.puesto}
                   onChange={handleChange}
-                  className="bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600
-                             block w-full p-2.5 dark:bg-gray-700 border-gray-600 text-gray-900 dark:text-white"
+                  className="bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 border-gray-600 text-gray-900 dark:text-white"
                   disabled={isSubmitting}
                 >
                   {formValues.type === 'bombero' ? (
@@ -286,12 +243,8 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 </select>
               </div>
             )}
-
             <div>
-              <label
-                htmlFor="AP"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="AP" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Asuntos Propios (AP)
               </label>
               <input
@@ -300,19 +253,13 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="AP"
                 value={formValues.AP}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                           focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
-                           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                           dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 required
                 disabled={isSubmitting}
               />
             </div>
             <div>
-              <label
-                htmlFor="vacaciones"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="vacaciones" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Vacaciones
               </label>
               <input
@@ -321,19 +268,13 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="vacaciones"
                 value={formValues.vacaciones}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                           focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
-                           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                           dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 required
                 disabled={isSubmitting}
               />
             </div>
             <div>
-              <label
-                htmlFor="modulo"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="modulo" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Módulo
               </label>
               <input
@@ -342,19 +283,13 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="modulo"
                 value={formValues.modulo}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                           focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
-                           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                           dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 required
                 disabled={isSubmitting}
               />
             </div>
             <div>
-              <label
-                htmlFor="compensacion_grupos"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
+              <label htmlFor="compensacion_grupos" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 Compensación Grupos
               </label>
               <input
@@ -363,10 +298,23 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 id="compensacion_grupos"
                 value={formValues.compensacion_grupos}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                           focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
-                           dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                           dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+            {/* Nueva sección para Horas Sindicales */}
+            <div>
+              <label htmlFor="horas_sindicales" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                Horas Sindicales
+              </label>
+              <input
+                type="number"
+                name="horas_sindicales"
+                id="horas_sindicales"
+                value={formValues.horas_sindicales}
+                onChange={handleChange}
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 required
                 disabled={isSubmitting}
               />
@@ -375,21 +323,15 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
           <div className="flex items-center space-x-4">
             <button
               type="submit"
-              className="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none
-                         focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center
-                         dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+              className="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
               disabled={isSubmitting}
             >
-              {/* Si se está enviando => “Enviando...”, si no => “Actualizar usuario” */}
               {isSubmitting ? 'Enviando...' : 'Actualizar usuario'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="text-red-600 hover:text-white border border-red-600 hover:bg-red-600
-                         focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg
-                         text-sm px-5 py-2.5 text-center dark:border-red-500 dark:text-red-500
-                         dark:hover:text-white dark:hover:bg-red-600 dark:focus:ring-red-900"
+              className="text-red-600 hover:text-white border border-red-600 hover:bg-red-600 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-red-500 dark:text-red-500 dark:hover:text-white dark:hover:bg-red-600 dark:focus:ring-red-900"
               disabled={isSubmitting}
             >
               <FontAwesomeIcon icon={faTrash} className="w-5 h-5 mr-1" />

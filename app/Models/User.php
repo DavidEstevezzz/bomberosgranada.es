@@ -32,6 +32,7 @@ class User extends Authenticatable
         'vacaciones',
         'modulo',
         'compensacion_grupos',
+        'horas_sindicales',
     ];
 
     protected $hidden = [

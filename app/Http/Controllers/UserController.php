@@ -247,6 +247,7 @@ class UserController extends Controller
             'vacaciones',
             'modulo',
             'compensacion_grupos',
+            'horas_sindicales',
         ];
 
         if (!in_array($field, $allowedFields)) {

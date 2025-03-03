@@ -122,17 +122,26 @@ class MessageController extends Controller
      */
     public function downloadAttachment($id)
 {
-    $message = UserMessage::find($id);
-    if (!$message || !$message->attachment) {
-        return response()->json(['message' => 'Archivo no encontrado'], 404);
+    try {
+        $message = UserMessage::find($id);
+        if (!$message || !$message->attachment) {
+            Log::error("No se encontró el mensaje o no tiene adjunto. ID: " . $id);
+            return response()->json(['message' => 'Archivo no encontrado'], 404);
+        }
+        // Asegúrate de que la ruta sea la correcta. 
+        // Por ejemplo, si guardaste el archivo en 'attachments', debería ser 'storage/attachments/'.
+        $filePath = public_path('storage/attatchments' . $message->attachment);
+        Log::info("Ruta de archivo adjunto: " . $filePath);
+        if (!file_exists($filePath)) {
+            Log::error("Archivo no encontrado en el servidor. Ruta: " . $filePath);
+            return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
+        }
+        $downloadName = basename($message->attachment);
+        return response()->download($filePath, $downloadName);
+    } catch (\Exception $e) {
+        Log::error("Error al descargar el adjunto: " . $e->getMessage());
+        return response()->json(['message' => 'Error interno del servidor'], 500);
     }
-    $filePath = public_path('storage/attatchments' . $message->attachment);
-    Log::info("Ruta de archivo adjunto: " . $filePath);
-    if (!file_exists($filePath)) {
-        return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
-    }
-    $downloadName = basename($message->attachment);
-    return response()->download($filePath, $downloadName);
 }
 
     /**

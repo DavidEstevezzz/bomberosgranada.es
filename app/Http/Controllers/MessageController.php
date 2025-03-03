@@ -121,18 +121,19 @@ class MessageController extends Controller
      * Descargar un adjunto.
      */
     public function downloadAttachment($id)
-    {
-        $message = UserMessage::find($id);
-        if (!$message || !$message->attachment) {
-            return response()->json(['message' => 'Archivo no encontrado'], 404);
-        }
-        $filePath = public_path('storage/' . $message->attachment);
-        Log::info("Ruta de archivo adjunto: " . $filePath);
-        if (!file_exists($filePath)) {
-            return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
-        }
-        return response()->download($filePath);
+{
+    $message = UserMessage::find($id);
+    if (!$message || !$message->attachment) {
+        return response()->json(['message' => 'Archivo no encontrado'], 404);
     }
+    $filePath = public_path('storage/' . $message->attachment);
+    Log::info("Ruta de archivo adjunto: " . $filePath);
+    if (!file_exists($filePath)) {
+        return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
+    }
+    $downloadName = basename($message->attachment);
+    return response()->download($filePath, $downloadName);
+}
 
     /**
      * Marcar un mensaje como leído.

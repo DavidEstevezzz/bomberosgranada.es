@@ -130,7 +130,7 @@ class MessageController extends Controller
         }
         // Asegúrate de que la ruta sea la correcta. 
         // Por ejemplo, si guardaste el archivo en 'attachments', debería ser 'storage/attachments/'.
-        $filePath = public_path('storage/' . $message->attachment);
+        $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $message->attachment);
         Log::info("Ruta de archivo adjunto: " . $filePath);
         if (!file_exists($filePath)) {
             Log::error("Archivo no encontrado en el servidor. Ruta: " . $filePath);

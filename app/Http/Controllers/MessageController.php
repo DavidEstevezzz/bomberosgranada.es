@@ -126,7 +126,7 @@ class MessageController extends Controller
     if (!$message || !$message->attachment) {
         return response()->json(['message' => 'Archivo no encontrado'], 404);
     }
-    $filePath = public_path('storage/' . $message->attachment);
+    $filePath = public_path('storage/attatchments' . $message->attachment);
     Log::info("Ruta de archivo adjunto: " . $filePath);
     if (!file_exists($filePath)) {
         return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);

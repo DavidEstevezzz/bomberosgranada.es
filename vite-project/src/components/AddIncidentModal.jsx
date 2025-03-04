@@ -15,18 +15,18 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   const { user } = useStateContext();
 
   const [formValues, setFormValues] = useState({
-    // Se elimina id_incidencia, pues es autoincrementable
     tipo: '',
     fecha: '',
     descripcion: '',
     id_parque: '',
     matricula: '',
     id_empleado2: '',
-    // Campos añadidos automáticamente:
-    id_empleado: '',
-    estado: '',
-    leido: false
+    id_empleado: user ? user.id_empleado : '',
+    estado: 'Pendiente',
+    leido: false,
+    nivel: '' // Nuevo campo añadido
   });
+
   const [errorMessages, setErrorMessages] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,7 +50,8 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
         id_empleado2: '',
         id_empleado: user ? user.id_empleado : '',
         estado: 'Pendiente',
-        leido: false
+        leido: false,
+        nivel: '' 
       });
       setErrorMessages({});
       setIsSubmitting(false);
@@ -66,7 +67,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
           UsersApiService.getUsuarios(),
           VehiclesApiService.getVehicles(),
           ParksApiService.getParks()
-          
+
         ]);
         console.log(parksResponse.data)
         setUsers(usersResponse.data);
@@ -106,9 +107,9 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     setErrorMessages({});
-  
+
     // Mostrar en consola los datos que se enviarán
-    console.log('Form values a enviar:', formValues);  
+    console.log('Form values a enviar:', formValues);
     try {
       const response = await IncidentApiService.createIncident(formValues);
       onAdd(response.data);
@@ -125,7 +126,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
       setIsSubmitting(false);
     }
   };
-  
+
 
   return (
     <div className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-full bg-black bg-opacity-50">
@@ -133,7 +134,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
         <div className={`flex justify-between items-center pb-4 mb-4 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
           <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Añadir Incidencia</h3>
           <button onClick={onClose} disabled={isSubmitting} className={`p-1.5 rounded-lg ${darkMode ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-400 hover:bg-gray-200'}`}>
-            <FontAwesomeIcon icon={faTimes} className="w-5 h-5"/>
+            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
           </button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -202,6 +203,25 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
               {errorMessages.descripcion && <span className="text-red-500 text-sm">{errorMessages.descripcion}</span>}
             </div>
           </div>
+          <div>
+            <label htmlFor="nivel" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Nivel de Incidencia
+            </label>
+            <select
+              name="nivel"
+              id="nivel"
+              value={formValues.nivel}
+              onChange={handleChange}
+              className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+              required
+            >
+              <option value="">Seleccione un nivel</option>
+              {["bajo", "medio", "alto"].map((nivel) => (
+                <option key={nivel} value={nivel}>{nivel.charAt(0).toUpperCase() + nivel.slice(1)}</option>
+              ))}
+            </select>
+            {errorMessages.nivel && <span className="text-red-500 text-sm">{errorMessages.nivel}</span>}
+          </div>
           {/* Campos condicionales según el tipo */}
           {formValues.tipo === 'vehiculo' && (
             <div className="mb-4">
@@ -257,6 +277,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
               {errorMessages.id_empleado2 && <span className="text-red-500 text-sm">{errorMessages.id_empleado2}</span>}
             </div>
           )}
+
           <div className="flex items-center space-x-4">
             <button
               type="submit"

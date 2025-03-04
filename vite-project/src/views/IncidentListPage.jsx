@@ -15,13 +15,15 @@ const IncidentListPage = () => {
     const [incidents, setIncidents] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [currentMonth, setCurrentMonth] = useState(dayjs());
     const { darkMode } = useDarkMode();
     const { user } = useStateContext();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [detailIncident, setDetailIncident] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [searchParams] = useSearchParams();
+
+    // Nueva variable para filtrar por parque
+    const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
 
     useEffect(() => {
         fetchIncidents();
@@ -44,18 +46,14 @@ const IncidentListPage = () => {
         }
     };
 
-    const handlePreviousMonth = () => {
-        setCurrentMonth(currentMonth.subtract(1, 'month'));
-    };
-
-    const handleNextMonth = () => {
-        setCurrentMonth(currentMonth.add(1, 'month'));
-    };
-
-    // Filtrar incidencias del mes actual
-    const filteredIncidents = incidents.filter((incident) =>
-        dayjs(incident.fecha).isSame(currentMonth, 'month')
-    );
+    // Filtrar incidencias por parque (ya no se filtra por mes)
+    const filteredIncidents = incidents.filter((incident) => {
+        const matchesPark =
+            selectedParkFilter === "Todas" ||
+            (incident.park &&
+                incident.park.nombre.toLowerCase() === selectedParkFilter.toLowerCase());
+        return matchesPark;
+    });
     const pendingIncidents = filteredIncidents.filter(
         (incident) => incident.estado.toLowerCase() === 'pendiente'
     );
@@ -124,23 +122,25 @@ const IncidentListPage = () => {
                     <span>Nueva Incidencia</span>
                 </button>
             </div>
-
-            <div className="flex justify-between items-center mb-4">
+            {/* Sección de filtro por parque */}
+            <div className="flex justify-center space-x-4 mb-4">
                 <button
-                    onClick={handlePreviousMonth}
-                    className="bg-blue-500 text-white px-4 py-2 rounded"
+                    onClick={() => setSelectedParkFilter("Todas")}
+                    className={`px-4 py-2 rounded ${selectedParkFilter === "Todas" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-800"}`}
                 >
-                    Mes Anterior
+                    Todas
                 </button>
-                <span className="text-xl font-semibold">
-                    {currentMonth.format('MMMM YYYY').charAt(0).toUpperCase() +
-                        currentMonth.format('MMMM YYYY').slice(1)}
-                </span>
                 <button
-                    onClick={handleNextMonth}
-                    className="bg-blue-500 text-white px-4 py-2 rounded"
+                    onClick={() => setSelectedParkFilter("Parque Sur")}
+                    className={`px-4 py-2 rounded ${selectedParkFilter === "Parque Sur" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-800"}`}
                 >
-                    Mes Siguiente
+                    Parque Sur
+                </button>
+                <button
+                    onClick={() => setSelectedParkFilter("Parque Norte")}
+                    className={`px-4 py-2 rounded ${selectedParkFilter === "Parque Norte" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-800"}`}
+                >
+                    Parque Norte
                 </button>
             </div>
 
@@ -219,7 +219,7 @@ const IncidentListPage = () => {
                             ) : (
                                 <tr>
                                     <td colSpan="7" className="py-4 text-center">
-                                        No hay incidencias pendientes en este mes.
+                                        No hay incidencias pendientes.
                                     </td>
                                 </tr>
                             )}
@@ -290,12 +290,11 @@ const IncidentListPage = () => {
                             ) : (
                                 <tr>
                                     <td colSpan="7" className="py-4 text-center">
-                                        No hay incidencias resueltas en este mes.
+                                        No hay incidencias resueltas.
                                     </td>
                                 </tr>
                             )}
                         </tbody>
-
                     </table>
                 </div>
             </div>

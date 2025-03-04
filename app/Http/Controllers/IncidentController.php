@@ -31,6 +31,7 @@ class IncidentController extends Controller
             'fecha'         => 'required|date',
             'descripcion'   => 'required|string',
             'leido'         => 'required|boolean',
+            'nivel'         => 'required|in:bajo,medio,alto',
             // 'resulta_por' es opcional
         ];
 

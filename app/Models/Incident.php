@@ -26,7 +26,8 @@ class Incident extends Model
         'leido',         // Bool que indica si ha sido leído por los jefes
         'id_parque',     // Parque donde se genera la incidencia
         'fecha',
-        'descripcion'
+        'descripcion',
+        'nivel'
     ];
 
     // Relación con el usuario creador de la incidencia.

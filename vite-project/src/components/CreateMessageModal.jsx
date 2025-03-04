@@ -6,6 +6,7 @@ import MessagesApiService from '../services/MessagesApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
 
+// Función para eliminar diacríticos (acentos, etc.)
 function removeDiacritics(str) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
@@ -18,6 +19,14 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // En lugar de un checkbox para mensaje masivo, usaremos radio buttons para definir el alcance
+  // Los valores serán:
+  // "individual": mensaje individual (selección manual del destinatario)
+  // "toda": toda la plantilla
+  // "mandos": sólo usuarios con type = "mando"
+  // "bomberos": sólo usuarios con type = "bomberos"
+  const [messageScope, setMessageScope] = useState("individual");
+
   const [formData, setFormData] = useState({
     receiver_id: '',
     subject: '',
@@ -25,7 +34,6 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
     attachment: null,
     parent_id: '',
   });
-  const [isMassive, setIsMassive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -50,7 +58,7 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
       });
 
       setSearchTerm('');
-      setIsMassive(false);
+      setMessageScope("individual"); // Por defecto, mensaje individual
       setIsSubmitting(false);
     }
   }, [isOpen, replyMessage]);
@@ -99,7 +107,8 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
     setIsSubmitting(true);
 
     const data = new FormData();
-    if (!isMassive) {
+    // Si es un mensaje individual, se requiere el receptor seleccionado
+    if (!(currentUserRole === 'Jefe' && messageScope !== 'individual')) {
       data.append('receiver_id', formData.receiver_id);
     }
     data.append('subject', formData.subject);
@@ -110,8 +119,9 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
     if (formData.attachment) {
       data.append('attachment', formData.attachment);
     }
-    if (isMassive) {
-      data.append('massive', '1');
+    // Si el mensaje es masivo (no es individual), enviamos el scope en el campo massive
+    if (currentUserRole === 'Jefe' && messageScope !== 'individual') {
+      data.append('massive', messageScope);
     }
 
     try {
@@ -140,22 +150,59 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
           </button>
         </div>
 
+        {/* Opciones de mensaje masivo para Jefe */}
         {currentUserRole === 'Jefe' && (
           <div className="mb-4">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={isMassive}
-                onChange={(e) => setIsMassive(e.target.checked)}
-                disabled={isSubmitting}
-              />
-              <span>Mensaje masivo (para todos los usuarios)</span>
+            <label className="block mb-2 text-sm font-medium">
+              Tipo de Mensaje
             </label>
+            <div className="flex space-x-4">
+              <label className="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  value="individual"
+                  checked={messageScope === 'individual'}
+                  onChange={(e) => setMessageScope(e.target.value)}
+                  disabled={isSubmitting}
+                />
+                <span>Mensaje Individual</span>
+              </label>
+              <label className="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  value="toda"
+                  checked={messageScope === 'toda'}
+                  onChange={(e) => setMessageScope(e.target.value)}
+                  disabled={isSubmitting}
+                />
+                <span>Toda la plantilla</span>
+              </label>
+              <label className="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  value="mandos"
+                  checked={messageScope === 'mandos'}
+                  onChange={(e) => setMessageScope(e.target.value)}
+                  disabled={isSubmitting}
+                />
+                <span>Mandos</span>
+              </label>
+              <label className="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  value="bomberos"
+                  checked={messageScope === 'bomberos'}
+                  onChange={(e) => setMessageScope(e.target.value)}
+                  disabled={isSubmitting}
+                />
+                <span>Bomberos</span>
+              </label>
+            </div>
           </div>
         )}
 
-        {/* Si no es masivo ni respuesta, se muestra el buscador y selector */}
-        {!isMassive && !replyMessage && (
+        {/* Mostrar buscador y selector de destinatario solo para mensaje individual y cuando no sea respuesta */}
+        {(currentUserRole !== 'Jefe' || messageScope === 'individual') && !replyMessage && (
           <>
             <div className="mb-4">
               <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -179,7 +226,7 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
                 value={formData.receiver_id}
                 onChange={handleChange}
                 className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
-                required={!isMassive}
+                required={messageScope === 'individual'}
                 disabled={isSubmitting}
               >
                 <option value="">Seleccione un usuario</option>

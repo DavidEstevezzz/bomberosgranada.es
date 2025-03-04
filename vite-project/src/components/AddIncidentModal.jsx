@@ -212,7 +212,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
               id="nivel"
               value={formValues.nivel}
               onChange={handleChange}
-              className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+              className={`bg-gray-50 border text-sm rounded-lg block w-full mb-1 p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
               required
             >
               <option value="">Seleccione un nivel</option>

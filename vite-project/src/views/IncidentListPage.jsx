@@ -10,6 +10,8 @@ import { faEye, faEyeSlash, faTimes, faPlus, faInfoCircle } from '@fortawesome/f
 import dayjs from 'dayjs';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const IncidentListPage = () => {
     const [incidents, setIncidents] = useState([]);
@@ -22,7 +24,7 @@ const IncidentListPage = () => {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [searchParams] = useSearchParams();
 
-    // Nueva variable para filtrar por parque
+    // Filtro por parque
     const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
 
     useEffect(() => {
@@ -46,14 +48,16 @@ const IncidentListPage = () => {
         }
     };
 
-    // Filtrar incidencias por parque (ya no se filtra por mes)
+    // Filtrar incidencias por parque (se muestran todas sin filtrar por mes)
     const filteredIncidents = incidents.filter((incident) => {
         const matchesPark =
             selectedParkFilter === "Todas" ||
             (incident.park &&
-                incident.park.nombre.toLowerCase() === selectedParkFilter.toLowerCase());
+             incident.park.nombre.toLowerCase() === selectedParkFilter.toLowerCase());
         return matchesPark;
     });
+
+    // Separar pendientes y resueltas
     const pendingIncidents = filteredIncidents.filter(
         (incident) => incident.estado.toLowerCase() === 'pendiente'
     );
@@ -61,13 +65,68 @@ const IncidentListPage = () => {
         (incident) => incident.estado.toLowerCase() === 'resuelta'
     );
 
+    // Dividir pendientes según el nivel
+    const pendingHigh = pendingIncidents.filter(incident => incident.nivel && incident.nivel.toLowerCase() === 'alto');
+    const pendingMedium = pendingIncidents.filter(incident => incident.nivel && incident.nivel.toLowerCase() === 'medio');
+    const pendingLow = pendingIncidents.filter(incident => incident.nivel && incident.nivel.toLowerCase() === 'bajo');
+
     // Funciones auxiliares para mostrar nombres
     const getCreatorName = (incident) =>
         incident.creator ? `${incident.creator.nombre} ${incident.creator.apellido}` : incident.id_empleado;
     const getEmployee2Name = (incident) =>
         incident.employee2 ? `${incident.employee2.nombre} ${incident.employee2.apellido}` : '';
 
-    // Marcar incidencia como resuelta
+    // Función para exportar a PDF
+    const exportPDF = () => {
+        const doc = new jsPDF();
+        let yOffset = 10;
+        doc.setFontSize(16);
+        doc.text(`Incidencias No Resueltas - ${selectedParkFilter}`, 14, yOffset);
+        yOffset += 10;
+
+        // Función auxiliar para agregar una tabla de incidencias
+        const addTableForIncidents = (title, incidentsArray) => {
+            if (incidentsArray.length === 0) return;
+            doc.setFontSize(14);
+            doc.text(title, 14, yOffset);
+            yOffset += 6;
+            const tableData = incidentsArray.map(incident => {
+                let extraInfo = '';
+                if (incident.tipo.toLowerCase() === 'vehiculo' && incident.matricula) {
+                    extraInfo = incident.matricula;
+                } else if (incident.tipo.toLowerCase() === 'personal' && incident.employee2) {
+                    extraInfo = getEmployee2Name(incident);
+                }
+                return [
+                    getCreatorName(incident),
+                    dayjs(incident.fecha).format('DD/MM/YYYY'),
+                    incident.descripcion,
+                    incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1),
+                    extraInfo
+                ];
+            });
+            // Define los encabezados según el tipo (la columna extra se mostrará como "Matrícula" o "Empleado")
+            const head = [['Creado por', 'Fecha', 'Descripción', 'Tipo', 'Matrícula/Empleado']];
+            doc.autoTable({
+                startY: yOffset,
+                head,
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: 150 },
+            });
+            yOffset = doc.lastAutoTable.finalY + 10;
+        };
+
+        // Agregar tablas para cada nivel pendiente
+        addTableForIncidents("Incidencias Pendientes - Nivel Alto", pendingHigh);
+        addTableForIncidents("Incidencias Pendientes - Nivel Medio", pendingMedium);
+        addTableForIncidents("Incidencias Pendientes - Nivel Bajo", pendingLow);
+
+        // Guardar el PDF
+        doc.save("incidencias_no_resueltas.pdf");
+    };
+
+    // Acciones
     const handleResolve = async (incidentId) => {
         try {
             const resolverData = { resulta_por: user.id_empleado };
@@ -79,7 +138,6 @@ const IncidentListPage = () => {
         }
     };
 
-    // Marcar incidencia como leída (solo para jefes)
     const handleMarkAsRead = async (incidentId) => {
         try {
             await IncidentApiService.markAsRead(incidentId);
@@ -89,7 +147,6 @@ const IncidentListPage = () => {
         }
     };
 
-    // Eliminar incidencia
     const handleDelete = async (incidentId) => {
         if (window.confirm("¿Estás seguro de que deseas eliminar esta incidencia?")) {
             try {
@@ -101,7 +158,6 @@ const IncidentListPage = () => {
         }
     };
 
-    // Abrir modal de detalle
     const openDetailModal = (incident) => {
         setDetailIncident(incident);
         setIsDetailModalOpen(true);
@@ -114,13 +170,22 @@ const IncidentListPage = () => {
         <div className={`p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
             <div className="flex justify-between items-center mb-4">
                 <h1 className="text-2xl font-bold">Incidencias</h1>
-                <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded flex items-center space-x-2"
-                >
-                    <FontAwesomeIcon icon={faPlus} />
-                    <span>Nueva Incidencia</span>
-                </button>
+                <div className="flex space-x-2">
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded flex items-center space-x-2"
+                    >
+                        <FontAwesomeIcon icon={faPlus} />
+                        <span>Nueva Incidencia</span>
+                    </button>
+                    {/* Botón de exportar a PDF */}
+                    <button
+                        onClick={exportPDF}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded flex items-center space-x-2"
+                    >
+                        <span>Exportar a PDF</span>
+                    </button>
+                </div>
             </div>
             {/* Sección de filtro por parque */}
             <div className="flex justify-center space-x-4 mb-4">
@@ -144,9 +209,11 @@ const IncidentListPage = () => {
                 </button>
             </div>
 
-            {/* Tabla de Incidencias Pendientes */}
+            {/* Tabla de Incidencias Pendientes Nivel Alto */}
             <div className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                <h2 className="text-xl font-semibold mb-4">Incidencias Pendientes</h2>
+                <h2 className="text-xl font-semibold mb-4 bg-red-600 text-white p-2 rounded">
+                    Incidencias Pendientes - Nivel Alto
+                </h2>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
@@ -161,8 +228,8 @@ const IncidentListPage = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {pendingIncidents.length > 0 ? (
-                                pendingIncidents.map((incident) => (
+                            {pendingHigh.length > 0 ? (
+                                pendingHigh.map((incident) => (
                                     <tr key={incident.id_incidencia} className="border-b border-gray-700">
                                         <td className="py-2 px-2">{getCreatorName(incident)}</td>
                                         <td className="py-2 px-2">
@@ -219,7 +286,7 @@ const IncidentListPage = () => {
                             ) : (
                                 <tr>
                                     <td colSpan="7" className="py-4 text-center">
-                                        No hay incidencias pendientes.
+                                        No hay incidencias pendientes de nivel alto.
                                     </td>
                                 </tr>
                             )}
@@ -228,9 +295,179 @@ const IncidentListPage = () => {
                 </div>
             </div>
 
-            {/* Tabla de Incidencias Resueltas */}
+            {/* Tabla de Incidencias Pendientes Nivel Medio */}
             <div className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                <h2 className="text-xl font-semibold mb-4">Incidencias Resueltas</h2>
+                <h2 className="text-xl font-semibold mb-4 bg-orange-500 text-white p-2 rounded">
+                    Incidencias Pendientes - Nivel Medio
+                </h2>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr>
+                                <th className="py-2 px-2">Creado por</th>
+                                <th className="py-2 px-2">Tipo</th>
+                                <th className="py-2 px-2">Fecha</th>
+                                <th className="py-2 px-2">Leído</th>
+                                <th className="py-2 px-2">Parque</th>
+                                <th className="py-2 px-2">Extras</th>
+                                <th className="py-2 px-2">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {pendingMedium.length > 0 ? (
+                                pendingMedium.map((incident) => (
+                                    <tr key={incident.id_incidencia} className="border-b border-gray-700">
+                                        <td className="py-2 px-2">{getCreatorName(incident)}</td>
+                                        <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
+                                        <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
+                                        <td className="py-2 px-2">
+                                            {incident.leido ? (
+                                                <FontAwesomeIcon icon={faEye} title="Leído" />
+                                            ) : (
+                                                <FontAwesomeIcon icon={faEyeSlash} title="No leído" />
+                                            )}
+                                        </td>
+                                        <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
+                                        <td className="py-2 px-2">
+                                            {incident.tipo === 'vehiculo' && incident.matricula && (
+                                                <span>{incident.vehicle.nombre}</span>
+                                            )}
+                                            {incident.tipo === 'personal' && incident.employee2 && (
+                                                <span>{getEmployee2Name(incident)}</span>
+                                            )}
+                                        </td>
+                                        <td className="py-2 px-2 flex space-x-2">
+                                            <button
+                                                onClick={() => handleResolve(incident.id_incidencia)}
+                                                className="bg-green-600 text-white px-3 py-1 rounded"
+                                            >
+                                                Resuelta
+                                            </button>
+                                            <button
+                                                onClick={() => openDetailModal(incident)}
+                                                className="bg-gray-600 text-white px-3 py-1 rounded flex items-center space-x-1"
+                                            >
+                                                <FontAwesomeIcon icon={faInfoCircle} />
+                                                <span>Detalle</span>
+                                            </button>
+                                            {user?.type === 'jefe' && !incident.leido && (
+                                                <button
+                                                    onClick={() => handleMarkAsRead(incident.id_incidencia)}
+                                                    className="bg-yellow-600 text-white px-3 py-1 rounded"
+                                                >
+                                                    Marcar Leída
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleDelete(incident.id_incidencia)}
+                                                className="bg-red-600 text-white px-3 py-1 rounded"
+                                            >
+                                                Borrar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="7" className="py-4 text-center">
+                                        No hay incidencias pendientes de nivel medio.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Tabla de Incidencias Pendientes Nivel Bajo */}
+            <div className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                <h2 className="text-xl font-semibold mb-4 bg-yellow-500 text-white p-2 rounded">
+                    Incidencias Pendientes - Nivel Bajo
+                </h2>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr>
+                                <th className="py-2 px-2">Creado por</th>
+                                <th className="py-2 px-2">Tipo</th>
+                                <th className="py-2 px-2">Fecha</th>
+                                <th className="py-2 px-2">Leído</th>
+                                <th className="py-2 px-2">Parque</th>
+                                <th className="py-2 px-2">Extras</th>
+                                <th className="py-2 px-2">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {pendingLow.length > 0 ? (
+                                pendingLow.map((incident) => (
+                                    <tr key={incident.id_incidencia} className="border-b border-gray-700">
+                                        <td className="py-2 px-2">{getCreatorName(incident)}</td>
+                                        <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
+                                        <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
+                                        <td className="py-2 px-2">
+                                            {incident.leido ? (
+                                                <FontAwesomeIcon icon={faEye} title="Leído" />
+                                            ) : (
+                                                <FontAwesomeIcon icon={faEyeSlash} title="No leído" />
+                                            )}
+                                        </td>
+                                        <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
+                                        <td className="py-2 px-2">
+                                            {incident.tipo === 'vehiculo' && incident.matricula && (
+                                                <span>{incident.vehicle.nombre}</span>
+                                            )}
+                                            {incident.tipo === 'personal' && incident.employee2 && (
+                                                <span>{getEmployee2Name(incident)}</span>
+                                            )}
+                                        </td>
+                                        <td className="py-2 px-2 flex space-x-2">
+                                            <button
+                                                onClick={() => handleResolve(incident.id_incidencia)}
+                                                className="bg-green-600 text-white px-3 py-1 rounded"
+                                            >
+                                                Resuelta
+                                            </button>
+                                            <button
+                                                onClick={() => openDetailModal(incident)}
+                                                className="bg-gray-600 text-white px-3 py-1 rounded flex items-center space-x-1"
+                                            >
+                                                <FontAwesomeIcon icon={faInfoCircle} />
+                                                <span>Detalle</span>
+                                            </button>
+                                            {user?.type === 'jefe' && !incident.leido && (
+                                                <button
+                                                    onClick={() => handleMarkAsRead(incident.id_incidencia)}
+                                                    className="bg-yellow-600 text-white px-3 py-1 rounded"
+                                                >
+                                                    Marcar Leída
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleDelete(incident.id_incidencia)}
+                                                className="bg-red-600 text-white px-3 py-1 rounded"
+                                            >
+                                                Borrar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="7" className="py-4 text-center">
+                                        No hay incidencias pendientes de nivel bajo.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Tabla de Incidencias Resueltas (se muestran todas independientemente del nivel) */}
+            <div className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                <h2 className="text-xl font-semibold mb-4 bg-green-600 text-white p-2 rounded">
+                    Incidencias Resueltas
+                </h2>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
@@ -249,9 +486,7 @@ const IncidentListPage = () => {
                                 resolvedIncidents.map((incident) => (
                                     <tr key={incident.id_incidencia} className="border-b border-gray-700">
                                         <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                                        <td className="py-2 px-2">
-                                            {incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}
-                                        </td>
+                                        <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
                                         <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                                         <td className="py-2 px-2">
                                             {incident.leido ? (

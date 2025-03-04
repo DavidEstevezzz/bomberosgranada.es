@@ -66,56 +66,77 @@ class MessageController extends Controller
      * Se admite el campo opcional parent_id para respuestas.
      */
     public function store(Request $request)
-    {
-        // Validar
-        $isMassive = $request->boolean('massive', false);
-        $rules = [
-            'subject'   => 'required|string|max:255',
-            'body'      => 'required|string',
-            'attachment'=> 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
-            'massive'   => 'sometimes|boolean',
-            'parent_id' => 'nullable|exists:messages,id', // Para respuesta en hilo.
-        ];
-        if (!$isMassive) {
-            $rules['receiver_id'] = 'required|exists:users,id_empleado';
-        }
+{
+    // Se espera que el campo 'massive' venga como false o como uno de: 'toda', 'mandos', 'bomberos'
+    $massiveScope = $request->input('massive', false);
+    // Se considera masivo si massiveScope no es false (ni la cadena 'false')
+    $isMassive = $massiveScope !== false && $massiveScope !== 'false';
 
-        $validated = $request->validate($rules);
-        $validated['sender_id'] = auth()->id();
-        $validated['massive'] = $isMassive;
+    // Definir reglas de validación:
+    $rules = [
+        'subject'   => 'required|string|max:255',
+        'body'      => 'required|string',
+        'attachment'=> 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+        'parent_id' => 'nullable|exists:messages,id', // Para respuesta en hilo.
+    ];
 
-        // Si es masivo, ignoramos receiver_id.
-        if ($isMassive) {
-            $validated['receiver_id'] = null;
-        }
-
-        // Manejo del archivo adjunto.
-        if ($request->hasFile('attachment')) {
-            $path = $request->file('attachment')->store('attachments', 'shared');
-            $validated['attachment'] = $path;
-        }
-
-        $message = UserMessage::create($validated);
-        $message->load('sender', 'receiver', 'parent', 'replies');
-
-        // Enviar correos (mantén tu lógica actual)
-        try {
-            if ($isMassive) {
-                $allUsers = \App\Models\User::where('id_empleado', '!=', auth()->id())->get();
-                foreach ($allUsers as $u) {
-                    Mail::to($u->email)->send(new MessageSent($message));
-                }
-            } else {
-                if ($message->receiver) {
-                    Mail::to($message->receiver->email)->send(new MessageSent($message));
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error("Error enviando correo masivo: " . $e->getMessage());
-        }
-
-        return response()->json($message, 201);
+    // Si no es masivo, se requiere receptor
+    if (!$isMassive) {
+        $rules['receiver_id'] = 'required|exists:users,id_empleado';
+    } else {
+        // Si es masivo, el campo massive debe ser uno de los valores permitidos
+        $rules['massive'] = 'sometimes|string|in:toda,mandos,bomberos';
     }
+
+    $validated = $request->validate($rules);
+    $validated['sender_id'] = auth()->id();
+    // Guardamos el valor masivo (puede ser 'toda', 'mandos' o 'bomberos') o false
+    $validated['massive'] = $isMassive ? $massiveScope : false;
+
+    // Si es masivo, ignoramos receiver_id
+    if ($isMassive) {
+        $validated['receiver_id'] = null;
+    }
+
+    // Manejo del archivo adjunto.
+    if ($request->hasFile('attachment')) {
+        $path = $request->file('attachment')->store('attachments', 'shared');
+        $validated['attachment'] = $path;
+    }
+
+    $message = UserMessage::create($validated);
+    $message->load('sender', 'receiver', 'parent', 'replies');
+
+    // Enviar correos
+    try {
+        if ($isMassive) {
+            if ($massiveScope === 'toda') {
+                // Toda la plantilla: todos excepto el remitente
+                $users = \App\Models\User::where('id_empleado', '!=', auth()->id())->get();
+            } elseif ($massiveScope === 'mandos') {
+                // Solo mandos
+                $users = \App\Models\User::where('type', 'mando')->get();
+            } elseif ($massiveScope === 'bomberos') {
+                // Solo bomberos
+                $users = \App\Models\User::where('type', 'bomberos')->get();
+            } else {
+                $users = collect();
+            }
+            foreach ($users as $u) {
+                Mail::to($u->email)->send(new MessageSent($message));
+            }
+        } else {
+            if ($message->receiver) {
+                Mail::to($message->receiver->email)->send(new MessageSent($message));
+            }
+        }
+    } catch (\Exception $e) {
+        Log::error("Error enviando correo masivo: " . $e->getMessage());
+    }
+
+    return response()->json($message, 201);
+}
+
 
     /**
      * Descargar un adjunto.

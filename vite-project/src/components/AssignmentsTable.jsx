@@ -16,8 +16,6 @@ const AssignmentsTable = ({
 }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [brigades, setBrigades] = useState([]);
-  const [filteredAssignments, setFilteredAssignments] = useState(assignments);
-  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -28,7 +26,7 @@ const AssignmentsTable = ({
       try {
         const [resUsuarios, resBrigades] = await Promise.all([
           UsuariosApiService.getUsuarios(),
-          BrigadesApiService.getBrigades(),
+          BrigadesApiService.getBrigades()
         ]);
 
         setUsuarios(resUsuarios.data);
@@ -44,14 +42,6 @@ const AssignmentsTable = ({
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const filtered = assignments.filter((assignment) => {
-      const usuarioNombre = getUsuarioNombre(assignment.id_empleado).toLowerCase();
-      return usuarioNombre.includes(searchTerm.toLowerCase());
-    });
-    setFilteredAssignments(filtered);
-  }, [searchTerm, assignments]);
-
   const getUsuarioNombre = (id_empleado) => {
     const usuario = usuarios.find((usuario) => usuario.id_empleado === id_empleado);
     return usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Desconocido';
@@ -65,30 +55,22 @@ const AssignmentsTable = ({
   // Renderiza el indicador de ordenamiento
   const getSortIcon = (columnName) => {
     if (sortConfig && sortConfig.key === columnName) {
-      return sortConfig.direction === 'asc' ? 
-        <FontAwesomeIcon icon={faSortUp} className="ml-1" /> : 
-        <FontAwesomeIcon icon={faSortDown} className="ml-1" />;
+      return sortConfig.direction === 'asc' ? (
+        <FontAwesomeIcon icon={faSortUp} className="ml-1" />
+      ) : (
+        <FontAwesomeIcon icon={faSortDown} className="ml-1" />
+      );
     }
     return null;
   };
 
-  if (loading) return <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Cargando...</p>;
-  if (error) return <p className={`text-center ${darkMode ? 'text-red-300' : 'text-red-500'}`}>Error: {error}</p>;
+  if (loading)
+    return <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Cargando...</p>;
+  if (error)
+    return <p className={`text-center ${darkMode ? 'text-red-300' : 'text-red-500'}`}>Error: {error}</p>;
 
   return (
     <div className="overflow-x-auto">
-      {/* Buscador */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Buscar por usuario"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className={`w-full px-4 py-2 rounded ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'}`}
-        />
-      </div>
-
-      {/* Tabla */}
       <table
         className={`w-full text-left border-collapse rounded-lg ${
           darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-900'
@@ -96,30 +78,26 @@ const AssignmentsTable = ({
       >
         <thead>
           <tr className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-900'}`}>
-            <th 
-              className="py-2 px-2 cursor-pointer"
-              onClick={() => handleSort('fecha_ini')}
-            >
+            <th className="py-2 px-2 cursor-pointer" onClick={() => handleSort('fecha_ini')}>
               <div className="flex items-center">
                 Fecha Inicio {getSortIcon('fecha_ini')}
               </div>
             </th>
-            <th 
-              className="py-2 px-2 cursor-pointer"
-              onClick={() => handleSort('nombre')}
-            >
+            <th className="py-2 px-2 cursor-pointer" onClick={() => handleSort('nombre')}>
               <div className="flex items-center">
                 Empleado {getSortIcon('nombre')}
               </div>
             </th>
             <th className="py-2 px-2">Brigada Origen</th>
             <th className="py-2 px-2">Brigada Destino</th>
-            <th className="py-2 px-2" style={{ width: '200px' }}>Acciones</th>
+            <th className="py-2 px-2" style={{ width: '200px' }}>
+              Acciones
+            </th>
           </tr>
         </thead>
         <tbody>
-          {filteredAssignments.length > 0 ? (
-            filteredAssignments.map((assignment) => (
+          {assignments.length > 0 ? (
+            assignments.map((assignment) => (
               <tr
                 key={assignment.id_asignacion}
                 className={`border-b ${

@@ -21,8 +21,8 @@ class MessageController extends Controller
 
         // Mensajes recibidos o masivos.
         $messages = UserMessage::where(function ($query) use ($userId) {
-                $query->where('receiver_id', $userId)
-                      ->orWhere('massive', true);
+            $query->where('receiver_id', $userId)
+            ->orWhere('massive', '!=', 'false');
             })
             ->orderBy('created_at', 'desc')
             ->get();
@@ -91,7 +91,7 @@ class MessageController extends Controller
     $validated = $request->validate($rules);
     $validated['sender_id'] = auth()->id();
     // Guardamos el valor masivo (puede ser 'toda', 'mandos' o 'bomberos') o false
-    $validated['massive'] = $isMassive ? $massiveScope : false;
+    $validated['massive'] = $isMassive ? $massiveScope : 'false';
 
     // Si es masivo, ignoramos receiver_id
     if ($isMassive) {

@@ -1,10 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import BrigadesApiService from '../services/BrigadesApiService';
-import GuardsApiService from '../services/GuardsApiService';
-import IncidentApiService from '../services/IncidentApiService';
-import AddIncidentModal from '../components/AddIncidentModal';
-import IncidentDetailModal from '../components/IncidentDetailModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash, faTimes, faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
@@ -12,6 +6,9 @@ import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import IncidentApiService from '../services/IncidentApiService';
+import AddIncidentModal from '../components/AddIncidentModal';
+import IncidentDetailModal from '../components/IncidentDetailModal';
 
 const IncidentListPage = () => {
     const [incidents, setIncidents] = useState([]);
@@ -22,7 +19,7 @@ const IncidentListPage = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [detailIncident, setDetailIncident] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-    const [searchParams] = useSearchParams();
+    const [searchParams] = useState();
 
     // Filtro por parque
     const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
@@ -92,8 +89,8 @@ const IncidentListPage = () => {
             yOffset += 6;
             const tableData = incidentsArray.map(incident => {
                 let extraInfo = '';
-                if (incident.tipo.toLowerCase() === 'vehiculo' && incident.matricula) {
-                    extraInfo = incident.matricula;
+                if (incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre) {
+                    extraInfo = incident.vehicle.nombre;
                 } else if (incident.tipo.toLowerCase() === 'personal' && incident.employee2) {
                     extraInfo = getEmployee2Name(incident);
                 }
@@ -105,8 +102,8 @@ const IncidentListPage = () => {
                     extraInfo
                 ];
             });
-            // Define los encabezados según el tipo (la columna extra se mostrará como "Matrícula" o "Empleado")
-            const head = [['Creado por', 'Fecha', 'Descripción', 'Tipo', 'Matrícula/Empleado']];
+            // Cabecera actualizada: se muestra "Vehículo/Empleado"
+            const head = [['Creado por', 'Fecha', 'Descripción', 'Tipo', 'Vehículo/Empleado']];
             doc.autoTable({
                 startY: yOffset,
                 head,
@@ -232,9 +229,7 @@ const IncidentListPage = () => {
                                 pendingHigh.map((incident) => (
                                     <tr key={incident.id_incidencia} className="border-b border-gray-700">
                                         <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                                        <td className="py-2 px-2">
-                                            {incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}
-                                        </td>
+                                        <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
                                         <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                                         <td className="py-2 px-2">
                                             {incident.leido ? (
@@ -245,12 +240,11 @@ const IncidentListPage = () => {
                                         </td>
                                         <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
                                         <td className="py-2 px-2">
-                                            {incident.tipo === 'vehiculo' && incident.matricula && (
+                                            {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre ? (
                                                 <span>{incident.vehicle.nombre}</span>
-                                            )}
-                                            {incident.tipo === 'personal' && incident.employee2 && (
+                                            ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
                                                 <span>{getEmployee2Name(incident)}</span>
-                                            )}
+                                            ) : null}
                                         </td>
                                         <td className="py-2 px-2 flex space-x-2">
                                             <button
@@ -329,12 +323,11 @@ const IncidentListPage = () => {
                                         </td>
                                         <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
                                         <td className="py-2 px-2">
-                                            {incident.tipo === 'vehiculo' && incident.matricula && (
+                                            {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre ? (
                                                 <span>{incident.vehicle.nombre}</span>
-                                            )}
-                                            {incident.tipo === 'personal' && incident.employee2 && (
+                                            ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
                                                 <span>{getEmployee2Name(incident)}</span>
-                                            )}
+                                            ) : null}
                                         </td>
                                         <td className="py-2 px-2 flex space-x-2">
                                             <button
@@ -413,12 +406,11 @@ const IncidentListPage = () => {
                                         </td>
                                         <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
                                         <td className="py-2 px-2">
-                                            {incident.tipo === 'vehiculo' && incident.matricula && (
+                                            {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre ? (
                                                 <span>{incident.vehicle.nombre}</span>
-                                            )}
-                                            {incident.tipo === 'personal' && incident.employee2 && (
+                                            ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
                                                 <span>{getEmployee2Name(incident)}</span>
-                                            )}
+                                            ) : null}
                                         </td>
                                         <td className="py-2 px-2 flex space-x-2">
                                             <button
@@ -463,7 +455,7 @@ const IncidentListPage = () => {
                 </div>
             </div>
 
-            {/* Tabla de Incidencias Resueltas (se muestran todas independientemente del nivel) */}
+            {/* Tabla de Incidencias Resueltas (todas) */}
             <div className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                 <h2 className="text-xl font-semibold mb-4 bg-green-600 text-white p-2 rounded">
                     Incidencias Resueltas
@@ -497,12 +489,11 @@ const IncidentListPage = () => {
                                         </td>
                                         <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
                                         <td className="py-2 px-2">
-                                            {incident.tipo === 'vehiculo' && incident.matricula && (
-                                                <span>Vehículo: {incident.vehicle.nombre}</span>
-                                            )}
-                                            {incident.tipo === 'personal' && incident.employee2 && (
-                                                <span>Empleado: {getEmployee2Name(incident)}</span>
-                                            )}
+                                            {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre ? (
+                                                <span>{incident.vehicle.nombre}</span>
+                                            ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
+                                                <span>{getEmployee2Name(incident)}</span>
+                                            ) : null}
                                         </td>
                                         <td className="py-2 px-2 flex space-x-2">
                                             <button

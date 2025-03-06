@@ -16,19 +16,28 @@ class MessageController extends Controller
      * Muestra mensajes donde receiver_id = usuario logueado O massive = true.
      */
     public function index()
-    {
-        $userId = auth()->id();
+{
+    $user = auth()->user();
+    $userId = $user->id;
+    $userType = $user->type;
 
-        // Mensajes recibidos o masivos.
-        $messages = UserMessage::where(function ($query) use ($userId) {
-            $query->where('receiver_id', $userId)
-            ->orWhere('massive', '!=', 'false');
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
+    $messages = UserMessage::where(function ($query) use ($userId, $userType) {
+        $query->where('receiver_id', $userId)
+              ->orWhere('massive', 'toda')
+              ->orWhere(function($q) use ($userType) {
+                  if ($userType === 'mando') {
+                      $q->where('massive', 'mandos');
+                  } elseif ($userType === 'bombero') {
+                      $q->where('massive', 'bomberos');
+                  }
+              });
+    })
+    ->orderBy('created_at', 'desc')
+    ->get();
 
-        return response()->json($messages);
-    }
+    return response()->json($messages);
+}
+
 
     /**
      * Bandeja de salida:

@@ -38,8 +38,7 @@ class MessageController extends Controller
     ->get();
     
     Log::info("Cantidad de mensajes recuperados: " . $messages->count());
-    // También puedes loguear el SQL generado:
-    Log::info("Consulta SQL: " . $messages->toSql());
+
     
     return response()->json($messages);
 }

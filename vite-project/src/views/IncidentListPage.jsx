@@ -80,49 +80,59 @@ const IncidentListPage = () => {
         doc.setFontSize(16);
         doc.text(`Incidencias No Resueltas - ${selectedParkFilter}`, 14, yOffset);
         yOffset += 10;
-
-        // Función auxiliar para agregar una tabla de incidencias
-        const addTableForIncidents = (title, incidentsArray) => {
-            if (incidentsArray.length === 0) return;
-            doc.setFontSize(14);
-            doc.text(title, 14, yOffset);
-            yOffset += 6;
-            const tableData = incidentsArray.map(incident => {
-                let extraInfo = '';
-                if (incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre) {
-                    extraInfo = incident.vehicle.nombre;
-                } else if (incident.tipo.toLowerCase() === 'personal' && incident.employee2) {
-                    extraInfo = getEmployee2Name(incident);
-                }
-                return [
-                    getCreatorName(incident),
-                    dayjs(incident.fecha).format('DD/MM/YYYY'),
-                    incident.descripcion,
-                    incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1),
-                    extraInfo
-                ];
-            });
-            // Cabecera actualizada: se muestra "Vehículo/Empleado"
-            const head = [['Creado por', 'Fecha', 'Descripción', 'Tipo', 'Vehículo/Empleado']];
-            doc.autoTable({
-                startY: yOffset,
-                head,
-                body: tableData,
-                theme: 'grid',
-                headStyles: { fillColor: 150 },
-            });
-            yOffset = doc.lastAutoTable.finalY + 10;
-        };
-
-        // Agregar tablas para cada nivel pendiente
-        addTableForIncidents("Incidencias Pendientes - Nivel Alto", pendingHigh);
-        addTableForIncidents("Incidencias Pendientes - Nivel Medio", pendingMedium);
-        addTableForIncidents("Incidencias Pendientes - Nivel Bajo", pendingLow);
-
-        // Guardar el PDF
+      
+        const tableData = [];
+        pendingIncidents.forEach(incident => {
+          let extraInfo = '';
+          if (incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre) {
+            extraInfo = incident.vehicle.nombre;
+          } else if (incident.tipo.toLowerCase() === 'personal' && incident.employee2) {
+            extraInfo = getEmployee2Name(incident);
+          }
+          tableData.push({
+            fecha: dayjs(incident.fecha).format('DD/MM/YYYY'),
+            descripcion: incident.descripcion,
+            tipo: incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1),
+            extra: extraInfo,
+            nivel: incident.nivel ? incident.nivel.toLowerCase() : ''
+          });
+        });
+      
+        // Ordenar por la propiedad 'extra'
+        tableData.sort((a, b) => a.extra.localeCompare(b.extra));
+      
+        // Definir las columnas (sin la columna de creador)
+        const columns = [
+          { header: 'Fecha', dataKey: 'fecha' },
+          { header: 'Descripción', dataKey: 'descripcion' },
+          { header: 'Tipo', dataKey: 'tipo' },
+          { header: 'Vehículo/Empleado', dataKey: 'extra' },
+        ];
+      
+        // Configurar autoTable para generar la tabla en el PDF
+        doc.autoTable({
+          startY: yOffset,
+          head: [columns.map(col => col.header)],
+          body: tableData.map(row => columns.map(col => row[col.dataKey])),
+          theme: 'grid',
+          headStyles: { fillColor: 150 },
+          didParseCell: function(data) {
+            if (data.section === 'body') {
+              const rowObj = tableData[data.row.index];
+              if (rowObj.nivel === 'alto') {
+                data.cell.styles.fillColor = [255, 204, 204];
+              } else if (rowObj.nivel === 'medio') {
+                data.cell.styles.fillColor = [255, 229, 204];
+              } else if (rowObj.nivel === 'bajo') {
+                data.cell.styles.fillColor = [255, 255, 204];
+              }
+            }
+          }
+        });
+      
         doc.save("incidencias_no_resueltas.pdf");
-    };
-
+      };
+      
     // Acciones
     const handleResolve = async (incidentId) => {
         try {

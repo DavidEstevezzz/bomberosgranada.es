@@ -20,6 +20,8 @@ class MessageController extends Controller
     $user = auth()->user();
     $userId = $user->id;
     $userType = $user->type;
+    
+    Log::info("Recuperando mensajes para usuario: ID {$userId}, tipo {$userType}");
 
     $messages = UserMessage::where(function ($query) use ($userId, $userType) {
         $query->where('receiver_id', $userId)
@@ -34,7 +36,11 @@ class MessageController extends Controller
     })
     ->orderBy('created_at', 'desc')
     ->get();
-
+    
+    Log::info("Cantidad de mensajes recuperados: " . $messages->count());
+    // También puedes loguear el SQL generado:
+    Log::info("Consulta SQL: " . $messages->toSql());
+    
     return response()->json($messages);
 }
 

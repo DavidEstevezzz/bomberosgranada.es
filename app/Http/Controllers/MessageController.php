@@ -18,7 +18,7 @@ class MessageController extends Controller
     public function index()
 {
     $user = auth()->user();
-    $userId = $user->id;
+    $userId = auth()->id();
     $userType = $user->type;
     
     Log::info("Recuperando mensajes para usuario: ID {$userId}, tipo {$userType}");

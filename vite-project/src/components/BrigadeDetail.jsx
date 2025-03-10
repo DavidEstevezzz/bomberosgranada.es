@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import BrigadesApiService from '../services/BrigadesApiService';
 import GuardsApiService from '../services/GuardsApiService';
+import GuardAssignmentApiService from '../services/GuardAssignmentApiService'; // <-- Importa el servicio de asignaciones
 import AddGuardCommentsModal from './AddGuardCommentsModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
@@ -32,7 +33,6 @@ const BrigadeDetail = () => {
     1: { Subinspector: 1, Oficial: 1, Operador: 2, Conductor: 3, Bombero: 6 },
     2: { Subinspector: 1, Oficial: 1, Operador: 0, Conductor: 3, Bombero: 6 },
   };
-  // Nota: se cambió la prioridad de puestos según tu ejemplo (Subinspector: 1, Oficial: 2, Operador: 3, Conductor: 4, Bombero: 5)
   const puestoPriority = {
     Subinspector: 1,
     Oficial: 2,
@@ -59,10 +59,9 @@ const BrigadeDetail = () => {
     'C5': 'Apoyo',
   };
 
-  // Antes de renderizar la tabla, calcula los colores según el nombre de la brigada
+  // Cálculo de colores según el nombre de la brigada (para exportar al PDF)
   let brigadeColor = '';
   let nameColor = '';
-
   switch (brigade?.nombre) {
     case 'Brigada A':
       brigadeColor = 'bg-green-500';
@@ -92,7 +91,6 @@ const BrigadeDetail = () => {
       brigadeColor = '';
       nameColor = '';
   }
-
 
   useEffect(() => {
     const fetchBrigadeDetails = async () => {
@@ -136,39 +134,57 @@ const BrigadeDetail = () => {
     Tarde: {},
     Noche: {},
   });
-  // Opciones de asignación (se eliminó la restricción única, por lo que no se deshabilitan)
+  // Opciones de asignación (sin restricción única)
   const options = ['N1', 'N2', 'N3', 'N4', 'S1', 'S2', 'S3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'C1', 'C2', 'C3', 'C4', 'C5', 'Operador 1', 'Operador 2'];
 
   // Funciones de modal
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
-  // Actualiza tanto comentarios como guardDetails para que se propaguen al PDF
   const handleUpdateComments = (updatedData) => {
     console.log('Comentarios actualizados:', updatedData);
     setComentarios(updatedData.comentarios);
     setGuardDetails(updatedData.guard ? updatedData.guard : updatedData);
   };
 
+  // Función auxiliar para guardar la asignación en la base de datos
+  const saveAssignment = async (shift, employeeId, value) => {
+    if (!guardDetails || !guardDetails.id) return;
+    try {
+      await GuardAssignmentApiService.updateOrCreateAssignment({
+        id_guard: guardDetails.id,
+        id_empleado: employeeId,
+        turno: shift,
+        asignacion: value,
+      });
+      console.log(`Asignación guardada para ${shift} del empleado ${employeeId}`);
+    } catch (error) {
+      console.error('Error guardando la asignación:', error);
+    }
+  };
+
   // Función para manejar asignación y propagarla según el turno:
-  // Si se modifica en "Mañana", se propaga a Tarde y Noche. Si se modifica en Tarde o Noche, solo se actualiza ese turno.
+  // Si se modifica en "Mañana", se propaga a "Tarde" y "Noche" según el turno real del bombero.
   const handleAssignmentChange = (shift, employeeId, value) => {
     setAssignments(prev => {
       let newAssignments = { ...prev };
-      // Actualizamos el turno actual siempre:
       newAssignments[shift] = { ...newAssignments[shift], [employeeId]: value };
+      // Guardar la asignación para el turno actual
+      saveAssignment(shift, employeeId, value);
       if (shift === 'Mañana') {
-        // Solo propagamos desde Mañana según el turno real del bombero
         const firefighter = firefighters.find(f => f.id_empleado === employeeId);
         if (firefighter) {
           const turno = firefighter.turno.toLowerCase();
           if (turno === 'día completo') {
             ["Tarde", "Noche"].forEach(s => {
               newAssignments[s] = { ...newAssignments[s], [employeeId]: value };
+              saveAssignment(s, employeeId, value);
             });
           } else if (turno === 'mañana y tarde') {
             newAssignments["Tarde"] = { ...newAssignments["Tarde"], [employeeId]: value };
+            saveAssignment("Tarde", employeeId, value);
           } else if (turno === 'mañana y noche') {
             newAssignments["Noche"] = { ...newAssignments["Noche"], [employeeId]: value };
+            saveAssignment("Noche", employeeId, value);
           }
         }
       }
@@ -177,7 +193,6 @@ const BrigadeDetail = () => {
   };
 
   const getAvailableOptions = (shift) => {
-    // Ahora se permiten reutilizar opciones, por lo que no se filtran
     return options;
   };
 
@@ -276,7 +291,7 @@ const BrigadeDetail = () => {
     const letter = cleanAssignment.charAt(0).toUpperCase();
     const number = parseInt(cleanAssignment.slice(1), 10);
     if (isNaN(number)) return '';
-
+  
     if (letter === 'N') {
       if (number === 1) return 1;
       if (number === 2) return 3;
@@ -332,29 +347,29 @@ const BrigadeDetail = () => {
     const startY = 45;
 
     // Configurar colores del encabezado del PDF según la brigada
-let pdfHeaderFillColor, pdfHeaderTextColor;
-if (brigade?.nombre === 'Brigada A') {
-  pdfHeaderFillColor = '#22c55e'; // verde equivalente a bg-green-500
-  pdfHeaderTextColor = '#000000'; // equivalente a text-black
-} else if (brigade?.nombre === 'Brigada B') {
-  pdfHeaderFillColor = '#fafafa'; // equivalente a bg-zinc-50
-  pdfHeaderTextColor = '#000000'; // equivalente a text-black
-} else if (brigade?.nombre === 'Brigada C') {
-  pdfHeaderFillColor = '#3b82f6'; // equivalente a bg-blue-500
-  pdfHeaderTextColor = '#000000'; // equivalente a text-black
-} else if (brigade?.nombre === 'Brigada D') {
-  pdfHeaderFillColor = '#dc2626'; // equivalente a bg-red-600
-  pdfHeaderTextColor = '#000000'; // equivalente a text-black
-} else if (brigade?.nombre === 'Brigada E') {
-  pdfHeaderFillColor = '#fde047'; // equivalente a bg-yellow-300
-  pdfHeaderTextColor = '#000000'; // equivalente a text-black
-} else if (brigade?.nombre === 'Brigada F') {
-  pdfHeaderFillColor = '#d1d5db'; // equivalente a bg-gray-300
-  pdfHeaderTextColor = '#4b5563'; // equivalente a text-gray-600
-} else {
-  pdfHeaderFillColor = '#969a85'; // valor predeterminado
-  pdfHeaderTextColor = '#ffffff'; // blanco
-}
+    let pdfHeaderFillColor, pdfHeaderTextColor;
+    if (brigade?.nombre === 'Brigada A') {
+      pdfHeaderFillColor = '#22c55e';
+      pdfHeaderTextColor = '#000000';
+    } else if (brigade?.nombre === 'Brigada B') {
+      pdfHeaderFillColor = '#fafafa';
+      pdfHeaderTextColor = '#000000';
+    } else if (brigade?.nombre === 'Brigada C') {
+      pdfHeaderFillColor = '#3b82f6';
+      pdfHeaderTextColor = '#000000';
+    } else if (brigade?.nombre === 'Brigada D') {
+      pdfHeaderFillColor = '#dc2626';
+      pdfHeaderTextColor = '#000000';
+    } else if (brigade?.nombre === 'Brigada E') {
+      pdfHeaderFillColor = '#fde047';
+      pdfHeaderTextColor = '#000000';
+    } else if (brigade?.nombre === 'Brigada F') {
+      pdfHeaderFillColor = '#d1d5db';
+      pdfHeaderTextColor = '#4b5563';
+    } else {
+      pdfHeaderFillColor = '#969a85';
+      pdfHeaderTextColor = '#ffffff';
+    }
 
     // Ordenar todos los bomberos por prioridad
     const sortedFirefighters = [...firefighters].sort(
@@ -376,7 +391,7 @@ if (brigade?.nombre === 'Brigada A') {
           return [255, 102, 102]; // rojo claro
         }
       } else if (letter === 'C' || letter === 'B') {
-        return [255, 240, 220]; // beige aún más claro
+        return [255, 240, 220]; // beige claro
       }
       return [255, 255, 255];
     };
@@ -392,9 +407,9 @@ if (brigade?.nombre === 'Brigada A') {
       const turnoLower = firefighter.turno.toLowerCase();
       const vehicleInfo =
         (turnoLower === 'mañana' ||
-          turnoLower === 'día completo' ||
-          turnoLower === 'mañana y tarde' ||
-          turnoLower === 'mañana y noche')
+         turnoLower === 'día completo' ||
+         turnoLower === 'mañana y tarde' ||
+         turnoLower === 'mañana y noche')
           ? (vehicleMapping[assignmentValue] || '')
           : '';
       return [
@@ -426,7 +441,6 @@ if (brigade?.nombre === 'Brigada A') {
       }
     });
 
-    // Imprimir en consola para depurar los comentarios
     console.log('guardDetails en exportToPDF:', guardDetails);
 
     // Agregar tabla de comentarios adicionales debajo de la tabla principal
@@ -499,7 +513,7 @@ if (brigade?.nombre === 'Brigada A') {
           {shifts.map(shift => (
             <div key={shift.key} className="bg-gray-700 p-2 rounded-lg">
               <h3 className="text-lg font-semibold mb-2 text-center">{shift.label}</h3>
-              {/* Agregamos una fila separadora en blanco */}
+              {/* Fila separadora en blanco */}
               <table className="w-full text-sm text-left">
                 <thead>
                   <tr>
@@ -547,7 +561,7 @@ if (brigade?.nombre === 'Brigada A') {
                   <tr className="bg-gray-800 text-white">
                     <td colSpan="4" className="py-4 px-4 text-center font-bold">{shift.label}</td>
                   </tr>
-                  {/* Agregamos un separador en blanco antes de las filas de cada turno */}
+                  {/* Separador en blanco */}
                   <tr>
                     <td colSpan="4" className="py-1"></td>
                   </tr>
@@ -569,7 +583,6 @@ if (brigade?.nombre === 'Brigada A') {
                               <option value="" disabled>
                                 Seleccione
                               </option>
-                              {/* Se eliminaron los atributos que deshabilitaban las opciones */}
                               {options.map((option) => (
                                 <option key={option} value={option}>
                                   {option}

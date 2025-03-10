@@ -37,10 +37,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/guard-assignments', [GuardAssignmentController::class, 'index']);
     Route::post('/guard-assignments', [GuardAssignmentController::class, 'store']);
+    Route::put('/guard-assignments/update-or-create', [GuardAssignmentController::class, 'updateOrCreateAssignment']);
     Route::get('/guard-assignments/{id}', [GuardAssignmentController::class, 'show']);
     Route::put('/guard-assignments/{id}', [GuardAssignmentController::class, 'update']);
     Route::delete('/guard-assignments/{id}', [GuardAssignmentController::class, 'destroy']);
-    Route::put('/guard-assignments/update-or-create', [GuardAssignmentController::class, 'updateOrCreateAssignment']);
 
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);

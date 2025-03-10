@@ -224,7 +224,8 @@ class BrigadeController extends Controller
                         'apellido' => $user->apellido,
                         'puesto' => $user->puesto,
                         'telefono' => $user->telefono,
-                        'turno' => 'Mañana y noche'
+                        'turno' => 'Mañana y noche',
+                        'dni' => $user->dni
                     ];
                 } else if ($assignmentsByTurno['Tarde']->id_brigada_destino == $id_brigada && !isset($assignmentsByTurno['Noche'])) {
 
@@ -236,7 +237,8 @@ class BrigadeController extends Controller
                         'apellido' => $user->apellido,
                         'puesto' => $user->puesto,
                         'telefono' => $user->telefono,
-                        'turno' => 'Tarde y noche'
+                        'turno' => 'Tarde y noche',
+                        'dni' => $user->dni
                     ];
                 } else if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada && isset($assignmentsByTurno['Mañana']) && $assignmentsByTurno['Mañana']->id_brigada_destino == $id_brigada) {
 
@@ -248,7 +250,8 @@ class BrigadeController extends Controller
                         'apellido' => $user->apellido,
                         'puesto' => $user->puesto,
                         'telefono' => $user->telefono,
-                        'turno' => 'Mañana'
+                        'turno' => 'Mañana',
+                        'dni' => $user->dni
                     ];
                 } else if (
                     $assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada
@@ -265,7 +268,8 @@ class BrigadeController extends Controller
                         'apellido' => $user->apellido,
                         'puesto' => $user->puesto,
                         'telefono' => $user->telefono,
-                        'turno' => 'Mañana'
+                        'turno' => 'Mañana',
+                        'dni' => $user->dni
                     ];
                 } else if ($assignmentsByTurno['Tarde']->id_brigada_destino == $id_brigada && isset($assignmentsByTurno['Noche']) && $assignmentsByTurno['Noche']->id_brigada_destino != $id_brigada) {
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el ELSE 1 - Turno Tarde");
@@ -276,7 +280,8 @@ class BrigadeController extends Controller
                         'apellido' => $user->apellido,
                         'puesto' => $user->puesto,
                         'telefono' => $user->telefono,
-                        'turno' => 'Tarde'
+                        'turno' => 'Tarde',
+                        'dni' => $user->dni
                     ];
                 } else if (
                     isset($assignmentsByTurno['Tarde']) &&
@@ -294,7 +299,8 @@ class BrigadeController extends Controller
                         'apellido' => $user->apellido,
                         'puesto' => $user->puesto,
                         'telefono' => $user->telefono,
-                        'turno' => 'Mañana'
+                        'turno' => 'Mañana',
+                        'dni' => $user->dni
                     ];
                 }
             } else if (isset($assignmentsByTurno['Noche'])) {
@@ -308,7 +314,8 @@ class BrigadeController extends Controller
                         'apellido'   => $user->apellido,
                         'puesto'     => $user->puesto,
                         'telefono'   => $user->telefono,
-                        'turno'      => 'Noche'
+                        'turno'      => 'Noche',
+                        'dni' => $user->dni
                     ];
                 } else {
                     // Verificar si hay asignación para 'Mañana'
@@ -339,7 +346,8 @@ class BrigadeController extends Controller
                             'apellido'   => $user->apellido,
                             'puesto'     => $user->puesto,
                             'telefono'   => $user->telefono,
-                            'turno'      => 'Mañana y tarde'
+                            'turno'      => 'Mañana y tarde',
+                            'dni' => $user->dni
                         ];
                     }
                 }
@@ -354,7 +362,8 @@ class BrigadeController extends Controller
                         'apellido' => $user->apellido,
                         'puesto' => $user->puesto,
                         'telefono' => $user->telefono,
-                        'turno' => 'Día completo'
+                        'turno' => 'Día completo',
+                        'dni' => $user->dni
                     ];
                 }
             } else if (empty($assignmentsByTurno)) {
@@ -368,7 +377,8 @@ class BrigadeController extends Controller
                         'apellido' => $user->apellido,
                         'puesto' => $user->puesto,
                         'telefono' => $user->telefono,
-                        'turno' => 'Día completo'
+                        'turno' => 'Día completo',
+                        'dni' => $user->dni
                     ];
                 }
             } else {
@@ -386,7 +396,8 @@ class BrigadeController extends Controller
                         'apellido' => $user->apellido,
                         'puesto' => $user->puesto,
                         'telefono' => $user->telefono,
-                        'turno' => 'Día completo'
+                        'turno' => 'Día completo',
+                        'dni' => $user->dni
                     ];
                 }
             }

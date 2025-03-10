@@ -221,7 +221,7 @@ const FirefighterAssignment = () => {
             placeholder="Buscar por nombre y apellido"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 rounded"
+            className="w-full px-4 py-2 rounded bg-gray-700 text-white" // Añadido bg-gray-700 y text-white
           />
         </div>
 
@@ -257,9 +257,8 @@ const FirefighterAssignment = () => {
             <button
               onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages || totalPages === 0}
-              className={`px-4 py-2 rounded ${
-                currentPage === totalPages || totalPages === 0 ? 'bg-gray-500' : 'bg-blue-600 text-white'
-              }`}
+              className={`px-4 py-2 rounded ${currentPage === totalPages || totalPages === 0 ? 'bg-gray-500' : 'bg-blue-600 text-white'
+                }`}
             >
               Siguiente
             </button>

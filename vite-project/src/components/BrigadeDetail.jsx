@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import BrigadesApiService from '../services/BrigadesApiService';
 import GuardsApiService from '../services/GuardsApiService';
 import AddGuardCommentsModal from './AddGuardCommentsModal';
@@ -8,7 +8,7 @@ import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-so
 import dayjs from 'dayjs';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { useSearchParams } from 'react-router-dom';
+import logo from '../assets/logo.png';
 import { useStateContext } from '../contexts/ContextProvider.jsx';
 
 const BrigadeDetail = () => {
@@ -17,7 +17,7 @@ const BrigadeDetail = () => {
   const [brigade, setBrigade] = useState(null);
   const [guardDetails, setGuardDetails] = useState(null);
   const [firefighters, setFirefighters] = useState([]);
-  const [comentarios, setComentarios] = useState(''); // Estado para los comentarios
+  const [comentarios, setComentarios] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,19 +27,22 @@ const BrigadeDetail = () => {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const navigate = useNavigate();
 
+  // Mínimos y prioridad para puestos
   const minimums = {
     1: { Subinspector: 1, Oficial: 1, Operador: 2, Conductor: 3, Bombero: 6 },
     2: { Subinspector: 1, Oficial: 1, Operador: 0, Conductor: 3, Bombero: 6 },
   };
+  // Nota: se cambió la prioridad de puestos según tu ejemplo (Subinspector: 1, Oficial: 2, Operador: 3, Conductor: 4, Bombero: 5)
   const puestoPriority = {
-    Operador: 1,
-    Subinspector: 2,
-    Oficial: 3,
+    Subinspector: 1,
+    Oficial: 2,
+    Operador: 3,
     Conductor: 4,
     Bombero: 5,
   };
 
-  const vehicleMapping = { // Mapeo para vehículos
+  // Mapeo para vehículos (para turno Mañana y variantes)
+  const vehicleMapping = {
     'B1': 'BUL-3-7 / BRP-1',
     'B2': 'BUL-3-7 / BRP-1',
     'B3': 'FSV-3 / BIP-1 / BUL-1 / UMC-1 / UPI-1',
@@ -56,6 +59,41 @@ const BrigadeDetail = () => {
     'C5': 'Apoyo',
   };
 
+  // Antes de renderizar la tabla, calcula los colores según el nombre de la brigada
+  let brigadeColor = '';
+  let nameColor = '';
+
+  switch (brigade?.nombre) {
+    case 'Brigada A':
+      brigadeColor = 'bg-green-500';
+      nameColor = 'text-black';
+      break;
+    case 'Brigada B':
+      brigadeColor = 'bg-zinc-50';
+      nameColor = 'text-black';
+      break;
+    case 'Brigada C':
+      brigadeColor = 'bg-blue-500';
+      nameColor = 'text-black';
+      break;
+    case 'Brigada D':
+      brigadeColor = 'bg-red-600';
+      nameColor = 'text-black';
+      break;
+    case 'Brigada E':
+      brigadeColor = 'bg-yellow-300';
+      nameColor = 'text-black';
+      break;
+    case 'Brigada F':
+      brigadeColor = 'bg-gray-300';
+      nameColor = 'text-gray-600';
+      break;
+    default:
+      brigadeColor = '';
+      nameColor = '';
+  }
+
+
   useEffect(() => {
     const fetchBrigadeDetails = async () => {
       setFirefighters([]);
@@ -64,7 +102,6 @@ const BrigadeDetail = () => {
         setLoading(false);
         return;
       }
-
       try {
         const response = await BrigadesApiService.getFirefightersByBrigadeDebouncing(id_brigada, selectedDate);
         if (response.data.brigade) {
@@ -72,75 +109,95 @@ const BrigadeDetail = () => {
         } else {
           setError('No brigade data found');
         }
-
         setFirefighters(Object.values(response.data.firefighters));
 
         const commentsResponse = await GuardsApiService.getGuard(id_brigada, selectedDate);
-      // Se espera que la respuesta incluya un objeto "guard" con los nuevos campos
-      if (commentsResponse.data.guard) {
-        setGuardDetails(commentsResponse.data.guard);
-        setComentarios(commentsResponse.data.guard.comentarios || '');
-      } else {
-        setGuardDetails(null);
-        setComentarios('');
-      }
-
+        if (commentsResponse.data.guard) {
+          setGuardDetails(commentsResponse.data.guard);
+          setComentarios(commentsResponse.data.guard.comentarios || '');
+        } else {
+          setGuardDetails(null);
+          setComentarios('');
+        }
         setError(null);
       } catch (error) {
-        console.error('Error en fetchBrigadeDetails:', error); // Log completo del error
+        console.error('Error en fetchBrigadeDetails:', error);
         setError('Failed to load brigade details');
       } finally {
         setLoading(false);
       }
     };
-
     fetchBrigadeDetails();
   }, [id_brigada, selectedDate]);
 
+  // Estado para asignaciones. Se guardará por turno (Mañana, Tarde, Noche)
   const [assignments, setAssignments] = useState({
     Mañana: {},
     Tarde: {},
     Noche: {},
   });
-  const options = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'C1', 'C2', 'C3', 'C4', 'C5', 'Operador 1', 'Operador 2'];
+  // Opciones de asignación (se eliminó la restricción única, por lo que no se deshabilitan)
+  const options = ['N1', 'N2', 'N3', 'N4', 'S1', 'S2', 'S3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'C1', 'C2', 'C3', 'C4', 'C5', 'Operador 1', 'Operador 2'];
 
+  // Funciones de modal
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
+  // Actualiza tanto comentarios como guardDetails para que se propaguen al PDF
   const handleUpdateComments = (updatedData) => {
+    console.log('Comentarios actualizados:', updatedData);
     setComentarios(updatedData.comentarios);
+    setGuardDetails(updatedData.guard ? updatedData.guard : updatedData);
   };
 
+  // Función para manejar asignación y propagarla según el turno:
+  // Si se modifica en "Mañana", se propaga a Tarde y Noche. Si se modifica en Tarde o Noche, solo se actualiza ese turno.
   const handleAssignmentChange = (shift, employeeId, value) => {
-    setAssignments((prev) => {
-      const updated = { ...prev };
-      updated[shift] = { ...updated[shift], [employeeId]: value };
-      return updated;
+    setAssignments(prev => {
+      let newAssignments = { ...prev };
+      // Actualizamos el turno actual siempre:
+      newAssignments[shift] = { ...newAssignments[shift], [employeeId]: value };
+      if (shift === 'Mañana') {
+        // Solo propagamos desde Mañana según el turno real del bombero
+        const firefighter = firefighters.find(f => f.id_empleado === employeeId);
+        if (firefighter) {
+          const turno = firefighter.turno.toLowerCase();
+          if (turno === 'día completo') {
+            ["Tarde", "Noche"].forEach(s => {
+              newAssignments[s] = { ...newAssignments[s], [employeeId]: value };
+            });
+          } else if (turno === 'mañana y tarde') {
+            newAssignments["Tarde"] = { ...newAssignments["Tarde"], [employeeId]: value };
+          } else if (turno === 'mañana y noche') {
+            newAssignments["Noche"] = { ...newAssignments["Noche"], [employeeId]: value };
+          }
+        }
+      }
+      return newAssignments;
     });
   };
 
   const getAvailableOptions = (shift) => {
-    const usedOptions = Object.values(assignments[shift]);
-    return options.filter((option) => !usedOptions.includes(option));
+    // Ahora se permiten reutilizar opciones, por lo que no se filtran
+    return options;
   };
 
   const handleCommentSubmit = async () => {
     if (!user || user.type !== 'jefe') return;
-
     setIsUpdating(true);
     try {
       const response = await GuardsApiService.updateGuardComments(
-        id_brigada, // ID de la brigada
-        selectedDate, // Fecha seleccionada
-        comentarios // Comentarios a guardar
+        id_brigada,
+        selectedDate,
+        comentarios
       );
       setComentarios(response.data.comentarios);
+      setGuardDetails(response.data.guard ? response.data.guard : response.data);
     } catch (error) {
       console.error('Error actualizando comentarios:', error);
     } finally {
       setIsUpdating(false);
     }
   };
-
 
   const handlePreviousDay = () => {
     const previousDay = dayjs(selectedDate).subtract(1, 'day').format('YYYY-MM-DD');
@@ -158,14 +215,14 @@ const BrigadeDetail = () => {
       const count = firefighters.filter(firefighter => {
         const isCategory = firefighter.puesto === category;
         const hasShift = [shift, 'Día completo'].includes(firefighter.turno);
-        const isCombinedShift = firefighter.turno === 'Mañana y tarde' && (shift === 'Mañana' || shift === 'Tarde')
-          || firefighter.turno === 'Tarde y noche' && (shift === 'Tarde' || shift === 'Noche') || firefighter.turno === 'Mañana y noche' && (shift === 'Mañana' || shift === 'Noche');
+        const isCombinedShift =
+          (firefighter.turno === 'Mañana y tarde' && (shift === 'Mañana' || shift === 'Tarde')) ||
+          (firefighter.turno === 'Tarde y noche' && (shift === 'Tarde' || shift === 'Noche')) ||
+          (firefighter.turno === 'Mañana y noche' && (shift === 'Mañana' || shift === 'Noche'));
         return isCategory && (hasShift || isCombinedShift);
       }).length;
       return { category, count };
     });
-
-    // Añadir categoría "Tropa" si el parque es 2
     if (brigade?.park?.id_parque === 2) {
       const tropaCount = counts.reduce((sum, { category, count }) => {
         if (['Bombero', 'Conductor', 'Operador'].includes(category)) {
@@ -175,147 +232,251 @@ const BrigadeDetail = () => {
       }, 0);
       counts.push({ category: 'Tropa', count: tropaCount });
     }
-
     return counts;
   };
 
   const checkMinimums = (category, count) => {
     const parkId = brigade?.park?.id_parque;
     let minimumCount = minimums[parkId]?.[category] || 0;
-
-    // Definir mínimo para "Tropa" en el parque 2
     if (category === 'Tropa' && parkId === 2) {
-      minimumCount = 10; // Mínimo específico para "Tropa"
+      minimumCount = 10;
     }
-
     return { isBelowMinimum: count < minimumCount, minimumCount };
   };
 
   const filterFirefightersByShift = (shift) => {
     return firefighters
       .filter(firefighter =>
-        firefighter.turno === shift || // Turno exacto
-        firefighter.turno === 'Día completo' || // Día completo aplica a todos los turnos
-        (shift === 'Mañana' && ['Mañana y tarde', 'Mañana y noche'].includes(firefighter.turno)) || // Turno combinado que incluye la mañana
-        (shift === 'Tarde' && ['Mañana y tarde', 'Tarde y noche'].includes(firefighter.turno)) || // Turno combinado que incluye la tarde
-        (shift === 'Noche' && ['Tarde y noche', 'Mañana y noche'].includes(firefighter.turno)) // Turno combinado que incluye la noche
+        firefighter.turno === shift ||
+        firefighter.turno === 'Día completo' ||
+        (shift === 'Mañana' && ['Mañana y tarde', 'Mañana y noche'].includes(firefighter.turno)) ||
+        (shift === 'Tarde' && ['Mañana y tarde', 'Tarde y noche'].includes(firefighter.turno)) ||
+        (shift === 'Noche' && ['Tarde y noche', 'Mañana y noche'].includes(firefighter.turno))
       )
-      .sort((a, b) => puestoPriority[a.puesto] - puestoPriority[b.puesto]); // Ordenar por prioridad
+      .sort((a, b) => puestoPriority[a.puesto] - puestoPriority[b.puesto]);
   };
 
+  // Función auxiliar para obtener el valor asignado para un bombero sin duplicados
+  const getAssignmentValue = (firefighter) => {
+    const possibleShifts = ["Mañana", "Tarde", "Noche"];
+    let values = [];
+    possibleShifts.forEach((shift) => {
+      if (assignments[shift] && assignments[shift][firefighter.id_empleado]) {
+        values.push(assignments[shift][firefighter.id_empleado]);
+      }
+    });
+    const uniqueValues = [...new Set(values)];
+    return uniqueValues.length > 0 ? uniqueValues.join(', ') : 'No asignado';
+  };
 
+  // Función auxiliar para calcular el número de radio según la asignación y parque
+  const getRadioNumber = (assignment, parkId) => {
+    if (!assignment || assignment === 'No asignado') return '';
+    const cleanAssignment = assignment.trim();
+    const letter = cleanAssignment.charAt(0).toUpperCase();
+    const number = parseInt(cleanAssignment.slice(1), 10);
+    if (isNaN(number)) return '';
 
+    if (letter === 'N') {
+      if (number === 1) return 1;
+      if (number === 2) return 3;
+      if (number === 3) return 5;
+    } else if (letter === 'S') {
+      if (number === 1) return 2;
+      if (number === 2) return 4;
+      if (number === 3) return 6;
+    } else if (letter === 'C') {
+      if (parkId === 2) {
+        if (number === 1) return 8;
+        if (number === 2) return 10;
+        if (number === 3) return 12;
+        if (number === 4) return 14;
+        if (number === 5) return 16;
+      } else {
+        if (number === 1) return 7;
+        if (number === 2) return 9;
+        if (number === 3) return 11;
+        if (number === 4) return 13;
+        if (number === 5) return 15;
+      }
+    } else if (letter === 'B') {
+      if (parkId === 2) {
+        return 16 + number * 2;
+      } else {
+        return 15 + number * 2;
+      }
+    }
+    return '';
+  };
+
+  // Función para exportar a PDF: genera una única tabla con columnas: Nombre, Puesto, Turno, Asignación y Vehículos.
+  // Luego agrega una tabla adicional con los comentarios adicionales dividida en dos filas.
   const exportToPDF = () => {
     const doc = new jsPDF();
+    // Añadir logo en la esquina superior izquierda
+    doc.addImage(logo, 'PNG', 10, 10, 20, 30);
+
     doc.setFont('helvetica', 'bold');
     const pageWidth = doc.internal.pageSize.getWidth();
-  
-    // Encabezado: Nombre del parque, nombre de la brigada y fecha completa
+
+    // Encabezado principal (ajustado para no solapar con el logo)
     const parqueNombre = brigade?.park ? brigade.park.nombre : 'Parque no disponible';
     const brigadeNombre = brigade ? brigade.nombre : 'Brigada no disponible';
     const fechaCompleta = dayjs(selectedDate).format('[Día] D [de] MMMM [de] YYYY');
-    
     doc.setFontSize(16);
-    doc.text(parqueNombre, pageWidth / 2, 15, { align: 'center' });
-    doc.text(brigadeNombre, pageWidth / 2, 25, { align: 'center' });
+    doc.text(parqueNombre, pageWidth / 2, 20, { align: 'center' });
+    doc.text(brigadeNombre, pageWidth / 2, 30, { align: 'center' });
     doc.setFontSize(14);
-    doc.text(fechaCompleta, pageWidth / 2, 35, { align: 'center' });
-  
-    // Salto de línea antes de la tabla principal
+    doc.text(fechaCompleta, pageWidth / 2, 40, { align: 'center' });
+
     const startY = 45;
-  
-    // Generar la lista de bomberos ordenada por prioridad de puesto
+
+    // Configurar colores del encabezado del PDF según la brigada
+let pdfHeaderFillColor, pdfHeaderTextColor;
+if (brigade?.nombre === 'Brigada A') {
+  pdfHeaderFillColor = '#22c55e'; // verde equivalente a bg-green-500
+  pdfHeaderTextColor = '#000000'; // equivalente a text-black
+} else if (brigade?.nombre === 'Brigada B') {
+  pdfHeaderFillColor = '#fafafa'; // equivalente a bg-zinc-50
+  pdfHeaderTextColor = '#000000'; // equivalente a text-black
+} else if (brigade?.nombre === 'Brigada C') {
+  pdfHeaderFillColor = '#3b82f6'; // equivalente a bg-blue-500
+  pdfHeaderTextColor = '#000000'; // equivalente a text-black
+} else if (brigade?.nombre === 'Brigada D') {
+  pdfHeaderFillColor = '#dc2626'; // equivalente a bg-red-600
+  pdfHeaderTextColor = '#000000'; // equivalente a text-black
+} else if (brigade?.nombre === 'Brigada E') {
+  pdfHeaderFillColor = '#fde047'; // equivalente a bg-yellow-300
+  pdfHeaderTextColor = '#000000'; // equivalente a text-black
+} else if (brigade?.nombre === 'Brigada F') {
+  pdfHeaderFillColor = '#d1d5db'; // equivalente a bg-gray-300
+  pdfHeaderTextColor = '#4b5563'; // equivalente a text-gray-600
+} else {
+  pdfHeaderFillColor = '#969a85'; // valor predeterminado
+  pdfHeaderTextColor = '#ffffff'; // blanco
+}
+
+    // Ordenar todos los bomberos por prioridad
     const sortedFirefighters = [...firefighters].sort(
       (a, b) => puestoPriority[a.puesto] - puestoPriority[b.puesto]
     );
-  
-    const headers = ['Nombre', 'Puesto', 'Teléfono', 'Turno', 'Asignación', 'Vehículos'];
-    const body = sortedFirefighters.map((firefighter) => {
-      let assignmentValue = 'No asignado';
-      if (firefighter.turno in assignments && assignments[firefighter.turno][firefighter.id_empleado]) {
-        assignmentValue = assignments[firefighter.turno][firefighter.id_empleado];
+
+    // Función auxiliar para determinar el color de fondo de la celda "Nombre"
+    const getNameCellBgColor = (assignment, puesto) => {
+      if (puesto.toLowerCase() === 'operador') return [255, 255, 255];
+      if (!assignment || assignment === 'No asignado') return [255, 255, 255];
+
+      const cleanAssignment = assignment.trim().toUpperCase();
+      const letter = cleanAssignment.charAt(0);
+
+      if (letter === 'N' || letter === 'S') {
+        if (cleanAssignment === 'N1' || cleanAssignment === 'S1') {
+          return [255, 255, 153]; // amarillo claro
+        } else {
+          return [255, 102, 102]; // rojo claro
+        }
+      } else if (letter === 'C' || letter === 'B') {
+        return [255, 240, 220]; // beige aún más claro
       }
-      // Para el turno "Mañana", se muestra la información del vehículo asignado según el mapeo
-      const vehicleInfo = firefighter.turno === 'Mañana' ? (vehicleMapping[assignmentValue] || '') : '';
+      return [255, 255, 255];
+    };
+
+    // Construir la tabla principal sin la columna de teléfono
+    const headers = ['Nombre', 'Puesto', 'Turno', 'Asignación', 'Vehículos'];
+    const body = sortedFirefighters.map((firefighter) => {
+      const assignmentValue = getAssignmentValue(firefighter);
+      const radio = assignmentValue !== 'No asignado'
+        ? ` (${getRadioNumber(assignmentValue, brigade.park?.id_parque)})`
+        : '';
+      const fullName = `${firefighter.nombre} ${firefighter.apellido}${radio}`;
+      const turnoLower = firefighter.turno.toLowerCase();
+      const vehicleInfo =
+        (turnoLower === 'mañana' ||
+          turnoLower === 'día completo' ||
+          turnoLower === 'mañana y tarde' ||
+          turnoLower === 'mañana y noche')
+          ? (vehicleMapping[assignmentValue] || '')
+          : '';
       return [
-        `${firefighter.nombre} ${firefighter.apellido}`,
+        fullName,
         firefighter.puesto,
         firefighter.turno,
         assignmentValue,
         vehicleInfo,
       ];
     });
-  
-    // Crear la tabla principal con un poco más de espaciado
+
+    // Configuración de la tabla principal
     doc.autoTable({
       startY,
       head: [headers],
       body: body,
       theme: 'striped',
-      styles: { halign: 'center', cellPadding: 3.6, fontSize: 10 },
-      headStyles: { fillColor: [22, 160, 133], textColor: 255 },
+      styles: { halign: 'center', cellPadding: 2.5, fontSize: 9 },
+      headStyles: { fillColor: pdfHeaderFillColor, textColor: pdfHeaderTextColor, fontSize: 10 },
       alternateRowStyles: { fillColor: [240, 240, 240] },
-      margin: { top: startY },
+      margin: { top: startY, horizontal: 10 },
+      didParseCell: function (data) {
+        if (data.column.index === 0 && data.section === 'body') {
+          const employee = sortedFirefighters[data.row.index];
+          const assignmentValue = getAssignmentValue(employee);
+          const bgColor = getNameCellBgColor(assignmentValue, employee.puesto);
+          data.cell.styles.fillColor = bgColor;
+        }
+      }
     });
-  
-    // Posición final de la tabla principal
-    const finalY = doc.previousAutoTable.finalY + 10;
-  
-    // Sección de comentarios (se muestran en dos filas de 3 columnas cada una)
+
+    // Imprimir en consola para depurar los comentarios
+    console.log('guardDetails en exportToPDF:', guardDetails);
+
+    // Agregar tabla de comentarios adicionales debajo de la tabla principal
     if (guardDetails) {
-      const commentFields = [
-        'revision',
-        'practica',
-        'basura',
-        'anotaciones',
-        'incidencias_de_trafico',
-        'mando',
-      ];
-      // Primer grupo: Revisión, Práctica, Basura
-      const commentHeaders1 = commentFields.slice(0, 3).map(field =>
-        field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+      const commentsData = guardDetails.guard || guardDetails;
+      // Dividir los campos en dos filas para mayor espacio
+      const commentFieldsRow1 = ['revision', 'practica', 'basura'];
+      const commentFieldsRow2 = ['anotaciones', 'incidencias_de_trafico', 'mando'];
+      const headersRow1 = commentFieldsRow1.map(field =>
+        field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
       );
-      const commentValues1 = commentFields.slice(0, 3).map(field => guardDetails[field] || '');
-    
-      // Segundo grupo: Anotaciones, Incidencias De Tráfico, Mando
-      const commentHeaders2 = commentFields.slice(3).map(field =>
-        field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+      const headersRow2 = commentFieldsRow2.map(field =>
+        field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
       );
-      const commentValues2 = commentFields.slice(3).map(field => guardDetails[field] || '');
-    
-      // Tabla para el primer grupo de comentarios
+      const valuesRow1 = commentFieldsRow1.map(field => commentsData[field] || '');
+      const valuesRow2 = commentFieldsRow2.map(field => commentsData[field] || '');
+
+      const finalY = doc.previousAutoTable ? doc.previousAutoTable.finalY + 10 : startY + 10;
+
+      // Primera fila de comentarios
       doc.autoTable({
         startY: finalY,
-        head: [commentHeaders1],
-        body: [commentValues1],
+        head: [headersRow1],
+        body: [valuesRow1],
         theme: 'grid',
-        styles: { halign: 'center', cellPadding: 6, fontSize: 11 },
+        styles: { halign: 'center', cellPadding: 4, fontSize: 9 },
         headStyles: { fillColor: [52, 73, 94], textColor: 255 },
-        margin: { left: 14, right: 14 },
+        margin: { left: 10, right: 10 },
       });
-    
-      // Tabla para el segundo grupo de comentarios, con un pequeño margen superior
+
+      // Segunda fila de comentarios
       doc.autoTable({
-        startY: doc.previousAutoTable.finalY + 5,
-        head: [commentHeaders2],
-        body: [commentValues2],
+        startY: doc.previousAutoTable.finalY + 4,
+        head: [headersRow2],
+        body: [valuesRow2],
         theme: 'grid',
-        styles: { halign: 'center', cellPadding: 6, fontSize: 11 },
+        styles: { halign: 'center', cellPadding: 4, fontSize: 9 },
         headStyles: { fillColor: [52, 73, 94], textColor: 255 },
-        margin: { left: 14, right: 14 },
+        margin: { left: 10, right: 10 },
       });
     }
-  
+
     doc.save('Bomberos_Por_Turno.pdf');
   };
-  
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!brigade) return <div>No brigade data available.</div>;
 
   const { nombre, park } = brigade;
-
   const shifts = [
     { label: 'Mañana', key: 'Mañana' },
     { label: 'Tarde', key: 'Tarde' },
@@ -334,12 +495,11 @@ const BrigadeDetail = () => {
         <p className="text-center"><strong>Parque:</strong> {park ? park.nombre : 'No disponible'}</p>
         <p className="text-center"><strong>Número de Bomberos:</strong> {firefighters.length}</p>
 
-
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {shifts.map(shift => (
             <div key={shift.key} className="bg-gray-700 p-2 rounded-lg">
               <h3 className="text-lg font-semibold mb-2 text-center">{shift.label}</h3>
+              {/* Agregamos una fila separadora en blanco */}
               <table className="w-full text-sm text-left">
                 <thead>
                   <tr>
@@ -348,6 +508,9 @@ const BrigadeDetail = () => {
                   </tr>
                 </thead>
                 <tbody>
+                  <tr>
+                    <td colSpan="2" className="py-1"></td>
+                  </tr>
                   {categorizeFirefighters(shift.key).map((data, index) => {
                     const { isBelowMinimum, minimumCount } = checkMinimums(data.category, data.count);
                     return (
@@ -368,20 +531,25 @@ const BrigadeDetail = () => {
         <h2 className="text-xl font-bold mt-6 mb-6 text-center">Bomberos Asignados</h2>
         <div className="overflow-x-auto w-full rounded-lg">
           <table className="w-full text-center bg-gray-700 rounded-lg border-2 border-gray-700">
-            <thead className='bg-gray-600'>
+            <thead className={`${brigadeColor} ${nameColor}`}>
               <tr>
                 <th className="py-2 px-2">Nombre</th>
                 <th className="py-2 px-2">Puesto</th>
                 <th className="py-2 px-2">Turno Asignado</th>
                 {['mando', 'jefe'].includes(user.type) && (
-                  <th className="py-2 px-2">Puesto</th>
-                )}    </tr>
+                  <th className="py-2 px-2">Asignación</th>
+                )}
+              </tr>
             </thead>
             <tbody>
               {shifts.map(shift => (
-                <>
-                  <tr key={`header-${shift.key}`} className="bg-gray-800 text-white">
-                    <td colSpan="5" className="py-4 px-4 text-center font-bold">{shift.label}</td>
+                <React.Fragment key={shift.key}>
+                  <tr className="bg-gray-800 text-white">
+                    <td colSpan="4" className="py-4 px-4 text-center font-bold">{shift.label}</td>
+                  </tr>
+                  {/* Agregamos un separador en blanco antes de las filas de cada turno */}
+                  <tr>
+                    <td colSpan="4" className="py-1"></td>
                   </tr>
                   {filterFirefightersByShift(shift.key).length > 0 ? (
                     filterFirefightersByShift(shift.key).map((firefighter, index) => (
@@ -401,38 +569,31 @@ const BrigadeDetail = () => {
                               <option value="" disabled>
                                 Seleccione
                               </option>
+                              {/* Se eliminaron los atributos que deshabilitaban las opciones */}
                               {options.map((option) => (
-                                <option
-                                  key={option}
-                                  value={option}
-                                  disabled={
-                                    Object.entries(assignments[shift.key]).some(
-                                      ([_, selectedOption]) => selectedOption === option
-                                    )
-                                  }
-                                >
+                                <option key={option} value={option}>
                                   {option}
                                 </option>
                               ))}
                             </select>
                           )}
                         </td>
-
                       </tr>
                     ))
                   ) : (
-                    <tr key={`no-firefighters-${shift.key}`}>
+                    <tr>
                       <td colSpan="4" className="text-center py-4">No hay bomberos asignados para este turno.</td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
-
         </div>
 
-        <button onClick={exportToPDF} className="bg-green-500 text-white px-4 py-2 rounded mt-4">Exportar a PDF</button>
+        <button onClick={exportToPDF} className="bg-green-500 text-white px-4 py-2 rounded mt-4">
+          Exportar a PDF
+        </button>
 
         <div className="mt-6 w-full">
           <h2 className="text-xl font-bold mb-4">Comentarios</h2>

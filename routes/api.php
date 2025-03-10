@@ -17,6 +17,7 @@ use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\IncidentController;
+use App\Http\Controllers\GuardAssignmentController;
 
 
 
@@ -33,6 +34,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/firefighters-assignments/available-firefighters-no-adjacent-days', [FirefighterAssignmentController::class, 'availableFirefightersNoAdjacentDays']);
     Route::get('/firefighters-assignments/no-today-and-tomorrow', [FirefighterAssignmentController::class, 'availableFirefightersNoTodayAndTomorrow']);
     Route::get('/firefighters-assignments/no-today-and-yesterday', [FirefighterAssignmentController::class, 'availableFirefightersNoTodayAndYesterday']);
+
+    Route::get('/guard-assignments', [GuardAssignmentController::class, 'index']);
+    Route::post('/guard-assignments', [GuardAssignmentController::class, 'store']);
+    Route::get('/guard-assignments/{id}', [GuardAssignmentController::class, 'show']);
+    Route::put('/guard-assignments/{id}', [GuardAssignmentController::class, 'update']);
+    Route::delete('/guard-assignments/{id}', [GuardAssignmentController::class, 'destroy']);
+    Route::put('/guard-assignments/update-or-create', [GuardAssignmentController::class, 'updateOrCreateAssignment']);
 
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);
@@ -80,7 +88,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/guards/by-brigade-and-date', [GuardController::class, 'getGuardByBrigadeAndDate']);
     Route::put('/guards/{id}/update-schedule', [GuardController::class, 'updateSchedule']);
     Route::put('/guards/update-comments', [GuardController::class, 'updateComments']);
-    
+
 
 
     Route::get('/firefighters-assignments', [FirefighterAssignmentController::class, 'index']);
@@ -174,7 +182,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('/firefighters-assignments/{id}/move-to-bottom/{column}', [FirefighterAssignmentController::class, 'moveToBottom']);
     Route::post('firefighters-assignments/require-firefighter', [FirefighterAssignmentController::class, 'requireFirefighter']);
 
-    
+
 
 
 

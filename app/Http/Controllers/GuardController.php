@@ -1,9 +1,5 @@
 <?php
-
-// App\Http\Controllers\GuardController.php
-
 namespace App\Http\Controllers;
-
 use App\Models\Guard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;

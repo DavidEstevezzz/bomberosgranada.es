@@ -1,7 +1,7 @@
 import BaseApiService from './BaseApiService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const API_URL = `${API_BASE_URL}/intervention`;
+const API_URL = `${API_BASE_URL}/intervenciones`;
 
 class InterventionApiService {
   /**

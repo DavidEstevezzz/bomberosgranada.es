@@ -1,32 +1,16 @@
 // src/components/AddInterventionModal.jsx
 import React, { useState, useEffect } from 'react';
 import InterventionApiService from '../services/InterventionApiService';
-import UsuariosApiService from '../services/UsuariosApiService';
 
-const AddInterventionModal = ({ show, onClose, onAdded, idGuard }) => {
+const AddInterventionModal = ({ show, onClose, onAdded, idGuard, firefighters }) => {
   const [formData, setFormData] = useState({
     id_guard: idGuard,
     parte: '',
     tipo: '',
     mando: '',
   });
-  const [users, setUsers] = useState([]);
 
-  useEffect(() => {
-    if (show) {
-      const fetchUsers = async () => {
-        try {
-          const response = await UsuariosApiService.getUsuarios();
-          setUsers(response.data);
-        } catch (error) {
-          console.error('Error fetching users:', error);
-        }
-      };
-      fetchUsers();
-    }
-  }, [show]);
-
-  // Actualizar el id_guard en caso de cambios en el prop
+  // Actualiza el id_guard en caso de cambios en el prop
   useEffect(() => {
     setFormData((prev) => ({ ...prev, id_guard: idGuard }));
   }, [idGuard]);
@@ -82,11 +66,12 @@ const AddInterventionModal = ({ show, onClose, onAdded, idGuard }) => {
             className="w-full p-2 rounded bg-gray-700 text-white"
           >
             <option value="">Seleccione Mando</option>
-            {users.map((user) => (
-              <option key={user.id_empleado} value={user.id_empleado}>
-                {user.nombre} {user.apellido}
-              </option>
-            ))}
+            {firefighters &&
+              firefighters.map((f) => (
+                <option key={f.id_empleado} value={f.id_empleado}>
+                  {f.nombre} {f.apellido}
+                </option>
+              ))}
           </select>
           <div className="flex justify-end space-x-2">
             <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">

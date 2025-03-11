@@ -15,6 +15,8 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import logo from '../assets/logo.png';
 import { useStateContext } from '../contexts/ContextProvider.jsx';
+import { useDarkMode } from '../contexts/DarkModeContext';
+
 
 const BrigadeDetail = () => {
   const { user } = useStateContext();
@@ -31,6 +33,8 @@ const BrigadeDetail = () => {
   const initialDate = searchParams.get('date') || dayjs().format('YYYY-MM-DD');
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const navigate = useNavigate();
+  const { darkMode } = useDarkMode();
+
 
   // Mínimos y prioridad para puestos
   const minimums = {
@@ -703,7 +707,7 @@ const BrigadeDetail = () => {
             </div>
             <InterventionsTable
               idGuard={guardDetails?.id}
-              darkMode={false} // o la variable darkMode si la tienes definida
+              darkMode={darkMode}
               refreshTrigger={refreshInterventions}
               onEditIntervention={handleEditIntervention}
               onDeleteIntervention={handleDeleteIntervention}
@@ -716,14 +720,15 @@ const BrigadeDetail = () => {
             onClose={() => setShowAddInterventionModal(false)}
             onAdded={() => setRefreshInterventions((prev) => !prev)}
             idGuard={guardDetails?.id}
+            firefighters={firefighters.filter((f) => f.puesto === 'Subinspector')}
           />
 
-          {/* Modal para editar intervención */}
           <EditInterventionModal
             show={showEditInterventionModal}
             intervention={selectedIntervention}
             onClose={() => setShowEditInterventionModal(false)}
             onEdited={() => setRefreshInterventions((prev) => !prev)}
+            firefighters={firefighters.filter((f) => f.puesto === 'Subinspector')}
           />
 
           <AddGuardCommentsModal

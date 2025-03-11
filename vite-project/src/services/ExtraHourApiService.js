@@ -50,6 +50,11 @@ class ExtraHoursApiService {
   async deleteExtraHour(id) {
     return await BaseApiService.delete(`${API_URL}/${id}`);
   }
+
+  async getExtraHoursByMonth(month) {
+    return await BaseApiService.get(`${API_BASE_URL}/extra-hours-by-month?month=${month}`);
+  }
+  
 }
 
 export default new ExtraHoursApiService();

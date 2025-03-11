@@ -10,6 +10,7 @@ import IncidentApiService from '../services/IncidentApiService';
 import AddIncidentModal from '../components/AddIncidentModal';
 import IncidentDetailModal from '../components/IncidentDetailModal';
 import EditIncidentModal from '../components/EditIncidentModal';
+import ResolveIncidentModal from '../components/ResolveIncidentModal';
 
 
 const IncidentListPage = () => {
@@ -49,7 +50,7 @@ const IncidentListPage = () => {
     setSelectedIncident(incident);
     setIsResolveModalOpen(true);
   };
-  
+
   const fetchIncidents = async () => {
     setLoading(true);
     try {
@@ -441,7 +442,7 @@ const IncidentListPage = () => {
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
                       <button
-                        onClick={() => handleResolve(incident.id_incidencia)}
+                        onClick={() => openResolveModal(incident)}
                         className="bg-green-600 text-white px-3 py-1 rounded"
                       >
                         Resuelta
@@ -557,8 +558,8 @@ const IncidentListPage = () => {
                       ) : null}
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
-                      <button
-                        onClick={() => handleResolve(incident.id_incidencia)}
+                    <button
+                        onClick={() => openResolveModal(incident)}
                         className="bg-green-600 text-white px-3 py-1 rounded"
                       >
                         Resuelta

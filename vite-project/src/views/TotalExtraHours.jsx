@@ -5,68 +5,33 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
 const TotalExtraHours = () => {
-  const [extraHours, setExtraHours] = useState([]);
   const [groupedExtraHours, setGroupedExtraHours] = useState([]);
   const [currentMonth, setCurrentMonth] = useState(dayjs().format('YYYY-MM'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Se obtiene la data filtrada por mes directamente del backend
   useEffect(() => {
-    const fetchExtraHours = async () => {
+    const fetchExtraHoursByMonth = async () => {
       setLoading(true);
       try {
-        const response = await ExtraHourApiService.getExtraHours();
+        const response = await ExtraHourApiService.getExtraHoursByMonth(currentMonth);
         if (response.data) {
-          const data = response.data;
-          setExtraHours(data);
-          filterExtraHoursByMonth(data, currentMonth);
+          setGroupedExtraHours(response.data);
           setError(null);
         } else {
           throw new Error('No extra hours data returned from the API');
         }
       } catch (error) {
-        console.error('Failed to fetch extra hours:', error);
+        console.error('Failed to fetch extra hours by month:', error);
         setError('Failed to load extra hours');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchExtraHours();
+    fetchExtraHoursByMonth();
   }, [currentMonth]);
-
-  const filterExtraHoursByMonth = (extraHoursData, month) => {
-    const filteredData = extraHoursData.filter((extraHour) => {
-      const hourDate = dayjs(extraHour.fecha);
-      return hourDate.format('YYYY-MM') === month;
-    });
-
-    groupAndSumExtraHours(filteredData);
-  };
-
-  const groupAndSumExtraHours = (extraHoursData) => {
-    const groupedData = extraHoursData.reduce((acc, extraHour) => {
-      const { id_empleado, horas_diurnas, horas_nocturnas, salarie, user } = extraHour;
-
-      if (!acc[id_empleado]) {
-        acc[id_empleado] = {
-          id_empleado,
-          nombre: user.nombre,
-          apellido: user.apellido,
-          horas_diurnas,
-          horas_nocturnas,
-          total_salary: horas_diurnas * salarie.precio_diurno + horas_nocturnas * salarie.precio_nocturno,
-        };
-      } else {
-        acc[id_empleado].horas_diurnas += horas_diurnas;
-        acc[id_empleado].horas_nocturnas += horas_nocturnas;
-        acc[id_empleado].total_salary += horas_diurnas * salarie.precio_diurno + horas_nocturnas * salarie.precio_nocturno;
-      }
-      return acc;
-    }, {});
-
-    setGroupedExtraHours(Object.values(groupedData));
-  };
 
   const handlePreviousMonth = () => {
     const newMonth = dayjs(currentMonth).subtract(1, 'month').format('YYYY-MM');
@@ -81,8 +46,7 @@ const TotalExtraHours = () => {
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.text(`Horas Extras - ${dayjs(currentMonth).format('MMMM YYYY')}`, 10, 10);
-    
-    // Configuración de la tabla para `jspdf-autotable`
+
     doc.autoTable({
       head: [['Nombre', 'Apellido', 'Horas Diurnas', 'Horas Nocturnas', 'Total Salario']],
       body: groupedExtraHours.map((extraHour) => [
@@ -92,7 +56,7 @@ const TotalExtraHours = () => {
         extraHour.horas_nocturnas,
         `${extraHour.total_salary.toFixed(2)} €`
       ]),
-      startY: 20, // Posición vertical para la tabla
+      startY: 20,
     });
 
     doc.save(`Horas_Extras_${currentMonth}.pdf`);
@@ -104,11 +68,19 @@ const TotalExtraHours = () => {
   return (
     <div className="p-4">
       <div className="flex flex-col md:flex-row items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-white mb-4 md:mb-0">Horas Extras - {dayjs(currentMonth).format('MMMM YYYY')}</h1>
+        <h1 className="text-2xl font-bold text-white mb-4 md:mb-0">
+          Horas Extras - {dayjs(currentMonth).format('MMMM YYYY')}
+        </h1>
         <div className="flex items-center space-x-2">
-          <button onClick={handlePreviousMonth} className="bg-blue-500 text-white px-4 py-2 rounded">Mes Anterior</button>
-          <button onClick={handleNextMonth} className="bg-blue-500 text-white px-4 py-2 rounded">Mes Siguiente</button>
-          <button onClick={exportToPDF} className="bg-green-500 text-white px-4 py-2 rounded">Exportar a PDF</button>
+          <button onClick={handlePreviousMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
+            Mes Anterior
+          </button>
+          <button onClick={handleNextMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
+            Mes Siguiente
+          </button>
+          <button onClick={exportToPDF} className="bg-green-500 text-white px-4 py-2 rounded">
+            Exportar a PDF
+          </button>
         </div>
       </div>
       <div className="bg-gray-800 text-white p-4 rounded-lg">
@@ -126,7 +98,9 @@ const TotalExtraHours = () => {
             <tbody>
               {groupedExtraHours.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-4">No hay horas extras para este mes</td>
+                  <td colSpan="5" className="text-center py-4">
+                    No hay horas extras para este mes
+                  </td>
                 </tr>
               ) : (
                 groupedExtraHours.map((extraHour) => (

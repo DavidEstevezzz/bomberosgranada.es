@@ -101,6 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/guards/{id}', [GuardController::class, 'show']);
 
     Route::get('/extra_hours', [Extra_hourController::class, 'index']);
+    Route::get('extra-hours-by-month', [Extra_hourController::class, 'getExtraHoursByMonth']);
     Route::get('/extra_hours/{id}', [Extra_hourController::class, 'show']);
 
     Route::get('/settings', [SettingController::class, 'index']);

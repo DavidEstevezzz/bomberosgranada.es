@@ -139,7 +139,9 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
           <div className="grid gap-4 mb-4 sm:grid-cols-2">
             {/* Tipo de Incidencia y selector condicional */}
             <div className="sm:col-span-1">
-              <label htmlFor="tipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Tipo de Incidencia</label>
+              <label htmlFor="tipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Tipo de Incidencia
+              </label>
               <select
                 name="tipo"
                 id="tipo"
@@ -158,7 +160,9 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
               {/* Selector condicional para vehículo o personal justo debajo del tipo */}
               {formValues.tipo === 'vehiculo' && (
                 <div className="mt-4">
-                  <label htmlFor="matricula" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Vehículo</label>
+                  <label htmlFor="matricula" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Vehículo
+                  </label>
                   <input
                     type="text"
                     placeholder="Buscar vehículo..."
@@ -176,7 +180,9 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
                   >
                     <option value="">Seleccione un vehículo</option>
                     {filteredVehicles.map((vehicle) => (
-                      <option key={vehicle.matricula} value={vehicle.matricula}>{vehicle.nombre}</option>
+                      <option key={vehicle.matricula} value={vehicle.matricula}>
+                        {vehicle.nombre}
+                      </option>
                     ))}
                   </select>
                   {errorMessages.matricula && <span className="text-red-500 text-sm">{errorMessages.matricula}</span>}
@@ -184,7 +190,9 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
               )}
               {formValues.tipo === 'personal' && (
                 <div className="mt-4">
-                  <label htmlFor="id_empleado2" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Empleado</label>
+                  <label htmlFor="id_empleado2" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Empleado
+                  </label>
                   <input
                     type="text"
                     placeholder="Buscar empleado..."
@@ -214,7 +222,9 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
 
             {/* Fecha */}
             <div className="sm:col-span-1">
-              <label htmlFor="fecha" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Fecha</label>
+              <label htmlFor="fecha" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Fecha
+              </label>
               <input
                 type="date"
                 name="fecha"
@@ -229,7 +239,9 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
 
             {/* Parque */}
             <div className="sm:col-span-1">
-              <label htmlFor="id_parque" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Parque</label>
+              <label htmlFor="id_parque" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Parque
+              </label>
               <select
                 name="id_parque"
                 id="id_parque"
@@ -240,26 +252,52 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
               >
                 <option value="">Seleccione un parque</option>
                 {parks.map((park) => (
-                  <option key={park.id_parque} value={park.id_parque}>{park.nombre}</option>
+                  <option key={park.id_parque} value={park.id_parque}>
+                    {park.nombre}
+                  </option>
                 ))}
               </select>
               {errorMessages.id_parque && <span className="text-red-500 text-sm">{errorMessages.id_parque}</span>}
             </div>
 
-            {/* Descripción */}
-            <div className="sm:col-span-2">
-              <label htmlFor="descripcion" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Descripción</label>
-              <textarea
-                name="descripcion"
-                id="descripcion"
-                value={formValues.descripcion}
+            {/* Nivel */}
+            <div className="sm:col-span-1">
+              <label htmlFor="nivel" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Nivel
+              </label>
+              <select
+                name="nivel"
+                id="nivel"
+                value={formValues.nivel}
                 onChange={handleChange}
                 className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
                 required
-              ></textarea>
-              {errorMessages.descripcion && <span className="text-red-500 text-sm">{errorMessages.descripcion}</span>}
+              >
+                <option value="">Seleccione un nivel</option>
+                <option value="bajo">Bajo</option>
+                <option value="medio">Medio</option>
+                <option value="alto">Alto</option>
+              </select>
+              {errorMessages.nivel && <span className="text-red-500 text-sm">{errorMessages.nivel}</span>}
             </div>
           </div>
+
+          {/* Descripción */}
+          <div className="sm:col-span-2 mb-4">
+            <label htmlFor="descripcion" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Descripción
+            </label>
+            <textarea
+              name="descripcion"
+              id="descripcion"
+              value={formValues.descripcion}
+              onChange={handleChange}
+              className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+              required
+            ></textarea>
+            {errorMessages.descripcion && <span className="text-red-500 text-sm">{errorMessages.descripcion}</span>}
+          </div>
+
           <div className="flex items-center space-x-4">
             <button
               type="submit"

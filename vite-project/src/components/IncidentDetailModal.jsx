@@ -81,6 +81,12 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
               : 'No resuelto'}
           </p>
           <p>
+            <strong>Resolución:</strong>{' '}
+            {incident.resolver
+              ? `${incident.resolucion}`
+              : 'No resuelto'}
+          </p>
+          <p>
             <strong>Descripción:</strong>
           </p>
           <p>{incident.descripcion}</p>

@@ -78,11 +78,8 @@ class InterventionController extends Controller
     }
 
     public function getInterventionsByGuard($id_guard)
-    {
-        $interventions = Intervention::where('id_guard', $id_guard)->get();
-        if ($interventions->isEmpty()) {
-            return response()->json(['message' => 'No hay registros para el guard especificado'], 404);
-        }
-        return response()->json($interventions, 200);
-    }
+{
+    $interventions = Intervention::where('id_guard', $id_guard)->get();
+    return response()->json($interventions, 200);
+}
 }

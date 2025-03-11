@@ -133,12 +133,13 @@ public function resolve(Request $request, $id)
 {
     $incident = Incident::find($id);
     if (!$incident) {
-        return response()->json(['error' => 'Incidencia no encontrada'], 404);
+         return response()->json(['error' => 'Incidencia no encontrada'], 404);
     }
 
-    // Validar que se proporcione el id del empleado que resuelve la incidencia
+    // Validar que se proporcione tanto el id del empleado que resuelve como la resolución
     $validator = Validator::make($request->all(), [
-         'resulta_por' => 'required'
+         'resulta_por' => 'required',
+         'resolucion'  => 'required|string'
     ]);
     if ($validator->fails()){
          return response()->json($validator->errors(), 400);
@@ -146,10 +147,12 @@ public function resolve(Request $request, $id)
 
     $incident->estado = 'resuelta';
     $incident->resulta_por = $request->input('resulta_por');
+    $incident->resolucion = $request->input('resolucion');
     $incident->save();
 
     return response()->json($incident, 200);
 }
+
 
 public function countPending()
 {

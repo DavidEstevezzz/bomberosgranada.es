@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash, faTimes, faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faTimes, faEdit, faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -9,6 +9,8 @@ import 'jspdf-autotable';
 import IncidentApiService from '../services/IncidentApiService';
 import AddIncidentModal from '../components/AddIncidentModal';
 import IncidentDetailModal from '../components/IncidentDetailModal';
+import EditIncidentModal from '../components/EditIncidentModal';
+
 
 const IncidentListPage = () => {
   // Estados generales
@@ -20,8 +22,13 @@ const IncidentListPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [detailIncident, setDetailIncident] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [editIncident, setEditIncident] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchParams] = useState();
   const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
+  const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
+  const [selectedIncident, setSelectedIncident] = useState(null);
+  const [resolutionText, setResolutionText] = useState("");
 
   // Estados para incidencias resueltas (filtradas por mes)  
   const [currentMonth, setCurrentMonth] = useState(dayjs().month()); // 0 = enero, 11 = diciembre
@@ -38,6 +45,11 @@ const IncidentListPage = () => {
     fetchIncidents();
   }, []);
 
+  const openResolveModal = (incident) => {
+    setSelectedIncident(incident);
+    setIsResolveModalOpen(true);
+  };
+  
   const fetchIncidents = async () => {
     setLoading(true);
     try {
@@ -148,10 +160,11 @@ const IncidentListPage = () => {
     tableData.sort((a, b) => a.extra.localeCompare(b.extra));
 
     const columns = [
-      { header: 'Fecha', dataKey: 'fecha' },
-      { header: 'Descripción', dataKey: 'descripcion' },
       { header: 'Tipo', dataKey: 'tipo' },
       { header: 'Vehículo/Empleado', dataKey: 'extra' },
+      { header: 'Descripción', dataKey: 'descripcion' },
+      { header: 'Fecha', dataKey: 'fecha' },
+
     ];
 
     doc.autoTable({
@@ -164,11 +177,11 @@ const IncidentListPage = () => {
         if (data.section === 'body') {
           const rowObj = tableData[data.row.index];
           if (rowObj.nivel === 'alto') {
-            data.cell.styles.fillColor = [255, 204, 204];
+            data.cell.styles.fillColor = [255, 153, 153];
           } else if (rowObj.nivel === 'medio') {
-            data.cell.styles.fillColor = [255, 229, 204];
+            data.cell.styles.fillColor = [255, 219, 153];
           } else if (rowObj.nivel === 'bajo') {
-            data.cell.styles.fillColor = [255, 255, 204];
+            data.cell.styles.fillColor = [255, 255, 153];
           }
         }
       }
@@ -177,17 +190,21 @@ const IncidentListPage = () => {
     doc.save("incidencias_no_resueltas.pdf");
   };
 
-  // Función para marcar una incidencia como resuelta
-  const handleResolve = async (incidentId) => {
+  const handleResolveSubmit = async () => {
     try {
-      const resolverData = { resulta_por: user.id_empleado };
-      console.log("Datos de resolución:", resolverData);
-      await IncidentApiService.resolveIncident(incidentId, resolverData);
-      fetchIncidents();
+      const resolverData = {
+        resolucion: resolutionText,
+        resulta_por: user.id_empleado
+      };
+      await IncidentApiService.resolveIncident(selectedIncident.id_incidencia, resolverData);
+      setIsResolveModalOpen(false);
+      setResolutionText("");
+      fetchIncidents(); // Actualiza la lista de incidencias
     } catch (err) {
-      console.error("Error al resolver incidencia:", err);
+      console.error("Error al resolver la incidencia: ", err);
     }
   };
+
 
   // Función para marcar una incidencia como leída
   const handleMarkAsRead = async (incidentId) => {
@@ -306,11 +323,12 @@ const IncidentListPage = () => {
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
                       <button
-                        onClick={() => handleResolve(incident.id_incidencia)}
+                        onClick={() => openResolveModal(incident)}
                         className="bg-green-600 text-white px-3 py-1 rounded"
                       >
                         Resuelta
                       </button>
+
                       <button
                         onClick={() => openDetailModal(incident)}
                         className="bg-gray-600 text-white px-3 py-1 rounded flex items-center space-x-1"
@@ -326,11 +344,23 @@ const IncidentListPage = () => {
                           Marcar Leída
                         </button>
                       )}
+                      {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
+                        <button
+                          onClick={() => handleDelete(incident.id_incidencia)}
+                          className="bg-red-600 text-white px-3 py-1 rounded"
+                        >
+                          Borrar
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleDelete(incident.id_incidencia)}
-                        className="bg-red-600 text-white px-3 py-1 rounded"
+                        onClick={() => {
+                          setEditIncident(incident);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-1"
                       >
-                        Borrar
+                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
+                        <span>Editar</span>
                       </button>
                     </td>
                   </tr>
@@ -431,11 +461,23 @@ const IncidentListPage = () => {
                           Marcar Leída
                         </button>
                       )}
+                      {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
+                        <button
+                          onClick={() => handleDelete(incident.id_incidencia)}
+                          className="bg-red-600 text-white px-3 py-1 rounded"
+                        >
+                          Borrar
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleDelete(incident.id_incidencia)}
-                        className="bg-red-600 text-white px-3 py-1 rounded"
+                        onClick={() => {
+                          setEditIncident(incident);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-1"
                       >
-                        Borrar
+                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
+                        <span>Editar</span>
                       </button>
                     </td>
                   </tr>
@@ -536,11 +578,23 @@ const IncidentListPage = () => {
                           Marcar Leída
                         </button>
                       )}
+                      {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
+                        <button
+                          onClick={() => handleDelete(incident.id_incidencia)}
+                          className="bg-red-600 text-white px-3 py-1 rounded"
+                        >
+                          Borrar
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleDelete(incident.id_incidencia)}
-                        className="bg-red-600 text-white px-3 py-1 rounded"
+                        onClick={() => {
+                          setEditIncident(incident);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-1"
                       >
-                        Borrar
+                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
+                        <span>Editar</span>
                       </button>
                     </td>
                   </tr>
@@ -651,12 +705,23 @@ const IncidentListPage = () => {
                         <FontAwesomeIcon icon={faInfoCircle} />
                         <span>Detalle</span>
                       </button>
+                      {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
+                        <button
+                          onClick={() => handleDelete(incident.id_incidencia)}
+                          className="bg-red-600 text-white px-3 py-1 rounded"
+                        >
+                          Borrar
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleDelete(incident.id_incidencia)}
-                        className="bg-red-600 text-white px-3 py-1 rounded flex items-center space-x-1"
+                        onClick={() => {
+                          setEditIncident(incident);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-1"
                       >
-                        <FontAwesomeIcon icon={faTimes} />
-                        <span>Borrar</span>
+                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
+                        <span>Editar</span>
                       </button>
                     </td>
                   </tr>
@@ -710,6 +775,25 @@ const IncidentListPage = () => {
           onClose={() => setIsDetailModalOpen(false)}
         />
       )}
+      {isEditModalOpen && editIncident && (
+        <EditIncidentModal
+          isOpen={isEditModalOpen}
+          incident={editIncident}
+          onClose={() => setIsEditModalOpen(false)}
+          onUpdate={fetchIncidents}
+        />
+      )}
+
+      {isResolveModalOpen && (
+        <ResolveIncidentModal
+          isOpen={isResolveModalOpen}
+          onClose={() => setIsResolveModalOpen(false)}
+          resolutionText={resolutionText}
+          setResolutionText={setResolutionText}
+          onSubmit={handleResolveSubmit}
+        />
+      )}
+
     </div>
   );
 };

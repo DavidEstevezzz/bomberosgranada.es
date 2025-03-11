@@ -27,7 +27,8 @@ class Incident extends Model
         'id_parque',     // Parque donde se genera la incidencia
         'fecha',
         'descripcion',
-        'nivel'
+        'nivel',
+        'resolucion',
     ];
 
     // Relación con el usuario creador de la incidencia.

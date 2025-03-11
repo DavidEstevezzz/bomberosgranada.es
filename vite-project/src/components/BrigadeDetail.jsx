@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import BrigadesApiService from '../services/BrigadesApiService';
 import GuardsApiService from '../services/GuardsApiService';
-import GuardAssignmentApiService from '../services/GuardAssignmentApiService';
+import GuardAssignmentApiService from '../services/GuardAssignmentApiService'; // Servicio de asignaciones
 import AddGuardCommentsModal from './AddGuardCommentsModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
@@ -41,33 +41,56 @@ const BrigadeDetail = () => {
     Bombero: 5,
   };
 
-  // Función para obtener las opciones del select según puesto y parque
-  const getOptionsForPosition = (firefighter) => {
-    const puesto = firefighter.puesto.toLowerCase();
-    // Para puestos "subinspector" y "oficial"
-    if (puesto === 'subinspector' || puesto === 'oficial') {
-      if (brigade?.park?.nombre?.toLowerCase().includes('norte')) {
-        return ['N1', 'N2', 'N3', 'N4'];
-      } else if (brigade?.park?.nombre?.toLowerCase().includes('sur')) {
-        return ['S1', 'S2', 'S3', 'S4'];
-      } else {
-        return [];
-      }
-    }
-    // Para puesto "bombero"
-    if (puesto === 'bombero') {
-      return ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9'];
-    }
-    // Para puesto "conductor"
-    if (puesto === 'conductor') {
-      return ['C1', 'C2', 'C3', 'C4', 'C5'];
-    }
-    // Para puesto "operador"
-    if (puesto === 'operador') {
-      return ['Operador 1', 'Operador 2', 'Operador 3'];
-    }
-    return [];
+  // Mapeo para vehículos (para turno Mañana y variantes)
+  const vehicleMapping = {
+    'B1': 'BUL-3-7 / BRP-1',
+    'B2': 'BUL-3-7 / BRP-1',
+    'B3': 'FSV-3 / BIP-1 / BUL-1 / UMC-1 / UPI-1',
+    'B4': 'FSV-3 / BIP-1 / BUL-1 / UMC-1 / UPI-1',
+    'B5': 'AEA-3 / VAT-1 / UBH-1 / UPC-1-3 / BNP-1',
+    'B6': 'AEA-3 / VAT-1 / UBH-1 / UPC-1-3 / BNP-1',
+    'B7': 'Apoyo equipo 2 (B3 y B4)',
+    'B8': 'Apoyo equipo 3 (B5 y B6)',
+    'B9': 'Apoyo',
+    'C1': 'BUL-1-3 / BRP-1 / UPC-1-3',
+    'C2': 'AEA-3 / UBH-1 / BIP-1 / UPI-1',
+    'C3': 'FSV-3 / UMC-1 / BNP-1 / BUL-7 / VAT-1',
+    'C4': 'Apoyo',
+    'C5': 'Apoyo',
   };
+
+  // Cálculo de colores según el nombre de la brigada (para exportar al PDF)
+  let brigadeColor = '';
+  let nameColor = '';
+  switch (brigade?.nombre) {
+    case 'Brigada A':
+      brigadeColor = 'bg-green-500';
+      nameColor = 'text-black';
+      break;
+    case 'Brigada B':
+      brigadeColor = 'bg-zinc-50';
+      nameColor = 'text-black';
+      break;
+    case 'Brigada C':
+      brigadeColor = 'bg-blue-500';
+      nameColor = 'text-black';
+      break;
+    case 'Brigada D':
+      brigadeColor = 'bg-red-600';
+      nameColor = 'text-black';
+      break;
+    case 'Brigada E':
+      brigadeColor = 'bg-yellow-300';
+      nameColor = 'text-black';
+      break;
+    case 'Brigada F':
+      brigadeColor = 'bg-gray-300';
+      nameColor = 'text-gray-600';
+      break;
+    default:
+      brigadeColor = '';
+      nameColor = '';
+  }
 
   // Cargar datos de la brigada, bomberos y guardDetails
   useEffect(() => {
@@ -106,7 +129,7 @@ const BrigadeDetail = () => {
     fetchBrigadeDetails();
   }, [id_brigada, selectedDate]);
 
-  // Estados y funciones para asignaciones (actuales y previas)
+  // Estado para asignaciones actuales y asignaciones previas (guard anterior: id_guard - 10)
   const [assignments, setAssignments] = useState({
     Mañana: {},
     Tarde: {},
@@ -117,8 +140,10 @@ const BrigadeDetail = () => {
     Tarde: {},
     Noche: {},
   });
+  // Opciones de asignación (se permiten valores reutilizables)
+  const options = ['N1', 'N2', 'N3', 'N4', 'S1', 'S2', 'S3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'C1', 'C2', 'C3', 'C4', 'C5', 'Operador 1', 'Operador 2'];
 
-  // Cargar asignaciones actuales y previas
+  // Al tener guardDetails, cargar asignaciones actuales y previas
   useEffect(() => {
     if (guardDetails && guardDetails.id) {
       // Asignaciones actuales
@@ -151,7 +176,7 @@ const BrigadeDetail = () => {
     }
   }, [guardDetails]);
 
-  // Funciones de modal y actualización de comentarios...
+  // Funciones de modal
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
   const handleUpdateComments = (updatedData) => {
@@ -160,7 +185,7 @@ const BrigadeDetail = () => {
     setGuardDetails(updatedData.guard ? updatedData.guard : updatedData);
   };
 
-  // Guardar asignación en la BD
+  // Función para guardar la asignación en la BD usando el endpoint updateOrCreateAssignment
   const saveAssignment = async (shift, employeeId, value) => {
     if (!guardDetails || !guardDetails.id) return;
     try {
@@ -176,11 +201,13 @@ const BrigadeDetail = () => {
     }
   };
 
-  // Manejar cambios en la asignación
+  // Función para manejar cambios de asignación.
+  // Si se modifica en "Mañana", se propaga a "Tarde" y "Noche" según el turno real; si se cambia en Tarde o Noche, se actualiza solo ese turno.
   const handleAssignmentChange = (shift, employeeId, value) => {
     setAssignments(prev => {
       let newAssignments = { ...prev };
       newAssignments[shift] = { ...newAssignments[shift], [employeeId]: value };
+      // Guardar asignación para el turno actual
       saveAssignment(shift, employeeId, value);
       if (shift === 'Mañana') {
         const firefighter = firefighters.find(f => f.id_empleado === employeeId);
@@ -204,7 +231,7 @@ const BrigadeDetail = () => {
     });
   };
 
-  // Función auxiliar para obtener la asignación actual de un bombero
+  // Función auxiliar para obtener la asignación actual (actualizada en el estado) para un bombero sin duplicados
   const getAssignmentValue = (firefighter) => {
     const possibleShifts = ["Mañana", "Tarde", "Noche"];
     let values = [];
@@ -217,7 +244,7 @@ const BrigadeDetail = () => {
     return uniqueValues.length > 0 ? uniqueValues.join(', ') : 'No asignado';
   };
 
-  // Función auxiliar para obtener la asignación previa
+  // Función auxiliar para obtener la asignación previa del guard anterior para un bombero en un turno dado
   const getPreviousAssignment = (shift, employeeId) => {
     if (prevAssignments[shift] && prevAssignments[shift][employeeId]) {
       return prevAssignments[shift][employeeId];
@@ -253,8 +280,41 @@ const BrigadeDetail = () => {
     setSelectedDate(nextDay);
   };
 
-  // Función para filtrar bomberos por turno y ordenarlos:
-  // Primero por prioridad del puesto y, en caso de empate, por dni de menor a mayor.
+  const categorizeFirefighters = (shift) => {
+    const categories = ['Subinspector', 'Oficial', 'Operador', 'Conductor', 'Bombero'];
+    const counts = categories.map(category => {
+      const count = firefighters.filter(firefighter => {
+        const isCategory = firefighter.puesto === category;
+        const hasShift = [shift, 'Día completo'].includes(firefighter.turno);
+        const isCombinedShift =
+          (firefighter.turno === 'Mañana y tarde' && (shift === 'Mañana' || shift === 'Tarde')) ||
+          (firefighter.turno === 'Tarde y noche' && (shift === 'Tarde' || shift === 'Noche')) ||
+          (firefighter.turno === 'Mañana y noche' && (shift === 'Mañana' || shift === 'Noche'));
+        return isCategory && (hasShift || isCombinedShift);
+      }).length;
+      return { category, count };
+    });
+    if (brigade?.park?.id_parque === 2) {
+      const tropaCount = counts.reduce((sum, { category, count }) => {
+        if (['Bombero', 'Conductor', 'Operador'].includes(category)) {
+          return sum + count;
+        }
+        return sum;
+      }, 0);
+      counts.push({ category: 'Tropa', count: tropaCount });
+    }
+    return counts;
+  };
+
+  const checkMinimums = (category, count) => {
+    const parkId = brigade?.park?.id_parque;
+    let minimumCount = minimums[parkId]?.[category] || 0;
+    if (category === 'Tropa' && parkId === 2) {
+      minimumCount = 10;
+    }
+    return { isBelowMinimum: count < minimumCount, minimumCount };
+  };
+
   const filterFirefightersByShift = (shift) => {
     return firefighters
       .filter(firefighter =>
@@ -265,18 +325,13 @@ const BrigadeDetail = () => {
         (shift === 'Noche' && ['Tarde y noche', 'Mañana y noche'].includes(firefighter.turno))
       )
       .sort((a, b) => {
-        const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
-        if (puestoDiff !== 0) return puestoDiff;
-        const dniA = parseInt(a.dni, 10);
-        const dniB = parseInt(b.dni, 10);
-        const result = dniA - dniB;
-        console.log('Ejemplo de objeto firefighter:', firefighters[0]);
-
-        return result;
+        const diff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
+        if (diff !== 0) return diff;
+        return a.dni - b.dni;
       });
   };
 
-  // Función auxiliar para calcular el número de radio (sin cambios)
+  // Función auxiliar para calcular el número de radio según la asignación y parque
   const getRadioNumber = (assignment, parkId) => {
     if (!assignment || assignment === 'No asignado') return '';
     const cleanAssignment = assignment.trim();
@@ -355,11 +410,7 @@ const BrigadeDetail = () => {
       pdfHeaderTextColor = '#ffffff';
     }
     const sortedFirefighters = [...firefighters].sort(
-      (a, b) => {
-        const diff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
-        if (diff !== 0) return diff;
-        return a.dni - b.dni;
-      }
+      (a, b) => puestoPriority[a.puesto] - puestoPriority[b.puesto]
     );
     const getNameCellBgColor = (assignment, puesto) => {
       if (puesto.toLowerCase() === 'operador') return [255, 255, 255];
@@ -418,6 +469,7 @@ const BrigadeDetail = () => {
         }
       }
     });
+    console.log('guardDetails en exportToPDF:', guardDetails);
     if (guardDetails) {
       const commentsData = guardDetails.guard || guardDetails;
       const commentFieldsRow1 = ['revision', 'practica', 'basura'];
@@ -457,7 +509,7 @@ const BrigadeDetail = () => {
   if (error) return <div>Error: {error}</div>;
   if (!brigade) return <div>No brigade data available.</div>;
 
-  // Definimos los turnos para la tabla
+  // Para la tabla de la página, definimos los turnos
   const shifts = [
     { label: 'Mañana', key: 'Mañana' },
     { label: 'Tarde', key: 'Tarde' },
@@ -479,6 +531,7 @@ const BrigadeDetail = () => {
           {shifts.map(shift => (
             <div key={shift.key} className="bg-gray-700 p-2 rounded-lg">
               <h3 className="text-lg font-semibold mb-2 text-center">{shift.label}</h3>
+              {/* Fila separadora en blanco */}
               <table className="w-full text-sm text-left">
                 <thead>
                   <tr>
@@ -490,7 +543,17 @@ const BrigadeDetail = () => {
                   <tr>
                     <td colSpan="2" className="py-1"></td>
                   </tr>
-                  {/** Aquí se muestran los conteos por categoría */}
+                  {categorizeFirefighters(shift.key).map((data, index) => {
+                    const { isBelowMinimum, minimumCount } = checkMinimums(data.category, data.count);
+                    return (
+                      <tr key={index} className="border-b border-gray-600">
+                        <td className="py-1 px-2">{data.category}</td>
+                        <td className={`py-1 px-2 text-right ${isBelowMinimum ? 'text-red-500' : ''}`}>
+                          {data.count} {isBelowMinimum && <span className="text-sm">(min {minimumCount})</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -500,7 +563,7 @@ const BrigadeDetail = () => {
         <h2 className="text-xl font-bold mt-6 mb-6 text-center">Bomberos Asignados</h2>
         <div className="overflow-x-auto w-full rounded-lg">
           <table className="w-full text-center bg-gray-700 rounded-lg border-2 border-gray-700">
-            <thead className={`${brigade?.nombre && brigade.nombre.includes('Brigada') ? '' : ''}`}>
+            <thead className={`${brigadeColor} ${nameColor}`}>
               <tr>
                 <th className="py-2 px-2">Nombre</th>
                 <th className="py-2 px-2">Puesto</th>
@@ -516,11 +579,13 @@ const BrigadeDetail = () => {
                   <tr className="bg-gray-800 text-white">
                     <td colSpan="4" className="py-4 px-4 text-center font-bold">{shift.label}</td>
                   </tr>
+                  {/* Separador en blanco */}
                   <tr>
                     <td colSpan="4" className="py-1"></td>
                   </tr>
                   {filterFirefightersByShift(shift.key).length > 0 ? (
                     filterFirefightersByShift(shift.key).map((firefighter, index) => {
+                      // Obtenemos la asignación previa para este turno y empleado (guard anterior: id_guard - 10)
                       const prevAssign = getPreviousAssignment(shift.key, firefighter.id_empleado);
                       return (
                         <tr key={`${firefighter.id_empleado}-${index}`} className="border-b border-gray-700">
@@ -538,8 +603,10 @@ const BrigadeDetail = () => {
                                   handleAssignmentChange(shift.key, firefighter.id_empleado, e.target.value)
                                 }
                               >
-                                <option value="" disabled>Seleccione</option>
-                                {getOptionsForPosition(firefighter).map((option) => (
+                                <option value="" disabled>
+                                  Seleccione
+                                </option>
+                                {options.map((option) => (
                                   <option key={option} value={option}>
                                     {option}
                                   </option>
@@ -564,6 +631,15 @@ const BrigadeDetail = () => {
         <button onClick={exportToPDF} className="bg-green-500 text-white px-4 py-2 rounded mt-4">
           Exportar a PDF
         </button>
+
+        {['mando', 'jefe'].includes(user.type) && (
+            <button
+              onClick={handleOpenModal}
+              className="mt-4 ml-4 px-4 py-2 bg-green-500 text-white rounded"
+            >
+              Añadir Comentarios Adicionales
+            </button>
+          )}
 
         <div className="mt-6 w-full">
           <h2 className="text-xl font-bold mb-4">Comentarios</h2>
@@ -590,14 +666,7 @@ const BrigadeDetail = () => {
             )}
           </div>
 
-          {['mando', 'jefe'].includes(user.type) && (
-            <button
-              onClick={handleOpenModal}
-              className="mt-4 px-5 py-2.5 bg-green-500 text-white rounded-lg"
-            >
-              Añadir Comentarios Adicionales
-            </button>
-          )}
+          
 
           <AddGuardCommentsModal
             isOpen={isModalOpen}

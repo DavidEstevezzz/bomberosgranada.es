@@ -8,8 +8,8 @@ import ParksApiService from '../services/ParkApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
 
-const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
-  if (!isOpen) return null;
+const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
+  if (!isOpen || !incident) return null;
 
   const { darkMode } = useDarkMode();
   const { user } = useStateContext();
@@ -18,16 +18,16 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
   const [formValues, setFormValues] = useState({
-    tipo: '',
-    fecha: getTodayDate(),
-    descripcion: '',
-    id_parque: '',
-    matricula: '',
-    id_empleado2: '',
-    id_empleado: user ? user.id_empleado : '',
-    estado: 'Pendiente',
-    leido: false,
-    nivel: ''
+    tipo: incident.tipo || '',
+    fecha: incident.fecha ? incident.fecha.split('T')[0] : getTodayDate(),
+    descripcion: incident.descripcion || '',
+    id_parque: incident.id_parque || '',
+    matricula: incident.matricula || '',
+    id_empleado2: incident.id_empleado2 || '',
+    id_empleado: incident.id_empleado || (user ? user.id_empleado : ''),
+    estado: incident.estado || 'Pendiente',
+    leido: incident.leido || false,
+    nivel: incident.nivel || ''
   });
 
   const [errorMessages, setErrorMessages] = useState({});
@@ -42,27 +42,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   const [userSearch, setUserSearch] = useState('');
   const [vehicleSearch, setVehicleSearch] = useState('');
 
-  useEffect(() => {
-    if (isOpen) {
-      setFormValues({
-        tipo: '',
-        fecha: getTodayDate(),
-        descripcion: '',
-        id_parque: '',
-        matricula: '',
-        id_empleado2: '',
-        id_empleado: user ? user.id_empleado : '',
-        estado: 'Pendiente',
-        leido: false,
-        nivel: ''
-      });
-      setErrorMessages({});
-      setIsSubmitting(false);
-      setUserSearch('');
-      setVehicleSearch('');
-    }
-  }, [isOpen, user]);
-
+  // Cargar datos para dropdowns
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -77,23 +57,42 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
         setFilteredVehicles(vehiclesResponse.data);
         setParks(parksResponse.data);
       } catch (error) {
-        console.error('Error fetching data for incident modal:', error);
+        console.error('Error al cargar datos en el modal de edición:', error);
       }
     };
     fetchData();
   }, []);
 
+  // Actualizar el formulario cuando cambie la incidencia
   useEffect(() => {
-    const filtered = users.filter((user) => {
-      const fullName = `${user.nombre} ${user.apellido}`.toLowerCase();
+    if (incident) {
+      setFormValues({
+        tipo: incident.tipo || '',
+        fecha: incident.fecha ? incident.fecha.split('T')[0] : getTodayDate(),
+        descripcion: incident.descripcion || '',
+        id_parque: incident.id_parque || '',
+        matricula: incident.matricula || '',
+        id_empleado2: incident.id_empleado2 || '',
+        id_empleado: incident.id_empleado || (user ? user.id_empleado : ''),
+        estado: incident.estado || 'Pendiente',
+        leido: incident.leido || false,
+        nivel: incident.nivel || ''
+      });
+    }
+  }, [incident, user]);
+
+  // Filtrado de usuarios y vehículos según el texto de búsqueda
+  useEffect(() => {
+    const filtered = users.filter((u) => {
+      const fullName = `${u.nombre} ${u.apellido}`.toLowerCase();
       return fullName.includes(userSearch.toLowerCase());
     });
     setFilteredUsers(filtered);
   }, [userSearch, users]);
 
   useEffect(() => {
-    const filtered = vehicles.filter((vehicle) =>
-      vehicle.nombre.toLowerCase().includes(vehicleSearch.toLowerCase())
+    const filtered = vehicles.filter((v) =>
+      v.nombre.toLowerCase().includes(vehicleSearch.toLowerCase())
     );
     setFilteredVehicles(filtered);
   }, [vehicleSearch, vehicles]);
@@ -109,17 +108,17 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     setIsSubmitting(true);
     setErrorMessages({});
 
-    console.log('Form values a enviar:', formValues);
     try {
-      const response = await IncidentApiService.createIncident(formValues);
-      onAdd(response.data);
+      // Se llama al update usando el id de la incidencia
+      const response = await IncidentApiService.updateIncident(incident.id_incidencia, formValues);
+      onUpdate(response.data);
       onClose();
     } catch (error) {
-      console.error('Error creating incident:', error);
+      console.error('Error actualizando la incidencia:', error);
       if (error.response && error.response.data) {
         setErrorMessages(error.response.data);
       } else {
-        setErrorMessages({ general: 'Ocurrió un error al crear la incidencia.' });
+        setErrorMessages({ general: 'Ocurrió un error al actualizar la incidencia.' });
       }
     } finally {
       setIsSubmitting(false);
@@ -130,7 +129,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     <div className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-full bg-black bg-opacity-50">
       <div className={`p-4 w-full max-w-2xl rounded-lg shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
         <div className={`flex justify-between items-center pb-4 mb-4 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-          <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Añadir Incidencia</h3>
+          <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Editar Incidencia</h3>
           <button onClick={onClose} disabled={isSubmitting} className={`p-1.5 rounded-lg ${darkMode ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-400 hover:bg-gray-200'}`}>
             <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
           </button>
@@ -155,7 +154,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
               </select>
               {errorMessages.tipo && <span className="text-red-500 text-sm">{errorMessages.tipo}</span>}
 
-              {/* Selector condicional para vehículo o personal justo debajo del tipo */}
+              {/* Selector condicional para vehículo o personal */}
               {formValues.tipo === 'vehiculo' && (
                 <div className="mt-4">
                   <label htmlFor="matricula" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Vehículo</label>
@@ -266,7 +265,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
               disabled={isSubmitting}
               className={`text-sm px-5 py-2.5 text-center font-medium rounded-lg focus:outline-none focus:ring-4 ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-800' : 'bg-blue-700 hover:bg-blue-800 text-white focus:ring-blue-300'}`}
             >
-              {isSubmitting ? 'Enviando...' : 'Añadir Incidencia'}
+              {isSubmitting ? 'Actualizando...' : 'Actualizar Incidencia'}
             </button>
             <button
               type="button"
@@ -284,4 +283,4 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   );
 };
 
-export default AddIncidentModal;
+export default EditIncidentModal;

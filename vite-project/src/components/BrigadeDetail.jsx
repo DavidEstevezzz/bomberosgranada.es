@@ -4,6 +4,10 @@ import BrigadesApiService from '../services/BrigadesApiService';
 import GuardsApiService from '../services/GuardsApiService';
 import GuardAssignmentApiService from '../services/GuardAssignmentApiService'; // Servicio de asignaciones
 import AddGuardCommentsModal from './AddGuardCommentsModal';
+import InterventionsTable from './InterventionsTable.jsx';
+import AddInterventionModal from './AddInterventionModal';
+import EditInterventionModal from './EditInterventionModal';
+import InterventionApiService from '../services/InterventionApiService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
@@ -39,6 +43,27 @@ const BrigadeDetail = () => {
     Operador: 3,
     Conductor: 4,
     Bombero: 5,
+  };
+
+
+  const [showAddInterventionModal, setShowAddInterventionModal] = useState(false);
+  const [showEditInterventionModal, setShowEditInterventionModal] = useState(false);
+  const [selectedIntervention, setSelectedIntervention] = useState(null);
+  const [refreshInterventions, setRefreshInterventions] = useState(false);
+
+  const handleEditIntervention = (intervention) => {
+    setSelectedIntervention(intervention);
+    setShowEditInterventionModal(true);
+  };
+
+  const handleDeleteIntervention = async (parte) => {
+    try {
+      await InterventionApiService.deleteIntervention(parte);
+      setRefreshInterventions((prev) => !prev);
+    } catch (error) {
+      console.error('Error al borrar la intervención:', error);
+      alert('Error al borrar la intervención');
+    }
   };
 
   // Mapeo para vehículos (para turno Mañana y variantes)
@@ -338,7 +363,7 @@ const BrigadeDetail = () => {
     const letter = cleanAssignment.charAt(0).toUpperCase();
     const number = parseInt(cleanAssignment.slice(1), 10);
     if (isNaN(number)) return '';
-  
+
     if (letter === 'N') {
       if (number === 1) return 1;
       if (number === 2) return 3;
@@ -438,9 +463,9 @@ const BrigadeDetail = () => {
       const turnoLower = firefighter.turno.toLowerCase();
       const vehicleInfo =
         (turnoLower === 'mañana' ||
-         turnoLower === 'día completo' ||
-         turnoLower === 'mañana y tarde' ||
-         turnoLower === 'mañana y noche')
+          turnoLower === 'día completo' ||
+          turnoLower === 'mañana y tarde' ||
+          turnoLower === 'mañana y noche')
           ? (vehicleMapping[assignmentValue] || '')
           : '';
       return [
@@ -633,13 +658,13 @@ const BrigadeDetail = () => {
         </button>
 
         {['mando', 'jefe'].includes(user.type) && (
-            <button
-              onClick={handleOpenModal}
-              className="mt-4 ml-4 px-4 py-2 bg-green-500 text-white rounded"
-            >
-              Añadir Comentarios Adicionales
-            </button>
-          )}
+          <button
+            onClick={handleOpenModal}
+            className="mt-4 ml-4 px-4 py-2 bg-green-500 text-white rounded"
+          >
+            Añadir Comentarios Adicionales
+          </button>
+        )}
 
         <div className="mt-6 w-full">
           <h2 className="text-xl font-bold mb-4">Comentarios</h2>
@@ -666,7 +691,40 @@ const BrigadeDetail = () => {
             )}
           </div>
 
-          
+          <div className="mt-6 w-full">
+            <h2 className="text-xl font-bold mb-4">Intervenciones</h2>
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setShowAddInterventionModal(true)}
+                className="bg-green-500 text-white px-4 py-2 rounded"
+              >
+                Añadir Intervención
+              </button>
+            </div>
+            <InterventionsTable
+              idGuard={guardDetails?.id}
+              darkMode={false} // o la variable darkMode si la tienes definida
+              refreshTrigger={refreshInterventions}
+              onEditIntervention={handleEditIntervention}
+              onDeleteIntervention={handleDeleteIntervention}
+            />
+          </div>
+
+          {/* Modal para añadir intervención */}
+          <AddInterventionModal
+            show={showAddInterventionModal}
+            onClose={() => setShowAddInterventionModal(false)}
+            onAdded={() => setRefreshInterventions((prev) => !prev)}
+            idGuard={guardDetails?.id}
+          />
+
+          {/* Modal para editar intervención */}
+          <EditInterventionModal
+            show={showEditInterventionModal}
+            intervention={selectedIntervention}
+            onClose={() => setShowEditInterventionModal(false)}
+            onEdited={() => setRefreshInterventions((prev) => !prev)}
+          />
 
           <AddGuardCommentsModal
             isOpen={isModalOpen}

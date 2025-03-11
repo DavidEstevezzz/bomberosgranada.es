@@ -18,6 +18,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\GuardAssignmentController;
+use App\Http\Controllers\InterventionController;
 
 
 
@@ -42,6 +43,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/guard-assignments/{id}', [GuardAssignmentController::class, 'update']);
     Route::delete('/guard-assignments/{id}', [GuardAssignmentController::class, 'destroy']);
 
+
+    Route::get('/intervenciones', [InterventionController::class, 'index']);
+    Route::get('/intervenciones/{parte}', [InterventionController::class, 'show']);
+    Route::post('/intervenciones', [InterventionController::class, 'store']);
+    Route::put('/intervenciones/{parte}', [InterventionController::class, 'update']);
+    Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy']);
+    Route::get('/intervention/by-guard/{id_guard}', [InterventionController::class, 'getInterventionsByGuard']);
+
+
+    
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/por-puesto', [UserController::class, 'getUsersByPuesto']);

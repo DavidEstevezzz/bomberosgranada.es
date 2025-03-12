@@ -87,7 +87,26 @@ class GuardController extends Controller
 
         return response()->json(['message' => 'Guardia actualizada', 'guard' => $guard]);
     }
-
+    
+    public function updateDailyActivities(Request $request, $id)
+    {
+        $rules = [
+            'limpieza_vehiculos'    => 'sometimes|nullable|string',
+            'limpieza_dependencias' => 'sometimes|nullable|string',
+            'callejero'             => 'sometimes|nullable|string',
+            'ejercicios'            => 'sometimes|nullable|string',
+        ];
+    
+        $validated = $request->validate($rules);
+        $guard = Guard::findOrFail($id);
+        $guard->update($validated);
+    
+        return response()->json([
+            'message' => 'Actividades diarias actualizadas',
+            'guard'   => $guard
+        ], 200);
+    }
+    
 
 
     public function destroy($id)

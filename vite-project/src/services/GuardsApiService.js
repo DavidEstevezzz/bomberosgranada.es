@@ -61,6 +61,10 @@ async updateGuardComments(idBrigada, date, comentarios) {
     comentarios: comentarios,
   });
 }
+
+async updateDailyActivities(guardId, dailyData) {
+  return await BaseApiService.put(`${API_URL}/${guardId}/daily-activities`, dailyData);
+}
   
 }
 

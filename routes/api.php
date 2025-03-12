@@ -98,6 +98,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/guards/by-date', [GuardController::class, 'getGuardsByDate']);
     Route::get('/guards/by-brigade-and-date', [GuardController::class, 'getGuardByBrigadeAndDate']);
     Route::put('/guards/{id}/update-schedule', [GuardController::class, 'updateSchedule']);
+    Route::put('/guards/{id}/daily-activities', [GuardController::class, 'updateDailyActivities']);
     Route::put('/guards/update-comments', [GuardController::class, 'updateComments']);
 
 

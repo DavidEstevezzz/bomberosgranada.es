@@ -15,14 +15,19 @@ class Guard extends Model
         'id_salario',
         'tipo',
         'comentarios',
-        // Nuevos campos de texto
         'revision',
         'practica',
         'basura',
         'anotaciones',
         'incidencias_de_trafico',
         'mando',
+        'incidencias_personal',
+        'limpieza_vehiculos',
+        'limpieza_dependencias',
+        'callejero',
+        'ejercicios',
     ];
+    
 
     // Clave primaria autoincrementable (por defecto es "id")
     protected $primaryKey = 'id';

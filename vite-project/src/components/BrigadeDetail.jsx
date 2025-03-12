@@ -4,6 +4,7 @@ import BrigadesApiService from '../services/BrigadesApiService';
 import GuardsApiService from '../services/GuardsApiService';
 import GuardAssignmentApiService from '../services/GuardAssignmentApiService'; // Servicio de asignaciones
 import AddGuardCommentsModal from './AddGuardCommentsModal';
+import AddDailyActivitiesModal from './AddDailyActivitiesModal';
 import InterventionsTable from './InterventionsTable.jsx';
 import AddInterventionModal from './AddInterventionModal';
 import EditInterventionModal from './EditInterventionModal';
@@ -27,6 +28,7 @@ const BrigadeDetail = () => {
   const [comentarios, setComentarios] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchParams] = useSearchParams();
@@ -121,8 +123,8 @@ const BrigadeDetail = () => {
       nameColor = '';
   }
 
-  
-  
+
+
 
   // Cargar datos de la brigada, bomberos y guardDetails
   useEffect(() => {
@@ -234,6 +236,13 @@ const BrigadeDetail = () => {
     console.log('Comentarios actualizados:', updatedData);
     setComentarios(updatedData.comentarios);
     setGuardDetails(updatedData.guard ? updatedData.guard : updatedData);
+  };
+
+  const handleOpenDailyModal = () => setIsDailyModalOpen(true);
+  const handleCloseDailyModal = () => setIsDailyModalOpen(false);
+  const handleUpdateDailyActivities = (updatedData) => {
+    console.log('Actividades diarias actualizadas:', updatedData);
+    // Actualiza el estado o detalles de guard si fuera necesario
   };
 
   // Función para guardar la asignación en la BD usando el endpoint updateOrCreateAssignment
@@ -427,7 +436,7 @@ const BrigadeDetail = () => {
         return 15 + number * 2;
       }
     }
-    
+
   };
 
   // Función para exportar a PDF (modificada para usar la asignación específica del turno de mañana)
@@ -491,25 +500,25 @@ const BrigadeDetail = () => {
     const body = sortedFirefighters.map((firefighter) => {
       // Usamos el valor de asignación completo para mostrar todas las asignaciones
       const assignmentValue = getAssignmentValue(firefighter);
-      
+
       // Pero para los vehículos, solo usamos la asignación del turno de mañana
       const morningAssignment = getMorningAssignment(firefighter.id_empleado);
-      
+
       const radio = assignmentValue !== 'No asignado'
         ? ` (${getRadioNumber(assignmentValue, brigade.park?.id_parque)})`
         : '';
       const fullName = `${firefighter.nombre} ${firefighter.apellido}${radio}`;
-      
+
       // Verificar si el bombero está en turno de mañana, día completo o combinado con mañana
       const turnoLower = firefighter.turno.toLowerCase();
-      const isInMorningShift = turnoLower === 'mañana' || 
-                              turnoLower === 'día completo' ||
-                              turnoLower === 'mañana y tarde' ||
-                              turnoLower === 'mañana y noche';
-                              
+      const isInMorningShift = turnoLower === 'mañana' ||
+        turnoLower === 'día completo' ||
+        turnoLower === 'mañana y tarde' ||
+        turnoLower === 'mañana y noche';
+
       // Solo asignar vehículo si está en turno de mañana y tiene asignación de mañana
       const vehicleInfo = isInMorningShift ? (vehicleMapping[morningAssignment] || '') : '';
-      
+
       return [
         fullName,
         firefighter.puesto,
@@ -664,21 +673,21 @@ const BrigadeDetail = () => {
                           <td className="py-2 px-2">
                             {['mando', 'jefe'].includes(user.type) && (
                               <select
-                              className="bg-gray-700 text-white p-1 rounded"
-                              value={assignments[shift.key][firefighter.id_empleado] || ''}
-                              onChange={(e) =>
-                                handleAssignmentChange(shift.key, firefighter.id_empleado, e.target.value)
-                              }
-                            >
-                              <option value="" disabled>
-                                Seleccione
-                              </option>
-                              {getFilteredOptions(firefighter.puesto).map((option) => (
-                                <option key={option} value={option}>
-                                  {option}
+                                className="bg-gray-700 text-white p-1 rounded"
+                                value={assignments[shift.key][firefighter.id_empleado] || ''}
+                                onChange={(e) =>
+                                  handleAssignmentChange(shift.key, firefighter.id_empleado, e.target.value)
+                                }
+                              >
+                                <option value="" disabled>
+                                  Seleccione
                                 </option>
-                              ))}
-                            </select>
+                                {getFilteredOptions(firefighter.puesto).map((option) => (
+                                  <option key={option} value={option}>
+                                    {option}
+                                  </option>
+                                ))}
+                              </select>
                             )}
                           </td>
                         </tr>
@@ -700,12 +709,20 @@ const BrigadeDetail = () => {
         </button>
 
         {['mando', 'jefe'].includes(user.type) && (
-          <button
-            onClick={handleOpenModal}
-            className="mt-4 ml-4 px-4 py-2 bg-green-500 text-white rounded"
-          >
-            Añadir Comentarios Adicionales
-          </button>
+          <div className="flex gap-4 mt-4">
+            <button
+              onClick={handleOpenModal}
+              className="px-4 py-2 bg-green-500 text-white rounded"
+            >
+              Añadir Comentarios Adicionales
+            </button>
+            <button
+              onClick={handleOpenDailyModal}
+              className="px-4 py-2 bg-blue-500 text-white rounded"
+            >
+              Actividades Diarias
+            </button>
+          </div>
         )}
 
         <div className="mt-6 w-full">
@@ -767,6 +784,14 @@ const BrigadeDetail = () => {
             onClose={() => setShowEditInterventionModal(false)}
             onEdited={() => setRefreshInterventions((prev) => !prev)}
             firefighters={firefighters.filter((f) => f.puesto === 'Subinspector')}
+          />
+
+          <AddDailyActivitiesModal
+            isOpen={isDailyModalOpen}
+            onClose={handleCloseDailyModal}
+            onUpdate={handleUpdateDailyActivities}
+            id_brigada={id_brigada}
+            selectedDate={selectedDate}
           />
 
           <AddGuardCommentsModal

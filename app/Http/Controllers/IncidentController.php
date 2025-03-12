@@ -24,15 +24,23 @@ class IncidentController extends Controller
     {
         // Reglas básicas
         $rules = [
-            'id_empleado'   => 'required',
-            'tipo'          => 'required|in:vehiculo,personal,instalacion,equipo',
-            'estado'        => 'required',
-            'id_parque'     => 'required',
-            'fecha'         => 'required|date',
-            'descripcion'   => 'required|string',
-            'leido'         => 'required|boolean',
-            'nivel'         => 'required|in:bajo,medio,alto',
-            // 'resulta_por' es opcional
+            'date'       => 'required|date',
+            'id_brigada' => 'required|exists:brigades,id_brigada',
+            'id_salario' => 'exists:salaries,id_salario',
+            'tipo'       => 'required|string',
+            // Campos opcionales ya existentes...
+            'revision'   => 'sometimes|nullable|string',
+            'practica'   => 'sometimes|nullable|string',
+            'basura'     => 'sometimes|nullable|string',
+            'anotaciones'=> 'sometimes|nullable|string',
+            'incidencias_de_trafico' => 'sometimes|nullable|string',
+            'mando'      => 'sometimes|nullable|string',
+            // Nuevos campos opcionales:
+            'incidencias_personal'   => 'sometimes|nullable|string',
+            'limpieza_vehiculos'     => 'sometimes|nullable|string',
+            'limpieza_dependencias'  => 'sometimes|nullable|string',
+            'callejero'              => 'sometimes|nullable|string',
+            'ejercicios'             => 'sometimes|nullable|string',
         ];
 
         // Reglas condicionales según el tipo
@@ -75,14 +83,23 @@ class IncidentController extends Controller
         }
 
         $rules = [
-            'id_empleado'   => 'required',
-            'tipo'          => 'required|in:vehiculo,personal,instalacion,equipo',
-            'estado'        => 'required',
-            'id_parque'     => 'required',
-            'fecha'         => 'required|date',
-            'descripcion'   => 'required|string',
-            'leido'         => 'required|boolean',
-            // 'resulta_por' es opcional
+            'date'       => 'required|date',
+            'id_brigada' => 'required|exists:brigades,id_brigada',
+            'id_salario' => 'exists:salaries,id_salario',
+            'tipo'       => 'required|string',
+            // Campos opcionales ya existentes...
+            'revision'   => 'sometimes|nullable|string',
+            'practica'   => 'sometimes|nullable|string',
+            'basura'     => 'sometimes|nullable|string',
+            'anotaciones'=> 'sometimes|nullable|string',
+            'incidencias_de_trafico' => 'sometimes|nullable|string',
+            'mando'      => 'sometimes|nullable|string',
+            // Nuevos campos opcionales:
+            'incidencias_personal'   => 'sometimes|nullable|string',
+            'limpieza_vehiculos'     => 'sometimes|nullable|string',
+            'limpieza_dependencias'  => 'sometimes|nullable|string',
+            'callejero'              => 'sometimes|nullable|string',
+            'ejercicios'             => 'sometimes|nullable|string',
         ];
 
         $tipo = $request->input('tipo');

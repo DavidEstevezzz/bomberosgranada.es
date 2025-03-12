@@ -8,9 +8,9 @@ import UsuariosApiService from '../services/UsuariosApiService';
 const InterventionsTable = ({
   idGuard,
   darkMode,
-  onEditIntervention, // Función para abrir el modal de edición con los datos seleccionados
-  onDeleteIntervention, // Función para borrar la intervención
-  refreshTrigger,       // Variable para refrescar la lista
+  onEditIntervention,    // Función para abrir el modal de edición con los datos seleccionados
+  onDeleteIntervention,  // Función para borrar la intervención
+  refreshTrigger,        // Variable para refrescar la lista
 }) => {
   const [interventions, setInterventions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,18 +61,18 @@ const InterventionsTable = ({
   };
 
   if (loading) {
-    return <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Cargando...</p>;
+    return <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Cargando...</p>;
   }
   if (error) {
-    return <p className={darkMode ? 'text-red-300' : 'text-red-500'}>Error: {error}</p>;
+    return <p className={`text-center ${darkMode ? 'text-red-300' : 'text-red-500'}`}>Error: {error}</p>;
   }
 
   return (
     <div className={`p-8 rounded-xl ${darkMode ? 'bg-gray-900' : 'bg-gray-300'}`}>
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
+        <table className="w-full text-left border-collapse rounded-xl">
           <thead>
-            <tr className={darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-900'}>
+            <tr className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-900'} pl-2 pr-2`}>
               <th className="py-2 px-2">Parte</th>
               <th className="py-2 px-2">Mando</th>
               <th className="py-2 px-2">Tipo</th>
@@ -88,9 +88,6 @@ const InterventionsTable = ({
                 >
                   <td className="py-2 px-2">{intervention.parte}</td>
                   <td className="py-2 px-2 flex items-center space-x-2">
-                    <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-500 text-white text-lg font-bold">
-                      {getUserInitial(intervention.mando)}
-                    </div>
                     <div>
                       <p className="font-bold">{getUserName(intervention.mando)}</p>
                     </div>
@@ -116,7 +113,7 @@ const InterventionsTable = ({
               ))
             ) : (
               <tr>
-                <td colSpan="4" className="text-center py-4">
+                <td colSpan="4" className={`text-center py-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   No hay intervenciones disponibles
                 </td>
               </tr>

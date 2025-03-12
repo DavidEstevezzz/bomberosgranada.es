@@ -154,6 +154,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
                 <option value="vehiculo">Vehículo</option>
                 <option value="personal">Personal</option>
                 <option value="instalacion">Instalación</option>
+                <option value="equipo">Equipos</option>
               </select>
               {errorMessages.tipo && <span className="text-red-500 text-sm">{errorMessages.tipo}</span>}
 

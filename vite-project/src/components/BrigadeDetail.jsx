@@ -121,6 +121,9 @@ const BrigadeDetail = () => {
       nameColor = '';
   }
 
+  
+  
+
   // Cargar datos de la brigada, bomberos y guardDetails
   useEffect(() => {
     const fetchBrigadeDetails = async () => {
@@ -170,7 +173,26 @@ const BrigadeDetail = () => {
     Noche: {},
   });
   // Opciones de asignación (se permiten valores reutilizables)
-  const options = ['N1', 'N2', 'N3', 'N4', 'S1', 'S2', 'S3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'C1', 'C2', 'C3', 'C4', 'C5', 'Operador 1', 'Operador 2'];
+  const options = ['N1', 'N2', 'N3', 'N4', 'S1', 'S2', 'S3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'C1', 'C2', 'C3', 'C4', 'C5', 'Operador 1', 'Operador 2', 'Operador 3'];
+
+  const getFilteredOptions = (puesto) => {
+    if (puesto === "Bombero") {
+      return options.filter(opt => opt.startsWith("B"));
+    } else if (puesto === "Conductor") {
+      return options.filter(opt => opt.startsWith("C"));
+    } else if (puesto === "Operador") {
+      return options.filter(opt => opt.toLowerCase().includes("operador"));
+    } else if (puesto === "Subinspector" || puesto === "Oficial") {
+      // Suponiendo que si el parque es "norte" se usan opciones que empiezan con "N" y si es "sur" se usan "S"
+      if (brigade && brigade.park && brigade.park.nombre.toLowerCase().includes("norte")) {
+        return options.filter(opt => opt.startsWith("N"));
+      } else {
+        return options.filter(opt => opt.startsWith("S"));
+      }
+    } else {
+      return options;
+    }
+  };
 
   // Al tener guardDetails, cargar asignaciones actuales y previas
   useEffect(() => {
@@ -271,6 +293,14 @@ const BrigadeDetail = () => {
     });
     const uniqueValues = [...new Set(values)];
     return uniqueValues.length > 0 ? uniqueValues.join(', ') : 'No asignado';
+  };
+
+  // Nueva función para obtener específicamente la asignación del turno de mañana
+  const getMorningAssignment = (firefighterId) => {
+    if (assignments["Mañana"] && assignments["Mañana"][firefighterId]) {
+      return assignments["Mañana"][firefighterId];
+    }
+    return 'No asignado';
   };
 
   // Función auxiliar para obtener la asignación previa del guard anterior para un bombero en un turno dado
@@ -397,10 +427,10 @@ const BrigadeDetail = () => {
         return 15 + number * 2;
       }
     }
-    return '';
+    
   };
 
-  // Función para exportar a PDF (sin cambios en la lógica de asignaciones)
+  // Función para exportar a PDF (modificada para usar la asignación específica del turno de mañana)
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.addImage(logo, 'PNG', 10, 10, 20, 30);
@@ -459,19 +489,27 @@ const BrigadeDetail = () => {
     };
     const headers = ['Nombre', 'Puesto', 'Turno', 'Asignación', 'Vehículos'];
     const body = sortedFirefighters.map((firefighter) => {
+      // Usamos el valor de asignación completo para mostrar todas las asignaciones
       const assignmentValue = getAssignmentValue(firefighter);
+      
+      // Pero para los vehículos, solo usamos la asignación del turno de mañana
+      const morningAssignment = getMorningAssignment(firefighter.id_empleado);
+      
       const radio = assignmentValue !== 'No asignado'
         ? ` (${getRadioNumber(assignmentValue, brigade.park?.id_parque)})`
         : '';
       const fullName = `${firefighter.nombre} ${firefighter.apellido}${radio}`;
+      
+      // Verificar si el bombero está en turno de mañana, día completo o combinado con mañana
       const turnoLower = firefighter.turno.toLowerCase();
-      const vehicleInfo =
-        (turnoLower === 'mañana' ||
-          turnoLower === 'día completo' ||
-          turnoLower === 'mañana y tarde' ||
-          turnoLower === 'mañana y noche')
-          ? (vehicleMapping[assignmentValue] || '')
-          : '';
+      const isInMorningShift = turnoLower === 'mañana' || 
+                              turnoLower === 'día completo' ||
+                              turnoLower === 'mañana y tarde' ||
+                              turnoLower === 'mañana y noche';
+                              
+      // Solo asignar vehículo si está en turno de mañana y tiene asignación de mañana
+      const vehicleInfo = isInMorningShift ? (vehicleMapping[morningAssignment] || '') : '';
+      
       return [
         fullName,
         firefighter.puesto,
@@ -626,21 +664,21 @@ const BrigadeDetail = () => {
                           <td className="py-2 px-2">
                             {['mando', 'jefe'].includes(user.type) && (
                               <select
-                                className="bg-gray-700 text-white p-1 rounded"
-                                value={assignments[shift.key][firefighter.id_empleado] || ''}
-                                onChange={(e) =>
-                                  handleAssignmentChange(shift.key, firefighter.id_empleado, e.target.value)
-                                }
-                              >
-                                <option value="" disabled>
-                                  Seleccione
+                              className="bg-gray-700 text-white p-1 rounded"
+                              value={assignments[shift.key][firefighter.id_empleado] || ''}
+                              onChange={(e) =>
+                                handleAssignmentChange(shift.key, firefighter.id_empleado, e.target.value)
+                              }
+                            >
+                              <option value="" disabled>
+                                Seleccione
+                              </option>
+                              {getFilteredOptions(firefighter.puesto).map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
                                 </option>
-                                {options.map((option) => (
-                                  <option key={option} value={option}>
-                                    {option}
-                                  </option>
-                                ))}
-                              </select>
+                              ))}
+                            </select>
                             )}
                           </td>
                         </tr>

@@ -76,7 +76,7 @@ class IncidentController extends Controller
 
         $rules = [
             'id_empleado'   => 'required',
-            'tipo'          => 'required|in:vehiculo,personal,instalacion',
+            'tipo'          => 'required|in:vehiculo,personal,instalacion,equipo',
             'estado'        => 'required',
             'id_parque'     => 'required',
             'fecha'         => 'required|date',

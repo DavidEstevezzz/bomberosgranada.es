@@ -34,6 +34,8 @@ const BrigadeDetail = () => {
   const [searchParams] = useSearchParams();
   const initialDate = searchParams.get('date') || dayjs().format('YYYY-MM-DD');
   const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [incidenciasPersonal, setIncidenciasPersonal] = useState('');
+  const [isUpdatingPersonal, setIsUpdatingPersonal] = useState(false);
   const navigate = useNavigate();
   const { darkMode } = useDarkMode();
 
@@ -148,9 +150,11 @@ const BrigadeDetail = () => {
         if (commentsResponse.data.guard) {
           setGuardDetails(commentsResponse.data.guard);
           setComentarios(commentsResponse.data.guard.comentarios || '');
+          setIncidenciasPersonal(commentsResponse.data.guard.incidencias_personal || '');
         } else {
           setGuardDetails(null);
           setComentarios('');
+          setIncidenciasPersonal('');
         }
         setError(null);
       } catch (error) {
@@ -162,6 +166,25 @@ const BrigadeDetail = () => {
     };
     fetchBrigadeDetails();
   }, [id_brigada, selectedDate]);
+
+  const handlePersonalIncidentsSubmit = async () => {
+    if (!user || !['jefe', 'mando'].includes(user.type)) return;
+    setIsUpdatingPersonal(true);
+    try {
+      const response = await GuardsApiService.updatePersonalIncidents(
+        id_brigada,
+        selectedDate,
+        incidenciasPersonal
+      );
+      setIncidenciasPersonal(response.data.incidencias_personal);
+      // Puedes actualizar guardDetails si lo requieres:
+      setGuardDetails(response.data.guard ? response.data.guard : response.data);
+    } catch (error) {
+      console.error('Error actualizando incidencias de personal:', error);
+    } finally {
+      setIsUpdatingPersonal(false);
+    }
+  };
 
   // Estado para asignaciones actuales y asignaciones previas (guard anterior: id_guard - 10)
   const [assignments, setAssignments] = useState({
@@ -714,7 +737,7 @@ const BrigadeDetail = () => {
               onClick={handleOpenModal}
               className="px-4 py-2 bg-green-500 text-white rounded"
             >
-              Añadir Comentarios Adicionales
+              Completar Cuadrante
             </button>
             <button
               onClick={handleOpenDailyModal}
@@ -749,6 +772,37 @@ const BrigadeDetail = () => {
               <p className="text-white">{comentarios || 'No hay comentarios disponibles.'}</p>
             )}
           </div>
+
+          <div className="mt-6 w-full">
+  <h2 className="text-xl font-bold mb-4">Incidencias de Personal</h2>
+  <div className="bg-gray-700 p-4 rounded-lg">
+    {['mando', 'jefe'].includes(user.type) ? (
+      <>
+        <textarea
+          className="w-full p-2 rounded bg-gray-600 text-white"
+          rows="4"
+          placeholder="Añadir incidencias de personal..."
+          value={incidenciasPersonal}
+          onChange={(e) => setIncidenciasPersonal(e.target.value)}
+        />
+        <button
+          onClick={handlePersonalIncidentsSubmit}
+          className={`mt-2 px-4 py-2 rounded ${
+            isUpdatingPersonal ? 'bg-gray-500' : 'bg-blue-500'
+          } text-white`}
+          disabled={isUpdatingPersonal}
+        >
+          {isUpdatingPersonal ? 'Guardando...' : 'Guardar Incidencias de Personal'}
+        </button>
+      </>
+    ) : (
+      <p className="text-white">
+        {incidenciasPersonal || 'No hay incidencias de personal disponibles.'}
+      </p>
+    )}
+  </div>
+</div>
+
 
           <div className="mt-6 w-full">
             <h2 className="text-xl font-bold mb-4">Intervenciones</h2>

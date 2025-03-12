@@ -65,6 +65,15 @@ async updateGuardComments(idBrigada, date, comentarios) {
 async updateDailyActivities(guardId, dailyData) {
   return await BaseApiService.put(`${API_URL}/${guardId}/daily-activities`, dailyData);
 }
+
+async updatePersonalIncidents(idBrigada, date, incidencias_personal) {
+  const url = `${API_URL}/update-personal-incidents`;
+  return await BaseApiService.put(url, {
+    id_brigada: idBrigada,
+    date: date,
+    incidencias_personal: incidencias_personal,
+  });
+}
   
 }
 

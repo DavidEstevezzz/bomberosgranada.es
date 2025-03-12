@@ -108,6 +108,35 @@ class GuardController extends Controller
     }
     
 
+    public function updatePersonalIncidents(Request $request)
+{
+    // Validar la entrada
+    $request->validate([
+        'id_brigada' => 'required|exists:guards,id_brigada',
+        'date' => 'required|date',
+        'incidencias_personal' => 'required|string',
+    ]);
+
+    // Buscar la guardia por fecha y brigada
+    $guard = Guard::where('id_brigada', $request->id_brigada)
+        ->where('date', $request->date)
+        ->first();
+
+    if (!$guard) {
+        return response()->json(['message' => 'Guardia no encontrada'], 404);
+    }
+
+    // Actualizar incidencias de personal
+    $guard->incidencias_personal = $request->incidencias_personal;
+    $guard->save();
+
+    return response()->json([
+        'message' => 'Incidencias de personal actualizadas con éxito',
+        'incidencias_personal' => $guard->incidencias_personal
+    ], 200);
+}
+
+
 
     public function destroy($id)
     {

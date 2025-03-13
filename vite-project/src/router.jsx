@@ -33,6 +33,8 @@ import AvailableOperatorsMorning from './views/AvailableOperatorsMorning.jsx';
 import AvailableOperatorsNight from './views/AvailableOperatorsNight.jsx';
 import Vehicles from './views/Vehicles.jsx'; 
 import Incidents from './views/IncidentListPage.jsx';
+import SuggestionListPage from './views/SuggestionListPage.jsx';
+
 
 const router = createBrowserRouter([
   {
@@ -68,6 +70,8 @@ const router = createBrowserRouter([
       { path: 'cambio-guardia', element: <ShiftChangeRequestPage /> },
       { path: 'solicitud', element: <CreateRequestPage /> },
       { path: 'lista-solicitudes', element: <RequestAndShiftChangePage /> },
+      { path: 'sugerencias', element: <SuggestionListPage /> },
+
     ],
   },
   {

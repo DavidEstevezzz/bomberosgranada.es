@@ -19,6 +19,8 @@ use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\GuardAssignmentController;
 use App\Http\Controllers\InterventionController;
+use App\Http\Controllers\SuggestionController;
+use App\Http\Controllers\SuggestionVoteController;
 
 
 
@@ -52,7 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy']);
 
 
-    
+
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/por-puesto', [UserController::class, 'getUsersByPuesto']);
@@ -103,6 +105,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/guards/update-personal-incidents', [GuardController::class, 'updatePersonalIncidents']);
 
 
+    Route::get('/suggestions', [SuggestionController::class, 'index']);
+    Route::post('/suggestions', [SuggestionController::class, 'store']);
+    Route::get('/suggestions/{id}', [SuggestionController::class, 'show']);
+    Route::put('/suggestions/{id}', [SuggestionController::class, 'update']);
+    Route::delete('/suggestions/{id}', [SuggestionController::class, 'destroy']);
+    // Ruta para sumar votos
+    Route::post('/suggestions/{id}/vote', [SuggestionController::class, 'addVote']);
+
+    Route::post('/suggestions/vote', [SuggestionVoteController::class, 'store']);
+    Route::delete('/suggestions/vote', [SuggestionVoteController::class, 'destroy']);
 
 
     Route::get('/firefighters-assignments', [FirefighterAssignmentController::class, 'index']);

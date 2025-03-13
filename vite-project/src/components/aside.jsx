@@ -11,7 +11,8 @@ import {
   faCalendar, 
   faCaretDown,
   faTruck,  
-  faExclamationTriangle
+  faExclamationTriangle,
+  faLightbulb
 } from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -225,6 +226,12 @@ const Aside = ({ className }) => {
             Calendario
           </a>
         )}
+
+        {/* Sugerencias */}
+        <a href="/sugerencias" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <FontAwesomeIcon icon={faLightbulb} className="w-5 h-5 mr-2" />
+            Sugerencias
+          </a>
       </nav>
     </aside>
   );

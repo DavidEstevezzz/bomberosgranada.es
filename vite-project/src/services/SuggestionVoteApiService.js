@@ -11,7 +11,7 @@ class SuggestionVoteApiService {
 
     // Eliminar un voto previamente registrado
     async deleteVote(data) {
-        return await BaseApiService.delete(API_URL, { data });
+        return await BaseApiService.delete(API_URL, data);
     }
 }
 

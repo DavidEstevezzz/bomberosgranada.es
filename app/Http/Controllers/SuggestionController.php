@@ -9,10 +9,10 @@ class SuggestionController extends Controller
 {
     // Listar todas las sugerencias
     public function index()
-    {
-        $suggestions = Suggestion::all();
-        return response()->json($suggestions);
-    }
+{
+    $suggestions = Suggestion::with('user')->get();
+    return response()->json($suggestions);
+}
 
     // Crear una nueva sugerencia
     public function store(Request $request)

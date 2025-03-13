@@ -10,7 +10,7 @@ import AddSuggestionModal from '../components/AddSuggestionModal';
 
 const SuggestionListPage = () => {
   const { darkMode } = useDarkMode();
-  const { user } = useStateContext(); // Se asume que contiene datos del usuario actual, incluyendo "id_empleado"
+  const { user } = useStateContext(); 
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\SuggestionVote;
 use Illuminate\Database\QueryException;
+use App\Models\Suggestion;
 
 class SuggestionVoteController extends Controller
 {
@@ -19,6 +20,9 @@ class SuggestionVoteController extends Controller
         try {
             // Se intenta crear el voto
             $vote = SuggestionVote::create($data);
+
+            $suggestion = Suggestion::find($data['suggestion_id']);
+            $suggestion->increment('conteo_votos');
 
             return response()->json([
                 'message' => 'Voto registrado correctamente',
@@ -42,8 +46,11 @@ class SuggestionVoteController extends Controller
 
         // Buscamos el voto correspondiente
         $vote = SuggestionVote::where('suggestion_id', $data['suggestion_id'])
-                ->where('usuario_id', $data['usuario_id'])
-                ->first();
+            ->where('usuario_id', $data['usuario_id'])
+            ->first();
+        // En el método destroy del controlador de votos, luego de eliminar el voto:
+        $suggestion = Suggestion::find($data['suggestion_id']);
+        $suggestion->decrement('conteo_votos');
 
         if (!$vote) {
             return response()->json([

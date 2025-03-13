@@ -3,12 +3,16 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import SuggestionApiService from '../services/SuggestionApiService';
+import { useStateContext } from '../contexts/ContextProvider';
+
 
 const AddSuggestionModal = ({ isOpen, onClose, onAdd }) => {
   const { darkMode } = useDarkMode();
   const [formValues, setFormValues] = useState({ titulo: '', descripcion: '' });
   const [errorMessages, setErrorMessages] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useStateContext();
+
 
   useEffect(() => {
     if (isOpen) {
@@ -24,21 +28,35 @@ const AddSuggestionModal = ({ isOpen, onClose, onAdd }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    
+    // Agregar el id del usuario autenticado a los datos enviados
+    const dataToSend = {
+      ...formValues,
+      usuario_id: user.id_empleado, // Asegúrate de que user.id_empleado esté definido
+    };
+  
+    console.log("Datos enviados:", dataToSend);
+  
     if (isSubmitting) return;
     setIsSubmitting(true);
     setErrorMessages({});
-
+  
     try {
-      await SuggestionApiService.createSuggestion(formValues);
+      const response = await SuggestionApiService.createSuggestion(dataToSend);
+      console.log("Respuesta de la API:", response.data);
       onAdd(); // para refrescar la lista
       onClose();
     } catch (error) {
-      console.error('Error al crear sugerencia:', error);
+      console.error("Error al crear sugerencia:", error);
+      if (error.response && error.response.data) {
+        console.error("Datos del error:", error.response.data);
+      }
       setErrorMessages({ general: 'Error al crear la sugerencia.' });
     } finally {
       setIsSubmitting(false);
     }
   };
+  
 
   if (!isOpen) return null;
 

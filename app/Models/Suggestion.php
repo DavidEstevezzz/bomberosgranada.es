@@ -19,6 +19,9 @@ class Suggestion extends Model
     // Agregamos el atributo calculado para que se incluya en la respuesta JSON
     protected $appends = ['userVoted'];
 
+    const CREATED_AT = 'fecha_creacion';
+    const UPDATED_AT = 'fecha_actualizacion';
+
     /**
      * Relación: Una sugerencia tiene muchos votos.
      */

@@ -109,12 +109,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/suggestions', [SuggestionController::class, 'store']);
     Route::get('/suggestions/{id}', [SuggestionController::class, 'show']);
     Route::put('/suggestions/{id}', [SuggestionController::class, 'update']);
+    Route::delete('/suggestions/vote', [SuggestionVoteController::class, 'destroy']);
+
     Route::delete('/suggestions/{id}', [SuggestionController::class, 'destroy']);
     // Ruta para sumar votos
     Route::post('/suggestions/{id}/vote', [SuggestionController::class, 'addVote']);
 
     Route::post('/suggestions/vote', [SuggestionVoteController::class, 'store']);
-    Route::delete('/suggestions/vote', [SuggestionVoteController::class, 'destroy']);
 
 
     Route::get('/firefighters-assignments', [FirefighterAssignmentController::class, 'index']);

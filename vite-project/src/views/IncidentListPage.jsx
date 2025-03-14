@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash, faTimes, faEdit, faPlus, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faTimes, faEdit, faPlus, faInfoCircle, faHammer, faStop, faBan } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -288,13 +288,13 @@ const IncidentListPage = () => {
           Incidencias Pendientes - Nivel Alto
         </h2>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-center">
             <thead>
               <tr>
                 <th className="py-2 px-2">Creado por</th>
                 <th className="py-2 px-2">Tipo</th>
                 <th className="py-2 px-2">Fecha</th>
-                <th className="py-2 px-2">Leído</th>
+                <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Extras</th>
                 <th className="py-2 px-2">Acciones</th>
@@ -309,9 +309,9 @@ const IncidentListPage = () => {
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
                       {incident.leido ? (
-                        <FontAwesomeIcon icon={faEye} title="Leído" />
+                        <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
                       ) : (
-                        <FontAwesomeIcon icon={faEyeSlash} title="No leído" />
+                        <FontAwesomeIcon icon={faBan} title="No Resolviendo" />
                       )}
                     </td>
                     <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
@@ -337,12 +337,12 @@ const IncidentListPage = () => {
                         <FontAwesomeIcon icon={faInfoCircle} />
                         <span>Detalle</span>
                       </button>
-                      {user?.type === 'jefe' && !incident.leido && (
+                      {!incident.leido && (
                         <button
                           onClick={() => handleMarkAsRead(incident.id_incidencia)}
                           className="bg-yellow-600 text-white px-3 py-1 rounded"
                         >
-                          Marcar Leída
+                          Resolviendo
                         </button>
                       )}
                       {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
@@ -406,13 +406,13 @@ const IncidentListPage = () => {
           Incidencias Pendientes - Nivel Medio
         </h2>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-center">
             <thead>
               <tr>
                 <th className="py-2 px-2">Creado por</th>
                 <th className="py-2 px-2">Tipo</th>
                 <th className="py-2 px-2">Fecha</th>
-                <th className="py-2 px-2">Leído</th>
+                <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Extras</th>
                 <th className="py-2 px-2">Acciones</th>
@@ -426,10 +426,10 @@ const IncidentListPage = () => {
                     <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
-                      {incident.leido ? (
-                        <FontAwesomeIcon icon={faEye} title="Leído" />
+                    {incident.leido ? (
+                        <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
                       ) : (
-                        <FontAwesomeIcon icon={faEyeSlash} title="No leído" />
+                        <FontAwesomeIcon icon={faBan} title="No Resolviendo" />
                       )}
                     </td>
                     <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
@@ -454,12 +454,12 @@ const IncidentListPage = () => {
                         <FontAwesomeIcon icon={faInfoCircle} />
                         <span>Detalle</span>
                       </button>
-                      {user?.type === 'jefe' && !incident.leido && (
+                      {!incident.leido && (
                         <button
                           onClick={() => handleMarkAsRead(incident.id_incidencia)}
                           className="bg-yellow-600 text-white px-3 py-1 rounded"
                         >
-                          Marcar Leída
+                          Resolviendo
                         </button>
                       )}
                       {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
@@ -523,13 +523,13 @@ const IncidentListPage = () => {
           Incidencias Pendientes - Nivel Bajo
         </h2>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-center">
             <thead>
               <tr>
                 <th className="py-2 px-2">Creado por</th>
                 <th className="py-2 px-2">Tipo</th>
                 <th className="py-2 px-2">Fecha</th>
-                <th className="py-2 px-2">Leído</th>
+                <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Extras</th>
                 <th className="py-2 px-2">Acciones</th>
@@ -543,10 +543,10 @@ const IncidentListPage = () => {
                     <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
-                      {incident.leido ? (
-                        <FontAwesomeIcon icon={faEye} title="Leído" />
+                    {incident.leido ? (
+                        <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
                       ) : (
-                        <FontAwesomeIcon icon={faEyeSlash} title="No leído" />
+                        <FontAwesomeIcon icon={faBan} title="No Resolviendo" />
                       )}
                     </td>
                     <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
@@ -571,12 +571,12 @@ const IncidentListPage = () => {
                         <FontAwesomeIcon icon={faInfoCircle} />
                         <span>Detalle</span>
                       </button>
-                      {user?.type === 'jefe' && !incident.leido && (
+                      {!incident.leido && (
                         <button
                           onClick={() => handleMarkAsRead(incident.id_incidencia)}
                           className="bg-yellow-600 text-white px-3 py-1 rounded"
                         >
-                          Marcar Leída
+                          Resolviendo
                         </button>
                       )}
                       {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
@@ -670,7 +670,7 @@ const IncidentListPage = () => {
                 <th className="py-2 px-2">Creado por</th>
                 <th className="py-2 px-2">Tipo</th>
                 <th className="py-2 px-2">Fecha</th>
-                <th className="py-2 px-2">Leído</th>
+                <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Extras</th>
                 <th className="py-2 px-2">Acciones</th>
@@ -684,10 +684,10 @@ const IncidentListPage = () => {
                     <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
-                      {incident.leido ? (
-                        <FontAwesomeIcon icon={faEye} title="Leído" />
+                    {incident.leido ? (
+                        <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
                       ) : (
-                        <FontAwesomeIcon icon={faEyeSlash} title="No leído" />
+                        <FontAwesomeIcon icon={faBan} title="No Resolviendo" />
                       )}
                     </td>
                     <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>

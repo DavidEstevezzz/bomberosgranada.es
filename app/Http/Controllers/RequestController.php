@@ -59,8 +59,7 @@ class RequestController extends Controller
         $rules['turno'] = 'required|in:Mañana,Tarde,Noche,Día Completo,Mañana y tarde,Tarde y noche';
     }
 
-    // Reglas específicas para "salidas personales"
-    if ($request->tipo === 'salidas personales' || $request->tipo === 'horas sindicales') {
+    if ($request->tipo === 'salidas personales' || $request->tipo === 'horas sindicales' || request()->tipo === 'compensacion grupos especiales') {
     
         $rules['horas'] = 'required|numeric|min:1|max:24'; // Validar las horas
         $request->merge([

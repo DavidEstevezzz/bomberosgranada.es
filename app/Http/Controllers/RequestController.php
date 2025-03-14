@@ -59,7 +59,7 @@ class RequestController extends Controller
         $rules['turno'] = 'required|in:Mañana,Tarde,Noche,Día Completo,Mañana y tarde,Tarde y noche';
     }
 
-    if ($request->tipo === 'salidas personales' || $request->tipo === 'horas sindicales' || request()->tipo === 'compensacion grupos especiales') {
+    if ($request->tipo === 'salidas personales' || $request->tipo === 'horas sindicales' ) {
     
         $rules['horas'] = 'required|numeric|min:1|max:24'; // Validar las horas
         $request->merge([
@@ -67,7 +67,7 @@ class RequestController extends Controller
         ]);
     }
 
-    if ($request->tipo === 'licencias por dias') {
+    if ($request->tipo === 'licencias por dias' || request()->tipo === 'compensacion grupos especiales') {
         $request->merge([
             'fecha_fin' => $request->fecha_fin ?? $request->fecha_ini, // Asegura que haya fecha_fin
         ]);

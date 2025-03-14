@@ -97,10 +97,10 @@ const SuggestionListPage = () => {
                 suggestions.map((sugg) => (
                   <tr key={sugg.id} className="border-b border-gray-700 hover:bg-gray-700/10 transition-all duration-200">
                     <td className="py-4 px-4">
-                      {sugg.usuario ? `${sugg.user.nombre} ${sugg.user.apellido}` : "Desconocido"}
+                      {sugg.user ? `${sugg.user.nombre} ${sugg.user.apellido}` : "Desconocido"}
                     </td>
                     <td className="py-4 px-4 font-semibold">{sugg.titulo}</td>
-                    <td className="py-4 px-4 max-w-xs truncate">{sugg.descripcion}</td>
+                    <td className="py-4 px-4 max-w-xs line-clamp-2 hover:line-clamp-none">{sugg.descripcion}</td>
                     <td className="py-4 px-4 text-center font-bold">{sugg.conteo_votos}</td>
                     <td className="py-4 px-4 text-center">
                       <button

@@ -31,7 +31,6 @@ class MessageController extends Controller
     } elseif ($userType === 'bombero') {
         $massiveValues[] = 'bomberos';
     } elseif ($userType === 'jefe') {
-        // Añadir 'mandos' y/o 'bomberos' si un jefe también debe ver estos mensajes
         $massiveValues[] = 'mandos';
         $massiveValues[] = 'bomberos';
     }
@@ -48,6 +47,9 @@ class MessageController extends Controller
         foreach ($massiveValues as $value) {
             $query->orWhere('massive', $value);
         }
+        
+        // Incluir mensajes con massive vacío (que indican un intento de mensaje masivo inválido)
+        $query->orWhere('massive', '');
     })
     ->orderBy('created_at', 'desc')
     ->get();

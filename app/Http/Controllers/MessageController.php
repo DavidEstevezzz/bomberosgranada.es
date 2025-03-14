@@ -28,17 +28,26 @@ class MessageController extends Controller
     $massiveValues = ['toda'];
     if ($userType === 'mando') {
         $massiveValues[] = 'mandos';
-    } elseif ($userType === 'bombero') { // Asegúrate de que coincida con el valor en la base de datos
+    } elseif ($userType === 'bombero') {
+        $massiveValues[] = 'bomberos';
+    } elseif ($userType === 'jefe') {
+        // Añadir 'mandos' y/o 'bomberos' si un jefe también debe ver estos mensajes
+        $massiveValues[] = 'mandos';
         $massiveValues[] = 'bomberos';
     }
+    
     Log::debug("Valores de massive permitidos: " . implode(', ', $massiveValues));
 
     // Activar el registro de queries
     DB::enableQueryLog();
 
     $messages = UserMessage::where(function ($query) use ($userId, $massiveValues) {
-        $query->where('receiver_id', $userId)
-              ->orWhereIn('massive', $massiveValues);
+        $query->where('receiver_id', $userId);
+        
+        // Para cada valor de massive permitido, agregar una condición OR
+        foreach ($massiveValues as $value) {
+            $query->orWhere('massive', $value);
+        }
     })
     ->orderBy('created_at', 'desc')
     ->get();
@@ -54,7 +63,6 @@ class MessageController extends Controller
 
     return response()->json($messages);
 }
-
 
 
     /**

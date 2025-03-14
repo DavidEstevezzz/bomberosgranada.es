@@ -8,6 +8,7 @@ use App\Mail\MessageSent;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class MessageController extends Controller
 {
@@ -16,30 +17,44 @@ class MessageController extends Controller
      * Muestra mensajes donde receiver_id = usuario logueado O massive = true.
      */
     public function index()
-    {
-        $user = auth()->user();
-        $userId = auth()->id();
-        $userType = $user->type;
+{
+    $user = auth()->user();
+    $userId = auth()->id();
+    $userType = $user->type;
 
-        Log::info("Recuperando mensajes para usuario: ID {$userId}, tipo {$userType}");
+    Log::info("Recuperando mensajes para usuario: ID {$userId}, tipo {$userType}");
 
-        $massiveValues = ['toda'];
-        if ($userType === 'mando') {
-            $massiveValues[] = 'mandos';
-        } elseif ($userType === 'bombero') {
-            $massiveValues[] = 'bomberos';
-        }
-
-        $messages = UserMessage::where('receiver_id', $userId)
-            ->orWhereIn('massive', $massiveValues)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        Log::info("Cantidad de mensajes recuperados: " . $messages->count());
-
-
-        return response()->json($messages);
+    // Definir los valores permitidos para massive
+    $massiveValues = ['toda'];
+    if ($userType === 'mando') {
+        $massiveValues[] = 'mandos';
+    } elseif ($userType === 'bombero') { // Asegúrate de que coincida con el valor en la base de datos
+        $massiveValues[] = 'bomberos';
     }
+    Log::debug("Valores de massive permitidos: " . implode(', ', $massiveValues));
+
+    // Activar el registro de queries
+    DB::enableQueryLog();
+
+    $messages = UserMessage::where(function ($query) use ($userId, $massiveValues) {
+        $query->where('receiver_id', $userId)
+              ->orWhereIn('massive', $massiveValues);
+    })
+    ->orderBy('created_at', 'desc')
+    ->get();
+
+    // Loguear el query ejecutado
+    $queryLog = DB::getQueryLog();
+    Log::debug("Query ejecutada: " . json_encode($queryLog));
+
+    Log::info("Cantidad de mensajes recuperados: " . $messages->count());
+    foreach ($messages as $message) {
+        Log::debug("Mensaje ID: {$message->id}, massive: {$message->massive}");
+    }
+
+    return response()->json($messages);
+}
+
 
 
     /**

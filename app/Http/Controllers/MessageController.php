@@ -33,19 +33,41 @@ class MessageController extends Controller
     }
     Log::debug("Valores de massive permitidos: " . implode(', ', $massiveValues));
 
-    // Activar el registro de queries
+    // Activar el registro de queries y el registro de mensajes
     DB::enableQueryLog();
 
-    // Modificación para incluir el mensaje 243 específicamente
+    // Primera consulta: buscar mensaje 243 con withTrashed para ver si existe y su estado
+    $message243 = UserMessage::withTrashed()->find(243);
+    Log::debug("Mensaje 243 encontrado: " . ($message243 ? 'SÍ' : 'NO'));
+    if ($message243) {
+        Log::debug("Estado mensaje 243: deleted_at=" . ($message243->deleted_at ? $message243->deleted_at : 'NULL') . 
+                  ", massive='" . $message243->massive . "', tipo=" . gettype($message243->massive));
+    }
+
+    // Segunda consulta: verificar todos los mensajes masivos, incluso los eliminados
+    $massiveMessages = UserMessage::withTrashed()
+        ->whereIn(DB::raw('LOWER(massive)'), array_map('strtolower', $massiveValues))
+        ->get();
+    
+    Log::debug("Mensajes masivos encontrados (incluso eliminados): " . $massiveMessages->count());
+    foreach ($massiveMessages as $msg) {
+        Log::debug("Mensaje masivo ID: {$msg->id}, massive: '{$msg->massive}', deleted_at: " . 
+                  ($msg->deleted_at ? $msg->deleted_at : 'NULL'));
+    }
+
+    // Consulta principal: múltiples intentos para capturar diferentes posibilidades
     $messages = UserMessage::where(function ($query) use ($userId, $massiveValues) {
+        // 1. Mensajes específicos para este usuario
         $query->where('receiver_id', $userId);
         
-        // Añadir cada valor de massive como una condición OR separada
+        // 2. Mensajes masivos - usando varios métodos
         foreach ($massiveValues as $value) {
-            $query->orWhere('massive', $value);  // Cambiado: quitado el '=' explícito para usar el predeterminado
+            $query->orWhereRaw("LOWER(massive) = ?", [strtolower($value)])
+                  ->orWhereRaw("massive LIKE ?", ["%$value%"])
+                  ->orWhere('massive', $value);
         }
         
-        // Incluir el mensaje 243 específicamente para diagnóstico
+        // 3. Verificar el ID 243 específicamente 
         $query->orWhere('id', 243);
     })
     ->orderBy('created_at', 'desc')
@@ -53,14 +75,20 @@ class MessageController extends Controller
 
     // Loguear el query ejecutado
     $queryLog = DB::getQueryLog();
-    Log::debug("Query ejecutada: " . json_encode($queryLog));
+    Log::debug("Queries ejecutadas: " . json_encode($queryLog));
 
     // Agregar información detallada sobre los mensajes
     Log::info("Cantidad de mensajes recuperados: " . $messages->count());
     foreach ($messages as $message) {
-        // Convertir 'massive' a string para asegurar que se muestre correctamente en los logs
-        $massiveValue = $message->massive ? (string)$message->massive : 'null';
-        Log::debug("Mensaje ID: {$message->id}, massive: '{$massiveValue}', tipo: " . gettype($message->massive));
+        $massiveValue = $message->massive;
+        if (is_null($massiveValue)) {
+            $massiveValueStr = 'NULL';
+        } else {
+            // Asegurar que se muestre como string y escapar caracteres especiales
+            $massiveValueStr = "'" . addslashes($massiveValue) . "'";
+        }
+        
+        Log::debug("Mensaje ID: {$message->id}, massive: {$massiveValueStr}, tipo: " . gettype($message->massive));
     }
 
     return response()->json($messages);

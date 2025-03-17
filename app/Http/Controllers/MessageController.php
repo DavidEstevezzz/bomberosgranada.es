@@ -28,7 +28,7 @@ class MessageController extends Controller
     $massiveValues = ['toda'];
     if ($userType === 'mando') {
         $massiveValues[] = 'mandos';
-    } elseif ($userType === 'bombero') { // Asegúrate de que coincida con el valor en la base de datos
+    } elseif ($userType === 'bombero') {
         $massiveValues[] = 'bomberos';
     }
     Log::debug("Valores de massive permitidos: " . implode(', ', $massiveValues));
@@ -37,9 +37,12 @@ class MessageController extends Controller
     DB::enableQueryLog();
 
     $messages = UserMessage::where(function ($query) use ($userId, $massiveValues) {
-        $query->where('receiver_id', $userId)
-              ->orWhereIn('massive', $massiveValues)
-              ->orWhere('id', '243');
+        $query->where('receiver_id', $userId);
+        
+        // Añadir cada valor de massive como una condición OR separada
+        foreach ($massiveValues as $value) {
+            $query->orWhere('massive', '=', $value);
+        }
     })
     ->orderBy('created_at', 'desc')
     ->get();
@@ -48,9 +51,12 @@ class MessageController extends Controller
     $queryLog = DB::getQueryLog();
     Log::debug("Query ejecutada: " . json_encode($queryLog));
 
+    // Agregar información detallada sobre los mensajes
     Log::info("Cantidad de mensajes recuperados: " . $messages->count());
     foreach ($messages as $message) {
-        Log::debug("Mensaje ID: {$message->id}, massive: {$message->massive}");
+        // Convertir 'massive' a string para asegurar que se muestre correctamente en los logs
+        $massiveValue = $message->massive ? (string)$message->massive : 'null';
+        Log::debug("Mensaje ID: {$message->id}, massive: '{$massiveValue}'");
     }
 
     return response()->json($messages);

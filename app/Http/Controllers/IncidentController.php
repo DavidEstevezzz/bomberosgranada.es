@@ -26,7 +26,7 @@ class IncidentController extends Controller
         $rules = [
             'fecha'        => 'required|date',
             'id_empleado'  => 'required|exists:users,id_empleado', // Empleado que crea la incidencia
-            'tipo'         => 'required|in:vehiculo,personal,instalacion', // Tipos válidos
+            'tipo'         => 'required|in:vehiculo,personal,instalacion,equipo', // Tipos válidos
             'estado'       => 'required|in:Pendiente,En proceso,Resuelto',
             'descripcion'  => 'required|string',
             'nivel'        => 'required|in:alto,medio,bajo',

@@ -543,7 +543,7 @@ const BrigadeDetail = () => {
       const cleanAssignment = assignment.trim().toUpperCase();
       const letter = cleanAssignment.charAt(0);
       if (letter === 'N' || letter === 'S') {
-        if (cleanAssignment === 'N1' || cleanAssignment === 'S1') {
+        if (puesto.toLowerCase() === 'subinspector') {
           return [255, 255, 153];
         } else {
           return [255, 102, 102];
@@ -873,7 +873,7 @@ const BrigadeDetail = () => {
             intervention={selectedIntervention}
             onClose={() => setShowEditInterventionModal(false)}
             onEdited={() => setRefreshInterventions((prev) => !prev)}
-            firefighters={firefighters.filter((f) => f.puesto === 'Subinspector')}
+            firefighters={firefighters.filter((f) => f.puesto === 'Subinspector' || f.puesto === 'Oficial')}
           />
 
           <AddDailyActivitiesModal

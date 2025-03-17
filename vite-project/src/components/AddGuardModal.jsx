@@ -9,7 +9,7 @@ const AddGuardModal = ({ date, isOpen, onClose, onSave, brigades }) => {
     const [guard, setGuard] = useState({
         date: new Date(date),
         id_brigada: '',
-        id_salario: '',
+        id_salario: null,
         tipo: 'Festivo víspera',
     });
 
@@ -21,7 +21,7 @@ const AddGuardModal = ({ date, isOpen, onClose, onSave, brigades }) => {
             setGuard({
                 date: new Date(date),
                 id_brigada: '',
-                id_salario: '',
+                id_salario: null,
                 tipo: guard.tipo || 'Laborable',
             });
             setIsSubmitting(false);

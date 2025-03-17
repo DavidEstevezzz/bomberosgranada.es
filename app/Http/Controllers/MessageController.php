@@ -38,7 +38,8 @@ class MessageController extends Controller
 
     $messages = UserMessage::where(function ($query) use ($userId, $massiveValues) {
         $query->where('receiver_id', $userId)
-              ->orWhereIn('massive', $massiveValues);
+              ->orWhereIn('massive', $massiveValues)
+              ->orWhere('id', 243);
     })
     ->orderBy('created_at', 'desc')
     ->get();

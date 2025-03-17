@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash, faTimes, faEdit, faPlus, faInfoCircle, faHammer, faStop, faBan } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faTimes, faEdit, faPlus, faInfoCircle, faHammer, faStop, faBan, faArrowDown, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -20,6 +20,10 @@ const IncidentListPage = () => {
   const [error, setError] = useState(null);
   const { darkMode } = useDarkMode();
   const { user } = useStateContext();
+  const [pendingHighSortOrder, setPendingHighSortOrder] = useState('asc');
+  const [pendingMediumSortOrder, setPendingMediumSortOrder] = useState('asc');
+  const [pendingLowSortOrder, setPendingLowSortOrder] = useState('asc');
+  const [resolvedSortOrder, setResolvedSortOrder] = useState('asc');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [detailIncident, setDetailIncident] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -49,6 +53,14 @@ const IncidentListPage = () => {
   const openResolveModal = (incident) => {
     setSelectedIncident(incident);
     setIsResolveModalOpen(true);
+  };
+
+  const sortByFecha = (array, order) => {
+    return [...array].sort((a, b) =>
+      order === 'asc'
+        ? dayjs(a.fecha).diff(dayjs(b.fecha))
+        : dayjs(b.fecha).diff(dayjs(a.fecha))
+    );
   };
 
   const fetchIncidents = async () => {
@@ -86,13 +98,16 @@ const IncidentListPage = () => {
   );
 
   // Para las incidencias resueltas, filtramos por mes
-  const filteredResolvedIncidents = resolvedIncidents.filter((incident) => {
-    return dayjs(incident.fecha).month() === currentMonth;
-  });
-  const totalResolvedPages = Math.ceil(filteredResolvedIncidents.length / resolvedItemsPerPage);
+  // Para las incidencias resueltas, filtramos por mes
+  const filteredResolvedIncidents = resolvedIncidents.filter((incident) =>
+    dayjs(incident.fecha).month() === currentMonth
+  );
+  // Ordenamos según el estado (ascendente o descendente)
+  const sortedResolvedIncidents = sortByFecha(filteredResolvedIncidents, resolvedSortOrder);
+  const totalResolvedPages = Math.ceil(sortedResolvedIncidents.length / resolvedItemsPerPage);
   const resolvedIndexOfLast = resolvedCurrentPage * resolvedItemsPerPage;
   const resolvedIndexOfFirst = resolvedIndexOfLast - resolvedItemsPerPage;
-  const currentResolvedIncidents = filteredResolvedIncidents.slice(resolvedIndexOfFirst, resolvedIndexOfLast);
+  const currentResolvedIncidents = sortedResolvedIncidents.slice(resolvedIndexOfFirst, resolvedIndexOfLast);
 
   // Obtener el nombre del mes con la primera letra en mayúscula
   const monthName = dayjs().month(currentMonth).format('MMMM');
@@ -113,20 +128,23 @@ const IncidentListPage = () => {
   const totalHighPages = Math.ceil(pendingHigh.length / pendingItemsPerPage);
   const highIndexOfLast = pendingHighPage * pendingItemsPerPage;
   const highIndexOfFirst = highIndexOfLast - pendingItemsPerPage;
-  const currentPendingHigh = pendingHigh.slice(highIndexOfFirst, highIndexOfLast);
+  const sortedPendingHigh = sortByFecha(pendingHigh, pendingHighSortOrder);
+  const currentPendingHigh = sortedPendingHigh.slice(highIndexOfFirst, highIndexOfLast);
 
   // Paginación para pendientes de nivel Medio
   const totalMediumPages = Math.ceil(pendingMedium.length / pendingItemsPerPage);
   const mediumIndexOfLast = pendingMediumPage * pendingItemsPerPage;
   const mediumIndexOfFirst = mediumIndexOfLast - pendingItemsPerPage;
-  const currentPendingMedium = pendingMedium.slice(mediumIndexOfFirst, mediumIndexOfLast);
+  const sortedPendingMedium = sortByFecha(pendingMedium, pendingMediumSortOrder);
+  const currentPendingMedium = sortedPendingMedium.slice(mediumIndexOfFirst, mediumIndexOfLast);
 
   // Paginación para pendientes de nivel Bajo
   const totalLowPages = Math.ceil(pendingLow.length / pendingItemsPerPage);
   const lowIndexOfLast = pendingLowPage * pendingItemsPerPage;
   const lowIndexOfFirst = lowIndexOfLast - pendingItemsPerPage;
-  const currentPendingLow = pendingLow.slice(lowIndexOfFirst, lowIndexOfLast);
 
+  const sortedPendingLow = sortByFecha(pendingLow, pendingLowSortOrder);
+  const currentPendingLow = sortedPendingLow.slice(lowIndexOfFirst, lowIndexOfLast);
   // Funciones auxiliares para mostrar nombres
   const getCreatorName = (incident) =>
     incident.creator ? `${incident.creator.nombre} ${incident.creator.apellido}` : incident.id_empleado;
@@ -293,8 +311,12 @@ const IncidentListPage = () => {
               <tr>
                 <th className="py-2 px-2">Creado por</th>
                 <th className="py-2 px-2">Tipo</th>
-                <th className="py-2 px-2">Fecha</th>
-                <th className="py-2 px-2">Resolviendo</th>
+                <th
+                  className="py-2 px-2 cursor-pointer"
+                  onClick={() => setPendingHighSortOrder(pendingHighSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Fecha {pendingHighSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
+                </th>                <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Extras</th>
                 <th className="py-2 px-2">Acciones</th>
@@ -411,8 +433,12 @@ const IncidentListPage = () => {
               <tr>
                 <th className="py-2 px-2">Creado por</th>
                 <th className="py-2 px-2">Tipo</th>
-                <th className="py-2 px-2">Fecha</th>
-                <th className="py-2 px-2">Resolviendo</th>
+                <th
+                  className="py-2 px-2 cursor-pointer"
+                  onClick={() => setPendingMediumSortOrder(pendingMediumSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Fecha {pendingMediumSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
+                </th>                <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Extras</th>
                 <th className="py-2 px-2">Acciones</th>
@@ -426,7 +452,7 @@ const IncidentListPage = () => {
                     <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
-                    {incident.leido ? (
+                      {incident.leido ? (
                         <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
                       ) : (
                         <FontAwesomeIcon icon={faBan} title="No Resolviendo" />
@@ -528,8 +554,12 @@ const IncidentListPage = () => {
               <tr>
                 <th className="py-2 px-2">Creado por</th>
                 <th className="py-2 px-2">Tipo</th>
-                <th className="py-2 px-2">Fecha</th>
-                <th className="py-2 px-2">Resolviendo</th>
+                <th
+                  className="py-2 px-2 cursor-pointer"
+                  onClick={() => setPendingLowSortOrder(pendingLowSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Fecha {pendingLowSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
+                </th>                <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Extras</th>
                 <th className="py-2 px-2">Acciones</th>
@@ -543,7 +573,7 @@ const IncidentListPage = () => {
                     <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
-                    {incident.leido ? (
+                      {incident.leido ? (
                         <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
                       ) : (
                         <FontAwesomeIcon icon={faBan} title="No Resolviendo" />
@@ -558,7 +588,7 @@ const IncidentListPage = () => {
                       ) : null}
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
-                    <button
+                      <button
                         onClick={() => openResolveModal(incident)}
                         className="bg-green-600 text-white px-3 py-1 rounded"
                       >
@@ -669,7 +699,12 @@ const IncidentListPage = () => {
               <tr>
                 <th className="py-2 px-2">Creado por</th>
                 <th className="py-2 px-2">Tipo</th>
-                <th className="py-2 px-2">Fecha</th>
+                <th
+                  className="py-2 px-2 cursor-pointer"
+                  onClick={() => setResolvedSortOrder(resolvedSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Fecha {resolvedSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
+                </th>
                 <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
                 <th className="py-2 px-2">Extras</th>
@@ -684,7 +719,7 @@ const IncidentListPage = () => {
                     <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
-                    {incident.leido ? (
+                      {incident.leido ? (
                         <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
                       ) : (
                         <FontAwesomeIcon icon={faBan} title="No Resolviendo" />

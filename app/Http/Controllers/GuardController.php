@@ -20,7 +20,6 @@ class GuardController extends Controller
         $rules = [
             'date'       => 'required|date',
             'id_brigada' => 'required|exists:brigades,id_brigada',
-            'id_salario' => 'exists:salaries,id_salario',
             'tipo'       => 'required|string',
             // Nuevos campos opcionales:
             'revision'              => 'sometimes|nullable|string',

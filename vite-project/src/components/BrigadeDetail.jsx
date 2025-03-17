@@ -9,6 +9,7 @@ import InterventionsTable from './InterventionsTable.jsx';
 import AddInterventionModal from './AddInterventionModal';
 import EditInterventionModal from './EditInterventionModal';
 import InterventionApiService from '../services/InterventionApiService';
+import AssignFirefighterModal from './AssignFirefighterModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
@@ -35,6 +36,7 @@ const BrigadeDetail = () => {
   const initialDate = searchParams.get('date') || dayjs().format('YYYY-MM-DD');
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [incidenciasPersonal, setIncidenciasPersonal] = useState('');
+  const [showAssignFirefighterModal, setShowAssignFirefighterModal] = useState(false);
   const [isUpdatingPersonal, setIsUpdatingPersonal] = useState(false);
   const navigate = useNavigate();
   const { darkMode } = useDarkMode();
@@ -434,6 +436,7 @@ const BrigadeDetail = () => {
       if (number === 1) return 1;
       if (number === 2) return 3;
       if (number === 3) return 5;
+      if (number === 4) return 5;
     } else if (letter === 'S') {
       if (number === 1) return 2;
       if (number === 2) return 4;
@@ -454,9 +457,9 @@ const BrigadeDetail = () => {
       }
     } else if (letter === 'B') {
       if (parkId === 2) {
-        return 16 + number * 2;
+        return 14 + number * 2;
       } else {
-        return 15 + number * 2;
+        return 13 + number * 2;
       }
     }
 
@@ -500,9 +503,40 @@ const BrigadeDetail = () => {
       pdfHeaderFillColor = '#969a85';
       pdfHeaderTextColor = '#ffffff';
     }
-    const sortedFirefighters = [...firefighters].sort(
-      (a, b) => puestoPriority[a.puesto] - puestoPriority[b.puesto]
-    );
+    // Función de ordenación modificada que ordena primero por puesto, luego por asignación
+    const sortedFirefighters = [...firefighters].sort((a, b) => {
+      // Primero ordenar por prioridad de puesto
+      const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
+      if (puestoDiff !== 0) return puestoDiff;
+
+      // Si tienen el mismo puesto, ordenar por asignación
+      const assignmentA = getMorningAssignment(a.id_empleado);
+      const assignmentB = getMorningAssignment(b.id_empleado);
+
+      // Manejar los casos 'No asignado'
+      if (assignmentA === 'No asignado' && assignmentB !== 'No asignado') return 1;
+      if (assignmentB === 'No asignado' && assignmentA !== 'No asignado') return -1;
+      if (assignmentA === 'No asignado' && assignmentB === 'No asignado') return 0;
+
+      // Extraer partes de letra y número
+      const letterA = assignmentA.charAt(0);
+      const letterB = assignmentB.charAt(0);
+
+      // Primero ordenar por letra
+      if (letterA !== letterB) return letterA.localeCompare(letterB);
+
+      // Luego ordenar por número
+      const numberA = parseInt(assignmentA.slice(1), 10);
+      const numberB = parseInt(assignmentB.slice(1), 10);
+
+      // Si ambos números son válidos, ordenar numéricamente
+      if (!isNaN(numberA) && !isNaN(numberB)) {
+        return numberA - numberB;
+      }
+
+      // Volver a comparación de cadenas si el análisis falló
+      return assignmentA.localeCompare(assignmentB);
+    });
     const getNameCellBgColor = (assignment, puesto) => {
       if (puesto.toLowerCase() === 'operador') return [255, 255, 255];
       if (!assignment || assignment === 'No asignado') return [255, 255, 255];
@@ -745,6 +779,9 @@ const BrigadeDetail = () => {
             >
               Actividades Diarias
             </button>
+            <button onClick={() => setShowAssignFirefighterModal(true)} className="px-4 py-2 bg-purple-500 text-white rounded">
+              Trasladar bombero
+            </button>
           </div>
         )}
 
@@ -774,34 +811,33 @@ const BrigadeDetail = () => {
           </div>
 
           <div className="mt-6 w-full">
-  <h2 className="text-xl font-bold mb-4">Incidencias de Personal</h2>
-  <div className="bg-gray-700 p-4 rounded-lg">
-    {['mando', 'jefe'].includes(user.type) ? (
-      <>
-        <textarea
-          className="w-full p-2 rounded bg-gray-600 text-white"
-          rows="4"
-          placeholder="Añadir incidencias de personal..."
-          value={incidenciasPersonal}
-          onChange={(e) => setIncidenciasPersonal(e.target.value)}
-        />
-        <button
-          onClick={handlePersonalIncidentsSubmit}
-          className={`mt-2 px-4 py-2 rounded ${
-            isUpdatingPersonal ? 'bg-gray-500' : 'bg-blue-500'
-          } text-white`}
-          disabled={isUpdatingPersonal}
-        >
-          {isUpdatingPersonal ? 'Guardando...' : 'Guardar Incidencias de Personal'}
-        </button>
-      </>
-    ) : (
-      <p className="text-white">
-        {incidenciasPersonal || 'No hay incidencias de personal disponibles.'}
-      </p>
-    )}
-  </div>
-</div>
+            <h2 className="text-xl font-bold mb-4">Incidencias de Personal</h2>
+            <div className="bg-gray-700 p-4 rounded-lg">
+              {['mando', 'jefe'].includes(user.type) ? (
+                <>
+                  <textarea
+                    className="w-full p-2 rounded bg-gray-600 text-white"
+                    rows="4"
+                    placeholder="Añadir incidencias de personal..."
+                    value={incidenciasPersonal}
+                    onChange={(e) => setIncidenciasPersonal(e.target.value)}
+                  />
+                  <button
+                    onClick={handlePersonalIncidentsSubmit}
+                    className={`mt-2 px-4 py-2 rounded ${isUpdatingPersonal ? 'bg-gray-500' : 'bg-blue-500'
+                      } text-white`}
+                    disabled={isUpdatingPersonal}
+                  >
+                    {isUpdatingPersonal ? 'Guardando...' : 'Guardar Incidencias de Personal'}
+                  </button>
+                </>
+              ) : (
+                <p className="text-white">
+                  {incidenciasPersonal || 'No hay incidencias de personal disponibles.'}
+                </p>
+              )}
+            </div>
+          </div>
 
 
           <div className="mt-6 w-full">
@@ -854,6 +890,14 @@ const BrigadeDetail = () => {
             onUpdate={handleUpdateComments}
             id_brigada={id_brigada}
             selectedDate={selectedDate}
+          />
+
+          <AssignFirefighterModal
+            isOpen={showAssignFirefighterModal}
+            onClose={() => setShowAssignFirefighterModal(false)}
+            firefighters={firefighters}
+            currentBrigade={brigade}
+            guardDate={selectedDate}
           />
         </div>
       </div>

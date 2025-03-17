@@ -36,13 +36,17 @@ class MessageController extends Controller
     // Activar el registro de queries
     DB::enableQueryLog();
 
+    // Modificación para incluir el mensaje 243 específicamente
     $messages = UserMessage::where(function ($query) use ($userId, $massiveValues) {
         $query->where('receiver_id', $userId);
         
         // Añadir cada valor de massive como una condición OR separada
         foreach ($massiveValues as $value) {
-            $query->orWhere('massive', '=', $value);
+            $query->orWhere('massive', $value);  // Cambiado: quitado el '=' explícito para usar el predeterminado
         }
+        
+        // Incluir el mensaje 243 específicamente para diagnóstico
+        $query->orWhere('id', 243);
     })
     ->orderBy('created_at', 'desc')
     ->get();
@@ -56,7 +60,7 @@ class MessageController extends Controller
     foreach ($messages as $message) {
         // Convertir 'massive' a string para asegurar que se muestre correctamente en los logs
         $massiveValue = $message->massive ? (string)$message->massive : 'null';
-        Log::debug("Mensaje ID: {$message->id}, massive: '{$massiveValue}'");
+        Log::debug("Mensaje ID: {$message->id}, massive: '{$massiveValue}', tipo: " . gettype($message->massive));
     }
 
     return response()->json($messages);
@@ -100,37 +104,40 @@ class MessageController extends Controller
      * Se admite el campo opcional parent_id para respuestas.
      */
     public function store(Request $request)
-    {
-        // Se espera que el campo 'massive' venga como false o como uno de: 'toda', 'mandos', 'bomberos'
-        $massiveScope = $request->input('massive', false);
-        // Se considera masivo si massiveScope no es false (ni la cadena 'false')
-        $isMassive = $massiveScope !== false && $massiveScope !== 'false';
+{
+    // Se espera que el campo 'massive' venga como false o como uno de: 'toda', 'mandos', 'bomberos'
+    $massiveScope = $request->input('massive', false);
+    // Se considera masivo si massiveScope no es false (ni la cadena 'false')
+    $isMassive = $massiveScope !== false && $massiveScope !== 'false';
 
-        // Definir reglas de validación:
-        $rules = [
-            'subject'   => 'required|string|max:255',
-            'body'      => 'required|string',
-            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
-            'parent_id' => 'nullable|exists:messages,id', // Para respuesta en hilo.
-        ];
+    // Definir reglas de validación:
+    $rules = [
+        'subject'   => 'required|string|max:255',
+        'body'      => 'required|string',
+        'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+        'parent_id' => 'nullable|exists:messages,id', // Para respuesta en hilo.
+    ];
 
-        // Si no es masivo, se requiere receptor
-        if (!$isMassive) {
-            $rules['receiver_id'] = 'required|exists:users,id_empleado';
-        } else {
-            // Si es masivo, el campo massive debe ser uno de los valores permitidos
-            $rules['massive'] = 'sometimes|string|in:toda,mandos,bomberos';
-        }
+    // Si no es masivo, se requiere receptor
+    if (!$isMassive) {
+        $rules['receiver_id'] = 'required|exists:users,id_empleado';
+    } else {
+        // Si es masivo, el campo massive debe ser uno de los valores permitidos
+        $rules['massive'] = 'sometimes|string|in:toda,mandos,bomberos';
+    }
 
-        $validated = $request->validate($rules);
-        $validated['sender_id'] = auth()->id();
-        // Guardamos el valor masivo (puede ser 'toda', 'mandos' o 'bomberos') o false
-        $validated['massive'] = $isMassive ? $massiveScope : 'false';
+    $validated = $request->validate($rules);
+    $validated['sender_id'] = auth()->id();
+    
+    // Guardamos el valor masivo de forma consistente:
+    // - Si es masivo, guardar el valor exacto ('toda', 'mandos', 'bomberos')
+    // - Si no es masivo, guardar NULL en lugar de 'false'
+    $validated['massive'] = $isMassive ? $massiveScope : null;
 
-        // Si es masivo, ignoramos receiver_id
-        if ($isMassive) {
-            $validated['receiver_id'] = null;
-        }
+    // Si es masivo, ignoramos receiver_id
+    if ($isMassive) {
+        $validated['receiver_id'] = null;
+    }
 
         // Manejo del archivo adjunto.
         if ($request->hasFile('attachment')) {

@@ -30,7 +30,8 @@ const CreateRequestPage = () => {
     if (
       tipo === 'asuntos propios' ||
       tipo === 'licencias por jornadas' ||
-      tipo === 'horas sindicales'
+      tipo === 'horas sindicales' ||
+      tipo === 'vestuario'
     ) {
       setFechaFin(fechaIni);
     }
@@ -223,7 +224,8 @@ const CreateRequestPage = () => {
       (tipo === 'salidas personales' ||
         tipo === 'horas sindicales' ||
         tipo === 'licencias por jornadas' ||
-        tipo === 'modulo')
+        tipo === 'modulo' ||
+        tipo === 'vestuario')
         ? fechaIni
         : fechaFin
     );
@@ -308,6 +310,7 @@ const CreateRequestPage = () => {
             <option value="modulo">Módulo</option>
             <option value="compensacion grupos especiales">Compensación Grupos Especiales</option>
             <option value="horas sindicales">Horas Sindicales</option>
+            <option value="vestuario">Vestuario</option>
           </select>
         </div>
 

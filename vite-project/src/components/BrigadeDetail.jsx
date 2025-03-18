@@ -200,11 +200,15 @@ const BrigadeDetail = () => {
     Noche: {},
   });
   // Opciones de asignación (se permiten valores reutilizables)
-  const options = ['N1', 'N2', 'N3', 'N4', 'S1', 'S2', 'S3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'C1', 'C2', 'C3', 'C4', 'C5', 'Operador 1', 'Operador 2', 'Operador 3'];
+  const options = ['N1', 'N2', 'N3', 'N4', 'S1', 'S2', 'S3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'C1', 'C2', 'C3', 'C4', 'C5', 'Operador 1', 'Operador 2', 'Operador 3', 'Telefonista', 'Jefe de Guardia'];
 
   const getFilteredOptions = (puesto) => {
     if (puesto === "Bombero") {
-      return options.filter(opt => opt.startsWith("B"));
+      return options.filter(opt => opt.startsWith("B") );
+    }else if (puesto === "Conductor" && brigade.park.nombre.toLowerCase().includes("sur")) {
+      return options.filter(opt => opt.startsWith("C") || opt.startsWith("T"));
+    }else if (puesto === "Bombero" && brigade.park.nombre.toLowerCase().includes("sur")) {
+      return options.filter(opt => opt.startsWith("B") || opt.startsWith("T"));
     } else if (puesto === "Conductor") {
       return options.filter(opt => opt.startsWith("C"));
     } else if (puesto === "Operador") {
@@ -212,9 +216,9 @@ const BrigadeDetail = () => {
     } else if (puesto === "Subinspector" || puesto === "Oficial") {
       // Suponiendo que si el parque es "norte" se usan opciones que empiezan con "N" y si es "sur" se usan "S"
       if (brigade && brigade.park && brigade.park.nombre.toLowerCase().includes("norte")) {
-        return options.filter(opt => opt.startsWith("N"));
+        return options.filter(opt => opt.startsWith("N") || opt.startsWith("J"));
       } else {
-        return options.filter(opt => opt.startsWith("S"));
+        return options.filter(opt => opt.startsWith("S") || opt.startsWith("J"));
       }
     } else {
       return options;
@@ -508,35 +512,54 @@ const BrigadeDetail = () => {
       // Primero ordenar por prioridad de puesto
       const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
       if (puestoDiff !== 0) return puestoDiff;
-
-      // Si tienen el mismo puesto, ordenar por asignación
-      const assignmentA = getMorningAssignment(a.id_empleado);
-      const assignmentB = getMorningAssignment(b.id_empleado);
-
-      // Manejar los casos 'No asignado'
+    
+      // Ordenar por la asignación completa
+      const assignmentA = getAssignmentValue(a);
+      const assignmentB = getAssignmentValue(b);
+    
+      // Si ambas asignaciones completas son iguales, usar la asignación de la mañana para desempatar
+      if (assignmentA === assignmentB) {
+        const morningAssignmentA = getMorningAssignment(a.id_empleado);
+        const morningAssignmentB = getMorningAssignment(b.id_empleado);
+    
+        // Manejar el caso de 'No asignado'
+        if (morningAssignmentA === 'No asignado' && morningAssignmentB !== 'No asignado') return 1;
+        if (morningAssignmentB === 'No asignado' && morningAssignmentA !== 'No asignado') return -1;
+        if (morningAssignmentA === 'No asignado' && morningAssignmentB === 'No asignado') return 0;
+    
+        // Comparar la letra de la asignación de la mañana
+        const letterA = morningAssignmentA.charAt(0);
+        const letterB = morningAssignmentB.charAt(0);
+        if (letterA !== letterB) return letterA.localeCompare(letterB);
+    
+        // Luego comparar numéricamente
+        const numberA = parseInt(morningAssignmentA.slice(1), 10);
+        const numberB = parseInt(morningAssignmentB.slice(1), 10);
+        if (!isNaN(numberA) && !isNaN(numberB)) {
+          return numberA - numberB;
+        }
+        return morningAssignmentA.localeCompare(morningAssignmentB);
+      }
+    
+      // Si las asignaciones completas son distintas, comparar teniendo en cuenta 'No asignado'
       if (assignmentA === 'No asignado' && assignmentB !== 'No asignado') return 1;
       if (assignmentB === 'No asignado' && assignmentA !== 'No asignado') return -1;
       if (assignmentA === 'No asignado' && assignmentB === 'No asignado') return 0;
-
-      // Extraer partes de letra y número
+    
+      // Extraer la letra para comparar
       const letterA = assignmentA.charAt(0);
       const letterB = assignmentB.charAt(0);
-
-      // Primero ordenar por letra
       if (letterA !== letterB) return letterA.localeCompare(letterB);
-
-      // Luego ordenar por número
+    
+      // Comparar numéricamente
       const numberA = parseInt(assignmentA.slice(1), 10);
       const numberB = parseInt(assignmentB.slice(1), 10);
-
-      // Si ambos números son válidos, ordenar numéricamente
       if (!isNaN(numberA) && !isNaN(numberB)) {
         return numberA - numberB;
       }
-
-      // Volver a comparación de cadenas si el análisis falló
       return assignmentA.localeCompare(assignmentB);
     });
+    
     const getNameCellBgColor = (assignment, puesto) => {
       if (puesto.toLowerCase() === 'operador') return [255, 255, 255];
       if (!assignment || assignment === 'No asignado') return [255, 255, 255];

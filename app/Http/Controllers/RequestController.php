@@ -47,7 +47,7 @@ class RequestController extends Controller
     // Reglas generales
     $rules = [
         'id_empleado' => 'required|exists:users,id_empleado',
-        'tipo' => 'required|in:vacaciones,asuntos propios,horas sindicales,salidas personales,licencias por jornadas,licencias por dias,modulo,compensacion grupos especiales',
+        'tipo' => 'required|in:vacaciones,asuntos propios,horas sindicales,salidas personales,vestuario,licencias por jornadas,licencias por dias,modulo,compensacion grupos especiales',
         'fecha_ini' => 'required|date',
         'fecha_fin' => 'required|date',
         'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
@@ -204,12 +204,13 @@ public function update(Request $request, $id)
         $this->adjustSindicalHours($miRequest, $oldEstado, $newEstado);
     } else {
         // Crear o eliminar asignaciones solo para otros tipos de solicitudes
-        if ($newEstado === 'Confirmada') {
-            $this->createAssignments($miRequest);
-        }
-
-        if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
-            $this->deleteAssignments($miRequest);
+        if (!in_array($miRequest->tipo, ['vestuario'])) {
+            if ($newEstado === 'Confirmada') {
+                $this->createAssignments($miRequest);
+            }
+            if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+                $this->deleteAssignments($miRequest);
+            }
         }
     }
 

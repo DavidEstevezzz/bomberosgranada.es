@@ -74,23 +74,14 @@ class IncidentController extends Controller
         }
 
         $rules = [
-            'date'       => 'required|date',
-            'id_brigada' => 'required|exists:brigades,id_brigada',
-            'id_salario' => 'exists:salaries,id_salario',
-            'tipo'       => 'required|string',
-            // Campos opcionales ya existentes...
-            'revision'   => 'sometimes|nullable|string',
-            'practica'   => 'sometimes|nullable|string',
-            'basura'     => 'sometimes|nullable|string',
-            'anotaciones'=> 'sometimes|nullable|string',
-            'incidencias_de_trafico' => 'sometimes|nullable|string',
-            'mando'      => 'sometimes|nullable|string',
-            // Nuevos campos opcionales:
-            'incidencias_personal'   => 'sometimes|nullable|string',
-            'limpieza_vehiculos'     => 'sometimes|nullable|string',
-            'limpieza_dependencias'  => 'sometimes|nullable|string',
-            'callejero'              => 'sometimes|nullable|string',
-            'ejercicios'             => 'sometimes|nullable|string',
+            'fecha'        => 'required|date',
+            'id_empleado'  => 'required|exists:users,id_empleado', // Empleado que crea la incidencia
+            'tipo'         => 'required|in:vehiculo,personal,instalacion,equipo', // Tipos válidos
+            'estado'       => 'required|in:Pendiente,En proceso,Resuelto',
+            'descripcion'  => 'required|string',
+            'nivel'        => 'required|in:alto,medio,bajo',
+            'id_parque'    => 'required|exists:parks,id_parque',
+            'leido'        => 'boolean', // Booleano opcional
         ];
 
         $tipo = $request->input('tipo');

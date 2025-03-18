@@ -10,6 +10,8 @@ import AddInterventionModal from './AddInterventionModal';
 import EditInterventionModal from './EditInterventionModal';
 import InterventionApiService from '../services/InterventionApiService';
 import AssignFirefighterModal from './AssignFirefighterModal';
+import AssignFirefighterToBajasModal from './AssignFirefighterToBajasModal.jsx';
+import RequireFirefighterModal from './RequireFirefighterModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
@@ -36,6 +38,8 @@ const BrigadeDetail = () => {
   const initialDate = searchParams.get('date') || dayjs().format('YYYY-MM-DD');
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [incidenciasPersonal, setIncidenciasPersonal] = useState('');
+  const [showAssignFirefighterToBajasModal, setShowAssignFirefighterToBajasModal] = useState(false);
+  const [showRequireFirefighterModal, setShowRequireFirefighterModal] = useState(false);
   const [showAssignFirefighterModal, setShowAssignFirefighterModal] = useState(false);
   const [isUpdatingPersonal, setIsUpdatingPersonal] = useState(false);
   const navigate = useNavigate();
@@ -169,6 +173,20 @@ const BrigadeDetail = () => {
     fetchBrigadeDetails();
   }, [id_brigada, selectedDate]);
 
+
+  const handleRefreshData = async () => {
+    try {
+      // Vuelve a consultar los bomberos y otros datos de la brigada.
+      const response = await BrigadesApiService.getFirefightersByBrigadeDebouncing(id_brigada, selectedDate);
+      if (response.data.brigade) {
+        setBrigade(response.data.brigade);
+      }
+      setFirefighters(Object.values(response.data.firefighters));
+    } catch (error) {
+      console.error('Error recargando datos:', error);
+    }
+  };
+
   const handlePersonalIncidentsSubmit = async () => {
     if (!user || !['jefe', 'mando'].includes(user.type)) return;
     setIsUpdatingPersonal(true);
@@ -204,10 +222,10 @@ const BrigadeDetail = () => {
 
   const getFilteredOptions = (puesto) => {
     if (puesto === "Bombero") {
-      return options.filter(opt => opt.startsWith("B") );
-    }else if (puesto === "Conductor" && brigade.park.nombre.toLowerCase().includes("sur")) {
+      return options.filter(opt => opt.startsWith("B"));
+    } else if (puesto === "Conductor" && brigade.park.nombre.toLowerCase().includes("sur")) {
       return options.filter(opt => opt.startsWith("C") || opt.startsWith("T"));
-    }else if (puesto === "Bombero" && brigade.park.nombre.toLowerCase().includes("sur")) {
+    } else if (puesto === "Bombero" && brigade.park.nombre.toLowerCase().includes("sur")) {
       return options.filter(opt => opt.startsWith("B") || opt.startsWith("T"));
     } else if (puesto === "Conductor") {
       return options.filter(opt => opt.startsWith("C"));
@@ -512,26 +530,26 @@ const BrigadeDetail = () => {
       // Primero ordenar por prioridad de puesto
       const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
       if (puestoDiff !== 0) return puestoDiff;
-    
+
       // Ordenar por la asignación completa
       const assignmentA = getAssignmentValue(a);
       const assignmentB = getAssignmentValue(b);
-    
+
       // Si ambas asignaciones completas son iguales, usar la asignación de la mañana para desempatar
       if (assignmentA === assignmentB) {
         const morningAssignmentA = getMorningAssignment(a.id_empleado);
         const morningAssignmentB = getMorningAssignment(b.id_empleado);
-    
+
         // Manejar el caso de 'No asignado'
         if (morningAssignmentA === 'No asignado' && morningAssignmentB !== 'No asignado') return 1;
         if (morningAssignmentB === 'No asignado' && morningAssignmentA !== 'No asignado') return -1;
         if (morningAssignmentA === 'No asignado' && morningAssignmentB === 'No asignado') return 0;
-    
+
         // Comparar la letra de la asignación de la mañana
         const letterA = morningAssignmentA.charAt(0);
         const letterB = morningAssignmentB.charAt(0);
         if (letterA !== letterB) return letterA.localeCompare(letterB);
-    
+
         // Luego comparar numéricamente
         const numberA = parseInt(morningAssignmentA.slice(1), 10);
         const numberB = parseInt(morningAssignmentB.slice(1), 10);
@@ -540,17 +558,17 @@ const BrigadeDetail = () => {
         }
         return morningAssignmentA.localeCompare(morningAssignmentB);
       }
-    
+
       // Si las asignaciones completas son distintas, comparar teniendo en cuenta 'No asignado'
       if (assignmentA === 'No asignado' && assignmentB !== 'No asignado') return 1;
       if (assignmentB === 'No asignado' && assignmentA !== 'No asignado') return -1;
       if (assignmentA === 'No asignado' && assignmentB === 'No asignado') return 0;
-    
+
       // Extraer la letra para comparar
       const letterA = assignmentA.charAt(0);
       const letterB = assignmentB.charAt(0);
       if (letterA !== letterB) return letterA.localeCompare(letterB);
-    
+
       // Comparar numéricamente
       const numberA = parseInt(assignmentA.slice(1), 10);
       const numberB = parseInt(assignmentB.slice(1), 10);
@@ -559,7 +577,7 @@ const BrigadeDetail = () => {
       }
       return assignmentA.localeCompare(assignmentB);
     });
-    
+
     const getNameCellBgColor = (assignment, puesto) => {
       if (puesto.toLowerCase() === 'operador') return [255, 255, 255];
       if (!assignment || assignment === 'No asignado') return [255, 255, 255];
@@ -805,6 +823,18 @@ const BrigadeDetail = () => {
             <button onClick={() => setShowAssignFirefighterModal(true)} className="px-4 py-2 bg-purple-500 text-white rounded">
               Trasladar bombero
             </button>
+            <button
+              onClick={() => setShowRequireFirefighterModal(true)}
+              className="px-4 py-2 bg-orange-500 text-white rounded"
+            >
+              Requerir Bombero
+            </button>
+            <button
+              onClick={() => setShowAssignFirefighterToBajasModal(true)}
+              className="px-4 py-2 bg-teal-500 text-white rounded"
+            >
+              Asignar a Bajas
+            </button>
           </div>
         )}
 
@@ -888,7 +918,15 @@ const BrigadeDetail = () => {
             onClose={() => setShowAddInterventionModal(false)}
             onAdded={() => setRefreshInterventions((prev) => !prev)}
             idGuard={guardDetails?.id}
-            firefighters={firefighters.filter((f) => f.puesto === 'Subinspector')}
+            firefighters={firefighters.filter((f) => f.puesto === 'Subinspector' || f.puesto === 'Oficial')}
+          />
+
+          <RequireFirefighterModal
+            show={showRequireFirefighterModal}
+            onClose={() => setShowRequireFirefighterModal(false)}
+            onAdd={handleRefreshData}  // Se llama después de requerir el bombero
+            brigade={brigade}
+            fecha={selectedDate}
           />
 
           <EditInterventionModal
@@ -906,6 +944,15 @@ const BrigadeDetail = () => {
             id_brigada={id_brigada}
             selectedDate={selectedDate}
           />
+
+          <AssignFirefighterToBajasModal
+            isOpen={showAssignFirefighterToBajasModal}
+            onClose={() => setShowAssignFirefighterToBajasModal(false)}
+            firefighters={firefighters}
+            guardDate={selectedDate}
+            currentBrigade={brigade}
+          />
+
 
           <AddGuardCommentsModal
             isOpen={isModalOpen}

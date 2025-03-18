@@ -252,10 +252,15 @@ class MessageController extends Controller
      * Eliminar un mensaje.
      */
     public function destroy(UserMessage $message)
-    {
-        $message->delete();
-        return response()->json(['message' => 'Mensaje eliminado.']);
+{
+    // Verificar si el mensaje es masivo
+    if ($message->massive) {
+        return response()->json(['error' => 'No se pueden eliminar mensajes masivos'], 403);
     }
+    
+    $message->delete();
+    return response()->json(['message' => 'Mensaje eliminado.']);
+}
 
     /**
      * Restaurar un mensaje eliminado.

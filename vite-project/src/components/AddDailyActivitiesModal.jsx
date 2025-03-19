@@ -45,6 +45,13 @@ const AddDailyActivitiesModal = ({ isOpen, onClose, onUpdate, id_brigada, select
     setFormValues({ ...formValues, [e.target.name]: e.target.value });
   };
 
+  const fieldLabels = {
+    limpieza_vehiculos: 'Limpieza Vehículos',
+    limpieza_dependencias: 'Limpieza Dependencias',
+    callejero: 'Callejero',
+    ejercicios: 'Maniobras',
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (isSubmitting) return;
@@ -90,7 +97,7 @@ const AddDailyActivitiesModal = ({ isOpen, onClose, onUpdate, id_brigada, select
                   htmlFor={field}
                   className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}
                 >
-                  {field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                  {fieldLabels[field] || field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                 </label>
                 <textarea
                   name={field}
@@ -98,9 +105,8 @@ const AddDailyActivitiesModal = ({ isOpen, onClose, onUpdate, id_brigada, select
                   onChange={handleChange}
                   rows={4}
                   placeholder={`Escribe ${field.replace(/_/g, ' ')}...`}
-                  className={`resize-y bg-gray-50 border text-sm rounded-lg block w-full p-3 ${
-                    darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'
-                  }`}
+                  className={`resize-y bg-gray-50 border text-sm rounded-lg block w-full p-3 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'
+                    }`}
                 />
               </div>
             ))}
@@ -110,18 +116,16 @@ const AddDailyActivitiesModal = ({ isOpen, onClose, onUpdate, id_brigada, select
             <button
               type="button"
               onClick={onClose}
-              className={`text-sm px-5 py-2.5 rounded-lg font-medium focus:outline-none ${
-                darkMode ? 'bg-gray-500 text-white hover:bg-gray-600' : 'bg-gray-400 text-black hover:bg-gray-500'
-              }`}
+              className={`text-sm px-5 py-2.5 rounded-lg font-medium focus:outline-none ${darkMode ? 'bg-gray-500 text-white hover:bg-gray-600' : 'bg-gray-400 text-black hover:bg-gray-500'
+                }`}
               disabled={isSubmitting}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className={`text-sm px-5 py-2.5 rounded-lg font-medium ${
-                darkMode ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-green-700 text-white hover:bg-green-800'
-              }`}
+              className={`text-sm px-5 py-2.5 rounded-lg font-medium ${darkMode ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-green-700 text-white hover:bg-green-800'
+                }`}
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Guardando...' : 'Guardar Actividades'}

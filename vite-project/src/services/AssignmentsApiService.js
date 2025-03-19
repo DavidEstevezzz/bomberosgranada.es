@@ -6,6 +6,7 @@ const API_URL3 = `${API_BASE_URL}/firefighters-assignments/available-firefighter
 const API_URL4 = `${API_BASE_URL}/firefighters-assignments/available-firefighters-no-adjacent-days`;
 const API_URL_NO_TODAY_TOMORROW   = `${API_BASE_URL}/firefighters-assignments/no-today-and-tomorrow`;
 const API_URL_NO_TODAY_YESTERDAY = `${API_BASE_URL}/firefighters-assignments/no-today-and-yesterday`;
+const API_URL_WORKING_FIRE = `${API_BASE_URL}/firefighters-assignments/working-firefighters`;
 
 import BaseApiService from './BaseApiService';
 
@@ -27,7 +28,7 @@ class AssignmentsApiService {
   }
 
   async deleteAssignment(id) {
-    return await BaseApiService.delete(`${API_URL}/${id}`);
+    return await BaseApiService.delete(API_URL + '/' + id);
   }
 
   async getAvailableFirefighters(date) {
@@ -66,6 +67,10 @@ class AssignmentsApiService {
     return await BaseApiService.put(`${API_URL}/${id}/increment-user-column`, payload);
   }
   
+  // Nuevo método para obtener los bomberos que están trabajando
+  async getWorkingFirefighters(date) {
+    return await BaseApiService.get(API_URL_WORKING_FIRE, { date });
+  }
 }
 
 export default new AssignmentsApiService();

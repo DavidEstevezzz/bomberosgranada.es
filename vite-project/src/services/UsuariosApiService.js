@@ -29,6 +29,10 @@ class UsuariosApiService {
     async updateUserField(id, field, value) {
         return await BaseApiService.put(`${API_URL}/${id}/${field}`, { [field]: value });
     }
+
+    async updateUserTraslado(id, traslado) {
+        return await BaseApiService.put(`${API_URL}/${id}/update-traslado`, { traslado });
+    }
     
     async forgotPassword(data) {
         return await BaseApiService.post(`${API_URL}/forgot-password`, data);

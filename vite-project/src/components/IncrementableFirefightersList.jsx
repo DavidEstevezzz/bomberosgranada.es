@@ -6,7 +6,7 @@ import AssignmentsApiService from '../services/AssignmentsApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider.jsx';
 
-const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn }) => {
+const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn, orderColumn2 }) => {
   const { darkMode } = useDarkMode();
   const { user } = useStateContext();
 
@@ -18,16 +18,20 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
   // Mapeo de los incrementos introducidos para cada usuario (id_empleado)
   const [increments, setIncrements] = useState({});
 
-  // Función para cargar la lista de bomberos, utilizando la función fetchData pasada como parámetro
+  // Función para cargar la lista de bomberos
   const fetchFirefighters = async () => {
     setLoading(true);
     try {
       const response = await fetchData(selectedDate);
       const fetchedFirefighters = response.data.available_firefighters;
-      // Ordenar de menor a mayor según orderColumn, y en caso de empate, por dni (descendente)
+      // Ordenar de menor a mayor según orderColumn; en caso de empate, usar orderColumn2 si existe o por dni (descendente)
       const orderedFirefighters = fetchedFirefighters.sort((a, b) => {
         const diff = a[orderColumn] - b[orderColumn];
         if (diff === 0) {
+          if (orderColumn2) {
+            const diff2 = a[orderColumn2] - b[orderColumn2];
+            if (diff2 !== 0) return diff2;
+          }
           return Number(b.dni) - Number(a.dni);
         }
         return diff;
@@ -78,7 +82,11 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
       return;
     }
     try {
-      await AssignmentsApiService.incrementUserColumn(id, { column: orderColumn, increment: incValue });
+      await AssignmentsApiService.incrementUserColumn(id, { 
+        column: orderColumn, 
+        increment: incValue,  
+        orderColumn2: orderColumn2 
+      });
       // Recargar la lista tras la actualización
       await fetchFirefighters();
       // Limpiar el input para ese usuario
@@ -134,6 +142,7 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
               <th className="py-3 px-6">Teléfono</th>
               <th className="py-3 px-6">Puesto</th>
               <th className="py-3 px-6">Horas</th>
+              <th className="py-3 px-6">Ultima</th>
               {user?.type === 'jefe' && <th className="py-3 px-6">Acción</th>}
             </tr>
           </thead>
@@ -149,6 +158,7 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
                 <td className="py-4 px-6">{firefighter.telefono}</td>
                 <td className="py-4 px-6">{firefighter.puesto}</td>
                 <td className="py-4 px-6">{firefighter[orderColumn]}</td>
+                <td className="py-4 px-6">{firefighter[orderColumn2]}</td>
                 {user?.type === 'jefe' && (
                   <td className="py-4 px-6 flex items-center space-x-2">
                     <input
@@ -156,7 +166,6 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
                       value={increments[firefighter.id_empleado] || ''}
                       onChange={(e) => handleIncrementChange(firefighter.id_empleado, e.target.value)}
                       className="w-16 p-1 border rounded bg-gray-800 text-gray-200"
-                      placeholder=""
                     />
                     <button
                       onClick={() => handleIncrementSubmit(firefighter.id_empleado)}

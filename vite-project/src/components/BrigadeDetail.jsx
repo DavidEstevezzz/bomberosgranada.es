@@ -833,7 +833,7 @@ const BrigadeDetail = () => {
               onClick={() => setShowAssignFirefighterToBajasModal(true)}
               className="px-4 py-2 bg-teal-500 text-white rounded"
             >
-              Asignar a Bajas
+              Asignar Baja Sobrevenida
             </button>
           </div>
         )}

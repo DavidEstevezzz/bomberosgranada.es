@@ -898,28 +898,85 @@ class FirefighterAssignmentController extends Controller
     }
 
     public function increaseUserColumnValue($id_empleado, Request $request)
-    {
-        $validated = $request->validate([
-            'column' => 'required|string',
-            'increment' => 'required|numeric',
-        ]);
+{
+    $validated = $request->validate([
+        'column' => 'required|string',
+        'increment' => 'required|numeric',
+        // Recibimos opcionalmente el nombre de la segunda columna
+        'orderColumn2' => 'nullable|string',
+    ]);
 
-        $column = $validated['column'];
-        $increment = $validated['increment'];
+    $column = $validated['column'];
+    $increment = $validated['increment'];
+    $orderColumn2 = $validated['orderColumn2'] ?? null;
 
-        $user = User::find($id_empleado);
+    $user = User::find($id_empleado);
 
-        if (!$user) {
-            return response()->json(['message' => 'Usuario no encontrado.'], 404);
-        }
-
-        // Incrementar el valor de la columna indicada
-        $user->$column += $increment;
-        $user->save();
-
-        return response()->json([
-            'message' => "Columna '{$column}' incrementada en {$increment} para el usuario con ID {$id_empleado}.",
-            'new_value' => $user->$column
-        ]);
+    if (!$user) {
+        return response()->json(['message' => 'Usuario no encontrado.'], 404);
     }
+
+    // Incrementar la columna principal
+    $user->$column += $increment;
+
+    // Si se proporciona el nombre de la segunda columna, actualizarla con el timestamp actual
+    if ($orderColumn2) {
+        $user->$orderColumn2 = now();
+    }
+
+    $user->save();
+
+    return response()->json([
+        'message' => "Columna '{$column}' incrementada en {$increment}" . ($orderColumn2 ? " y '{$orderColumn2}' actualizado." : "."),
+        'new_value' => $user->$column,
+        'orderColumn2' => $orderColumn2 ? $user->$orderColumn2 : null,
+    ]);
+}
+
+
+    public function workingFirefighters(Request $request)
+{
+    // Se obtiene la fecha de consulta (por defecto el día de hoy)
+    $date = $request->query('date', date('Y-m-d'));
+    Log::info("Fecha recibida en workingFirefighters:", ['date' => $date]);
+
+    // Se obtienen las guardias asignadas para esa fecha, junto con la información de la brigada
+    $guards = Guard::with('brigade')->where('date', $date)->get();
+    // Se extraen los nombres de las brigadas que tienen guardia asignada ese día
+    $guardBrigades = $guards->pluck('brigade.nombre')->unique()->toArray();
+    Log::info("Brigadas con guardia asignada en {$date}:", ['guardBrigades' => $guardBrigades]);
+
+    // Se obtienen las asignaciones de bomberos cuya fecha es menor o igual a la fecha consultada,
+    // ordenadas de forma que la primera asignación de cada bombero es la más reciente.
+    $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
+        ->orderBy('fecha_ini', 'desc')
+        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+        ->get()
+        ->groupBy('id_empleado');
+
+    $workingFirefighterIds = [];
+
+    // Se recorre cada grupo de asignaciones por bombero
+    foreach ($assignments as $firefighterId => $assignmentGroup) {
+        // Se toma la última asignación (la más reciente) para el bombero
+        $lastAssignment = $assignmentGroup->first();
+        if ($lastAssignment && $lastAssignment->brigadeDestination) {
+            $brigadeName = $lastAssignment->brigadeDestination->nombre;
+            // Si la brigada destino de la última asignación está entre las brigadas que tienen guardia asignada,
+            // se considera que el bombero está trabajando
+            if (in_array($brigadeName, $guardBrigades)) {
+                $workingFirefighterIds[] = $firefighterId;
+            }
+        }
+    }
+
+    // Se obtienen los datos de los bomberos que cumplen la condición
+    $workingFirefighters = User::whereIn('id_empleado', $workingFirefighterIds)->get();
+
+    return response()->json([
+        'date' => $date,
+        'working_firefighters' => $workingFirefighters,
+    ]);
+}
+
 }

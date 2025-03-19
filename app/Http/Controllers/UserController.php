@@ -298,4 +298,22 @@ class UserController extends Controller
         $usuario = Auth::user();
         return response()->json($usuario);
     }
+
+    public function updateTraslado(Request $request, $id)
+{
+    // Validamos que se envíe el campo "traslado" como entero
+    $validatedData = $request->validate([
+        'traslado' => 'required|integer'
+    ]);
+
+    // Buscamos el usuario o lanzamos un error 404
+    $user = User::findOrFail($id);
+
+    // Actualizamos el campo traslado (tipo int)
+    $user->traslado = $validatedData['traslado'];
+    $user->save();
+
+    return response()->json($user, 200);
+}
+
 }

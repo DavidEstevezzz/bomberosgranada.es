@@ -34,6 +34,7 @@ import AvailableOperatorsNight from './views/AvailableOperatorsNight.jsx';
 import Vehicles from './views/Vehicles.jsx'; 
 import Incidents from './views/IncidentListPage.jsx';
 import SuggestionListPage from './views/SuggestionListPage.jsx';
+import Transfers from './views/TransferList.jsx';
 
 
 const router = createBrowserRouter([
@@ -56,6 +57,8 @@ const router = createBrowserRouter([
       { path: 'aprobacion-cambio-guardia', element: <ProtectedRoute element={<ShiftChangeApprovalPage />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'vehicles', element: <ProtectedRoute element={<Vehicles />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'incidents', element: <ProtectedRoute element={<Incidents />} rolesAllowed={['Jefe', 'Mando']} /> },
+      { path: 'transfers', element: <ProtectedRoute element={<Transfers />} rolesAllowed={['Jefe', 'Mando']} /> },
+
 
       // Rutas existentes
       { path: '/brigades/:id_brigada', element: <BrigadeDetail /> },

@@ -33,6 +33,7 @@ class User extends Authenticatable
         'modulo',
         'compensacion_grupos',
         'horas_sindicales',
+        'traslados',
     ];
 
     protected $hidden = [

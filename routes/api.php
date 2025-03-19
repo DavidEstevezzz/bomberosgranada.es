@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/firefighters-assignments/available-firefighters-no-adjacent-days', [FirefighterAssignmentController::class, 'availableFirefightersNoAdjacentDays']);
     Route::get('/firefighters-assignments/no-today-and-tomorrow', [FirefighterAssignmentController::class, 'availableFirefightersNoTodayAndTomorrow']);
     Route::get('/firefighters-assignments/no-today-and-yesterday', [FirefighterAssignmentController::class, 'availableFirefightersNoTodayAndYesterday']);
+    Route::get('/firefighters-assignments/working-firefighters', [FirefighterAssignmentController::class, 'workingFirefighters']);
 
     Route::get('/guard-assignments', [GuardAssignmentController::class, 'index']);
     Route::post('/guard-assignments', [GuardAssignmentController::class, 'store']);
@@ -60,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/por-puesto', [UserController::class, 'getUsersByPuesto']);
     Route::get('/users/{id}', [UserController::class, 'show']);
     Route::put('/users/{id}', [UserController::class, 'update']);
+    
 
     // Bandeja de entrada
     Route::get('/messages', [MessageController::class, 'index']);
@@ -165,6 +167,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::patch('/incidents/{id}/mark-as-read', [IncidentController::class, 'markAsRead']);
     Route::post('/users/create', [UserController::class, 'store']);
     Route::put('/users/{id}/update-ap', [UserController::class, 'updateAP']);
+    Route::put('/users/{id}/update-traslado', [UserController::class, 'updateTraslado']);
     Route::put('/users/{id}/{field}', [UserController::class, 'updateUserField']);
 
 

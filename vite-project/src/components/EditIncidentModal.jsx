@@ -25,8 +25,9 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
     matricula: incident.matricula || '',
     id_empleado2: incident.id_empleado2 || '',
     id_empleado: incident.id_empleado || (user ? user.id_empleado : ''),
-    estado: incident.estado || 'Pendiente',
-    leido: incident.leido || false,
+    estado: incident.estado
+    ? incident.estado.charAt(0).toUpperCase() + incident.estado.slice(1).toLowerCase()
+    : 'Pendiente',    leido: incident.leido || false,
     nivel: incident.nivel || ''
   });
 
@@ -74,8 +75,9 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
         matricula: incident.matricula || '',
         id_empleado2: incident.id_empleado2 || '',
         id_empleado: incident.id_empleado || (user ? user.id_empleado : ''),
-        estado: incident.estado || 'Pendiente',
-        leido: incident.leido || false,
+        estado: incident.estado
+        ? incident.estado.charAt(0).toUpperCase() + incident.estado.slice(1).toLowerCase()
+        : 'Pendiente',        leido: incident.leido || false,
         nivel: incident.nivel || ''
       });
     }

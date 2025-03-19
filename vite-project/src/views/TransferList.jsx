@@ -12,7 +12,7 @@ const TransferList = () => {
       title="Lista de Traslados entre parques"
       fetchData={fetchAvailableFirefighters} // Función corregida para manejar fecha
       listType="firefighters by order"
-      orderColumn="traslado"
+      orderColumn="traslados"
       orderColumn2="fecha_traslado"
     />
   );

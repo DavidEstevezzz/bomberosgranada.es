@@ -256,6 +256,7 @@ class BrigadeController extends Controller
                 } else if (
                     $assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada
                     && !isset($assignmentsByTurno['Noche'])
+                    && !isset($assignmentsByTurno['Mañana'])
                     && $lastAssignment
                     && $lastAssignment->id_brigada_destino == $id_brigada
                 ) {

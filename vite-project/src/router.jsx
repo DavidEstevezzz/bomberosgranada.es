@@ -35,6 +35,7 @@ import Vehicles from './views/Vehicles.jsx';
 import Incidents from './views/IncidentListPage.jsx';
 import SuggestionListPage from './views/SuggestionListPage.jsx';
 import Transfers from './views/TransferList.jsx';
+import HorasOfrecidas from './views/HoursCountTable.jsx';
 
 
 const router = createBrowserRouter([
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
       { path: 'vehicles', element: <ProtectedRoute element={<Vehicles />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'incidents', element: <ProtectedRoute element={<Incidents />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'transfers', element: <ProtectedRoute element={<Transfers />} rolesAllowed={['Jefe', 'Mando']} /> },
+      { path: 'horas-requerimientos',element: <ProtectedRoute element={<HorasOfrecidas />} rolesAllowed={['Jefe', 'Mando']} /> },
 
 
       // Rutas existentes

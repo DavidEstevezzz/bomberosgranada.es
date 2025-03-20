@@ -19,7 +19,7 @@ class FirefighterAssignmentController extends Controller
     public function index()
     {
         $firefighter_assignments = Firefighters_assignment::with([
-            'firefighter:id_empleado,nombre,apellido', // Asumiendo que tienes un campo 'nombre' en el modelo User
+            'firefighter:id_empleado,nombre,apellido', 
             'brigadeOrigin:id_brigada,nombre',
             'brigadeDestination:id_brigada,nombre'
         ])->get();

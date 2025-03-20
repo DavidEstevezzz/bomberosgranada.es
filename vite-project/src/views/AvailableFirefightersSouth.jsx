@@ -1,6 +1,6 @@
 import React from 'react';
 import AssignmentsApiService from '../services/AssignmentsApiService';
-import IncrementableFirefightersList from '../components/IncrementableFirefightersList';
+import RequirementList from '../components/RequirementList';
 
 const AvailableFirefighters2 = () => {
   const fetchAvailableFirefighters = (date) => {
@@ -8,11 +8,12 @@ const AvailableFirefighters2 = () => {
   };
 
   return (
-    <IncrementableFirefightersList
+    <RequirementList
       title="Lista de Requerimientos Parque Sur"
       fetchData={fetchAvailableFirefighters} // Función corregida para manejar fecha
       listType="firefighters by order"
-      orderColumn="orden_sur"
+      orderColumn="horas_ofrecidas"
+      orderColumn2="fecha_req"
     />
   );
 };

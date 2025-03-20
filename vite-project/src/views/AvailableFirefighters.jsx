@@ -1,6 +1,6 @@
 import React from 'react';
-import SortableFirefightersList from '../components/SortableFirefightersList';
 import AssignmentsApiService from '../services/AssignmentsApiService';
+import RequirementList from '../components/RequirementList';
 
 const AvailableFirefighters = () => {
   const fetchAvailableFirefighters = (date) => {
@@ -8,13 +8,14 @@ const AvailableFirefighters = () => {
   };
 
   return (
-    <SortableFirefightersList
+    <RequirementList
       title="Lista de Requerimientos 24h"
-      fetchData={fetchAvailableFirefighters} // Pasar la función corregida
+      fetchData={fetchAvailableFirefighters} 
       listType="firefighters by order"
-      orderColumn="orden"
+      orderColumn="horas_ofrecidas"
+      orderColumn2="fecha_req"
     />
   );
-};
+};  
 
 export default AvailableFirefighters;

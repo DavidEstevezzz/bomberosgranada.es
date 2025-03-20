@@ -122,6 +122,8 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
     // Si el mensaje es masivo (no es individual), enviamos el scope en el campo massive
     if (currentUserRole === 'Jefe' && messageScope !== 'individual') {
       data.append('massive', messageScope);
+    } else {
+      data.append('massive', 'false');
     }
 
     try {

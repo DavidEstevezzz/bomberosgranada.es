@@ -158,10 +158,7 @@ class MessageController extends Controller
     $validated['sender_id'] = auth()->id();
     
     // Guardamos el valor masivo de forma consistente:
-    // - Si es masivo, guardar el valor exacto ('toda', 'mandos', 'bomberos')
-    // - Si no es masivo, guardar NULL en lugar de 'false'
-    $validated['massive'] = $isMassive ? $massiveScope : null;
-
+    $validated['massive'] = $isMassive ? $massiveScope : 'false'; 
     // Si es masivo, ignoramos receiver_id
     if ($isMassive) {
         $validated['receiver_id'] = null;

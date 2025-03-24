@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaFilePdf } from 'react-icons/fa'; // Librería react-icons para el ícono de PDF
+import { FaFilePdf, FaSortUp, FaSortDown } from 'react-icons/fa'; // Añadido íconos de ordenamiento
 import dayjs from 'dayjs'; // Manejo de fechas
 import RequestApiService from '../services/RequestApiService';
 import UsuariosApiService from '../services/UsuariosApiService';
@@ -16,6 +16,10 @@ const RequestListPage = () => {
     Confirmada: 1,
     Cancelada: 1,
   });
+  // Añadir estados para el ordenamiento
+  const [sortField, setSortField] = useState('fecha_ini');
+  const [sortDirection, setSortDirection] = useState('asc');
+  
   const itemsPerPage = 10; // Filas por página
   const { darkMode } = useDarkMode();
 
@@ -145,7 +149,36 @@ const RequestListPage = () => {
     }
   };
   
+  // Función para manejar el ordenamiento
+  const handleSort = (field) => {
+    if (field === sortField) {
+      // Si es el mismo campo, cambiamos la dirección
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Si es un campo diferente, establecemos el nuevo campo y dirección ascendente por defecto
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
+  // Función para ordenar los datos
+  const sortData = (data) => {
+    if (!sortField) return data;
+    
+    return [...data].sort((a, b) => {
+      if (sortField === 'fecha_ini') {
+        const dateA = dayjs(a.fecha_ini);
+        const dateB = dayjs(b.fecha_ini);
+        
+        if (sortDirection === 'asc') {
+          return dateA.isBefore(dateB) ? -1 : dateA.isAfter(dateB) ? 1 : 0;
+        } else {
+          return dateB.isBefore(dateA) ? -1 : dateB.isAfter(dateA) ? 1 : 0;
+        }
+      }
+      return 0;
+    });
+  };
 
   const handlePreviousMonth = () => {
     setCurrentMonth((prev) => prev.subtract(1, 'month'));
@@ -203,7 +236,8 @@ const RequestListPage = () => {
 
       {['Pendiente', 'Confirmada', 'Cancelada'].map((status) => {
         const filteredByStatus = filteredRequests.filter((request) => request.estado === status);
-        const paginatedRequests = paginate(filteredByStatus, status);
+        const sortedRequests = sortData(filteredByStatus);
+        const paginatedRequests = paginate(sortedRequests, status);
         const totalPages = getTotalPages(filteredByStatus);
 
         return (
@@ -216,7 +250,17 @@ const RequestListPage = () => {
                     <th className="py-2 px-2">Empleado</th>
                     <th className="py-2 px-2">Tipo</th>
                     <th className="py-2 px-2">Motivo</th>
-                    <th className="py-2 px-2">Fecha Inicio</th>
+                    <th 
+                      className="py-2 px-2 cursor-pointer select-none flex items-center"
+                      onClick={() => handleSort('fecha_ini')}
+                    >
+                      Fecha Inicio
+                      {sortField === 'fecha_ini' && (
+                        <span className="ml-1">
+                          {sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />}
+                        </span>
+                      )}
+                    </th>
                     <th className="py-2 px-2">Fecha Fin</th>
                     <th className="py-2 px-2">Turno</th>
                     <th className="py-2 px-2">Creación</th>

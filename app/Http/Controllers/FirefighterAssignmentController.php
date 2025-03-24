@@ -144,7 +144,7 @@ class FirefighterAssignmentController extends Controller
         $unavailableFirefighterIds = $this->getFirefightersAssignedToExcludedBrigades($date, $excludedBrigades, $guards);
 
         $availableFirefighters = User::whereIn('type', ['bombero', 'mando'])
-            ->where('puesto', '!=', 'Operador')
+            //->where('puesto', '!=', 'Operador')
             ->whereNotIn('id_empleado', $unavailableFirefighterIds)
             ->get();
 

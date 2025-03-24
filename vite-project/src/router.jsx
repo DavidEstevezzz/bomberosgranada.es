@@ -36,6 +36,7 @@ import Incidents from './views/IncidentListPage.jsx';
 import SuggestionListPage from './views/SuggestionListPage.jsx';
 import Transfers from './views/TransferList.jsx';
 import HorasOfrecidas from './views/HoursCountTable.jsx';
+import RubishList from './views/RubishList.jsx';
 
 
 const router = createBrowserRouter([
@@ -60,6 +61,9 @@ const router = createBrowserRouter([
       { path: 'incidents', element: <ProtectedRoute element={<Incidents />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'transfers', element: <ProtectedRoute element={<Transfers />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'horas-requerimientos',element: <ProtectedRoute element={<HorasOfrecidas />} rolesAllowed={['Jefe', 'Mando']} /> },
+      { path: 'rubish', element: <ProtectedRoute element={<RubishList />} rolesAllowed={['Jefe', 'Mando']} /> },
+
+
 
 
       // Rutas existentes
@@ -69,7 +73,6 @@ const router = createBrowserRouter([
       { path: 'calendario-sur', element: <CalendarPage2 /> },
       { path: 'requerimientos', element: <AvailableFirefighters /> },
       { path: 'requerimientos-10-horas', element: <AvailableFirefighters2 /> },
-      { path: 'requerimientos-sur', element: <AvailableFirefightersSouth /> },
       { path: 'requerimientos-operadores-mañana', element: <AvailableOperatorsMorning /> },
       { path: 'requerimientos-operadores-noche', element: <AvailableOperatorsNight /> },
       { path: 'cambio-guardia', element: <ShiftChangeRequestPage /> },

@@ -34,6 +34,8 @@ class User extends Authenticatable
         'compensacion_grupos',
         'horas_sindicales',
         'traslados',
+        'basura',
+        'fecha_basura',
     ];
 
     protected $hidden = [

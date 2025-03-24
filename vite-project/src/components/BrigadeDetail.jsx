@@ -81,7 +81,7 @@ const BrigadeDetail = () => {
   };
 
   // Mapeo para vehículos (para turno Mañana y variantes)
-  const vehicleMapping = {
+  const vehicleMappingNorte = {
     'B1': 'BUL-3-7 / BRP-1',
     'B2': 'BUL-3-7 / BRP-1',
     'B3': 'FSV-3 / BIP-1 / BUL-1 / UMC-1 / UPI-1',
@@ -97,6 +97,24 @@ const BrigadeDetail = () => {
     'C4': 'Apoyo',
     'C5': 'Apoyo',
   };
+
+  const vehicleMappingSur = {
+    'B1': 'BUL-4-6 / BRP-2',
+    'B2': 'BUL-4-6 / BRP-2',
+    'B3': 'FSV-4 / BIP-2 / BUL-2 / UMC-2 / UP-2',
+    'B4': 'FSV-4 / BIP-2 / BUL-2 / UMC-2 / UP-2',
+    'B5': 'AEA-4-6 / VAT-2 / UBH-2 / UPC-2',
+    'B6': 'AEA-4-6 / VAT-2 / UBH-2 / UPC-2',
+    'B7': 'Apoyo equipo 2 (B3 y B4)',
+    'B8': 'Apoyo equipo 3 (B5 y B6)',
+    'B9': 'Apoyo',
+    'C1': 'BUL-2-4 / BRP-2 / UPC-2',
+    'C2': 'AEA-4-6 / UBH-2 / UPI-2',
+    'C3': 'FSV-4 / BIP-2 / UMC-2 / BUL-6',
+    'C4': 'Apoyo',
+    'C5': 'Apoyo',
+  };
+
 
   // Cálculo de colores según el nombre de la brigada (para exportar al PDF)
   let brigadeColor = '';
@@ -221,18 +239,19 @@ const BrigadeDetail = () => {
   const options = ['N1', 'N2', 'N3', 'N4', 'S1', 'S2', 'S3', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'C1', 'C2', 'C3', 'C4', 'C5', 'Operador 1', 'Operador 2', 'Operador 3', 'Telefonista', 'Jefe de Guardia'];
 
   const getFilteredOptions = (puesto) => {
-    if (puesto === "Bombero") {
+    if (puesto === "Bombero" && brigade.park.nombre.toLowerCase().includes("sur")) {
+      // Para parque sur, se muestran las opciones que comienzan con "B" o "T" (incluye "Telefonista")
+      return options.filter(opt => opt.startsWith("B") || opt.startsWith("T"));
+    } else if (puesto === "Bombero") {
+      // Para parque norte, solo se muestran opciones que comienzan con "B"
       return options.filter(opt => opt.startsWith("B"));
     } else if (puesto === "Conductor" && brigade.park.nombre.toLowerCase().includes("sur")) {
       return options.filter(opt => opt.startsWith("C") || opt.startsWith("T"));
-    } else if (puesto === "Bombero" && brigade.park.nombre.toLowerCase().includes("sur")) {
-      return options.filter(opt => opt.startsWith("B") || opt.startsWith("T"));
     } else if (puesto === "Conductor") {
       return options.filter(opt => opt.startsWith("C"));
     } else if (puesto === "Operador") {
       return options.filter(opt => opt.toLowerCase().includes("operador"));
     } else if (puesto === "Subinspector" || puesto === "Oficial") {
-      // Suponiendo que si el parque es "norte" se usan opciones que empiezan con "N" y si es "sur" se usan "S"
       if (brigade && brigade.park && brigade.park.nombre.toLowerCase().includes("norte")) {
         return options.filter(opt => opt.startsWith("N") || opt.startsWith("J"));
       } else {
@@ -242,6 +261,7 @@ const BrigadeDetail = () => {
       return options;
     }
   };
+  
 
   // Al tener guardDetails, cargar asignaciones actuales y previas
   useEffect(() => {
@@ -615,7 +635,13 @@ const BrigadeDetail = () => {
         turnoLower === 'mañana y noche';
 
       // Solo asignar vehículo si está en turno de mañana y tiene asignación de mañana
-      const vehicleInfo = isInMorningShift ? (vehicleMapping[morningAssignment] || '') : '';
+      // Seleccionar el mapeo adecuado según el nombre del parque
+      const mapping = brigade?.park?.nombre.toLowerCase().includes("sur")
+        ? vehicleMappingSur
+        : vehicleMappingNorte;
+
+      // Usar el mapeo para obtener la información del vehículo
+      const vehicleInfo = isInMorningShift ? (mapping[morningAssignment] || '') : '';
 
       return [
         fullName,

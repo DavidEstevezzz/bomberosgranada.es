@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import dayjs from 'dayjs';
 import AssignmentsApiService from '../services/AssignmentsApiService';
 import UsuariosApiService from '../services/UsuariosApiService';
 
@@ -8,13 +9,71 @@ const RequireFirefighterModal = ({ show, onClose, onAdd, brigade, fecha }) => {
   const [filteredUsuarios, setFilteredUsuarios] = useState([]);
   const [formData, setFormData] = useState({
     id_empleado: '',
-    turno: '',
+    turno: 'Mañana',
   });
+  const [assignmentDetails, setAssignmentDetails] = useState(null);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Define todas las opciones de turno como en el primer archivo
+  const turnoOptions = [
+    "Mañana",
+    "Tarde",
+    "Noche",
+    "Día Completo",
+    "Mañana y tarde",
+    "Tarde y noche"
+  ];
+
+  // Función para calcular los turnos de ida y vuelta según el turno seleccionado
+  const computeAssignment = (turnoSeleccionado) => {
+    let ida = '';
+    let vuelta = '';
+    switch (turnoSeleccionado) {
+      case 'Mañana':
+        ida = 'Mañana';
+        vuelta = 'Tarde';
+        break;
+      case 'Tarde':
+        ida = 'Tarde';
+        vuelta = 'Noche';
+        break;
+      case 'Noche':
+        ida = 'Noche';
+        vuelta = 'Mañana';
+        break;
+      case 'Mañana y tarde':
+        ida = 'Mañana';
+        vuelta = 'Noche';
+        break;
+      case 'Tarde y noche':
+        ida = 'Tarde';
+        vuelta = 'Mañana';
+        break;
+      case 'Día Completo':
+        ida = 'Mañana';
+        vuelta = 'Mañana';
+        break;
+      default:
+        break;
+    }
+    return { ida, vuelta };
+  };
 
   useEffect(() => {
     if (show) {
+      // Reiniciar estados
+      setFormData({
+        id_empleado: '',
+        turno: 'Mañana',
+      });
+      setSuccess('');
+      setError('');
+      setIsSubmitting(false);
+      setAssignmentDetails(computeAssignment('Mañana'));
+
+      // Cargar usuarios
       const fetchUsuarios = async () => {
         try {
           const response = await UsuariosApiService.getUsuarios();
@@ -25,11 +84,17 @@ const RequireFirefighterModal = ({ show, onClose, onAdd, brigade, fecha }) => {
           setUsuarios(bomberos);
         } catch (err) {
           console.error('Error al obtener usuarios:', err);
+          setError('Error al cargar la lista de bomberos');
         }
       };
       fetchUsuarios();
     }
   }, [show]);
+
+  // Actualizar assignmentDetails cuando cambia el turno
+  useEffect(() => {
+    setAssignmentDetails(computeAssignment(formData.turno));
+  }, [formData.turno]);
 
   useEffect(() => {
     const filtered = usuarios.filter(usuario =>
@@ -45,25 +110,61 @@ const RequireFirefighterModal = ({ show, onClose, onAdd, brigade, fecha }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    
     if (!formData.id_empleado || !formData.turno) {
       setError("Por favor, complete todos los campos.");
       return;
     }
+
+    setIsSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    // Calcular las fechas de ida y vuelta según el turno seleccionado
+    const fecha_ida = fecha;
+    let fecha_vuelta = fecha;
+    
+    // Para ciertos turnos, la asignación de vuelta se hace al día siguiente
+    if (formData.turno === "Noche" || formData.turno === "Tarde y noche" || formData.turno === "Día Completo") {
+      fecha_vuelta = dayjs(fecha).add(1, 'day').format('YYYY-MM-DD');
+    }
+
     try {
-      const payload = {
+      // Payload para asignación de ida (requerimiento)
+      const payloadIda = {
         id_empleado: formData.id_empleado,
-        id_brigada_destino: brigade.id_brigada, // Se usa la brigada de la guardia
-        fecha: fecha, // La fecha de la guardia
-        turno: formData.turno,
-        requerimiento: true, // Marcamos que es una asignación de requerimiento (ida)
+        id_brigada_destino: brigade.id_brigada,
+        fecha_ini: fecha_ida,
+        turno: assignmentDetails.ida,
+        requerimiento: true,
       };
-      await AssignmentsApiService.requireFirefighter(payload);
+
+      // Payload para asignación de vuelta
+      const payloadVuelta = {
+        id_empleado: formData.id_empleado,
+        id_brigada_destino: formData.id_brigada_origen || null, // Brigada de origen si está disponible
+        fecha_ini: fecha_vuelta,
+        turno: assignmentDetails.vuelta,
+        requerimiento: false, // La vuelta no es un requerimiento
+      };
+
+      // Crear la asignación de ida
+      await AssignmentsApiService.requireFirefighter(payloadIda);
+      
+      // Crear la asignación de vuelta
+      // Nota: Es posible que necesites crear un endpoint específico para esto o modificar el existente
+      // dependiendo de cómo esté implementado tu API
+      await AssignmentsApiService.requireFirefighter(payloadVuelta);
+
       setSuccess('Requerimiento creado con éxito');
       if (onAdd) onAdd();
       onClose();
     } catch (err) {
       console.error('Error al crear el requerimiento:', err);
       setError('Error al crear el requerimiento.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -93,6 +194,7 @@ const RequireFirefighterModal = ({ show, onClose, onAdd, brigade, fecha }) => {
               value={formData.id_empleado}
               required
               className="w-full p-2 rounded bg-gray-700 text-white"
+              disabled={isSubmitting}
             >
               <option value="">Seleccione un Bombero</option>
               {filteredUsuarios.map(usuario => (
@@ -109,21 +211,29 @@ const RequireFirefighterModal = ({ show, onClose, onAdd, brigade, fecha }) => {
               value={formData.turno}
               required
               className="w-full p-2 rounded bg-gray-700 text-white"
+              disabled={isSubmitting}
             >
               <option value="">Seleccione Turno</option>
-              <option value="Mañana">Mañana</option>
-              <option value="Tarde">Tarde</option>
-              <option value="Noche">Noche</option>
+              {turnoOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex justify-end space-x-2">
-            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-              Requerir
+            <button 
+              type="submit" 
+              className="bg-blue-600 text-white px-4 py-2 rounded"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Enviando...' : 'Requerir'}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="bg-gray-600 text-white px-4 py-2 rounded"
+              disabled={isSubmitting}
             >
               Cancelar
             </button>

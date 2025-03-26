@@ -159,7 +159,7 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
                 <td className="py-4 px-6">{firefighter.puesto}</td>
                 <td className="py-4 px-6">{firefighter[orderColumn]}</td>
                 <td className="py-4 px-6">{firefighter[orderColumn2]}</td>
-                {user?.type === 'jefe' && (
+                {(user?.type === 'jefe' || user?.type === 'mando') && (
                   <td className="py-4 px-6 flex items-center space-x-2">
                     <input
                       type="number"

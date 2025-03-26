@@ -101,7 +101,7 @@ class GuardAssignmentController extends Controller
             'id_guard'    => 'required|exists:guards,id',
             'id_empleado' => 'required|exists:users,id_empleado',
             'turno'       => 'required|in:Mañana,Tarde,Noche',
-            'asignacion'  => 'required|string|max:10'
+            'asignacion'  => 'required|string|max:15'
         ];
 
         $validator = Validator::make($request->all(), $rules);

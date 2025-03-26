@@ -26,6 +26,7 @@ class Guard extends Model
         'limpieza_dependencias',
         'callejero',
         'ejercicios',
+        'repostaje',
     ];
     
 

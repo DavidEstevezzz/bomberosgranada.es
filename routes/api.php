@@ -52,8 +52,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/intervenciones/{parte}', [InterventionController::class, 'show']);
     Route::post('/intervenciones', [InterventionController::class, 'store']);
     Route::put('/intervenciones/{parte}', [InterventionController::class, 'update']);
-    Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy']);
-
+    Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy'])
+    ->where('parte', '.*');
 
 
     // Métodos index y show abiertos a todos los roles

@@ -472,8 +472,10 @@ const BrigadeDetail = () => {
     const cleanAssignment = assignment.trim();
     const letter = cleanAssignment.charAt(0).toUpperCase();
     const number = parseInt(cleanAssignment.slice(1), 10);
-    if (isNaN(number)) return '';
-
+    if (isNaN(number)) return '-';
+    if (letter === 'J') {
+      return 1;
+    }
     if (letter === 'N') {
       if (number === 1) return 1;
       if (number === 2) return 3;
@@ -603,6 +605,9 @@ const BrigadeDetail = () => {
       if (!assignment || assignment === 'No asignado') return [255, 255, 255];
       const cleanAssignment = assignment.trim().toUpperCase();
       const letter = cleanAssignment.charAt(0);
+      if (letter === 'J') {
+        return [255, 255, 153];
+      }
       if (letter === 'N' || letter === 'S') {
         if (puesto.toLowerCase() === 'subinspector') {
           return [255, 255, 153];

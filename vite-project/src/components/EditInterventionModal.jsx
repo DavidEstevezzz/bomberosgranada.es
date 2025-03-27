@@ -35,12 +35,12 @@ const EditInterventionModal = ({ show, onClose, onEdited, intervention, firefigh
         <h2 className="text-2xl font-bold text-white mb-4">Editar Intervención</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-white">Parte (no editable):</label>
+            <label className="text-white">Parte:</label>
             <input
               type="text"
               name="parte"
               value={formData.parte}
-              readOnly
+              required
               className="w-full p-2 rounded bg-gray-700 text-white"
             />
           </div>

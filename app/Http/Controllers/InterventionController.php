@@ -43,7 +43,6 @@ class InterventionController extends Controller
         return response()->json($intervencion, 201);
     }
 
-    // Actualizar una intervención existente (identificada por 'parte')
     public function update(Request $request, $parte)
     {
         $intervencion = Intervention::find($parte);

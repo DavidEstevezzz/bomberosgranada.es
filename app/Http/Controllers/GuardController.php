@@ -95,6 +95,7 @@ class GuardController extends Controller
             'callejero'             => 'sometimes|nullable|string',
             'ejercicios'            => 'sometimes|nullable|string',
             'repostaje'             => 'sometimes|nullable|string',
+            'botellas'             => 'sometimes|nullable|string',
         ];
     
         $validated = $request->validate($rules);

@@ -32,6 +32,7 @@ const AddDailyActivitiesModal = ({ isOpen, onClose, onUpdate, id_brigada, select
               callejero: guard.callejero || '',
               ejercicios: guard.ejercicios || '',
               repostaje: guard.repostaje || '',
+              botellas: guard.botellas || '',
             });
             setGuardId(guard.id);
           }
@@ -53,6 +54,7 @@ const AddDailyActivitiesModal = ({ isOpen, onClose, onUpdate, id_brigada, select
     callejero: 'Callejero',
     ejercicios: 'Maniobras',
     repostaje: 'Repostaje',
+    botellas: 'Botellas de aire',
   };
 
   const handleSubmit = async (event) => {
@@ -94,7 +96,7 @@ const AddDailyActivitiesModal = ({ isOpen, onClose, onUpdate, id_brigada, select
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-6 mb-4 sm:grid-cols-2">
-            {['limpieza_vehiculos', 'limpieza_dependencias', 'callejero', 'ejercicios', 'repostaje'].map((field) => (
+            {['limpieza_vehiculos', 'limpieza_dependencias', 'callejero', 'ejercicios', 'repostaje', 'botellas'].map((field) => (
               <div key={field}>
                 <label
                   htmlFor={field}

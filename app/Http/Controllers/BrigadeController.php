@@ -131,7 +131,6 @@ class BrigadeController extends Controller
             $sameDayAssignments = Firefighters_assignment::where('id_empleado', $user->id_empleado)
                 ->whereDate('fecha_ini', '=', $fecha)
                 ->orderByRaw("FIELD(turno, 'Mañana', 'Tarde', 'Noche')")
-                ->orderBy('created_at', 'desc')  // Añadir esta línea
                 ->get();
 
             // Lista de brigadas que consideras "excluidas" (tienen prioridad si chocan con otra)
@@ -188,20 +187,19 @@ class BrigadeController extends Controller
 
             Log::info("Asignaciones por turno para el usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado})", $assignmentsByTurno);
 
-            $lastAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)
-                ->whereDate('fecha_ini', '<', $fecha)
-                ->orderBy('fecha_ini', 'desc')
-                ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
-                ->orderBy('created_at', 'desc')  
-                ->first();
+                $lastAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)
+                    ->whereDate('fecha_ini', '<', $fecha)
+                    ->orderBy('fecha_ini', 'desc')
+                    ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+                    ->first();
 
-            if ($lastAssignment) {
-                Log::info("ULTIMA ASIGNACION para el empleado {$user->id_empleado}", [
-                    'lastAssignment' => $lastAssignment ? $lastAssignment->toArray() : null
-                ]);
-            } else {
-                Log::info("No se encontró última asignación para el empleado {$user->id_empleado} con fecha <= {$fecha}");
-            }
+                if ($lastAssignment) {
+                    Log::info("ULTIMA ASIGNACION para el empleado {$user->id_empleado}", [
+                        'lastAssignment' => $lastAssignment ? $lastAssignment->toArray() : null
+                    ]);
+                } else {
+                    Log::info("No se encontró última asignación para el empleado {$user->id_empleado} con fecha <= {$fecha}");
+                }
 
             $firefighters = [];
 
@@ -307,15 +305,6 @@ class BrigadeController extends Controller
                     ];
                 }
             } else if (isset($assignmentsByTurno['Noche'])) {
-
-                Log::info("Comparando brigadas para Noche", [
-                    'id_brigada_destino' => $assignmentsByTurno['Noche']->id_brigada_destino,
-                    'id_brigada_consultada' => $id_brigada,
-                    'son_iguales' => ($assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada),
-                    'tipo_id_brigada_destino' => gettype($assignmentsByTurno['Noche']->id_brigada_destino),
-                    'tipo_id_brigada_consultada' => gettype($id_brigada)
-                ]);
-
                 if ($assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 4 - Turno Noche");

@@ -262,7 +262,7 @@ class FirefighterAssignmentController extends Controller
         if ($lastToday && $lastToday->brigadeDestination) {
             $brigadeNameToday = $lastToday->brigadeDestination->nombre;
             Log::info("Brigada de hoy para bombero {$firefighterId}: {$brigadeNameToday} y su última asignación fue a {$lastToday->fecha_ini}");
-            if (in_array($brigadeNameToday, $excludedForToday)) {
+            if (in_array($brigadeNameToday, $excludedForToday) && !$isProtected) {
                 $unavailableFirefighterIds[] = $firefighterId;
                 continue;
             }

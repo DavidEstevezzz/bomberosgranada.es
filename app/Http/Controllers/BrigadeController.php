@@ -305,6 +305,15 @@ class BrigadeController extends Controller
                     ];
                 }
             } else if (isset($assignmentsByTurno['Noche'])) {
+
+                Log::info("Comparando brigadas para Noche", [
+                    'id_brigada_destino' => $assignmentsByTurno['Noche']->id_brigada_destino,
+                    'id_brigada_consultada' => $id_brigada,
+                    'son_iguales' => ($assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada),
+                    'tipo_id_brigada_destino' => gettype($assignmentsByTurno['Noche']->id_brigada_destino),
+                    'tipo_id_brigada_consultada' => gettype($id_brigada)
+                ]);
+                
                 if ($assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 4 - Turno Noche");

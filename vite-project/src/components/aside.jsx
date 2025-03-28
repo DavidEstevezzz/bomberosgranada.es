@@ -85,13 +85,8 @@ const Aside = ({ className }) => {
 
   return (
     <aside
-      className={`
-        w-64 h-full
-        overflow-y-auto
-        md:overflow-y-visible
-        ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'}
-        ${className}
-      `}
+    className={`w-64 h-screen overflow-y-auto ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'} ${className}`}
+
     >
       <nav className="mt-6">
         {/* Inicio */}

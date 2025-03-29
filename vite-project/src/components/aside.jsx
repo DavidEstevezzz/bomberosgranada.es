@@ -15,7 +15,8 @@ import {
   faLightbulb,
   faExchangeAlt,
   faSitemap,
-  faTrashAlt
+  faTrashAlt,
+  faRadio // Icono para equipos de radio
 } from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -31,6 +32,7 @@ const Aside = ({ className }) => {
     extraHours: false,
     solicitudes: false,
     organization: false, // Nuevo estado para el menú de organización
+    equipment: false, // Nuevo estado para el menú de equipos
   });
   const [unreadCount, setUnreadCount] = useState(0); // Contador de mensajes no leídos
   const [pendingIncidentsCount, setPendingIncidentsCount] = useState(0); // Contador de incidencias pendientes
@@ -112,6 +114,24 @@ const Aside = ({ className }) => {
             <FontAwesomeIcon icon={faTruck} className="w-5 h-5 mr-2" />
             Vehículos
           </a>
+        )}
+
+        {/* NUEVA SECCIÓN: Equipos */}
+        {(userType === 'jefe' || userType === 'mando') && (
+          <div className="relative">
+            <button onClick={() => toggleDropdown('equipment')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+              <span className="flex items-center">
+                <FontAwesomeIcon icon={faRadio} className="w-5 h-5 mr-2" />
+                Inventario
+              </span>
+              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.equipment ? 'rotate-180' : ''}`} />
+            </button>
+            {dropdownOpen.equipment && (
+              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <a href="/personal-equipment" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Equipos Personales</a>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Usuarios */}

@@ -134,25 +134,65 @@ const UserGuardsCalendarPage = ({ user }) => {
                 const matchingTurn = matching[0].turno;
                 const otherTurn = other.turno;
                 let suffix = "";
-                if (matchingTurn === "Mañana" && otherTurn === "Tarde") suffix = "Mañana";
-                else if (matchingTurn === "Tarde" && otherTurn === "Noche") suffix = "Tarde";
-                else if (matchingTurn === "Mañana" && otherTurn === "Noche") suffix = "Mañana y tarde";
+                
+                // Determinar el sufijo basado en los turnos específicos y el orden de las asignaciones
+                // Si la brigada coincidente es el destino solo para el turno de mañana y luego cambia, mostrar "Mañana"
+                if (matchingTurn === "Mañana" && otherTurn === "Tarde" && 
+                    other.id_brigada_origen === requiredBrigada) {
+                  suffix = "Mañana";
+                } 
+                // Si la brigada coincidente es el destino solo para el turno de tarde y luego cambia, mostrar "Tarde"
+                else if (matchingTurn === "Tarde" && otherTurn === "Noche" && 
+                         other.id_brigada_origen === requiredBrigada) {
+                  suffix = "Tarde";
+                }
+                // Si la brigada coincidente es el destino para mañana y el bombero tiene noche, pero no tarde
+                else if (matchingTurn === "Mañana" && otherTurn === "Noche") {
+                  suffix = "Mañana";
+                }
+                // En otros casos, usar la lógica genérica basada solo en el turno de la asignación coincidente
                 else {
-                  // Si no se cumple alguna de las combinaciones anteriores, se usa la asignación matching
-                  if (matchingTurn === "Mañana") suffix = "Día completo";
-                  else if (matchingTurn === "Tarde") suffix = "Tarde y noche";
-                  else if (matchingTurn === "Noche") suffix = "Noche";
+                  // Verificar si hay un cambio de brigada durante el día
+                  const isTemporaryAssignment = other.id_brigada_origen === requiredBrigada || 
+                                                other.id_brigada_destino === requiredBrigada;
+                  
+                  if (isTemporaryAssignment) {
+                    // Si la asignación es temporal (la brigada cambia durante el día)
+                    if (matchingTurn === "Mañana") suffix = "Mañana";
+                    else if (matchingTurn === "Tarde") suffix = "Tarde";
+                    else if (matchingTurn === "Noche") suffix = "Noche";
+                  } else {
+                    // Si no hay cambio temporal, usar la asignación completa
+                    if (matchingTurn === "Mañana") suffix = "Día completo";
+                    else if (matchingTurn === "Tarde") suffix = "Tarde y noche";
+                    else if (matchingTurn === "Noche") suffix = "Noche";
+                  }
                 }
                 return { assignment: matching[0], suffix };
               } else if (matching.length === 2) {
-                // Ambas asignaciones coinciden
-                const sorted = sameDayAssignments.sort((a, b) =>
+                // Ambas asignaciones coinciden con la brigada requerida
+                // Ordenar por prioridad de turno (Noche, Tarde, Mañana)
+                const sorted = matching.sort((a, b) =>
                   turnPriority.indexOf(a.turno) - turnPriority.indexOf(b.turno)
                 );
+                
+                // Verificar si las asignaciones representan un cambio temporal
+                const isSequential = sorted[0].id_brigada_origen === sorted[1].id_brigada_destino ||
+                                     sorted[1].id_brigada_origen === sorted[0].id_brigada_destino;
+                
                 let suffix = "";
-                if (sorted[0].turno === "Mañana") suffix = "Día completo";
-                else if (sorted[0].turno === "Tarde") suffix = "Tarde y noche";
-                else if (sorted[0].turno === "Noche") suffix = "Noche";
+                if (isSequential) {
+                  // Si hay un cambio secuencial de brigadas, mostrar solo los turnos aplicables
+                  if (sorted[0].turno === "Mañana" && sorted[1].turno === "Tarde") suffix = "Mañana y tarde";
+                  else if (sorted[0].turno === "Mañana" && sorted[1].turno === "Noche") suffix = "Mañana";
+                  else if (sorted[0].turno === "Tarde" && sorted[1].turno === "Noche") suffix = "Tarde y noche";
+                  else suffix = sorted[0].turno; // Caso por defecto
+                } else {
+                  // Si no hay cambio secuencial, usar la lógica original
+                  if (sorted[0].turno === "Mañana") suffix = "Día completo";
+                  else if (sorted[0].turno === "Tarde") suffix = "Tarde y noche";
+                  else if (sorted[0].turno === "Noche") suffix = "Noche";
+                }
                 return { assignment: sorted[0], suffix };
               } else {
                 // Si no hay ninguna asignación matching, usar la de menor prioridad del día

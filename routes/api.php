@@ -21,7 +21,7 @@ use App\Http\Controllers\GuardAssignmentController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\SuggestionController;
 use App\Http\Controllers\SuggestionVoteController;
-use App\Http\Controllers\EquipoPersonalController;
+use App\Http\Controllers\PersonalEquipmentController;
 
 
 
@@ -57,14 +57,14 @@ Route::middleware('auth:sanctum')->group(function () {
     ->where('parte', '.*');
 
     Route::prefix('equipos-personales')->group(function () {
-        Route::get('/', [EquipoPersonalController::class, 'index']);
-        Route::post('/', [EquipoPersonalController::class, 'store']);
-        Route::get('/{equipo}', [EquipoPersonalController::class, 'show']);
-        Route::put('/{equipo}', [EquipoPersonalController::class, 'update']);
-        Route::delete('/{equipo}', [EquipoPersonalController::class, 'destroy']);
-     });
-     
-     Route::get('/categorias-equipos', [EquipoPersonalController::class, 'getCategorias']);
+        Route::get('/', [PersonalEquipmentController::class, 'index']);
+        Route::post('/', [PersonalEquipmentController::class, 'store']);
+        Route::get('/{equipo}', [PersonalEquipmentController::class, 'show']);
+        Route::put('/{equipo}', [PersonalEquipmentController::class, 'update']);
+        Route::delete('/{equipo}', [PersonalEquipmentController::class, 'destroy']);
+    });
+    
+    Route::get('/categorias-equipos', [PersonalEquipmentController::class, 'getCategories']);
 
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);

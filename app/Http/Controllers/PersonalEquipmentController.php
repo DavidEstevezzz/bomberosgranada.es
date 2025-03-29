@@ -6,7 +6,7 @@ use App\Models\EquipoPersonal;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-class EquipoPersonalController extends Controller
+class PersonalEquipmentController extends Controller
 {
     /**
      * Mostrar listado de equipos personales

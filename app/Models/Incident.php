@@ -30,6 +30,7 @@ class Incident extends Model
         'descripcion',
         'nivel',
         'resolucion',
+        'resolviendo',
     ];
 
     // Relación con el usuario creador de la incidencia.

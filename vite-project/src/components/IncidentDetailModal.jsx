@@ -141,7 +141,7 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
           <h4 className="text-sm uppercase tracking-wider font-semibold mb-3 text-gray-500 dark:text-gray-400">Descripción</h4>
           <p className="whitespace-pre-line">{incident.descripcion}</p>
         </div>
-        
+
         {incident.resolucion && (
           <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
             <h4 className="text-sm uppercase tracking-wider font-semibold mb-3 text-gray-500 dark:text-gray-400">Resolución</h4>
@@ -150,17 +150,14 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
         )}
 
         {incident.resolver && (
-          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+          <div className={`p-4 mt-6 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
             <h4 className="text-sm uppercase tracking-wider font-semibold mb-3 text-gray-500 dark:text-gray-400">Resolución</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="font-medium">Resuelto por:</span>
                 <span>{incident.resolver ? `${incident.resolver.nombre} ${incident.resolver.apellido}` : 'No resuelto'}</span>
               </div>
-              <div>
-                <span className="font-medium block mb-2">Detalles de la resolución:</span>
-                <p className="whitespace-pre-line bg-gray-50 dark:bg-gray-600 p-3 rounded">{incident.resolucion}</p>
-              </div>
+              
             </div>
           </div>
         )}

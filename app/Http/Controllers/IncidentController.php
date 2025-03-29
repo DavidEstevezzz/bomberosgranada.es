@@ -32,7 +32,7 @@ class IncidentController extends Controller
             'nivel'        => 'required|in:alto,medio,bajo',
             'id_parque'    => 'required|exists:parks,id_parque',
             'leido'        => 'boolean', // Booleano opcional
-            'resolucion'   => 'nullable|string',
+            'resolviendo'   => 'nullable|string',
         ];
 
         // Reglas condicionales según el tipo
@@ -85,7 +85,7 @@ class IncidentController extends Controller
             'nivel'        => 'required|in:alto,medio,bajo',
             'id_parque'    => 'required|exists:parks,id_parque',
             'leido'        => 'boolean', // Booleano opcional
-            'resolucion'   => 'nullable|string',
+            'resolviendo'   => 'nullable|string',
         ];
 
         $tipo = $request->input('tipo');

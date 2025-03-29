@@ -25,7 +25,7 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
     id_parque: incident.id_parque || '',
     matricula: incident.matricula || '',
     id_empleado2: incident.id_empleado2 || '',
-    resolucion: incident.resolucion || '',
+    resolviendo: incident.resolviendo || '',
     id_empleado: incident.id_empleado || (user ? user.id_empleado : ''),
     estado: incident.estado
       ? incident.estado.charAt(0).toUpperCase() + incident.estado.slice(1).toLowerCase()
@@ -99,7 +99,7 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
         id_parque: incident.id_parque || '',
         matricula: incident.matricula || '',
         id_empleado2: incident.id_empleado2 || '',
-        resolucion: incident.resolucion || '',
+        resolviendo: incident.resolviendo || '',
         id_empleado: incident.id_empleado || (user ? user.id_empleado : ''),
         estado: incident.estado
           ? incident.estado.charAt(0).toUpperCase() + incident.estado.slice(1).toLowerCase()
@@ -399,17 +399,17 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
             </div>
 
             <div className="sm:col-span-2">
-              <label htmlFor="resolucion" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Resolución (opcional)</label>
+              <label htmlFor="resolviendo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Resolviendo (opcional)</label>
               <textarea
-                name="resolucion"
-                id="resolucion"
-                value={formValues.resolucion}
+                name="resolviendo"
+                id="resolviendo"
+                value={formValues.resolviendo}
                 onChange={handleChange}
                 className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
               ></textarea>
-              {errorMessages.resolucion && <span className="text-red-500 text-sm">{errorMessages.resolucion}</span>}
+              {errorMessages.resolviendo && <span className="text-red-500 text-sm">{errorMessages.resolviendo}</span>}
             </div>
-            
+
           </div>
 
 

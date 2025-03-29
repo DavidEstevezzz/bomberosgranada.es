@@ -5,6 +5,7 @@ import IncidentApiService from '../services/IncidentApiService';
 import UsersApiService from '../services/UsuariosApiService';
 import VehiclesApiService from '../services/VehiclesApiService';
 import ParksApiService from '../services/ParkApiService';
+import PersonalEquipmentApiService from '../services/PersonalEquipmentApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
 
@@ -24,11 +25,14 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
     id_parque: incident.id_parque || '',
     matricula: incident.matricula || '',
     id_empleado2: incident.id_empleado2 || '',
+    resolucion: incident.resolucion || '',
     id_empleado: incident.id_empleado || (user ? user.id_empleado : ''),
     estado: incident.estado
-    ? incident.estado.charAt(0).toUpperCase() + incident.estado.slice(1).toLowerCase()
-    : 'Pendiente',    leido: incident.leido || false,
-    nivel: incident.nivel || ''
+      ? incident.estado.charAt(0).toUpperCase() + incident.estado.slice(1).toLowerCase()
+      : 'Pendiente',
+    leido: incident.leido || false,
+    nivel: incident.nivel || '',
+    equipo: incident.equipo || ''
   });
 
   const [errorMessages, setErrorMessages] = useState({});
@@ -43,26 +47,47 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
   const [userSearch, setUserSearch] = useState('');
   const [vehicleSearch, setVehicleSearch] = useState('');
 
+  // Equipos personales
+  const [equipmentCategories, setEquipmentCategories] = useState([]);
+  const [allEquipments, setAllEquipments] = useState([]);
+  const [filteredEquipments, setFilteredEquipments] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [equipmentSearch, setEquipmentSearch] = useState('');
+
   // Cargar datos para dropdowns
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersResponse, vehiclesResponse, parksResponse] = await Promise.all([
+        const [usersResponse, vehiclesResponse, parksResponse, categoriesResponse, equipmentsResponse] = await Promise.all([
           UsersApiService.getUsuarios(),
           VehiclesApiService.getVehicles(),
-          ParksApiService.getParks()
+          ParksApiService.getParks(),
+          PersonalEquipmentApiService.getCategories(),
+          PersonalEquipmentApiService.getPersonalEquipments()
         ]);
         setUsers(usersResponse.data);
         setFilteredUsers(usersResponse.data);
         setVehicles(vehiclesResponse.data);
         setFilteredVehicles(vehiclesResponse.data);
         setParks(parksResponse.data);
+        setEquipmentCategories(categoriesResponse.data);
+        setAllEquipments(equipmentsResponse.data);
+
+        // Si la incidencia es de tipo equipo, establecemos la categoría seleccionada
+        if (incident.tipo === 'equipo' && incident.equipment) {
+          const equipmentData = equipmentsResponse.data.find(e => e.id == incident.equipo);
+          if (equipmentData) {
+            setSelectedCategory(equipmentData.categoria);
+            // Filtramos los equipos por la categoría
+            setFilteredEquipments(equipmentsResponse.data.filter(e => e.categoria === equipmentData.categoria));
+          }
+        }
       } catch (error) {
         console.error('Error al cargar datos en el modal de edición:', error);
       }
     };
     fetchData();
-  }, []);
+  }, [incident]);
 
   // Actualizar el formulario cuando cambie la incidencia
   useEffect(() => {
@@ -74,11 +99,14 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
         id_parque: incident.id_parque || '',
         matricula: incident.matricula || '',
         id_empleado2: incident.id_empleado2 || '',
+        resolucion: incident.resolucion || '',
         id_empleado: incident.id_empleado || (user ? user.id_empleado : ''),
         estado: incident.estado
-        ? incident.estado.charAt(0).toUpperCase() + incident.estado.slice(1).toLowerCase()
-        : 'Pendiente',        leido: incident.leido || false,
-        nivel: incident.nivel || ''
+          ? incident.estado.charAt(0).toUpperCase() + incident.estado.slice(1).toLowerCase()
+          : 'Pendiente',
+        leido: incident.leido || false,
+        nivel: incident.nivel || '',
+        equipo: incident.equipo || ''
       });
     }
   }, [incident, user]);
@@ -99,9 +127,40 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
     setFilteredVehicles(filtered);
   }, [vehicleSearch, vehicles]);
 
+  // Filtrar equipos basados en la categoría seleccionada
+  useEffect(() => {
+    if (selectedCategory) {
+      const filtered = allEquipments.filter(
+        (equipment) => equipment.categoria === selectedCategory
+      );
+      setFilteredEquipments(filtered);
+    } else {
+      setFilteredEquipments([]);
+    }
+  }, [selectedCategory, allEquipments]);
+
+  // Filtrar equipos por búsqueda
+  useEffect(() => {
+    if (selectedCategory && equipmentSearch) {
+      const filtered = allEquipments.filter(
+        (equipment) =>
+          equipment.categoria === selectedCategory &&
+          equipment.nombre.toLowerCase().includes(equipmentSearch.toLowerCase())
+      );
+      setFilteredEquipments(filtered);
+    }
+  }, [equipmentSearch, selectedCategory, allEquipments]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormValues((prev) => ({ ...prev, [name]: value }));
+
+    // Si cambia la categoría, reseteamos el equipo seleccionado
+    if (name === 'categoria_equipo') {
+      setSelectedCategory(value);
+      setFormValues(prev => ({ ...prev, equipo: '' }));
+    } else {
+      setFormValues(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -153,10 +212,11 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
                 <option value="vehiculo">Vehículo</option>
                 <option value="personal">Personal</option>
                 <option value="instalacion">Instalación</option>
+                <option value="equipo">Equipos Personales</option>
               </select>
               {errorMessages.tipo && <span className="text-red-500 text-sm">{errorMessages.tipo}</span>}
 
-              {/* Selector condicional para vehículo o personal */}
+              {/* Selector condicional para vehículo o personal o equipo */}
               {formValues.tipo === 'vehiculo' && (
                 <div className="mt-4">
                   <label htmlFor="matricula" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Vehículo</label>
@@ -211,6 +271,62 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
                   {errorMessages.id_empleado2 && <span className="text-red-500 text-sm">{errorMessages.id_empleado2}</span>}
                 </div>
               )}
+              {formValues.tipo === 'equipo' && (
+                <div className="mt-4">
+                  {/* Selector de categoría de equipo */}
+                  <label htmlFor="categoria_equipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Categoría de Equipo
+                  </label>
+                  <select
+                    name="categoria_equipo"
+                    id="categoria_equipo"
+                    value={selectedCategory}
+                    onChange={handleChange}
+                    className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+                    required
+                  >
+                    <option value="">Seleccione una categoría</option>
+                    {equipmentCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                  {errorMessages.categoria_equipo && <span className="text-red-500 text-sm">{errorMessages.categoria_equipo}</span>}
+
+                  {/* Selector de equipo específico (si hay categoría seleccionada) */}
+                  {selectedCategory && (
+                    <div className="mt-4">
+                      <label htmlFor="equipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Nombre del Equipo
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Buscar equipo..."
+                        value={equipmentSearch}
+                        onChange={(e) => setEquipmentSearch(e.target.value)}
+                        className={`w-full px-4 py-2 rounded mb-2 ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700'}`}
+                      />
+                      <select
+                        name="equipo"
+                        id="equipo"
+                        value={formValues.equipo}
+                        onChange={handleChange}
+                        className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+                        required
+                      >
+                        <option value="">Seleccione un equipo</option>
+                        {filteredEquipments.map((equipment) => (
+                          <option key={equipment.id} value={equipment.id}>
+                            {equipment.nombre}
+                          </option>
+                        ))}
+                      </select>
+                      {errorMessages.equipo && <span className="text-red-500 text-sm">{errorMessages.equipo}</span>}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Fecha */}
@@ -247,6 +363,27 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
               {errorMessages.id_parque && <span className="text-red-500 text-sm">{errorMessages.id_parque}</span>}
             </div>
 
+            {/* Nivel */}
+            <div className="sm:col-span-1">
+              <label htmlFor="nivel" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Nivel
+              </label>
+              <select
+                name="nivel"
+                id="nivel"
+                value={formValues.nivel}
+                onChange={handleChange}
+                className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+                required
+              >
+                <option value="">Seleccione un nivel</option>
+                <option value="bajo">Bajo</option>
+                <option value="medio">Medio</option>
+                <option value="alto">Alto</option>
+              </select>
+              {errorMessages.nivel && <span className="text-red-500 text-sm">{errorMessages.nivel}</span>}
+            </div>
+
             {/* Descripción */}
             <div className="sm:col-span-2">
               <label htmlFor="descripcion" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Descripción</label>
@@ -260,7 +397,29 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
               ></textarea>
               {errorMessages.descripcion && <span className="text-red-500 text-sm">{errorMessages.descripcion}</span>}
             </div>
+
+            <div className="sm:col-span-2">
+              <label htmlFor="resolucion" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Resolución (opcional)</label>
+              <textarea
+                name="resolucion"
+                id="resolucion"
+                value={formValues.resolucion}
+                onChange={handleChange}
+                className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+              ></textarea>
+              {errorMessages.resolucion && <span className="text-red-500 text-sm">{errorMessages.resolucion}</span>}
+            </div>
+            
           </div>
+
+
+          {/* Mensaje de error general */}
+          {errorMessages.general && (
+            <div className="mb-4 text-center">
+              <span className="text-red-500">{errorMessages.general}</span>
+            </div>
+          )}
+
           <div className="flex items-center space-x-4">
             <button
               type="submit"

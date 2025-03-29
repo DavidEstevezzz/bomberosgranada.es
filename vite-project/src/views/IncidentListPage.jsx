@@ -731,6 +731,8 @@ const IncidentListPage = () => {
                         <span>{incident.vehicle.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
                         <span>{getEmployee2Name(incident)}</span>
+                      ) : incident.tipo.toLowerCase() === 'equipo' && incident.equipment ? (
+                        <span>{incident.equipment.nombre}</span>
                       ) : null}
                     </td>
                     <td className="py-2 px-2 flex space-x-2">

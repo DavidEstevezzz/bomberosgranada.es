@@ -22,6 +22,7 @@ class Incident extends Model
         'estado',
         'matricula',     // Si tipo es "vehiculo"
         'id_empleado2',  // Si tipo es "personal"
+        'equipo',        // Si tipo es "equipo"
         'resulta_por',   // Empleado que resuelve la incidencia
         'leido',         // Bool que indica si ha sido leído por los jefes
         'id_parque',     // Parque donde se genera la incidencia

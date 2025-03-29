@@ -5,6 +5,7 @@ import IncidentApiService from '../services/IncidentApiService';
 import UsersApiService from '../services/UsuariosApiService';
 import VehiclesApiService from '../services/VehiclesApiService';
 import ParksApiService from '../services/ParkApiService';
+import PersonalEquipmentApiService from '../services/PersonalEquipmentApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
 
@@ -27,7 +28,8 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     id_empleado: user ? user.id_empleado : '',
     estado: 'Pendiente',
     leido: false,
-    nivel: ''
+    nivel: '',
+    equipo: '' // Campo para el ID del equipo personal
   });
 
   const [errorMessages, setErrorMessages] = useState({});
@@ -41,6 +43,13 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   const [parks, setParks] = useState([]);
   const [userSearch, setUserSearch] = useState('');
   const [vehicleSearch, setVehicleSearch] = useState('');
+  
+  // Equipos personales
+  const [equipmentCategories, setEquipmentCategories] = useState([]);
+  const [allEquipments, setAllEquipments] = useState([]);
+  const [filteredEquipments, setFilteredEquipments] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [equipmentSearch, setEquipmentSearch] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -54,28 +63,36 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
         id_empleado: user ? user.id_empleado : '',
         estado: 'Pendiente',
         leido: false,
-        nivel: ''
+        nivel: '',
+        equipo: ''
       });
       setErrorMessages({});
       setIsSubmitting(false);
       setUserSearch('');
       setVehicleSearch('');
+      setEquipmentSearch('');
+      setSelectedCategory('');
     }
   }, [isOpen, user]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersResponse, vehiclesResponse, parksResponse] = await Promise.all([
+        const [usersResponse, vehiclesResponse, parksResponse, categoriesResponse, equipmentsResponse] = await Promise.all([
           UsersApiService.getUsuarios(),
           VehiclesApiService.getVehicles(),
-          ParksApiService.getParks()
+          ParksApiService.getParks(),
+          PersonalEquipmentApiService.getCategories(),
+          PersonalEquipmentApiService.getPersonalEquipments()
         ]);
+        
         setUsers(usersResponse.data);
         setFilteredUsers(usersResponse.data);
         setVehicles(vehiclesResponse.data);
         setFilteredVehicles(vehiclesResponse.data);
         setParks(parksResponse.data);
+        setEquipmentCategories(categoriesResponse.data);
+        setAllEquipments(equipmentsResponse.data);
       } catch (error) {
         console.error('Error fetching data for incident modal:', error);
       }
@@ -98,9 +115,40 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     setFilteredVehicles(filtered);
   }, [vehicleSearch, vehicles]);
 
+  // Filtrar equipos basados en la categoría seleccionada
+  useEffect(() => {
+    if (selectedCategory) {
+      const filtered = allEquipments.filter(
+        (equipment) => equipment.categoria === selectedCategory
+      );
+      setFilteredEquipments(filtered);
+    } else {
+      setFilteredEquipments([]);
+    }
+  }, [selectedCategory, allEquipments]);
+
+  // Filtrar equipos por búsqueda
+  useEffect(() => {
+    if (selectedCategory && equipmentSearch) {
+      const filtered = allEquipments.filter(
+        (equipment) => 
+          equipment.categoria === selectedCategory && 
+          equipment.nombre.toLowerCase().includes(equipmentSearch.toLowerCase())
+      );
+      setFilteredEquipments(filtered);
+    }
+  }, [equipmentSearch, selectedCategory, allEquipments]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormValues((prev) => ({ ...prev, [name]: value }));
+    
+    // Si cambia la categoría, reseteamos el equipo seleccionado
+    if (name === 'categoria_equipo') {
+      setSelectedCategory(value);
+      setFormValues(prev => ({ ...prev, equipo: '' }));
+    } else {
+      setFormValues(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -158,7 +206,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
               </select>
               {errorMessages.tipo && <span className="text-red-500 text-sm">{errorMessages.tipo}</span>}
 
-              {/* Selector condicional para vehículo o personal justo debajo del tipo */}
+              {/* Selector condicional para vehículo o personal o equipo justo debajo del tipo */}
               {formValues.tipo === 'vehiculo' && (
                 <div className="mt-4">
                   <label htmlFor="matricula" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -217,6 +265,62 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
                     ))}
                   </select>
                   {errorMessages.id_empleado2 && <span className="text-red-500 text-sm">{errorMessages.id_empleado2}</span>}
+                </div>
+              )}
+              {formValues.tipo === 'equipo' && (
+                <div className="mt-4">
+                  {/* Selector de categoría de equipo */}
+                  <label htmlFor="categoria_equipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Categoría de Equipo
+                  </label>
+                  <select
+                    name="categoria_equipo"
+                    id="categoria_equipo"
+                    value={selectedCategory}
+                    onChange={handleChange}
+                    className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+                    required
+                  >
+                    <option value="">Seleccione una categoría</option>
+                    {equipmentCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                  {errorMessages.categoria_equipo && <span className="text-red-500 text-sm">{errorMessages.categoria_equipo}</span>}
+                  
+                  {/* Selector de equipo específico (si hay categoría seleccionada) */}
+                  {selectedCategory && (
+                    <div className="mt-4">
+                      <label htmlFor="equipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Nombre del Equipo
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Buscar equipo..."
+                        value={equipmentSearch}
+                        onChange={(e) => setEquipmentSearch(e.target.value)}
+                        className={`w-full px-4 py-2 rounded mb-2 ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700'}`}
+                      />
+                      <select
+                        name="equipo"
+                        id="equipo"
+                        value={formValues.equipo}
+                        onChange={handleChange}
+                        className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+                        required
+                      >
+                        <option value="">Seleccione un equipo</option>
+                        {filteredEquipments.map((equipment) => (
+                          <option key={equipment.id} value={equipment.id}>
+                            {equipment.nombre}
+                          </option>
+                        ))}
+                      </select>
+                      {errorMessages.equipo && <span className="text-red-500 text-sm">{errorMessages.equipo}</span>}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -298,6 +402,13 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
             ></textarea>
             {errorMessages.descripcion && <span className="text-red-500 text-sm">{errorMessages.descripcion}</span>}
           </div>
+
+          {/* Mensaje de error general */}
+          {errorMessages.general && (
+            <div className="mb-4 text-center">
+              <span className="text-red-500">{errorMessages.general}</span>
+            </div>
+          )}
 
           <div className="flex items-center space-x-4">
             <button

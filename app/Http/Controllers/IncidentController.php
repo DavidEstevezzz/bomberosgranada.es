@@ -32,6 +32,7 @@ class IncidentController extends Controller
             'nivel'        => 'required|in:alto,medio,bajo',
             'id_parque'    => 'required|exists:parks,id_parque',
             'leido'        => 'boolean', // Booleano opcional
+            'resolucion'   => 'nullable|string',
         ];
 
         // Reglas condicionales según el tipo
@@ -40,6 +41,8 @@ class IncidentController extends Controller
             $rules['matricula'] = 'required';
         } elseif ($tipo === 'personal') {
             $rules['id_empleado2'] = 'required';
+        } elseif ($tipo === 'equipo') {
+            $rules['equipo'] = 'required';
         }
         
         $validator = Validator::make($request->all(), $rules);
@@ -82,6 +85,7 @@ class IncidentController extends Controller
             'nivel'        => 'required|in:alto,medio,bajo',
             'id_parque'    => 'required|exists:parks,id_parque',
             'leido'        => 'boolean', // Booleano opcional
+            'resolucion'   => 'nullable|string',
         ];
 
         $tipo = $request->input('tipo');
@@ -89,6 +93,8 @@ class IncidentController extends Controller
             $rules['matricula'] = 'required';
         } elseif ($tipo === 'personal') {
             $rules['id_empleado2'] = 'required';
+        } elseif ($tipo === 'equipo') {
+            $rules['equipo'] = 'required';
         }
 
         $validator = Validator::make($request->all(), $rules);

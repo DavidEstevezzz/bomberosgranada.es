@@ -14,16 +14,7 @@ class PersonalEquipmentController extends Controller
     public function index()
     {
         $equipos = PersonalEquipment::all();
-        return view('equipos.index', compact('equipos'));
-    }
-
-    /**
-     * Mostrar formulario para crear nuevo equipo
-     */
-    public function create()
-    {
-        $categorias = PersonalEquipment::getCategorias();
-        return view('equipos.create', compact('categorias'));
+        return response()->json($equipos);
     }
 
     /**
@@ -36,10 +27,9 @@ class PersonalEquipmentController extends Controller
             'categoria' => ['required', Rule::in(PersonalEquipment::getCategorias())]
         ]);
 
-        PersonalEquipment::create($request->all());
+        $equipo = PersonalEquipment::create($request->all());
 
-        return redirect()->route('equipos.index')
-            ->with('success', 'Equipo personal creado correctamente.');
+        return response()->json($equipo, 201);
     }
 
     /**
@@ -47,16 +37,7 @@ class PersonalEquipmentController extends Controller
      */
     public function show(PersonalEquipment $equipo)
     {
-        return view('equipos.show', compact('equipo'));
-    }
-
-    /**
-     * Mostrar formulario para editar equipo
-     */
-    public function edit(PersonalEquipment $equipo)
-    {
-        $categorias = PersonalEquipment::getCategorias();
-        return view('equipos.edit', compact('equipo', 'categorias'));
+        return response()->json($equipo);
     }
 
     /**
@@ -71,8 +52,7 @@ class PersonalEquipmentController extends Controller
 
         $equipo->update($request->all());
 
-        return redirect()->route('equipos.index')
-            ->with('success', 'Equipo personal actualizado correctamente.');
+        return response()->json($equipo);
     }
 
     /**
@@ -82,7 +62,14 @@ class PersonalEquipmentController extends Controller
     {
         $equipo->delete();
 
-        return redirect()->route('equipos.index')
-            ->with('success', 'Equipo personal eliminado correctamente.');
+        return response()->json(null, 204);
+    }
+    
+    /**
+     * Obtener todas las categorías disponibles
+     */
+    public function getCategories()
+    {
+        return response()->json(PersonalEquipment::getCategorias());
     }
 }

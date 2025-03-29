@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\EquipoPersonal;
+use App\Models\PersonalEquipment;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -13,7 +13,7 @@ class PersonalEquipmentController extends Controller
      */
     public function index()
     {
-        $equipos = EquipoPersonal::all();
+        $equipos = PersonalEquipment::all();
         return view('equipos.index', compact('equipos'));
     }
 
@@ -22,7 +22,7 @@ class PersonalEquipmentController extends Controller
      */
     public function create()
     {
-        $categorias = EquipoPersonal::getCategorias();
+        $categorias = PersonalEquipment::getCategorias();
         return view('equipos.create', compact('categorias'));
     }
 
@@ -33,10 +33,10 @@ class PersonalEquipmentController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'categoria' => ['required', Rule::in(EquipoPersonal::getCategorias())]
+            'categoria' => ['required', Rule::in(PersonalEquipment::getCategorias())]
         ]);
 
-        EquipoPersonal::create($request->all());
+        PersonalEquipment::create($request->all());
 
         return redirect()->route('equipos.index')
             ->with('success', 'Equipo personal creado correctamente.');
@@ -45,7 +45,7 @@ class PersonalEquipmentController extends Controller
     /**
      * Mostrar un equipo específico
      */
-    public function show(EquipoPersonal $equipo)
+    public function show(PersonalEquipment $equipo)
     {
         return view('equipos.show', compact('equipo'));
     }
@@ -53,20 +53,20 @@ class PersonalEquipmentController extends Controller
     /**
      * Mostrar formulario para editar equipo
      */
-    public function edit(EquipoPersonal $equipo)
+    public function edit(PersonalEquipment $equipo)
     {
-        $categorias = EquipoPersonal::getCategorias();
+        $categorias = PersonalEquipment::getCategorias();
         return view('equipos.edit', compact('equipo', 'categorias'));
     }
 
     /**
      * Actualizar un equipo específico
      */
-    public function update(Request $request, EquipoPersonal $equipo)
+    public function update(Request $request, PersonalEquipment $equipo)
     {
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'categoria' => ['required', Rule::in(EquipoPersonal::getCategorias())]
+            'categoria' => ['required', Rule::in(PersonalEquipment::getCategorias())]
         ]);
 
         $equipo->update($request->all());
@@ -78,7 +78,7 @@ class PersonalEquipmentController extends Controller
     /**
      * Eliminar un equipo específico
      */
-    public function destroy(EquipoPersonal $equipo)
+    public function destroy(PersonalEquipment $equipo)
     {
         $equipo->delete();
 

@@ -335,125 +335,74 @@ class FirefighterAssignmentController extends Controller
     }
 
     private function isProtectedByRequests($firefighterId, $previousDay, $currentDay, $nextDay)
-    {
-        // Tipos que NO tienen turno,
-        // pero ahora se protegerán sólo si la solicitud **termina** el día anterior.
-        $typesWithoutTurno = [
-            'vacaciones',
-            'modulo',
-            'licencias por dias'
-        ];
+{
+    // Tipos que NO tienen turno
+    $typesWithoutTurno = [
+        'vacaciones',
+        'modulo',
+        'licencias por dias'
+    ];
 
-        // Tipos que SÍ requieren comprobación de turnos.
-        $typesWithTurno = [
-            'asuntos propios',
-            'compensacion grupos especiales',
-            'licencias por jornadas'
-        ];
+    // Tipos que SÍ requieren comprobación de turnos
+    $typesWithTurno = [
+        'asuntos propios',
+        'compensacion grupos especiales',
+        'licencias por jornadas'
+    ];
 
-        // Verificar si el bombero está en guardia HOY
-        $isInGuardToday = $this->isFirefighterInGuardBrigade($firefighterId, $currentDay);
+    // Verificar si el bombero está en guardia HOY
+    $isInGuardToday = $this->isFirefighterInGuardBrigade($firefighterId, $currentDay);
 
-        // Si está en guardia HOY, nunca debe estar protegido para HOY
-        if ($isInGuardToday) {
-            Log::info("isProtectedByRequests - Bombero {$firefighterId} en guardia HOY, no puede estar protegido.");
-            return false;
-        }
-
-        /******************************************************
-         * 1) CHEQUEO PARA EL DÍA ANTERIOR (previousDay)
-         ******************************************************/
-        $dayToCheck = $previousDay;
-        $dayToCheckMinus1 = date('Y-m-d', strtotime("$dayToCheck -1 day"));
-
-        $queryPrev = \App\Models\Request::where('id_empleado', $firefighterId)
-            ->where('estado', 'Confirmada')
-            ->where(function ($query) use ($dayToCheck, $dayToCheckMinus1, $typesWithoutTurno, $typesWithTurno) {
-                $query->where(function ($q) use ($dayToCheckMinus1, $dayToCheck, $typesWithoutTurno) {
-                    $q->whereIn('tipo', $typesWithoutTurno)
-                        ->where('fecha_ini', '<=', $dayToCheck)
-                        ->where('fecha_fin', '=', $dayToCheck);
-                })
-                    ->orWhere(function ($q) use ($dayToCheck, $typesWithTurno) {
-                        $q->whereIn('tipo', $typesWithTurno)
-                            ->where('fecha_ini', '<=', $dayToCheck)
-                            ->where('fecha_fin', '>=', $dayToCheck)
-                            ->whereIn('turno', ['Tarde y noche', 'Día Completo']);
-                    });
-            });
-        $protectedPrevious = $queryPrev->exists();
-        Log::info("isProtectedByRequests - Bombero {$firefighterId} - Día anterior ({$previousDay}): " . ($protectedPrevious ? "Protegido" : "No protegido"));
-
-        /******************************************************
-         * 2) CHEQUEO PARA EL DÍA ACTUAL (currentDay)
-         ******************************************************/
-        $dayToCheck = $currentDay;
-        $dayToCheckMinus1 = date('Y-m-d', strtotime("$dayToCheck -1 day"));
-        $queryCurrent = \App\Models\Request::where('id_empleado', $firefighterId)
-            ->where('estado', 'Confirmada')
-            ->where(function ($query) use ($dayToCheck, $dayToCheckMinus1, $typesWithoutTurno, $typesWithTurno) {
-                $query->where(function ($q) use ($dayToCheckMinus1, $typesWithoutTurno) {
-                    $q->whereIn('tipo', $typesWithoutTurno)
-                        ->where('fecha_ini', '<=', $dayToCheckMinus1)
-                        ->where('fecha_fin', '=', $dayToCheckMinus1);
-                })
-                    ->orWhere(function ($q) use ($dayToCheck, $typesWithTurno) {
-                        $q->whereIn('tipo', $typesWithTurno)
-                            ->where('fecha_ini', '<=', $dayToCheck)
-                            ->where('fecha_fin', '>=', $dayToCheck)
-                            ->whereIn('turno', ['Tarde y noche', 'Día Completo', 'Mañana y tarde']);
-                    });
-            });
-        $protectedCurrent = $queryCurrent->exists();
-        Log::info("isProtectedByRequests - Bombero {$firefighterId} - Día actual ({$currentDay}): " . ($protectedCurrent ? "Protegido" : "No protegido"));
-
-        /******************************************************
-         * 3) CHEQUEO PARA EL DÍA SIGUIENTE (nextDay)
-         ******************************************************/
-        $dayToCheck = $nextDay;
-        $dayToCheckMinus1 = date('Y-m-d', strtotime("$dayToCheck -1 day"));
-        $queryNext = \App\Models\Request::where('id_empleado', $firefighterId)
-            ->where('estado', 'Confirmada')
-            ->where(function ($query) use ($dayToCheck, $dayToCheckMinus1, $typesWithoutTurno, $typesWithTurno) {
-                $query->where(function ($q) use ($dayToCheckMinus1, $dayToCheck, $typesWithoutTurno) {
-                    $q->whereIn('tipo', $typesWithoutTurno)
-                        ->where('fecha_ini', '<=', $dayToCheck)
-                        ->where('fecha_fin', '>=', $dayToCheck);
-                })
-                    ->orWhere(function ($q) use ($dayToCheck, $typesWithTurno) {
-                        $q->whereIn('tipo', $typesWithTurno)
-                            ->where('fecha_ini', '<=', $dayToCheck)
-                            ->where('fecha_fin', '>=', $dayToCheck)
-                            ->whereIn('turno', ['Mañana y tarde', 'Día Completo']);
-                    });
-            });
-        $protectedNext = $queryNext->exists();
-
-        // **NUEVA VALIDACIÓN PARA EL DÍA SIGUIENTE (Condición B):**
-        // Se consulta la última asignación para el día actual y, si está en un tipo sin turno,
-        // se anula la protección para el día siguiente.
-        $lastAssignmentCurrent = Firefighters_assignment::where('id_empleado', $firefighterId)
-            ->where('fecha_ini', '<=', $currentDay)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
-            ->first();
-        if ($lastAssignmentCurrent && $lastAssignmentCurrent->brigadeDestination) {
-            $brigadeCurrent = strtolower($lastAssignmentCurrent->brigadeDestination->nombre);
-            if (in_array($brigadeCurrent, array_map('strtolower', $typesWithoutTurno))) {
-                $protectedNext = false;
-                Log::info("isProtectedByRequests - Bombero {$firefighterId}: No se protege para el día siguiente porque la última asignación para el día actual es a '{$lastAssignmentCurrent->brigadeDestination->nombre}', que está en tipos sin turno.");
-            }
-        }
-        Log::info("isProtectedByRequests - Bombero {$firefighterId} - Día siguiente ({$nextDay}): " . ($protectedNext ? "Protegido" : "No protegido"));
-
-        /******************************************************
-         * 4) RESULTADO FINAL
-         ******************************************************/
-        $result = $protectedPrevious || $protectedCurrent || $protectedNext;
-        Log::info("isProtectedByRequests - Bombero {$firefighterId} - Resultado final: " . ($result ? "Protegido" : "No protegido"));
-
-        return $result;
+    // Si está en guardia HOY, nunca debe estar protegido para HOY
+    if ($isInGuardToday) {
+        Log::info("isProtectedByRequests - Bombero {$firefighterId} en guardia HOY, no puede estar protegido.");
+        return false;
     }
+
+    // Verificar día anterior
+    $protectedPrevious = \App\Models\Request::where('id_empleado', $firefighterId)
+        ->where('estado', 'Confirmada')
+        ->where(function ($query) use ($previousDay, $typesWithoutTurno, $typesWithTurno) {
+            $query->where(function ($q) use ($previousDay, $typesWithoutTurno) {
+                $q->whereIn('tipo', $typesWithoutTurno)
+                    ->where('fecha_ini', '<=', $previousDay)
+                    ->where('fecha_fin', '=', $previousDay);
+            })
+            ->orWhere(function ($q) use ($previousDay, $typesWithTurno) {
+                $q->whereIn('tipo', $typesWithTurno)
+                    ->where('fecha_ini', '<=', $previousDay)
+                    ->where('fecha_fin', '>=', $previousDay)
+                    ->whereIn('turno', ['Tarde y noche', 'Día Completo']);
+            });
+        })
+        ->exists();
+    
+    Log::info("isProtectedByRequests - Bombero {$firefighterId} - Día anterior: " . ($protectedPrevious ? "Protegido" : "No protegido"));
+
+    // Verificar día siguiente
+    $protectedNext = \App\Models\Request::where('id_empleado', $firefighterId)
+        ->where('estado', 'Confirmada')
+        ->where(function ($query) use ($nextDay, $typesWithoutTurno, $typesWithTurno) {
+            $query->where(function ($q) use ($nextDay, $typesWithoutTurno) {
+                $q->whereIn('tipo', $typesWithoutTurno)
+                    ->where('fecha_ini', '=', $nextDay);
+            })
+            ->orWhere(function ($q) use ($nextDay, $typesWithTurno) {
+                $q->whereIn('tipo', $typesWithTurno)
+                    ->where('fecha_ini', '=', $nextDay)
+                    ->whereIn('turno', ['Mañana y tarde', 'Día Completo']);
+            });
+        })
+        ->exists();
+    
+    Log::info("isProtectedByRequests - Bombero {$firefighterId} - Día siguiente: " . ($protectedNext ? "Protegido" : "No protegido"));
+
+    // Protegido si cualquiera de las condiciones es verdadera
+    $result = $protectedPrevious || $protectedNext;
+    Log::info("isProtectedByRequests - Bombero {$firefighterId} - Resultado final: " . ($result ? "Protegido" : "No protegido"));
+
+    return $result;
+}
 
 
 

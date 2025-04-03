@@ -24,32 +24,51 @@ const MessageThread = ({ message, onReply, users }) => {
   const isLastMessage = !message.replies || message.replies.length === 0;
 
   // Función para descargar el adjunto (si lo tiene)
+  // En el componente MessageThread
   const handleDownloadAttachment = async () => {
     try {
       const response = await MessagesApiService.downloadAttachment(message.id);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+
+      // Extraer el nombre del archivo de los headers
+      let filename = 'attachment';
+      const contentDisposition = response.headers['content-disposition'];
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Crear el blob con el tipo de contenido correcto
+      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      const blob = new Blob([response.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+
       const link = document.createElement('a');
       link.href = url;
-      // Usa el nombre del archivo si existe, o 'attachment.pdf' por defecto
-      link.setAttribute('download', message.attachment_filename || 'attachment.pdf');
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
-      link.remove();
+
+      // Limpieza
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
     } catch (error) {
       console.error("Error al descargar el adjunto:", error);
+      alert("Error al descargar el archivo adjunto. Por favor, inténtelo de nuevo.");
     }
   };
-
   return (
     <div className="flex flex-col w-full">
       {/* Contenedor del mensaje */}
       <div className={`flex w-full my-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
         <div
-          className={`relative max-w-[75%] p-3 rounded-xl shadow-md text-sm transition-all ${
-            isOwnMessage
+          className={`relative max-w-[75%] p-3 rounded-xl shadow-md text-sm transition-all ${isOwnMessage
               ? `bg-green-500 text-white ${darkMode ? 'dark:bg-green-600' : ''}`
               : `bg-gray-200 text-gray-800 ${darkMode ? 'dark:bg-gray-700 dark:text-white' : ''}`
-          }`}
+            }`}
           style={{ alignSelf: isOwnMessage ? 'flex-end' : 'flex-start' }}
         >
           {/* Mostrar nombre del remitente solo si NO es tu mensaje */}
@@ -161,55 +180,55 @@ const MessagesPage = () => {
   const fetchRootMessage = async (message) => {
     // Si el mensaje actual no tiene padre, es el raíz
     if (!message.parent_id) return message;
-  
+
     // Si tiene padre, consultamos el mensaje padre
     const response = await MessagesApiService.getMessageThread(message.parent_id);
     const parentMessage = response.data.message ? response.data.message : response.data;
-    
+
     // Llamada recursiva hasta llegar al mensaje raíz
     return fetchRootMessage(parentMessage);
   };
 
   const handleOpenMessage = async (message) => {
-    
+
     // Solo marcar como leído si el mensaje es recibido por el usuario actual
     if (!message.is_read && message.receiver_id === user.id_empleado) {
-        try {
-            await MessagesApiService.markAsRead(message.id);
-            // Actualizar la UI localmente para reflejar el cambio
-            setInbox((prevInbox) =>
-                prevInbox.map((msg) =>
-                    msg.id === message.id ? { ...msg, is_read: true } : msg
-                )
-            );
-            setSent((prevSent) =>
-                prevSent.map((msg) =>
-                    msg.id === message.id ? { ...msg, is_read: true } : msg
-                )
-            );
-        } catch (error) {
-            console.error("Error al marcar mensaje como leído:", error);
-        }
+      try {
+        await MessagesApiService.markAsRead(message.id);
+        // Actualizar la UI localmente para reflejar el cambio
+        setInbox((prevInbox) =>
+          prevInbox.map((msg) =>
+            msg.id === message.id ? { ...msg, is_read: true } : msg
+          )
+        );
+        setSent((prevSent) =>
+          prevSent.map((msg) =>
+            msg.id === message.id ? { ...msg, is_read: true } : msg
+          )
+        );
+      } catch (error) {
+        console.error("Error al marcar mensaje como leído:", error);
+      }
     }
-    
+
     // Obtener el mensaje raíz si es una respuesta
     try {
-        const fullMessage = await fetchRootMessage(message);
+      const fullMessage = await fetchRootMessage(message);
 
-        // Validamos que la propiedad replies esté definida
-        if (!fullMessage.replies) {
-            fullMessage.replies = [];
-        }
+      // Validamos que la propiedad replies esté definida
+      if (!fullMessage.replies) {
+        fullMessage.replies = [];
+      }
 
-        setSelectedMessage(fullMessage);
+      setSelectedMessage(fullMessage);
     } catch (error) {
-        console.error('Error fetching message thread:', error);
+      console.error('Error fetching message thread:', error);
     }
-};
+  };
 
-  
-  
-  
+
+
+
 
   // Al hacer clic en "Responder", se cierra el modal de conversación y se prepara la respuesta
   const handleReply = (message) => {
@@ -383,33 +402,31 @@ const MessagesPage = () => {
         />
       )}
 
-{selectedMessage && (
-  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 transition-opacity">
-    <div
-      className={`p-6 w-full max-w-2xl rounded-lg shadow-lg transition-all ${
-        darkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200'
-      }`}
-    >
-      {/* Encabezado de la modal */}
-      <div className={`flex justify-between items-center pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-300'}`}>
-        <h2 className="text-lg font-bold">Chat</h2>
-        <button
-          onClick={() => setSelectedMessage(null)}
-          className={`p-2 rounded-full focus:outline-none focus:ring-2 ${
-            darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <FontAwesomeIcon icon={faTimes} />
-        </button>
-      </div>
+      {selectedMessage && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 transition-opacity">
+          <div
+            className={`p-6 w-full max-w-2xl rounded-lg shadow-lg transition-all ${darkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200'
+              }`}
+          >
+            {/* Encabezado de la modal */}
+            <div className={`flex justify-between items-center pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-300'}`}>
+              <h2 className="text-lg font-bold">Chat</h2>
+              <button
+                onClick={() => setSelectedMessage(null)}
+                className={`p-2 rounded-full focus:outline-none focus:ring-2 ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'
+                  }`}
+              >
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
 
-      {/* Contenido del chat con scrollbar y mayor ancho */}
-      <div className="overflow-y-auto max-h-[500px] p-4 space-y-2">
-        <MessageThread message={selectedMessage} onReply={handleReply} users={users} />
-      </div>
-    </div>
-  </div>
-)}
+            {/* Contenido del chat con scrollbar y mayor ancho */}
+            <div className="overflow-y-auto max-h-[500px] p-4 space-y-2">
+              <MessageThread message={selectedMessage} onReply={handleReply} users={users} />
+            </div>
+          </div>
+        </div>
+      )}
 
 
     </div>

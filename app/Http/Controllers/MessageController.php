@@ -126,11 +126,7 @@ class MessageController extends Controller
         ]);
     }
 
-    /**
-     * Crear/enviar un mensaje.
-     * Si massive=true, el receiver_id se ignora.
-     * Se admite el campo opcional parent_id para respuestas.
-     */
+
     public function store(Request $request)
     {
         // Se espera que el campo 'massive' venga como false o como uno de: 'toda', 'mandos', 'bomberos'
@@ -165,10 +161,13 @@ class MessageController extends Controller
         }
 
         // Manejo del archivo adjunto.
-        // Manejo del archivo adjunto.
         if ($request->hasFile('attachment')) {
             $file = $request->file('attachment');
             $originalName = $file->getClientOriginalName();
+
+            // Guardar el nombre original del archivo
+            $validated['attachment_filename'] = $originalName;
+
             // Guarda el archivo con un nombre único pero preservando la extensión
             $path = $file->storeAs(
                 'attachments',
@@ -181,32 +180,7 @@ class MessageController extends Controller
         $message = UserMessage::create($validated);
         $message->load('sender', 'receiver', 'parent', 'replies');
 
-        // Enviar correos
-        try {
-            if ($isMassive) {
-                if ($massiveScope === 'toda') {
-                    // Toda la plantilla: todos excepto el remitente
-                    $users = \App\Models\User::where('id_empleado', '!=', auth()->id())->get();
-                } elseif ($massiveScope === 'mandos') {
-                    // Solo mandos
-                    $users = \App\Models\User::where('type', 'mando')->get();
-                } elseif ($massiveScope === 'bomberos') {
-                    // Solo bomberos
-                    $users = \App\Models\User::where('type', 'bomberos')->get();
-                } else {
-                    $users = collect();
-                }
-                foreach ($users as $u) {
-                    Mail::to($u->email)->send(new MessageSent($message));
-                }
-            } else {
-                if ($message->receiver) {
-                    Mail::to($message->receiver->email)->send(new MessageSent($message));
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error("Error enviando correo masivo: " . $e->getMessage());
-        }
+        // Resto del código (envío de correos, etc.)...
 
         return response()->json($message, 201);
     }
@@ -215,56 +189,54 @@ class MessageController extends Controller
     /**
      * Descargar un adjunto.
      */
+    /**
+     * Descargar un adjunto.
+     */
     public function downloadAttachment($id)
-{
-    try {
-        $message = UserMessage::find($id);
-        if (!$message || !$message->attachment) {
-            Log::error("No se encontró el mensaje o no tiene adjunto. ID: " . $id);
-            return response()->json(['message' => 'Archivo no encontrado'], 404);
+    {
+        try {
+            Log::emergency("INICIO DESCARGA ADJUNTO: " . $id);
+
+            $message = UserMessage::find($id);
+            if (!$message || !$message->attachment) {
+                Log::emergency("No se encontró el mensaje o no tiene adjunto. ID: " . $id);
+                return response()->json(['message' => 'Archivo no encontrado'], 404);
+            }
+
+            $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $message->attachment);
+            Log::emergency("Ruta de archivo adjunto: " . $filePath);
+
+            if (!file_exists($filePath)) {
+                Log::emergency("Archivo no encontrado en el servidor. Ruta: " . $filePath);
+                return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
+            }
+
+            // Obtener nombre original y extensión real del archivo almacenado
+            $originalName = basename($message->attachment);
+
+            // Detectar el tipo MIME real del archivo
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $detectedMimeType = finfo_file($finfo, $filePath);
+            finfo_close($finfo);
+
+            Log::emergency(
+                "Información de descarga: " .
+                    json_encode([
+                        'originalName' => $originalName,
+                        'detectedMimeType' => $detectedMimeType
+                    ])
+            );
+
+            // Usar el tipo MIME detectado
+            return response()->file($filePath, [
+                'Content-Type' => $detectedMimeType,
+                'Content-Disposition' => 'attachment; filename="' . $originalName . '"'
+            ]);
+        } catch (\Exception $e) {
+            Log::emergency("ERROR EN DESCARGA: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json(['message' => 'Error interno del servidor: ' . $e->getMessage()], 500);
         }
-
-        $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $message->attachment);
-        Log::info("Ruta de archivo adjunto: " . $filePath);
-
-        if (!file_exists($filePath)) {
-            Log::error("Archivo no encontrado en el servidor. Ruta: " . $filePath);
-            return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
-        }
-
-        // Añadir logs detallados para depuración
-        $originalName = basename($message->attachment);
-        $extension = pathinfo($originalName, PATHINFO_EXTENSION);
-        $contentType = $this->getMimeTypeForExtension($extension);
-        
-        Log::info("Información de descarga:", [
-            'originalName' => $originalName,
-            'extension' => $extension,
-            'contentType' => $contentType,
-            'fullAttachmentPath' => $message->attachment
-        ]);
-        
-        // Verifiquemos el contenido real del archivo para confirmar su tipo
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $detectedMimeType = finfo_file($finfo, $filePath);
-        finfo_close($finfo);
-        
-        Log::info("MIME type detectado del archivo: " . $detectedMimeType);
-        
-        // Usar encabezados HTTP adicionales para forzar la descarga correcta
-        $headers = [
-            'Content-Type' => $contentType,
-            'Content-Disposition' => 'attachment; filename="' . $originalName . '"',
-            'X-Content-Type-Options' => 'nosniff'  // Evita que el navegador intente adivinar el tipo MIME
-        ];
-        
-        return response()->download($filePath, $originalName, $headers);
-    } catch (\Exception $e) {
-        Log::error("Error al descargar el adjunto: " . $e->getMessage());
-        return response()->json(['message' => 'Error interno del servidor'], 500);
     }
-}
-
     /**
      * Obtiene el tipo MIME para una extensión dada
      */

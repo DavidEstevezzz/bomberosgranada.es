@@ -587,9 +587,11 @@ const BrigadeDetail = () => {
   // Función para exportar a PDF (modificada para usar la asignación específica del turno de mañana)
   // Función para exportar a PDF (modificada para usar la asignación específica del turno de mañana)
   // Función para exportar a PDF con asignación secuencial
-// Función para exportar a PDF con asignación secuencial completamente rediseñada
+// Función para exportar a PDF con logs detallados
 const exportToPDF = async () => {
   try {
+    console.log("=== INICIANDO PROCESO DE ASIGNACIÓN DE RADIOS ===");
+    
     // Iniciar el PDF
     const doc = new jsPDF();
     doc.addImage(logo, 'PNG', 10, 10, 20, 30);
@@ -632,9 +634,17 @@ const exportToPDF = async () => {
 
     // ID del parque
     const parkId = brigade?.park?.id_parque || 1;
+    console.log(`Parque ID: ${parkId}`);
 
     // Obtener todos los tipos de asignaciones que necesitamos procesar
     const allAssignments = [];
+
+    // DEBUG: Mostrar todas las asignaciones de los bomberos
+    console.log("Asignaciones de bomberos:");
+    firefighters.forEach(ff => {
+      const assignmentValue = getAssignmentValue(ff);
+      console.log(`  ${ff.nombre} ${ff.apellido}: ${assignmentValue}`);
+    });
 
     // Extraer todos los tipos de asignación únicos de los bomberos
     firefighters.forEach(ff => {
@@ -650,6 +660,8 @@ const exportToPDF = async () => {
       }
     });
 
+    console.log("Asignaciones únicas encontradas:", allAssignments);
+
     // Ordenar las asignaciones por tipo (primero letra, luego número)
     allAssignments.sort((a, b) => {
       const letterA = a.charAt(0);
@@ -664,11 +676,16 @@ const exportToPDF = async () => {
       return numA - numB;
     });
 
+    console.log("Asignaciones ordenadas:", allAssignments);
+
     // Separar las asignaciones por tipo
     const nAssignments = allAssignments.filter(a => a.startsWith('N'));
     const sAssignments = allAssignments.filter(a => a.startsWith('S'));
     const cAssignments = allAssignments.filter(a => a.startsWith('C'));
     const bAssignments = allAssignments.filter(a => a.startsWith('B'));
+
+    console.log("Asignaciones C:", cAssignments);
+    console.log("Asignaciones B:", bAssignments);
 
     // Valores iniciales fijos (no necesitan verificación)
     const fixedAssignments = {
@@ -683,7 +700,7 @@ const exportToPDF = async () => {
       'Jefe de Guardia': 1
     };
 
-    // Registros de números ya utilizados (separados por paridad)
+    // Registros de números ya utilizados
     const usedRadioNumbers = new Set();
 
     // Mapa para almacenar las asignaciones de radio finales
@@ -693,32 +710,72 @@ const exportToPDF = async () => {
     Object.keys(fixedAssignments).forEach(key => {
       radioNumberByAssignment[key] = fixedAssignments[key];
       usedRadioNumbers.add(fixedAssignments[key]);
+      console.log(`Asignación fija: ${key} => ${fixedAssignments[key]}`);
     });
 
-    // Función para encontrar el siguiente número disponible
+    // Función para verificar la disponibilidad con logs
+    const isEquipmentAvailable = async (radioNumber) => {
+      try {
+        console.log(`  Verificando disponibilidad del equipo ${radioNumber}...`);
+        const response = await PersonalEquipmentApiService.checkEquipmentAvailability(radioNumber);
+        const isAvailable = response.data.available;
+        console.log(`  Equipo ${radioNumber} disponible: ${isAvailable}`);
+        return isAvailable;
+      } catch (error) {
+        console.error(`  Error verificando disponibilidad del equipo ${radioNumber}:`, error);
+        return false; // En caso de error, asumimos que no está disponible por seguridad
+      }
+    };
+
+    // Función para encontrar el siguiente número disponible con logs
     const findNextAvailableNumber = async (baseNumber) => {
+      console.log(`> Buscando siguiente número disponible desde ${baseNumber}`);
       let currentNumber = baseNumber;
       
       // Verificar si el número está disponible
-      while (
-        usedRadioNumbers.has(currentNumber) || 
-        !(await isEquipmentAvailable(currentNumber))
-      ) {
+      let isUsed = usedRadioNumbers.has(currentNumber);
+      console.log(`  Número ${currentNumber} ya usado: ${isUsed}`);
+      
+      let isAvailable = true;
+      if (!isUsed) {
+        isAvailable = await isEquipmentAvailable(currentNumber);
+      }
+      
+      let attemptCount = 0;
+      while ((isUsed || !isAvailable) && attemptCount < 10) {
+        attemptCount++;
         currentNumber += 2; // Mantener la paridad
+        console.log(`  Intentando con número ${currentNumber} (intento ${attemptCount})`);
+        
+        isUsed = usedRadioNumbers.has(currentNumber);
+        console.log(`  Número ${currentNumber} ya usado: ${isUsed}`);
+        
+        if (!isUsed) {
+          isAvailable = await isEquipmentAvailable(currentNumber);
+        }
+      }
+      
+      if (attemptCount >= 10) {
+        console.warn(`  ⚠️ Alcanzado límite de intentos para buscar número disponible`);
       }
       
       // Marcar como utilizado
       usedRadioNumbers.add(currentNumber);
+      console.log(`> Número disponible encontrado: ${currentNumber}`);
       return currentNumber;
     };
 
     // Procesar secuencialmente las asignaciones C
+    console.log("\n=== PROCESANDO ASIGNACIONES C ===");
     for (const assignment of cAssignments) {
+      console.log(`\nProcesando asignación: ${assignment}`);
+      
       // Valores fijos para C1
       if (assignment === 'C1') {
         const fixedValue = parkId === 2 ? 8 : 7;
         radioNumberByAssignment[assignment] = fixedValue;
         usedRadioNumbers.add(fixedValue);
+        console.log(`Asignación fija C1: ${fixedValue}`);
         continue;
       }
       
@@ -734,18 +791,25 @@ const exportToPDF = async () => {
         baseNumber = 7 + (number - 1) * 2;
       }
       
+      console.log(`Número base para ${assignment}: ${baseNumber}`);
+      
       // Encontrar el siguiente número disponible
       const radioNumber = await findNextAvailableNumber(baseNumber);
       radioNumberByAssignment[assignment] = radioNumber;
+      console.log(`Asignado: ${assignment} => ${radioNumber}`);
     }
 
     // Procesar secuencialmente las asignaciones B
+    console.log("\n=== PROCESANDO ASIGNACIONES B ===");
     for (const assignment of bAssignments) {
+      console.log(`\nProcesando asignación: ${assignment}`);
+      
       // Valores fijos para B1
       if (assignment === 'B1') {
         const fixedValue = parkId === 2 ? 16 : 15;
         radioNumberByAssignment[assignment] = fixedValue;
         usedRadioNumbers.add(fixedValue);
+        console.log(`Asignación fija B1: ${fixedValue}`);
         continue;
       }
       
@@ -761,19 +825,74 @@ const exportToPDF = async () => {
         baseNumber = 15 + (number - 1) * 2;
       }
       
+      console.log(`Número base para ${assignment}: ${baseNumber}`);
+      
       // Encontrar el siguiente número disponible
       const radioNumber = await findNextAvailableNumber(baseNumber);
       radioNumberByAssignment[assignment] = radioNumber;
+      console.log(`Asignado: ${assignment} => ${radioNumber}`);
     }
+
+    // Mostrar todas las asignaciones finales
+    console.log("\n=== ASIGNACIONES FINALES ===");
+    Object.keys(radioNumberByAssignment).forEach(key => {
+      console.log(`${key}: ${radioNumberByAssignment[key]}`);
+    });
 
     // Construir el cuerpo de la tabla con los números de radio asignados
     const sortedFirefighters = [...firefighters].sort((a, b) => {
-      // Lógica de ordenación existente...
+      // Primero ordenar por prioridad de puesto
       const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
       if (puestoDiff !== 0) return puestoDiff;
-      return 0;
+
+      // Ordenar por la asignación completa
+      const assignmentA = getAssignmentValue(a);
+      const assignmentB = getAssignmentValue(b);
+
+      // Si ambas asignaciones completas son iguales, usar la asignación de la mañana para desempatar
+      if (assignmentA === assignmentB) {
+        const morningAssignmentA = getMorningAssignment(a.id_empleado);
+        const morningAssignmentB = getMorningAssignment(b.id_empleado);
+
+        // Manejar el caso de 'No asignado'
+        if (morningAssignmentA === 'No asignado' && morningAssignmentB !== 'No asignado') return 1;
+        if (morningAssignmentB === 'No asignado' && morningAssignmentA !== 'No asignado') return -1;
+        if (morningAssignmentA === 'No asignado' && morningAssignmentB === 'No asignado') return 0;
+
+        // Comparar la letra de la asignación de la mañana
+        const letterA = morningAssignmentA.charAt(0);
+        const letterB = morningAssignmentB.charAt(0);
+        if (letterA !== letterB) return letterA.localeCompare(letterB);
+
+        // Luego comparar numéricamente
+        const numberA = parseInt(morningAssignmentA.slice(1), 10);
+        const numberB = parseInt(morningAssignmentB.slice(1), 10);
+        if (!isNaN(numberA) && !isNaN(numberB)) {
+          return numberA - numberB;
+        }
+        return morningAssignmentA.localeCompare(morningAssignmentB);
+      }
+
+      // Si las asignaciones completas son distintas, comparar teniendo en cuenta 'No asignado'
+      if (assignmentA === 'No asignado' && assignmentB !== 'No asignado') return 1;
+      if (assignmentB === 'No asignado' && assignmentA !== 'No asignado') return -1;
+      if (assignmentA === 'No asignado' && assignmentB === 'No asignado') return 0;
+
+      // Extraer la letra para comparar
+      const letterA = assignmentA.charAt(0);
+      const letterB = assignmentB.charAt(0);
+      if (letterA !== letterB) return letterA.localeCompare(letterB);
+
+      // Comparar numéricamente
+      const numberA = parseInt(assignmentA.slice(1), 10);
+      const numberB = parseInt(assignmentB.slice(1), 10);
+      if (!isNaN(numberA) && !isNaN(numberB)) {
+        return numberA - numberB;
+      }
+      return assignmentA.localeCompare(assignmentB);
     });
 
+    console.log("\n=== ASIGNANDO NÚMEROS A BOMBEROS ===");
     const headers = ['Nombre', 'Puesto', 'Turno', 'Asignación', 'Vehículos'];
     const body = sortedFirefighters.map(firefighter => {
       const assignmentValue = getAssignmentValue(firefighter);
@@ -787,9 +906,15 @@ const exportToPDF = async () => {
         
         if (radioNumberByAssignment[primaryAssignment]) {
           radioNumber = ` (${radioNumberByAssignment[primaryAssignment]})`;
+          console.log(`${firefighter.nombre} ${firefighter.apellido} - ${primaryAssignment}: ${radioNumberByAssignment[primaryAssignment]}`);
         } else if (primaryAssignment === 'Jefe de Guardia') {
           radioNumber = ' (1)';
+          console.log(`${firefighter.nombre} ${firefighter.apellido} - Jefe de Guardia: 1`);
+        } else {
+          console.log(`${firefighter.nombre} ${firefighter.apellido} - ${primaryAssignment}: NO ENCONTRADO`);
         }
+      } else {
+        console.log(`${firefighter.nombre} ${firefighter.apellido} - No asignado`);
       }
       
       const fullName = `${firefighter.nombre} ${firefighter.apellido}${radioNumber}`;
@@ -839,6 +964,7 @@ const exportToPDF = async () => {
       return [255, 255, 255];
     };
 
+    console.log("=== GENERANDO TABLA PDF ===");
     // Generar la tabla
     doc.autoTable({
       startY,
@@ -861,6 +987,7 @@ const exportToPDF = async () => {
 
     // Añadir comentarios y otros detalles
     if (guardDetails) {
+      console.log("=== AÑADIENDO COMENTARIOS Y DETALLES ADICIONALES ===");
       const commentsData = guardDetails.guard || guardDetails;
       const commentFieldsRow1 = ['revision', 'practica', 'basura'];
       const commentFieldsRow2 = ['anotaciones', 'incidencias_de_trafico', 'mando'];
@@ -895,9 +1022,11 @@ const exportToPDF = async () => {
       });
     }
     
+    console.log("=== GUARDANDO PDF ===");
     doc.save('Bomberos_Por_Turno.pdf');
+    console.log("=== PROCESO COMPLETO ===");
   } catch (error) {
-    console.error('Error al generar el PDF:', error);
+    console.error("=== ERROR EN EXPORTACIÓN ===", error);
     alert('Ha ocurrido un error al generar el PDF. Por favor, inténtelo de nuevo.');
   }
 };

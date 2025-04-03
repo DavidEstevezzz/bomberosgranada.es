@@ -17,82 +17,82 @@ class MessageController extends Controller
      * Muestra mensajes donde receiver_id = usuario logueado O massive = true.
      */
     public function index()
-{
-    $user = auth()->user();
-    $userId = auth()->id();
-    $userType = $user->type;
+    {
+        $user = auth()->user();
+        $userId = auth()->id();
+        $userType = $user->type;
 
-    Log::info("Recuperando mensajes para usuario: ID {$userId}, tipo {$userType}");
+        Log::info("Recuperando mensajes para usuario: ID {$userId}, tipo {$userType}");
 
-    // Definir los valores permitidos para massive
-    $massiveValues = ['toda'];
-    if ($userType === 'mando') {
-        $massiveValues[] = 'mandos';
-    } elseif ($userType === 'bombero') {
-        $massiveValues[] = 'bomberos';
-    }
-    Log::debug("Valores de massive permitidos: " . implode(', ', $massiveValues));
-
-    // Activar el registro de queries y el registro de mensajes
-    DB::enableQueryLog();
-
-    // Primera consulta: buscar mensaje 243 con withTrashed para ver si existe y su estado
-    $message243 = UserMessage::withTrashed()->find(243);
-    Log::debug("Mensaje 243 encontrado: " . ($message243 ? 'SÍ' : 'NO'));
-    if ($message243) {
-        Log::debug("Estado mensaje 243: deleted_at=" . ($message243->deleted_at ? $message243->deleted_at : 'NULL') . 
-                  ", massive='" . $message243->massive . "', tipo=" . gettype($message243->massive));
-    }
-
-    // Segunda consulta: verificar todos los mensajes masivos, incluso los eliminados
-    $massiveMessages = UserMessage::withTrashed()
-        ->whereIn(DB::raw('LOWER(massive)'), array_map('strtolower', $massiveValues))
-        ->get();
-    
-    Log::debug("Mensajes masivos encontrados (incluso eliminados): " . $massiveMessages->count());
-    foreach ($massiveMessages as $msg) {
-        Log::debug("Mensaje masivo ID: {$msg->id}, massive: '{$msg->massive}', deleted_at: " . 
-                  ($msg->deleted_at ? $msg->deleted_at : 'NULL'));
-    }
-
-    // Consulta principal: múltiples intentos para capturar diferentes posibilidades
-    $messages = UserMessage::where(function ($query) use ($userId, $massiveValues) {
-        // 1. Mensajes específicos para este usuario
-        $query->where('receiver_id', $userId);
-        
-        // 2. Mensajes masivos - usando varios métodos
-        foreach ($massiveValues as $value) {
-            $query->orWhereRaw("LOWER(massive) = ?", [strtolower($value)])
-                  ->orWhereRaw("massive LIKE ?", ["%$value%"])
-                  ->orWhere('massive', $value);
+        // Definir los valores permitidos para massive
+        $massiveValues = ['toda'];
+        if ($userType === 'mando') {
+            $massiveValues[] = 'mandos';
+        } elseif ($userType === 'bombero') {
+            $massiveValues[] = 'bomberos';
         }
-        
-        // 3. Verificar el ID 243 específicamente 
-        $query->orWhere('id', 243);
-    })
-    ->orderBy('created_at', 'desc')
-    ->get();
+        Log::debug("Valores de massive permitidos: " . implode(', ', $massiveValues));
 
-    // Loguear el query ejecutado
-    $queryLog = DB::getQueryLog();
-    Log::debug("Queries ejecutadas: " . json_encode($queryLog));
+        // Activar el registro de queries y el registro de mensajes
+        DB::enableQueryLog();
 
-    // Agregar información detallada sobre los mensajes
-    Log::info("Cantidad de mensajes recuperados: " . $messages->count());
-    foreach ($messages as $message) {
-        $massiveValue = $message->massive;
-        if (is_null($massiveValue)) {
-            $massiveValueStr = 'NULL';
-        } else {
-            // Asegurar que se muestre como string y escapar caracteres especiales
-            $massiveValueStr = "'" . addslashes($massiveValue) . "'";
+        // Primera consulta: buscar mensaje 243 con withTrashed para ver si existe y su estado
+        $message243 = UserMessage::withTrashed()->find(243);
+        Log::debug("Mensaje 243 encontrado: " . ($message243 ? 'SÍ' : 'NO'));
+        if ($message243) {
+            Log::debug("Estado mensaje 243: deleted_at=" . ($message243->deleted_at ? $message243->deleted_at : 'NULL') .
+                ", massive='" . $message243->massive . "', tipo=" . gettype($message243->massive));
         }
-        
-        Log::debug("Mensaje ID: {$message->id}, massive: {$massiveValueStr}, tipo: " . gettype($message->massive));
-    }
 
-    return response()->json($messages);
-}
+        // Segunda consulta: verificar todos los mensajes masivos, incluso los eliminados
+        $massiveMessages = UserMessage::withTrashed()
+            ->whereIn(DB::raw('LOWER(massive)'), array_map('strtolower', $massiveValues))
+            ->get();
+
+        Log::debug("Mensajes masivos encontrados (incluso eliminados): " . $massiveMessages->count());
+        foreach ($massiveMessages as $msg) {
+            Log::debug("Mensaje masivo ID: {$msg->id}, massive: '{$msg->massive}', deleted_at: " .
+                ($msg->deleted_at ? $msg->deleted_at : 'NULL'));
+        }
+
+        // Consulta principal: múltiples intentos para capturar diferentes posibilidades
+        $messages = UserMessage::where(function ($query) use ($userId, $massiveValues) {
+            // 1. Mensajes específicos para este usuario
+            $query->where('receiver_id', $userId);
+
+            // 2. Mensajes masivos - usando varios métodos
+            foreach ($massiveValues as $value) {
+                $query->orWhereRaw("LOWER(massive) = ?", [strtolower($value)])
+                    ->orWhereRaw("massive LIKE ?", ["%$value%"])
+                    ->orWhere('massive', $value);
+            }
+
+            // 3. Verificar el ID 243 específicamente 
+            $query->orWhere('id', 243);
+        })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Loguear el query ejecutado
+        $queryLog = DB::getQueryLog();
+        Log::debug("Queries ejecutadas: " . json_encode($queryLog));
+
+        // Agregar información detallada sobre los mensajes
+        Log::info("Cantidad de mensajes recuperados: " . $messages->count());
+        foreach ($messages as $message) {
+            $massiveValue = $message->massive;
+            if (is_null($massiveValue)) {
+                $massiveValueStr = 'NULL';
+            } else {
+                // Asegurar que se muestre como string y escapar caracteres especiales
+                $massiveValueStr = "'" . addslashes($massiveValue) . "'";
+            }
+
+            Log::debug("Mensaje ID: {$message->id}, massive: {$massiveValueStr}, tipo: " . gettype($message->massive));
+        }
+
+        return response()->json($messages);
+    }
 
 
 
@@ -132,41 +132,49 @@ class MessageController extends Controller
      * Se admite el campo opcional parent_id para respuestas.
      */
     public function store(Request $request)
-{
-    // Se espera que el campo 'massive' venga como false o como uno de: 'toda', 'mandos', 'bomberos'
-    $massiveScope = $request->input('massive', false);
-    // Se considera masivo si massiveScope no es false (ni la cadena 'false')
-    $isMassive = $massiveScope !== false && $massiveScope !== 'false';
+    {
+        // Se espera que el campo 'massive' venga como false o como uno de: 'toda', 'mandos', 'bomberos'
+        $massiveScope = $request->input('massive', false);
+        // Se considera masivo si massiveScope no es false (ni la cadena 'false')
+        $isMassive = $massiveScope !== false && $massiveScope !== 'false';
 
-    // Definir reglas de validación:
-    $rules = [
-        'subject'   => 'required|string|max:255',
-        'body'      => 'required|string',
-        'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
-        'parent_id' => 'nullable|exists:messages,id', // Para respuesta en hilo.
-    ];
+        // Definir reglas de validación:
+        $rules = [
+            'subject'   => 'required|string|max:255',
+            'body'      => 'required|string',
+            'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
+            'parent_id' => 'nullable|exists:messages,id', // Para respuesta en hilo.
+        ];
 
-    // Si no es masivo, se requiere receptor
-    if (!$isMassive) {
-        $rules['receiver_id'] = 'required|exists:users,id_empleado';
-    } else {
-        // Si es masivo, el campo massive debe ser uno de los valores permitidos
-        $rules['massive'] = 'sometimes|string|in:toda,mandos,bomberos';
-    }
+        // Si no es masivo, se requiere receptor
+        if (!$isMassive) {
+            $rules['receiver_id'] = 'required|exists:users,id_empleado';
+        } else {
+            // Si es masivo, el campo massive debe ser uno de los valores permitidos
+            $rules['massive'] = 'sometimes|string|in:toda,mandos,bomberos';
+        }
 
-    $validated = $request->validate($rules);
-    $validated['sender_id'] = auth()->id();
-    
-    // Guardamos el valor masivo de forma consistente:
-    $validated['massive'] = $isMassive ? $massiveScope : 'false'; 
-    // Si es masivo, ignoramos receiver_id
-    if ($isMassive) {
-        $validated['receiver_id'] = null;
-    }
+        $validated = $request->validate($rules);
+        $validated['sender_id'] = auth()->id();
+
+        // Guardamos el valor masivo de forma consistente:
+        $validated['massive'] = $isMassive ? $massiveScope : 'false';
+        // Si es masivo, ignoramos receiver_id
+        if ($isMassive) {
+            $validated['receiver_id'] = null;
+        }
 
         // Manejo del archivo adjunto.
+        // Manejo del archivo adjunto.
         if ($request->hasFile('attachment')) {
-            $path = $request->file('attachment')->store('attachments', 'shared');
+            $file = $request->file('attachment');
+            $originalName = $file->getClientOriginalName();
+            // Guarda el archivo con un nombre único pero preservando la extensión
+            $path = $file->storeAs(
+                'attachments',
+                pathinfo($originalName, PATHINFO_FILENAME) . '_' . time() . '.' . $file->getClientOriginalExtension(),
+                'shared'
+            );
             $validated['attachment'] = $path;
         }
 
@@ -215,22 +223,50 @@ class MessageController extends Controller
                 Log::error("No se encontró el mensaje o no tiene adjunto. ID: " . $id);
                 return response()->json(['message' => 'Archivo no encontrado'], 404);
             }
-            // Asegúrate de que la ruta sea la correcta. 
-            // Por ejemplo, si guardaste el archivo en 'attachments', debería ser 'storage/attachments/'.
+
             $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $message->attachment);
             Log::info("Ruta de archivo adjunto: " . $filePath);
+
             if (!file_exists($filePath)) {
                 Log::error("Archivo no encontrado en el servidor. Ruta: " . $filePath);
                 return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
             }
-            $downloadName = basename($message->attachment);
-            return response()->download($filePath, $downloadName);
+
+            // Obtener el nombre original con su extensión correcta
+            $originalName = basename($message->attachment);
+
+            // Determinar el tipo de contenido basado en la extensión del archivo
+            $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+            $contentType = $this->getMimeTypeForExtension($extension);
+
+            // Crear una respuesta con el tipo MIME correcto
+            return response()->download(
+                $filePath,
+                $originalName,
+                ['Content-Type' => $contentType]
+            );
         } catch (\Exception $e) {
             Log::error("Error al descargar el adjunto: " . $e->getMessage());
             return response()->json(['message' => 'Error interno del servidor'], 500);
         }
     }
 
+    /**
+     * Obtiene el tipo MIME para una extensión dada
+     */
+    private function getMimeTypeForExtension($extension)
+    {
+        $mimeTypes = [
+            'pdf'  => 'application/pdf',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'gif'  => 'image/gif',
+            // Añade más tipos según sea necesario
+        ];
+
+        return $mimeTypes[strtolower($extension)] ?? 'application/octet-stream';
+    }
     /**
      * Marcar un mensaje como leído.
      */
@@ -249,15 +285,15 @@ class MessageController extends Controller
      * Eliminar un mensaje.
      */
     public function destroy(UserMessage $message)
-{
-    // Verificar si el mensaje es masivo
-    if ($message->massive) {
-        return response()->json(['error' => 'No se pueden eliminar mensajes masivos'], 403);
+    {
+        // Verificar si el mensaje es masivo
+        if ($message->massive) {
+            return response()->json(['error' => 'No se pueden eliminar mensajes masivos'], 403);
+        }
+
+        $message->delete();
+        return response()->json(['message' => 'Mensaje eliminado.']);
     }
-    
-    $message->delete();
-    return response()->json(['message' => 'Mensaje eliminado.']);
-}
 
     /**
      * Restaurar un mensaje eliminado.

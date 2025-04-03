@@ -14,7 +14,8 @@ class PersonalEquipment extends Model
     protected $fillable = [
         'nombre',
         'categoria',
-        'disponible'
+        'disponible',
+        'parque'
     ];
     
     const CATEGORIA_RADIOS_PORTATILES = 'Radios portátiles';
@@ -40,5 +41,10 @@ class PersonalEquipment extends Model
             self::CATEGORIA_TABLETS,
             self::CATEGORIA_CARGADORES
         ];
+    }
+
+    public function park()
+    {
+        return $this->belongsTo(Park::class, 'parque', 'id_parque');
     }
 }

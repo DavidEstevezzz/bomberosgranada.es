@@ -8,7 +8,9 @@ const EditPersonalEquipmentModal = ({ isOpen, onClose, equipment, onUpdate }) =>
   const [formValues, setFormValues] = useState({
     id: equipment.id || '',
     nombre: equipment.nombre || '',
-    categoria: equipment.categoria || ''
+    categoria: equipment.categoria || '',
+    parque: equipment?.parque || null
+
   });
   const [categories, setCategories] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,6 +112,24 @@ const EditPersonalEquipmentModal = ({ isOpen, onClose, equipment, onUpdate }) =>
                 <option value="">Selecciona una categoría</option>
                 {categories.map((category) => (
                   <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Parque
+              </label>
+              <select
+                name="parque"
+                value={formData.parque || ''}
+                onChange={(e) => setFormData({ ...formData, parque: e.target.value ? Number(e.target.value) : null })}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">No asignado</option>
+                {parks.map((park) => (
+                  <option key={park.id_parque} value={park.id_parque}>
+                    {park.nombre}
+                  </option>
                 ))}
               </select>
             </div>

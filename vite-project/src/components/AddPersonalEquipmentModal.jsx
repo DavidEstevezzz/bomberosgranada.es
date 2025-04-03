@@ -20,7 +20,9 @@ const AddPersonalEquipmentModal = ({ isOpen, onClose, onAdd }) => {
     if (isOpen) {
       setFormValues({
         nombre: '',
-        categoria: ''
+        categoria: '',
+        disponible: true,
+        parque: null
       });
       setErrorMessages({});
       setIsSubmitting(false);
@@ -109,9 +111,28 @@ const AddPersonalEquipmentModal = ({ isOpen, onClose, onAdd }) => {
               </select>
               {errorMessages.categoria && <span className="text-red-500 text-sm">{errorMessages.categoria}</span>}
             </div>
+            {/* Parque */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Parque
+              </label>
+              <select
+                name="parque"
+                value={formData.parque || ''}
+                onChange={(e) => setFormData({ ...formData, parque: e.target.value ? Number(e.target.value) : null })}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">No asignado</option>
+                {parks.map((park) => (
+                  <option key={park.id_parque} value={park.id_parque}>
+                    {park.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           {errorMessages.general && (
-            <div className="mb-4">
+            <div className="mb-2">
               <span className="text-red-500 text-sm">{errorMessages.general}</span>
             </div>
           )}

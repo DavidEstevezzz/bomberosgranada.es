@@ -19,6 +19,7 @@ class ParkController extends Controller
             'nombre' => 'required|string|max:255',
             'ubicacion' => 'required|string|max:255',
             'telefono' => 'required|string|max:255',
+            'parque' => 'nullable|exists:parks,id_parque',
         ]);
 
         $park = Park::create($validated);
@@ -38,6 +39,7 @@ class ParkController extends Controller
             'nombre' => 'sometimes|required|string|max:255',
             'ubicacion' => 'sometimes|required|string|max:255',
             'telefono' => 'sometimes|required|string|max:255',
+            'parque' => 'nullable|exists:parks,id_parque',
         ]);
 
         $park = Park::findOrFail($id_parque);
@@ -52,5 +54,11 @@ class ParkController extends Controller
         $park->delete();
 
         return response()->json(null, 204);
+    }
+
+    public function getByPark($parkId)
+    {
+        $equipos = PersonalEquipment::where('parque', $parkId)->get();
+        return response()->json($equipos);
     }
 }

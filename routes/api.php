@@ -63,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{equipo}', [PersonalEquipmentController::class, 'update']);
         Route::delete('/{equipo}', [PersonalEquipmentController::class, 'destroy']);
         Route::put('/{equipo}/toggle-disponibilidad', [PersonalEquipmentController::class, 'toggleDisponibilidad']);
+        Route::get('/equipos-personales/parque/{parkId}', [PersonalEquipmentController::class, 'getByPark']);
 
     });
     

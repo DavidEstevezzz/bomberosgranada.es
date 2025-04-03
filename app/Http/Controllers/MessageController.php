@@ -216,40 +216,54 @@ class MessageController extends Controller
      * Descargar un adjunto.
      */
     public function downloadAttachment($id)
-    {
-        try {
-            $message = UserMessage::find($id);
-            if (!$message || !$message->attachment) {
-                Log::error("No se encontró el mensaje o no tiene adjunto. ID: " . $id);
-                return response()->json(['message' => 'Archivo no encontrado'], 404);
-            }
-
-            $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $message->attachment);
-            Log::info("Ruta de archivo adjunto: " . $filePath);
-
-            if (!file_exists($filePath)) {
-                Log::error("Archivo no encontrado en el servidor. Ruta: " . $filePath);
-                return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
-            }
-
-            // Obtener el nombre original con su extensión correcta
-            $originalName = basename($message->attachment);
-
-            // Determinar el tipo de contenido basado en la extensión del archivo
-            $extension = pathinfo($originalName, PATHINFO_EXTENSION);
-            $contentType = $this->getMimeTypeForExtension($extension);
-
-            // Crear una respuesta con el tipo MIME correcto
-            return response()->download(
-                $filePath,
-                $originalName,
-                ['Content-Type' => $contentType]
-            );
-        } catch (\Exception $e) {
-            Log::error("Error al descargar el adjunto: " . $e->getMessage());
-            return response()->json(['message' => 'Error interno del servidor'], 500);
+{
+    try {
+        $message = UserMessage::find($id);
+        if (!$message || !$message->attachment) {
+            Log::error("No se encontró el mensaje o no tiene adjunto. ID: " . $id);
+            return response()->json(['message' => 'Archivo no encontrado'], 404);
         }
+
+        $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $message->attachment);
+        Log::info("Ruta de archivo adjunto: " . $filePath);
+
+        if (!file_exists($filePath)) {
+            Log::error("Archivo no encontrado en el servidor. Ruta: " . $filePath);
+            return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
+        }
+
+        // Añadir logs detallados para depuración
+        $originalName = basename($message->attachment);
+        $extension = pathinfo($originalName, PATHINFO_EXTENSION);
+        $contentType = $this->getMimeTypeForExtension($extension);
+        
+        Log::info("Información de descarga:", [
+            'originalName' => $originalName,
+            'extension' => $extension,
+            'contentType' => $contentType,
+            'fullAttachmentPath' => $message->attachment
+        ]);
+        
+        // Verifiquemos el contenido real del archivo para confirmar su tipo
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $detectedMimeType = finfo_file($finfo, $filePath);
+        finfo_close($finfo);
+        
+        Log::info("MIME type detectado del archivo: " . $detectedMimeType);
+        
+        // Usar encabezados HTTP adicionales para forzar la descarga correcta
+        $headers = [
+            'Content-Type' => $contentType,
+            'Content-Disposition' => 'attachment; filename="' . $originalName . '"',
+            'X-Content-Type-Options' => 'nosniff'  // Evita que el navegador intente adivinar el tipo MIME
+        ];
+        
+        return response()->download($filePath, $originalName, $headers);
+    } catch (\Exception $e) {
+        Log::error("Error al descargar el adjunto: " . $e->getMessage());
+        return response()->json(['message' => 'Error interno del servidor'], 500);
     }
+}
 
     /**
      * Obtiene el tipo MIME para una extensión dada

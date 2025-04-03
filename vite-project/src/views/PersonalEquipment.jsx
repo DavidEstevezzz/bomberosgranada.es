@@ -139,7 +139,6 @@ const PersonalEquipment = () => {
       equipment.nombre,
       equipment.categoria,
       getParkName(equipment.parque),
-      new Date().toLocaleDateString('es-ES') // Fecha actual como ejemplo
     ]);
     
     // Configuración de la tabla
@@ -147,7 +146,6 @@ const PersonalEquipment = () => {
       'Nombre del Equipo', 
       'Categoría', 
       'Parque', 
-      'Fecha Reporte'
     ];
     
     // Añadir la tabla al documento
@@ -182,12 +180,8 @@ const PersonalEquipment = () => {
     const finalY = doc.autoTable.previous.finalY;
     doc.setFontSize(10);
     doc.setTextColor(128, 128, 128); // Gris para el pie de página
-    doc.text("Este informe contiene equipos que requieren revisión o mantenimiento.", 105, finalY + 10, { align: 'center' });
+    doc.text("Este informe contiene equipos que se encuentran inoperativos.", 105, finalY + 10, { align: 'center' });
     doc.text("Por favor, notifique al departamento de mantenimiento.", 105, finalY + 15, { align: 'center' });
-    
-    // Línea de firma
-    doc.line(20, finalY + 30, 80, finalY + 30);
-    doc.text("Firma del Responsable", 50, finalY + 35, { align: 'center' });
     
     // Guardar el PDF
     doc.save(`equipos_no_disponibles_${parkTitle.replace(/\s+/g, '_').toLowerCase()}.pdf`);
@@ -342,7 +336,7 @@ const PersonalEquipment = () => {
               {filteredEquipments.map((equipment) => (
                 <tr 
                   key={equipment.id} 
-                  className={`border-b border-gray-700 ${!equipment.disponible ? 'bg-red-100 dark:bg-red-900 dark:bg-opacity-20' : ''}`}
+                  className={`border-b border-gray-700`}
                 >
                   <td className="py-2 px-2 text-center">{equipment.nombre}</td>
                   <td className="py-2 px-2 text-center">{equipment.categoria}</td>

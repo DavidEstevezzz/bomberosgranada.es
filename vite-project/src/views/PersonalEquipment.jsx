@@ -230,7 +230,7 @@ const PersonalEquipment = () => {
       setIsAddModalOpen(false);
     } catch (error) {
       console.error('Error al agregar equipo:', error);
-      alert('Ocurrió un error al agregar el equipo.');
+      alert('Ocurrió un error al agregar el equipo');
     }
   };
 

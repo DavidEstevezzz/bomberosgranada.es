@@ -169,7 +169,7 @@ const PersonalEquipment = () => {
         halign: 'center'
       },
       columnStyles: {
-        0: { halign: 'left' }, // Nombre alineado a la izquierda
+        0: { halign: 'center' }, // Nombre centrado
         1: { halign: 'center' }, // Categoría centrada
         2: { halign: 'center' }, // Parque centrado
         3: { halign: 'center' }  // Fecha centrada

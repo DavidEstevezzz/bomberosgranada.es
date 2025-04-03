@@ -88,4 +88,44 @@ public function getByPark($parkId)
         $equipos = PersonalEquipment::where('parque', $parkId)->get();
         return response()->json($equipos);
     }
+
+    /**
+ * Verificar disponibilidad de un equipo por número
+ * Esta función comprueba si los equipos como Portátil, PTT, Linterna casco y 
+ * Linterna pecho están disponibles para el número específico
+ */
+public function checkAvailability($equipmentNumber)
+{
+    // Lista de categorías de equipos a verificar
+    $categoriasAVerificar = [
+        'Portátil', 
+        'PTT', 
+        'Linterna casco', 
+        'Linterna pecho'
+    ];
+
+    // Verificar cada categoría de equipo con el número proporcionado
+    $disponible = true;
+    $equiposNoDisponibles = [];
+
+    foreach ($categoriasAVerificar as $categoria) {
+        $nombreEquipo = "$categoria $equipmentNumber";
+        $equipo = PersonalEquipment::where('nombre', 'LIKE', $nombreEquipo)
+                                    ->first();
+        
+        // Si el equipo existe pero no está disponible
+        if ($equipo && !$equipo->disponible) {
+            $disponible = false;
+            $equiposNoDisponibles[] = $nombreEquipo;
+        }
+    }
+
+    return response()->json([
+        'available' => $disponible,
+        'equipment_number' => $equipmentNumber,
+        'unavailable_equipment' => $equiposNoDisponibles
+    ]);
+}
+
+
 }

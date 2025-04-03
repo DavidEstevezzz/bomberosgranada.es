@@ -59,6 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('equipos-personales')->group(function () {
         Route::get('/', [PersonalEquipmentController::class, 'index']);
         Route::post('/', [PersonalEquipmentController::class, 'store']);
+        Route::get('/check-availability/{equipmentNumber}', [PersonalEquipmentController::class, 'checkAvailability']);
         Route::get('/parque/{parkId}', [PersonalEquipmentController::class, 'getByPark']);
         Route::get('/{equipo}', [PersonalEquipmentController::class, 'show']);
         Route::put('/{equipo}', [PersonalEquipmentController::class, 'update']);

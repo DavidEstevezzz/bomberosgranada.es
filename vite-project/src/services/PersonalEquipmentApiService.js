@@ -49,6 +49,10 @@ class PersonalEquipmentApiService {
     async getEquipmentsByPark(parkId) {
         return await BaseApiService.get(`${API_URL}/parque/${parkId}`);
     }
+
+    async checkEquipmentAvailability(equipmentNumber) {
+        return await BaseApiService.get(`${API_URL}/check-availability/${equipmentNumber}`);
+    }
 }
 
 export default new PersonalEquipmentApiService();

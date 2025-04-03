@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PersonalEquipmentApiService from '../services/PersonalEquipmentApiService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faEllipsisH, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import EditPersonalEquipmentModal from '../components/EditPersonalEquipmentModal';
 import AddPersonalEquipmentModal from '../components/AddPersonalEquipmentModal';
 import { useDarkMode } from '../contexts/DarkModeContext';
@@ -107,6 +107,20 @@ const PersonalEquipment = () => {
     }
   };
 
+  const handleToggleDisponibilidad = async (equipment) => {
+    try {
+      const response = await PersonalEquipmentApiService.toggleDisponibilidad(equipment.id);
+      setEquipments((prev) =>
+        prev.map((eq) =>
+          eq.id === equipment.id ? response.data : eq
+        )
+      );
+    } catch (error) {
+      console.error('Error al cambiar disponibilidad:', error);
+      alert('Ocurrió un error al cambiar el estado de disponibilidad.');
+    }
+  };
+
   if (loading) return <div>Cargando equipos...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -147,7 +161,8 @@ const PersonalEquipment = () => {
               <tr>
                 <th className="py-2 px-2">Nombre</th>
                 <th className="py-2 px-2">Categoría</th>
-                <th className="py-2 px-2" style={{ width: '200px' }}></th>
+                <th className="py-2 px-2">Disponible</th>
+                <th className="py-2 px-2" style={{ width: '300px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -155,17 +170,34 @@ const PersonalEquipment = () => {
                 <tr key={equipment.id} className="border-b border-gray-700">
                   <td className="py-2 px-2">{equipment.nombre}</td>
                   <td className="py-2 px-2">{equipment.categoria}</td>
+                  <td className="py-2 px-2">
+                    {equipment.disponible ? (
+                      <FontAwesomeIcon icon={faCheck} className="text-green-500" />
+                    ) : (
+                      <FontAwesomeIcon icon={faTimes} className="text-red-500" />
+                    )}
+                  </td>
                   <td className="py-2 px-2 flex space-x-2">
                     <button
                       onClick={() => handleEditClick(equipment)}
-                      className="bg-blue-600 text-white px-4 py-1 rounded flex items-center space-x-1"
+                      className="bg-blue-600 text-white px-3 py-1 rounded flex items-center space-x-1"
                     >
                       <FontAwesomeIcon icon={faEdit} />
                       <span>Editar</span>
                     </button>
                     <button
+                      onClick={() => handleToggleDisponibilidad(equipment)}
+                      className={`${
+                        equipment.disponible
+                          ? 'bg-red-600'
+                          : 'bg-green-600'
+                      } text-white px-3 py-1 rounded flex items-center space-x-1`}
+                    >
+                      {equipment.disponible ? 'Inhabilitar' : 'Habilitar'}
+                    </button>
+                    <button
                       onClick={() => handleDeleteClick(equipment)}
-                      className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1"
+                      className="bg-red-600 text-white px-3 py-1 rounded flex items-center space-x-1"
                     >
                       <FontAwesomeIcon icon={faTrash} />
                       <span>Eliminar</span>

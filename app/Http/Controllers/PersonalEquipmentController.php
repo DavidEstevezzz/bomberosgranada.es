@@ -24,7 +24,8 @@ class PersonalEquipmentController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'categoria' => ['required', Rule::in(PersonalEquipment::getCategorias())]
+            'categoria' => ['required', Rule::in(PersonalEquipment::getCategorias())],
+            'disponible' => 'boolean' 
         ]);
 
         $equipo = PersonalEquipment::create($request->all());
@@ -47,7 +48,8 @@ class PersonalEquipmentController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'categoria' => ['required', Rule::in(PersonalEquipment::getCategorias())]
+            'categoria' => ['required', Rule::in(PersonalEquipment::getCategorias())],
+            'disponible' => 'boolean' 
         ]);
 
         $equipo->update($request->all());
@@ -72,4 +74,12 @@ class PersonalEquipmentController extends Controller
     {
         return response()->json(PersonalEquipment::getCategorias());
     }
+
+    public function toggleDisponibilidad(PersonalEquipment $equipo)
+{
+    $equipo->disponible = !$equipo->disponible;
+    $equipo->save();
+    
+    return response()->json($equipo);
+}
 }

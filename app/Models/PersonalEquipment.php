@@ -13,7 +13,8 @@ class PersonalEquipment extends Model
     
     protected $fillable = [
         'nombre',
-        'categoria'
+        'categoria',
+        'disponible'
     ];
     
     const CATEGORIA_RADIOS_PORTATILES = 'Radios portátiles';

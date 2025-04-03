@@ -41,6 +41,11 @@ class PersonalEquipmentApiService {
    async deletePersonalEquipment(id) {
        return await BaseApiService.delete(`${API_URL}/${id}`);
    }
+
+   // Alternar disponibilidad de un equipo
+   async toggleDisponibilidad(id) {
+    return await BaseApiService.put(`${API_URL}/${id}/toggle-disponibilidad`);
+}
 }
 
 export default new PersonalEquipmentApiService();

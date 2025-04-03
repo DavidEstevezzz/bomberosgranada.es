@@ -93,7 +93,7 @@ const router = createBrowserRouter([
       { path: '', element: <Login /> },
     ],
   },
-  // Rutas para restablecimiento de contraseña
+  // Rutas para restablecimiento de contraseña.
   { path: '/forgot-password', element: <ForgotPassword /> },
   { path: '/reset-password/:token', element: <ResetPassword /> },
   { path: '*', element: <NotFound /> },

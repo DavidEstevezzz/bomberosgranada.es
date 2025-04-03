@@ -587,449 +587,387 @@ const BrigadeDetail = () => {
   // Función para exportar a PDF (modificada para usar la asignación específica del turno de mañana)
   // Función para exportar a PDF (modificada para usar la asignación específica del turno de mañana)
   // Función para exportar a PDF con asignación secuencial
-// Función para exportar a PDF con logs detallados
-const exportToPDF = async () => {
-  try {
-    console.log("=== INICIANDO PROCESO DE ASIGNACIÓN DE RADIOS ===");
-    
-    // Iniciar el PDF
-    const doc = new jsPDF();
-    doc.addImage(logo, 'PNG', 10, 10, 20, 30);
-    doc.setFont('helvetica', 'bold');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const parqueNombre = brigade?.park ? brigade.park.nombre : 'Parque no disponible';
-    const brigadeNombre = brigade ? brigade.nombre : 'Brigada no disponible';
-    const fechaCompleta = dayjs(selectedDate).format('[Día] D [de] MMMM [de] YYYY');
-    doc.setFontSize(16);
-    doc.text(parqueNombre, pageWidth / 2, 20, { align: 'center' });
-    doc.text(brigadeNombre, pageWidth / 2, 30, { align: 'center' });
-    doc.setFontSize(14);
-    doc.text(fechaCompleta, pageWidth / 2, 40, { align: 'center' });
-    const startY = 45;
+  // Función para exportar a PDF optimizada
+  const exportToPDF = async () => {
+    try {
+      // Iniciar el PDF
+      const doc = new jsPDF();
+      doc.addImage(logo, 'PNG', 10, 10, 20, 30);
+      doc.setFont('helvetica', 'bold');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const parqueNombre = brigade?.park ? brigade.park.nombre : 'Parque no disponible';
+      const brigadeNombre = brigade ? brigade.nombre : 'Brigada no disponible';
+      const fechaCompleta = dayjs(selectedDate).format('[Día] D [de] MMMM [de] YYYY');
+      doc.setFontSize(16);
+      doc.text(parqueNombre, pageWidth / 2, 20, { align: 'center' });
+      doc.text(brigadeNombre, pageWidth / 2, 30, { align: 'center' });
+      doc.setFontSize(14);
+      doc.text(fechaCompleta, pageWidth / 2, 40, { align: 'center' });
+      const startY = 45;
 
-    // Configuración de colores para el PDF
-    let pdfHeaderFillColor, pdfHeaderTextColor;
-    if (brigade?.nombre === 'Brigada A') {
-      pdfHeaderFillColor = '#22c55e';
-      pdfHeaderTextColor = '#000000';
-    } else if (brigade?.nombre === 'Brigada B') {
-      pdfHeaderFillColor = '#fafafa';
-      pdfHeaderTextColor = '#000000';
-    } else if (brigade?.nombre === 'Brigada C') {
-      pdfHeaderFillColor = '#3b82f6';
-      pdfHeaderTextColor = '#000000';
-    } else if (brigade?.nombre === 'Brigada D') {
-      pdfHeaderFillColor = '#dc2626';
-      pdfHeaderTextColor = '#000000';
-    } else if (brigade?.nombre === 'Brigada E') {
-      pdfHeaderFillColor = '#fde047';
-      pdfHeaderTextColor = '#000000';
-    } else if (brigade?.nombre === 'Brigada F') {
-      pdfHeaderFillColor = '#d1d5db';
-      pdfHeaderTextColor = '#4b5563';
-    } else {
-      pdfHeaderFillColor = '#969a85';
-      pdfHeaderTextColor = '#ffffff';
-    }
-
-    // ID del parque
-    const parkId = brigade?.park?.id_parque || 1;
-    console.log(`Parque ID: ${parkId}`);
-
-    // Obtener todos los tipos de asignaciones que necesitamos procesar
-    const allAssignments = [];
-
-    // DEBUG: Mostrar todas las asignaciones de los bomberos
-    console.log("Asignaciones de bomberos:");
-    firefighters.forEach(ff => {
-      const assignmentValue = getAssignmentValue(ff);
-      console.log(`  ${ff.nombre} ${ff.apellido}: ${assignmentValue}`);
-    });
-
-    // Extraer todos los tipos de asignación únicos de los bomberos
-    firefighters.forEach(ff => {
-      const assignmentValue = getAssignmentValue(ff);
-      if (assignmentValue !== 'No asignado') {
-        // Dividir en caso de que haya múltiples asignaciones
-        const assignments = assignmentValue.split(',').map(a => a.trim());
-        assignments.forEach(a => {
-          if (!a.startsWith('Operador') && a !== 'Telefonista' && a !== 'Jefe de Guardia' && !allAssignments.includes(a)) {
-            allAssignments.push(a);
-          }
-        });
-      }
-    });
-
-    console.log("Asignaciones únicas encontradas:", allAssignments);
-
-    // Ordenar las asignaciones por tipo (primero letra, luego número)
-    allAssignments.sort((a, b) => {
-      const letterA = a.charAt(0);
-      const letterB = b.charAt(0);
-
-      if (letterA !== letterB) {
-        return letterA.localeCompare(letterB);
+      // Configuración de colores para el PDF
+      let pdfHeaderFillColor, pdfHeaderTextColor;
+      if (brigade?.nombre === 'Brigada A') {
+        pdfHeaderFillColor = '#22c55e';
+        pdfHeaderTextColor = '#000000';
+      } else if (brigade?.nombre === 'Brigada B') {
+        pdfHeaderFillColor = '#fafafa';
+        pdfHeaderTextColor = '#000000';
+      } else if (brigade?.nombre === 'Brigada C') {
+        pdfHeaderFillColor = '#3b82f6';
+        pdfHeaderTextColor = '#000000';
+      } else if (brigade?.nombre === 'Brigada D') {
+        pdfHeaderFillColor = '#dc2626';
+        pdfHeaderTextColor = '#000000';
+      } else if (brigade?.nombre === 'Brigada E') {
+        pdfHeaderFillColor = '#fde047';
+        pdfHeaderTextColor = '#000000';
+      } else if (brigade?.nombre === 'Brigada F') {
+        pdfHeaderFillColor = '#d1d5db';
+        pdfHeaderTextColor = '#4b5563';
+      } else {
+        pdfHeaderFillColor = '#969a85';
+        pdfHeaderTextColor = '#ffffff';
       }
 
-      const numA = parseInt(a.slice(1), 10);
-      const numB = parseInt(b.slice(1), 10);
-      return numA - numB;
-    });
+      // ID del parque
+      const parkId = brigade?.park?.id_parque || 1;
 
-    console.log("Asignaciones ordenadas:", allAssignments);
+      // Obtener todos los tipos de asignaciones que necesitamos procesar
+      const allAssignments = [];
 
-    // Separar las asignaciones por tipo
-    const nAssignments = allAssignments.filter(a => a.startsWith('N'));
-    const sAssignments = allAssignments.filter(a => a.startsWith('S'));
-    const cAssignments = allAssignments.filter(a => a.startsWith('C'));
-    const bAssignments = allAssignments.filter(a => a.startsWith('B'));
-
-    console.log("Asignaciones C:", cAssignments);
-    console.log("Asignaciones B:", bAssignments);
-
-    // Valores iniciales fijos (no necesitan verificación)
-    const fixedAssignments = {
-      'N1': 1,
-      'N2': 3,
-      'N3': 5,
-      'N4': 5,
-      'S1': 2,
-      'S2': 4,
-      'S3': 6,
-      'J': 1,
-      'Jefe de Guardia': 1
-    };
-
-    // Registros de números ya utilizados
-    const usedRadioNumbers = new Set();
-
-    // Mapa para almacenar las asignaciones de radio finales
-    const radioNumberByAssignment = {};
-
-    // Asignar los valores fijos
-    Object.keys(fixedAssignments).forEach(key => {
-      radioNumberByAssignment[key] = fixedAssignments[key];
-      usedRadioNumbers.add(fixedAssignments[key]);
-      console.log(`Asignación fija: ${key} => ${fixedAssignments[key]}`);
-    });
-
-    // Función para verificar la disponibilidad con logs
-    const isEquipmentAvailable = async (radioNumber) => {
-      try {
-        console.log(`  Verificando disponibilidad del equipo ${radioNumber}...`);
-        const response = await PersonalEquipmentApiService.checkEquipmentAvailability(radioNumber);
-        const isAvailable = response.data.available;
-        console.log(`  Equipo ${radioNumber} disponible: ${isAvailable}`);
-        return isAvailable;
-      } catch (error) {
-        console.error(`  Error verificando disponibilidad del equipo ${radioNumber}:`, error);
-        return false; // En caso de error, asumimos que no está disponible por seguridad
-      }
-    };
-
-    // Función para encontrar el siguiente número disponible con logs
-    const findNextAvailableNumber = async (baseNumber) => {
-      console.log(`> Buscando siguiente número disponible desde ${baseNumber}`);
-      let currentNumber = baseNumber;
-      
-      // Verificar si el número está disponible
-      let isUsed = usedRadioNumbers.has(currentNumber);
-      console.log(`  Número ${currentNumber} ya usado: ${isUsed}`);
-      
-      let isAvailable = true;
-      if (!isUsed) {
-        isAvailable = await isEquipmentAvailable(currentNumber);
-      }
-      
-      let attemptCount = 0;
-      while ((isUsed || !isAvailable) && attemptCount < 10) {
-        attemptCount++;
-        currentNumber += 2; // Mantener la paridad
-        console.log(`  Intentando con número ${currentNumber} (intento ${attemptCount})`);
-        
-        isUsed = usedRadioNumbers.has(currentNumber);
-        console.log(`  Número ${currentNumber} ya usado: ${isUsed}`);
-        
-        if (!isUsed) {
-          isAvailable = await isEquipmentAvailable(currentNumber);
+      // Extraer todos los tipos de asignación únicos de los bomberos
+      firefighters.forEach(ff => {
+        const assignmentValue = getAssignmentValue(ff);
+        if (assignmentValue !== 'No asignado') {
+          // Dividir en caso de que haya múltiples asignaciones
+          const assignments = assignmentValue.split(',').map(a => a.trim());
+          assignments.forEach(a => {
+            if (!a.startsWith('Operador') && a !== 'Telefonista' && a !== 'Jefe de Guardia' && !allAssignments.includes(a)) {
+              allAssignments.push(a);
+            }
+          });
         }
+      });
+
+      // Ordenar las asignaciones por tipo (primero letra, luego número)
+      allAssignments.sort((a, b) => {
+        const letterA = a.charAt(0);
+        const letterB = b.charAt(0);
+
+        if (letterA !== letterB) {
+          // Ordenar por tipo: N, S, C, B
+          const order = { 'N': 1, 'S': 2, 'C': 3, 'B': 4 };
+          return (order[letterA] || 99) - (order[letterB] || 99);
+        }
+
+        const numA = parseInt(a.slice(1), 10);
+        const numB = parseInt(b.slice(1), 10);
+        return numA - numB;
+      });
+
+      // Separar las asignaciones por tipo
+      const nAssignments = allAssignments.filter(a => a.startsWith('N'));
+      const sAssignments = allAssignments.filter(a => a.startsWith('S'));
+      const cAssignments = allAssignments.filter(a => a.startsWith('C'));
+      const bAssignments = allAssignments.filter(a => a.startsWith('B'));
+
+      // Registros de números ya utilizados
+      const usedRadioNumbers = new Set();
+
+      // Mapa para almacenar las asignaciones de radio finales
+      const radioNumberByAssignment = {};
+
+      // Función para verificar la disponibilidad
+      const isEquipmentAvailable = async (radioNumber) => {
+        try {
+          const response = await PersonalEquipmentApiService.checkEquipmentAvailability(radioNumber);
+          return response.data.available;
+        } catch (error) {
+          return false; // En caso de error, asumimos que no está disponible por seguridad
+        }
+      };
+
+      // Función para encontrar el siguiente número disponible
+      const findNextAvailableNumber = async (baseNumber, increment = 2) => {
+        let currentNumber = baseNumber;
+
+        // Verificar si el número está disponible
+        let isUsed = usedRadioNumbers.has(currentNumber);
+        let isAvailable = !isUsed && await isEquipmentAvailable(currentNumber);
+
+        while (isUsed || !isAvailable) {
+          currentNumber += increment;
+          isUsed = usedRadioNumbers.has(currentNumber);
+          isAvailable = !isUsed && await isEquipmentAvailable(currentNumber);
+        }
+
+        // Marcar como utilizado
+        usedRadioNumbers.add(currentNumber);
+        return currentNumber;
+      };
+
+      // Procesar secuencialmente las asignaciones N
+      for (const assignment of nAssignments) {
+        const number = parseInt(assignment.slice(1), 10);
+        let baseNumber;
+
+        if (number === 1) {
+          baseNumber = 1;
+        } else if (number === 2) {
+          baseNumber = 3;
+        } else if (number === 3 || number === 4) {
+          baseNumber = 5;
+        } else {
+          baseNumber = 7 + (number - 5) * 2;
+        }
+
+        // Encontrar el siguiente número disponible
+        const radioNumber = await findNextAvailableNumber(baseNumber, 2);
+        radioNumberByAssignment[assignment] = radioNumber;
       }
-      
-      if (attemptCount >= 10) {
-        console.warn(`  ⚠️ Alcanzado límite de intentos para buscar número disponible`);
+
+      // Procesar secuencialmente las asignaciones S
+      for (const assignment of sAssignments) {
+        const number = parseInt(assignment.slice(1), 10);
+        let baseNumber;
+
+        if (number === 1) {
+          baseNumber = 2;
+        } else if (number === 2) {
+          baseNumber = 4;
+        } else if (number === 3) {
+          baseNumber = 6;
+        } else {
+          baseNumber = 8 + (number - 4) * 2;
+        }
+
+        // Encontrar el siguiente número disponible
+        const radioNumber = await findNextAvailableNumber(baseNumber, 2);
+        radioNumberByAssignment[assignment] = radioNumber;
       }
-      
-      // Marcar como utilizado
-      usedRadioNumbers.add(currentNumber);
-      console.log(`> Número disponible encontrado: ${currentNumber}`);
-      return currentNumber;
-    };
 
-    // Procesar secuencialmente las asignaciones C
-    console.log("\n=== PROCESANDO ASIGNACIONES C ===");
-    for (const assignment of cAssignments) {
-      console.log(`\nProcesando asignación: ${assignment}`);
-      
-      // Valores fijos para C1
-      if (assignment === 'C1') {
-        const fixedValue = parkId === 2 ? 8 : 7;
-        radioNumberByAssignment[assignment] = fixedValue;
-        usedRadioNumbers.add(fixedValue);
-        console.log(`Asignación fija C1: ${fixedValue}`);
-        continue;
+      // Procesar secuencialmente las asignaciones C
+      for (const assignment of cAssignments) {
+        const number = parseInt(assignment.slice(1), 10);
+        let baseNumber;
+
+        if (parkId === 2) {
+          // Parque 2: C1 -> 8, C2 -> 10, C3 -> 12...
+          baseNumber = 8 + (number - 1) * 2;
+        } else {
+          // Parque 1: C1 -> 7, C2 -> 9, C3 -> 11...
+          baseNumber = 7 + (number - 1) * 2;
+        }
+
+        // Encontrar el siguiente número disponible
+        const radioNumber = await findNextAvailableNumber(baseNumber, 2);
+        radioNumberByAssignment[assignment] = radioNumber;
       }
-      
-      // Para C2, C3, etc.
-      const number = parseInt(assignment.slice(1), 10);
-      let baseNumber;
-      
-      if (parkId === 2) {
-        // Parque 2: C2 -> 10, C3 -> 12...
-        baseNumber = 8 + (number - 1) * 2;
-      } else {
-        // Parque 1: C2 -> 9, C3 -> 11...
-        baseNumber = 7 + (number - 1) * 2;
+
+      // Procesar secuencialmente las asignaciones B
+      for (const assignment of bAssignments) {
+        const number = parseInt(assignment.slice(1), 10);
+        let baseNumber;
+
+        if (parkId === 2) {
+          // Parque 2: B1 -> 16, B2 -> 18, B3 -> 20...
+          baseNumber = 16 + (number - 1) * 2;
+        } else {
+          // Parque 1: B1 -> 15, B2 -> 17, B3 -> 19...
+          baseNumber = 15 + (number - 1) * 2;
+        }
+
+        // Encontrar el siguiente número disponible
+        const radioNumber = await findNextAvailableNumber(baseNumber, 2);
+        radioNumberByAssignment[assignment] = radioNumber;
       }
-      
-      console.log(`Número base para ${assignment}: ${baseNumber}`);
-      
-      // Encontrar el siguiente número disponible
-      const radioNumber = await findNextAvailableNumber(baseNumber);
-      radioNumberByAssignment[assignment] = radioNumber;
-      console.log(`Asignado: ${assignment} => ${radioNumber}`);
-    }
 
-    // Procesar secuencialmente las asignaciones B
-    console.log("\n=== PROCESANDO ASIGNACIONES B ===");
-    for (const assignment of bAssignments) {
-      console.log(`\nProcesando asignación: ${assignment}`);
-      
-      // Valores fijos para B1
-      if (assignment === 'B1') {
-        const fixedValue = parkId === 2 ? 16 : 15;
-        radioNumberByAssignment[assignment] = fixedValue;
-        usedRadioNumbers.add(fixedValue);
-        console.log(`Asignación fija B1: ${fixedValue}`);
-        continue;
-      }
-      
-      // Para B2, B3, etc.
-      const number = parseInt(assignment.slice(1), 10);
-      let baseNumber;
-      
-      if (parkId === 2) {
-        // Parque 2: B2 -> 18, B3 -> 20...
-        baseNumber = 16 + (number - 1) * 2;
-      } else {
-        // Parque 1: B2 -> 17, B3 -> 19...
-        baseNumber = 15 + (number - 1) * 2;
-      }
-      
-      console.log(`Número base para ${assignment}: ${baseNumber}`);
-      
-      // Encontrar el siguiente número disponible
-      const radioNumber = await findNextAvailableNumber(baseNumber);
-      radioNumberByAssignment[assignment] = radioNumber;
-      console.log(`Asignado: ${assignment} => ${radioNumber}`);
-    }
+      // Asignar valores fijos para Jefe de Guardia
+      radioNumberByAssignment['J'] = 1;
+      radioNumberByAssignment['Jefe de Guardia'] = 1;
+      usedRadioNumbers.add(1);
 
-    // Mostrar todas las asignaciones finales
-    console.log("\n=== ASIGNACIONES FINALES ===");
-    Object.keys(radioNumberByAssignment).forEach(key => {
-      console.log(`${key}: ${radioNumberByAssignment[key]}`);
-    });
+      // Construir el cuerpo de la tabla con los números de radio asignados
+      const sortedFirefighters = [...firefighters].sort((a, b) => {
+        // Primero ordenar por prioridad de puesto
+        const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
+        if (puestoDiff !== 0) return puestoDiff;
 
-    // Construir el cuerpo de la tabla con los números de radio asignados
-    const sortedFirefighters = [...firefighters].sort((a, b) => {
-      // Primero ordenar por prioridad de puesto
-      const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
-      if (puestoDiff !== 0) return puestoDiff;
+        // Ordenar por la asignación completa
+        const assignmentA = getAssignmentValue(a);
+        const assignmentB = getAssignmentValue(b);
 
-      // Ordenar por la asignación completa
-      const assignmentA = getAssignmentValue(a);
-      const assignmentB = getAssignmentValue(b);
+        // Si ambas asignaciones completas son iguales, usar la asignación de la mañana para desempatar
+        if (assignmentA === assignmentB) {
+          const morningAssignmentA = getMorningAssignment(a.id_empleado);
+          const morningAssignmentB = getMorningAssignment(b.id_empleado);
 
-      // Si ambas asignaciones completas son iguales, usar la asignación de la mañana para desempatar
-      if (assignmentA === assignmentB) {
-        const morningAssignmentA = getMorningAssignment(a.id_empleado);
-        const morningAssignmentB = getMorningAssignment(b.id_empleado);
+          // Manejar el caso de 'No asignado'
+          if (morningAssignmentA === 'No asignado' && morningAssignmentB !== 'No asignado') return 1;
+          if (morningAssignmentB === 'No asignado' && morningAssignmentA !== 'No asignado') return -1;
+          if (morningAssignmentA === 'No asignado' && morningAssignmentB === 'No asignado') return 0;
 
-        // Manejar el caso de 'No asignado'
-        if (morningAssignmentA === 'No asignado' && morningAssignmentB !== 'No asignado') return 1;
-        if (morningAssignmentB === 'No asignado' && morningAssignmentA !== 'No asignado') return -1;
-        if (morningAssignmentA === 'No asignado' && morningAssignmentB === 'No asignado') return 0;
+          // Comparar la letra de la asignación de la mañana
+          const letterA = morningAssignmentA.charAt(0);
+          const letterB = morningAssignmentB.charAt(0);
+          if (letterA !== letterB) return letterA.localeCompare(letterB);
 
-        // Comparar la letra de la asignación de la mañana
-        const letterA = morningAssignmentA.charAt(0);
-        const letterB = morningAssignmentB.charAt(0);
+          // Luego comparar numéricamente
+          const numberA = parseInt(morningAssignmentA.slice(1), 10);
+          const numberB = parseInt(morningAssignmentB.slice(1), 10);
+          if (!isNaN(numberA) && !isNaN(numberB)) {
+            return numberA - numberB;
+          }
+          return morningAssignmentA.localeCompare(morningAssignmentB);
+        }
+
+        // Si las asignaciones completas son distintas, comparar teniendo en cuenta 'No asignado'
+        if (assignmentA === 'No asignado' && assignmentB !== 'No asignado') return 1;
+        if (assignmentB === 'No asignado' && assignmentA !== 'No asignado') return -1;
+        if (assignmentA === 'No asignado' && assignmentB === 'No asignado') return 0;
+
+        // Extraer la letra para comparar
+        const letterA = assignmentA.charAt(0);
+        const letterB = assignmentB.charAt(0);
         if (letterA !== letterB) return letterA.localeCompare(letterB);
 
-        // Luego comparar numéricamente
-        const numberA = parseInt(morningAssignmentA.slice(1), 10);
-        const numberB = parseInt(morningAssignmentB.slice(1), 10);
+        // Comparar numéricamente
+        const numberA = parseInt(assignmentA.slice(1), 10);
+        const numberB = parseInt(assignmentB.slice(1), 10);
         if (!isNaN(numberA) && !isNaN(numberB)) {
           return numberA - numberB;
         }
-        return morningAssignmentA.localeCompare(morningAssignmentB);
-      }
+        return assignmentA.localeCompare(assignmentB);
+      });
 
-      // Si las asignaciones completas son distintas, comparar teniendo en cuenta 'No asignado'
-      if (assignmentA === 'No asignado' && assignmentB !== 'No asignado') return 1;
-      if (assignmentB === 'No asignado' && assignmentA !== 'No asignado') return -1;
-      if (assignmentA === 'No asignado' && assignmentB === 'No asignado') return 0;
+      const headers = ['Nombre', 'Puesto', 'Turno', 'Asignación', 'Vehículos'];
+      const body = sortedFirefighters.map(firefighter => {
+        const assignmentValue = getAssignmentValue(firefighter);
+        const morningAssignment = getMorningAssignment(firefighter.id_empleado);
 
-      // Extraer la letra para comparar
-      const letterA = assignmentA.charAt(0);
-      const letterB = assignmentB.charAt(0);
-      if (letterA !== letterB) return letterA.localeCompare(letterB);
+        // Obtener número de radio para esta asignación
+        let radioNumber = '';
+        if (assignmentValue !== 'No asignado') {
+          // Tomar la primera asignación para el número de radio
+          const primaryAssignment = assignmentValue.split(',')[0].trim();
 
-      // Comparar numéricamente
-      const numberA = parseInt(assignmentA.slice(1), 10);
-      const numberB = parseInt(assignmentB.slice(1), 10);
-      if (!isNaN(numberA) && !isNaN(numberB)) {
-        return numberA - numberB;
-      }
-      return assignmentA.localeCompare(assignmentB);
-    });
-
-    console.log("\n=== ASIGNANDO NÚMEROS A BOMBEROS ===");
-    const headers = ['Nombre', 'Puesto', 'Turno', 'Asignación', 'Vehículos'];
-    const body = sortedFirefighters.map(firefighter => {
-      const assignmentValue = getAssignmentValue(firefighter);
-      const morningAssignment = getMorningAssignment(firefighter.id_empleado);
-      
-      // Obtener número de radio para esta asignación
-      let radioNumber = '';
-      if (assignmentValue !== 'No asignado') {
-        // Tomar la primera asignación para el número de radio
-        const primaryAssignment = assignmentValue.split(',')[0].trim();
-        
-        if (radioNumberByAssignment[primaryAssignment]) {
-          radioNumber = ` (${radioNumberByAssignment[primaryAssignment]})`;
-          console.log(`${firefighter.nombre} ${firefighter.apellido} - ${primaryAssignment}: ${radioNumberByAssignment[primaryAssignment]}`);
-        } else if (primaryAssignment === 'Jefe de Guardia') {
-          radioNumber = ' (1)';
-          console.log(`${firefighter.nombre} ${firefighter.apellido} - Jefe de Guardia: 1`);
-        } else {
-          console.log(`${firefighter.nombre} ${firefighter.apellido} - ${primaryAssignment}: NO ENCONTRADO`);
+          if (radioNumberByAssignment[primaryAssignment]) {
+            radioNumber = ` (${radioNumberByAssignment[primaryAssignment]})`;
+          } else if (primaryAssignment === 'Jefe de Guardia') {
+            radioNumber = ' (1)';
+          }
         }
-      } else {
-        console.log(`${firefighter.nombre} ${firefighter.apellido} - No asignado`);
-      }
-      
-      const fullName = `${firefighter.nombre} ${firefighter.apellido}${radioNumber}`;
-      
-      // Verificar si el bombero está en turno de mañana
-      const turnoLower = firefighter.turno.toLowerCase();
-      const isInMorningShift = turnoLower === 'mañana' ||
-        turnoLower === 'día completo' ||
-        turnoLower === 'mañana y tarde' ||
-        turnoLower === 'mañana y noche';
-      
-      // Seleccionar el mapeo adecuado según el nombre del parque
-      const mapping = brigade?.park?.nombre.toLowerCase().includes("sur")
-        ? vehicleMappingSur
-        : vehicleMappingNorte;
-      
-      // Usar el mapeo para obtener la información del vehículo
-      const vehicleInfo = isInMorningShift ? (mapping[morningAssignment] || '') : '';
-      
-      return [
-        fullName,
-        firefighter.puesto,
-        firefighter.turno,
-        assignmentValue,
-        vehicleInfo,
-      ];
-    });
 
-    // Función para determinar el color de fondo de una celda
-    const getNameCellBgColor = (assignment, puesto) => {
-      if (puesto.toLowerCase() === 'operador') return [255, 255, 255];
-      if (!assignment || assignment === 'No asignado') return [255, 255, 255];
-      const cleanAssignment = assignment.trim().toUpperCase();
-      const letter = cleanAssignment.charAt(0);
-      if (letter === 'J') {
-        return [255, 255, 153];
-      }
-      if (letter === 'N' || letter === 'S') {
-        if (puesto.toLowerCase() === 'subinspector') {
+        const fullName = `${firefighter.nombre} ${firefighter.apellido}${radioNumber}`;
+
+        // Verificar si el bombero está en turno de mañana
+        const turnoLower = firefighter.turno.toLowerCase();
+        const isInMorningShift = turnoLower === 'mañana' ||
+          turnoLower === 'día completo' ||
+          turnoLower === 'mañana y tarde' ||
+          turnoLower === 'mañana y noche';
+
+        // Seleccionar el mapeo adecuado según el nombre del parque
+        const mapping = brigade?.park?.nombre.toLowerCase().includes("sur")
+          ? vehicleMappingSur
+          : vehicleMappingNorte;
+
+        // Usar el mapeo para obtener la información del vehículo
+        const vehicleInfo = isInMorningShift ? (mapping[morningAssignment] || '') : '';
+
+        return [
+          fullName,
+          firefighter.puesto,
+          firefighter.turno,
+          assignmentValue,
+          vehicleInfo,
+        ];
+      });
+
+      // Función para determinar el color de fondo de una celda
+      const getNameCellBgColor = (assignment, puesto) => {
+        if (puesto.toLowerCase() === 'operador') return [255, 255, 255];
+        if (!assignment || assignment === 'No asignado') return [255, 255, 255];
+        const cleanAssignment = assignment.trim().toUpperCase();
+        const letter = cleanAssignment.charAt(0);
+        if (letter === 'J') {
           return [255, 255, 153];
-        } else {
-          return [255, 102, 102];
         }
-      } else if (letter === 'C' || letter === 'B') {
-        return [255, 240, 220];
-      }
-      return [255, 255, 255];
-    };
-
-    console.log("=== GENERANDO TABLA PDF ===");
-    // Generar la tabla
-    doc.autoTable({
-      startY,
-      head: [headers],
-      body: body,
-      theme: 'striped',
-      styles: { halign: 'center', cellPadding: 2.5, fontSize: 9 },
-      headStyles: { fillColor: pdfHeaderFillColor, textColor: pdfHeaderTextColor, fontSize: 10 },
-      alternateRowStyles: { fillColor: [240, 240, 240] },
-      margin: { top: startY, horizontal: 10 },
-      didParseCell: function (data) {
-        if (data.column.index === 0 && data.section === 'body') {
-          const employee = sortedFirefighters[data.row.index];
-          const assignmentValue = getAssignmentValue(employee);
-          const bgColor = getNameCellBgColor(assignmentValue, employee.puesto);
-          data.cell.styles.fillColor = bgColor;
+        if (letter === 'N' || letter === 'S') {
+          if (puesto.toLowerCase() === 'subinspector') {
+            return [255, 255, 153];
+          } else {
+            return [255, 102, 102];
+          }
+        } else if (letter === 'C' || letter === 'B') {
+          return [255, 240, 220];
         }
-      }
-    });
+        return [255, 255, 255];
+      };
 
-    // Añadir comentarios y otros detalles
-    if (guardDetails) {
-      console.log("=== AÑADIENDO COMENTARIOS Y DETALLES ADICIONALES ===");
-      const commentsData = guardDetails.guard || guardDetails;
-      const commentFieldsRow1 = ['revision', 'practica', 'basura'];
-      const commentFieldsRow2 = ['anotaciones', 'incidencias_de_trafico', 'mando'];
-      const headersRow1 = commentFieldsRow1.map(field =>
-        field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-      );
-      const headersRow2 = commentFieldsRow2.map(field =>
-        field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-      );
-      const valuesRow1 = commentFieldsRow1.map(field => commentsData[field] || '');
-      const valuesRow2 = commentFieldsRow2.map(field => commentsData[field] || '');
-      const finalY = doc.previousAutoTable ? doc.previousAutoTable.finalY + 10 : startY + 10;
-      
+      // Generar la tabla
       doc.autoTable({
-        startY: finalY,
-        head: [headersRow1],
-        body: [valuesRow1],
-        theme: 'grid',
-        styles: { halign: 'center', cellPadding: 4, fontSize: 9 },
-        headStyles: { fillColor: [52, 73, 94], textColor: 255 },
-        margin: { left: 10, right: 10 },
+        startY,
+        head: [headers],
+        body: body,
+        theme: 'striped',
+        styles: { halign: 'center', cellPadding: 2.5, fontSize: 9 },
+        headStyles: { fillColor: pdfHeaderFillColor, textColor: pdfHeaderTextColor, fontSize: 10 },
+        alternateRowStyles: { fillColor: [240, 240, 240] },
+        margin: { top: startY, horizontal: 10 },
+        didParseCell: function (data) {
+          if (data.column.index === 0 && data.section === 'body') {
+            const employee = sortedFirefighters[data.row.index];
+            const assignmentValue = getAssignmentValue(employee);
+            const bgColor = getNameCellBgColor(assignmentValue, employee.puesto);
+            data.cell.styles.fillColor = bgColor;
+          }
+        }
       });
-      
-      doc.autoTable({
-        startY: doc.previousAutoTable.finalY + 4,
-        head: [headersRow2],
-        body: [valuesRow2],
-        theme: 'grid',
-        styles: { halign: 'center', cellPadding: 4, fontSize: 9 },
-        headStyles: { fillColor: [52, 73, 94], textColor: 255 },
-        margin: { left: 10, right: 10 },
-      });
+
+      // Añadir comentarios y otros detalles
+      if (guardDetails) {
+        const commentsData = guardDetails.guard || guardDetails;
+        const commentFieldsRow1 = ['revision', 'practica', 'basura'];
+        const commentFieldsRow2 = ['anotaciones', 'incidencias_de_trafico', 'mando'];
+        const headersRow1 = commentFieldsRow1.map(field =>
+          field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+        );
+        const headersRow2 = commentFieldsRow2.map(field =>
+          field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+        );
+        const valuesRow1 = commentFieldsRow1.map(field => commentsData[field] || '');
+        const valuesRow2 = commentFieldsRow2.map(field => commentsData[field] || '');
+        const finalY = doc.previousAutoTable ? doc.previousAutoTable.finalY + 10 : startY + 10;
+
+        doc.autoTable({
+          startY: finalY,
+          head: [headersRow1],
+          body: [valuesRow1],
+          theme: 'grid',
+          styles: { halign: 'center', cellPadding: 4, fontSize: 9 },
+          headStyles: { fillColor: [52, 73, 94], textColor: 255 },
+          margin: { left: 10, right: 10 },
+        });
+
+        doc.autoTable({
+          startY: doc.previousAutoTable.finalY + 4,
+          head: [headersRow2],
+          body: [valuesRow2],
+          theme: 'grid',
+          styles: { halign: 'center', cellPadding: 4, fontSize: 9 },
+          headStyles: { fillColor: [52, 73, 94], textColor: 255 },
+          margin: { left: 10, right: 10 },
+        });
+      }
+
+      doc.save('Bomberos_Por_Turno.pdf');
+    } catch (error) {
+      console.error('Error al generar el PDF:', error);
+      alert('Ha ocurrido un error al generar el PDF. Por favor, inténtelo de nuevo.');
     }
-    
-    console.log("=== GUARDANDO PDF ===");
-    doc.save('Bomberos_Por_Turno.pdf');
-    console.log("=== PROCESO COMPLETO ===");
-  } catch (error) {
-    console.error("=== ERROR EN EXPORTACIÓN ===", error);
-    alert('Ha ocurrido un error al generar el PDF. Por favor, inténtelo de nuevo.');
-  }
-};
+  };
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!brigade) return <div>No brigade data available.</div>;

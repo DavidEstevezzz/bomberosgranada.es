@@ -82,4 +82,10 @@ class PersonalEquipmentController extends Controller
     
     return response()->json($equipo);
 }
+
+public function getByPark($parkId)
+    {
+        $equipos = PersonalEquipment::where('parque', $parkId)->get();
+        return response()->json($equipos);
+    }
 }

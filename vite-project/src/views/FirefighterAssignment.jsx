@@ -14,6 +14,14 @@ import { useDarkMode } from '../contexts/DarkModeContext';
 dayjs.locale('es');
 dayjs.extend(isBetween);
 
+// Función para normalizar texto (eliminar acentos y convertir a minúsculas)
+const normalizeText = (text) => {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+};
+
 const FirefighterAssignment = () => {
   const [assignments, setAssignments] = useState([]);
   const [filteredAssignments, setFilteredAssignments] = useState([]);
@@ -141,16 +149,21 @@ const FirefighterAssignment = () => {
     return sortedData.slice(startIndex, startIndex + itemsPerPage);
   };
 
-  // Se aplica la búsqueda sobre el conjunto completo filtrado por mes
+  // Se aplica la búsqueda sobre el conjunto completo filtrado por mes, ahora normalizando el texto
   const searchedAssignments = filteredAssignments.filter((assignment) => {
-    const fullName = getUsuarioNombre(assignment.id_empleado).toLowerCase();
-    const words = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
-    return words.every(word => fullName.includes(word));
+    if (!searchTerm.trim()) return true;
+    
+    const fullName = getUsuarioNombre(assignment.id_empleado);
+    const normalizedFullName = normalizeText(fullName);
+    const normalizedSearchTerm = normalizeText(searchTerm);
+    
+    const words = normalizedSearchTerm.split(/\s+/).filter(Boolean);
+    return words.every(word => normalizedFullName.includes(word));
   });
 
   const paginatedAssignments = paginate(searchedAssignments);
 
-  const totalPages = Math.ceil(filteredAssignments.length / itemsPerPage);
+  const totalPages = Math.ceil(searchedAssignments.length / itemsPerPage);
 
   const handleAdd = () => {
     fetchAssignments();
@@ -221,7 +234,7 @@ const FirefighterAssignment = () => {
             placeholder="Buscar por nombre y apellido"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-gray-700 text-white" // Añadido bg-gray-700 y text-white
+            className={`w-full px-4 py-2 rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
           />
         </div>
 
@@ -229,6 +242,8 @@ const FirefighterAssignment = () => {
         <div className={`p-6 rounded-lg shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           {filteredAssignments.length === 0 ? (
             <div className="text-center py-4">No hay asignaciones para este mes.</div>
+          ) : searchedAssignments.length === 0 ? (
+            <div className="text-center py-4">No hay resultados para la búsqueda.</div>
           ) : (
             <AssignmentsTable
               assignments={paginatedAssignments}
@@ -246,8 +261,12 @@ const FirefighterAssignment = () => {
           <div className="flex justify-between items-center mt-6">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className={`px-4 py-2 rounded ${currentPage === 1 ? 'bg-gray-500' : 'bg-blue-600 text-white'}`}
+              disabled={currentPage === 1 || searchedAssignments.length === 0}
+              className={`px-4 py-2 rounded ${
+                currentPage === 1 || searchedAssignments.length === 0
+                  ? 'bg-gray-500'
+                  : 'bg-blue-600 text-white'
+              }`}
             >
               Anterior
             </button>
@@ -257,8 +276,11 @@ const FirefighterAssignment = () => {
             <button
               onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages || totalPages === 0}
-              className={`px-4 py-2 rounded ${currentPage === totalPages || totalPages === 0 ? 'bg-gray-500' : 'bg-blue-600 text-white'
-                }`}
+              className={`px-4 py-2 rounded ${
+                currentPage === totalPages || totalPages === 0
+                  ? 'bg-gray-500'
+                  : 'bg-blue-600 text-white'
+              }`}
             >
               Siguiente
             </button>

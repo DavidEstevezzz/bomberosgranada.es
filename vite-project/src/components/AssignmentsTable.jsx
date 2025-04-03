@@ -90,6 +90,7 @@ const AssignmentsTable = ({
             </th>
             <th className="py-2 px-2">Brigada Origen</th>
             <th className="py-2 px-2">Brigada Destino</th>
+            <th className="py-2 px-2">Turno</th>
             <th className="py-2 px-2" style={{ width: '200px' }}>
               Acciones
             </th>
@@ -108,6 +109,7 @@ const AssignmentsTable = ({
                 <td className="py-2 px-2">{getUsuarioNombre(assignment.id_empleado)}</td>
                 <td className="py-2 px-2">{getBrigadaNombre(assignment.id_brigada_origen)}</td>
                 <td className="py-2 px-2">{getBrigadaNombre(assignment.id_brigada_destino)}</td>
+                <td className="py-2 px-2">{assignment.turno}</td>
                 <td className="py-2 px-2 flex space-x-2">
                   <button
                     onClick={() => {
@@ -132,7 +134,7 @@ const AssignmentsTable = ({
             ))
           ) : (
             <tr>
-              <td colSpan="5" className={`text-center py-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              <td colSpan="6" className={`text-center py-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 No hay asignaciones disponibles
               </td>
             </tr>

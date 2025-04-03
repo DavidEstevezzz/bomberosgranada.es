@@ -142,10 +142,10 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
           <p className="whitespace-pre-line">{incident.descripcion}</p>
         </div>
 
-        {incident.resolucion && (
+        {incident.resolviendo && (
           <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
             <h4 className="text-sm uppercase tracking-wider font-semibold mb-3 text-gray-500 dark:text-gray-400">Resolución</h4>
-            <p className="whitespace-pre-line">{incident.resolucion}</p>
+            <p className="whitespace-pre-line">{incident.resolviendo}</p>
           </div>
         )}
 

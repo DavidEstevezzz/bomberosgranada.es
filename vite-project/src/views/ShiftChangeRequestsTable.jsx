@@ -3,8 +3,9 @@ import ShiftChangeRequestApiService from '../services/ShiftChangeRequestApiServi
 import EditShiftChangeModal from '../components/EditShiftChangeModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit } from '@fortawesome/free-solid-svg-icons';
+import { FaSortUp, FaSortDown } from 'react-icons/fa'; // Importamos íconos de ordenamiento
 import { useDarkMode } from '../contexts/DarkModeContext';
-import dayjs from 'dayjs'; // <-- Importamos dayjs
+import dayjs from 'dayjs'; // Importamos dayjs
 
 const ShiftChangeRequestsTable = () => {
   const [shiftChangeRequests, setShiftChangeRequests] = useState([]);
@@ -26,6 +27,10 @@ const ShiftChangeRequestsTable = () => {
     rechazado: dayjs(),
     aceptado: dayjs(),
   });
+
+  // Estados para el ordenamiento
+  const [sortField, setSortField] = useState('fecha');
+  const [sortDirection, setSortDirection] = useState('asc');
 
   const itemsPerPage = 10;
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -70,6 +75,37 @@ const ShiftChangeRequestsTable = () => {
     } catch (error) {
       console.error('Failed to update shift change request:', error);
     }
+  };
+
+  // Función para manejar el ordenamiento
+  const handleSort = (field) => {
+    if (field === sortField) {
+      // Si es el mismo campo, cambiamos la dirección
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Si es un campo diferente, establecemos el nuevo campo y dirección ascendente por defecto
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Función para ordenar los datos
+  const sortData = (data) => {
+    if (!sortField) return data;
+    
+    return [...data].sort((a, b) => {
+      if (sortField === 'fecha') {
+        const dateA = dayjs(a.fecha);
+        const dateB = dayjs(b.fecha);
+        
+        if (sortDirection === 'asc') {
+          return dateA.isBefore(dateB) ? -1 : dateA.isAfter(dateB) ? 1 : 0;
+        } else {
+          return dateB.isBefore(dateA) ? -1 : dateB.isAfter(dateA) ? 1 : 0;
+        }
+      }
+      return 0;
+    });
   };
 
   const normalizeStatus = (status) => {
@@ -152,10 +188,8 @@ const ShiftChangeRequestsTable = () => {
         // (2) Filtrar adicionalmente por mes
         const filteredRequests = filterRequestsByMonth(requestsByStatus, status);
 
-        // (3) Ordenar por fecha (ascendente)
-        const sortedRequests = [...filteredRequests].sort((a, b) =>
-          dayjs(a.fecha).diff(dayjs(b.fecha))
-        );
+        // (3) Ordenar los datos según el campo y dirección de ordenamiento
+        const sortedRequests = sortData(filteredRequests);
 
         // (4) Paginación
         const totalPages = Math.ceil(sortedRequests.length / itemsPerPage) || 1;
@@ -205,7 +239,17 @@ const ShiftChangeRequestsTable = () => {
                     <tr>
                       <th className="py-2 px-2">Bombero 1</th>
                       <th className="py-2 px-2">Bombero 2</th>
-                      <th className="py-2 px-2">Fecha</th>
+                      <th 
+                        className="py-2 px-2 cursor-pointer select-none flex items-center"
+                        onClick={() => handleSort('fecha')}
+                      >
+                        Fecha
+                        {sortField === 'fecha' && (
+                          <span className="ml-1">
+                            {sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />}
+                          </span>
+                        )}
+                      </th>
                       <th className="py-2 px-2">Turno</th>
                       <th className="py-2 px-2">Acciones</th>
                     </tr>

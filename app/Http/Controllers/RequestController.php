@@ -159,7 +159,6 @@ public function update(Request $request, $id)
     ];
 
     $validator = Validator::make($request->all(), $rules);
-
     if ($validator->fails()) {
         return response()->json($validator->errors(), 400);
     }
@@ -167,9 +166,9 @@ public function update(Request $request, $id)
     $oldEstado = $miRequest->estado;
     $newEstado = $request->estado;
 
-    // Validar disponibilidad de días para "vacaciones" y "modulo"
+    // Validación de disponibilidad según el tipo de solicitud
     if ($newEstado === 'Confirmada') {
-        $user = $miRequest->EnviadaPor; // Relación con el modelo User
+        $user = $miRequest->EnviadaPor;
         if (!$user) {
             return response()->json(['error' => 'Usuario no encontrado para esta solicitud'], 404);
         }
@@ -178,14 +177,23 @@ public function update(Request $request, $id)
         $fechaFin = new \DateTime($miRequest->fecha_fin);
         $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
 
-        // Verificar para "vacaciones"
-        if ($miRequest->tipo === 'vacaciones' && $user->vacaciones < $diasSolicitados) {
-            return response()->json(['error' => 'El usuario no tiene suficientes días de vacaciones disponibles'], 400);
-        }
-
-        // Verificar para "modulo"
-        if ($miRequest->tipo === 'modulo' && $user->modulo < $diasSolicitados) {
-            return response()->json(['error' => 'El usuario no tiene suficientes días en su módulo disponibles'], 400);
+        // Verificaciones específicas por tipo
+        switch($miRequest->tipo) {
+            case 'vacaciones':
+                if ($user->vacaciones < $diasSolicitados) {
+                    return response()->json(['error' => 'El usuario no tiene suficientes días de vacaciones disponibles'], 400);
+                }
+                break;
+            case 'modulo':
+                if ($user->modulo < $diasSolicitados) {
+                    return response()->json(['error' => 'El usuario no tiene suficientes días en su módulo disponibles'], 400);
+                }
+                break;
+            case 'horas sindicales':
+                if ($user->horas_sindicales < $miRequest->horas) {
+                    return response()->json(['error' => 'El usuario no tiene suficientes horas sindicales disponibles'], 400);
+                }
+                break;
         }
     }
 
@@ -193,29 +201,34 @@ public function update(Request $request, $id)
     $miRequest->estado = $newEstado;
     $miRequest->save();
 
-    // Ajustar columnas correspondientes si el estado es confirmado
-    if ($miRequest->tipo === 'vacaciones' || $miRequest->tipo === 'modulo') {
-        $this->adjustVacationDays($miRequest, $oldEstado, $newEstado);
+    // Ajustar las columnas específicas según el tipo
+    switch($miRequest->tipo) {
+        case 'vacaciones':
+            $this->adjustVacationDays($miRequest, $oldEstado, $newEstado);
+            break;
+        case 'modulo':
+            $this->adjustModuloDays($miRequest, $oldEstado, $newEstado);
+            break;
+        case 'salidas personales':
+            $this->adjustSPHours($miRequest, $oldEstado, $newEstado);
+            break;
+        case 'horas sindicales':
+            $this->adjustSindicalHours($miRequest, $oldEstado, $newEstado);
+            break;
+        default:
+            // Para otros tipos de solicitudes
+            if (!in_array($miRequest->tipo, ['vestuario'])) {
+                if ($newEstado === 'Confirmada') {
+                    $this->createAssignments($miRequest);
+                }
+                if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+                    $this->deleteAssignments($miRequest);
+                }
+            }
     }
 
-    if ($miRequest->tipo === 'salidas personales') {
-        $this->adjustSPHours($miRequest, $oldEstado, $newEstado);
-    }else if ($miRequest->tipo === 'horas sindicales') {
-        $this->adjustSindicalHours($miRequest, $oldEstado, $newEstado);
-    } else {
-        // Crear o eliminar asignaciones solo para otros tipos de solicitudes
-        if (!in_array($miRequest->tipo, ['vestuario'])) {
-            if ($newEstado === 'Confirmada') {
-                $this->createAssignments($miRequest);
-            }
-            if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
-                $this->deleteAssignments($miRequest);
-            }
-        }
-    }
-
-    // Enviar correo de notificación al usuario
-    $user = $miRequest->EnviadaPor; // Relación con User
+    // Enviar correo de notificación
+    $user = $miRequest->EnviadaPor;
     if ($user && $user->email) {
         try {
             Mail::to($user->email)->send(new RequestStatusUpdatedMail($miRequest, $newEstado));
@@ -403,7 +416,7 @@ public function update(Request $request, $id)
 
     private function adjustVacationDays($miRequest, $oldEstado, $newEstado)
 {
-    $user = $miRequest->EnviadaPor; // Relación con el modelo User
+    $user = $miRequest->EnviadaPor;
     if (!$user) {
         Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
         return;
@@ -412,43 +425,34 @@ public function update(Request $request, $id)
     // Calcular los días solicitados
     $fechaInicio = new \DateTime($miRequest->fecha_ini);
     $fechaFin = new \DateTime($miRequest->fecha_fin);
-    $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1; // +1 para incluir ambos días
+    $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
 
-    // Restar días de `vacaciones` si la solicitud es confirmada
-    if ($miRequest->tipo === 'vacaciones') {
-        if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
-            $user->vacaciones = max(0, $user->vacaciones - $diasSolicitados); // Evitar valores negativos
-        }
-
-        // Sumar días de `vacaciones` si la solicitud es cancelada
-        if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
-            $user->vacaciones += $diasSolicitados;
-        }
+    // Restar días de vacaciones si la solicitud es confirmada
+    if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
+        $user->vacaciones = max(0, $user->vacaciones - $diasSolicitados);
+        Log::info("Restando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
     }
 
-    // Restar días de `modulo` si la solicitud es confirmada
-    if ($miRequest->tipo === 'modulo') {
-        $this->adjustModuloDays($miRequest, $oldEstado, $newEstado, $diasSolicitados);
-    }
-
-    if ($miRequest->tipo === 'horas sindicales') {
-        $requestedHours = $miRequest->horas;
-        if ($user->horas_sindicales < $requestedHours) {
-            return response()->json(['error' => 'El usuario no tiene suficientes horas sindicales disponibles'], 400);
-        }
+    // Sumar días de vacaciones si la solicitud es cancelada
+    if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+        $user->vacaciones += $diasSolicitados;
+        Log::info("Sumando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
     }
 
     $user->save();
-    Log::info("Columna ajustada para el usuario ID: {$user->id_empleado}, días ajustados: {$diasSolicitados}");
 }
-
-private function adjustModuloDays($miRequest, $oldEstado, $newEstado, $diasSolicitados)
+private function adjustModuloDays($miRequest, $oldEstado, $newEstado)
 {
     $user = $miRequest->EnviadaPor; // Relación con el modelo User
     if (!$user) {
         Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
         return;
     }
+    
+    // Calcular los días solicitados
+    $fechaInicio = new \DateTime($miRequest->fecha_ini);
+    $fechaFin = new \DateTime($miRequest->fecha_fin);
+    $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
 
     // Restar días de `modulo` si la solicitud es confirmada
     if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {

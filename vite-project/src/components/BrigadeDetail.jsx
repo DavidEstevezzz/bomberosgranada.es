@@ -587,6 +587,7 @@ const BrigadeDetail = () => {
   // Función para exportar a PDF (modificada para usar la asignación específica del turno de mañana)
   // Función para exportar a PDF (modificada para usar la asignación específica del turno de mañana)
   // Función para exportar a PDF con asignación secuencial
+// Función para exportar a PDF con asignación secuencial completamente rediseñada
 const exportToPDF = async () => {
   try {
     // Iniciar el PDF
@@ -629,141 +630,169 @@ const exportToPDF = async () => {
       pdfHeaderTextColor = '#ffffff';
     }
 
-    // Ordenar bomberos
-    const sortedFirefighters = [...firefighters].sort((a, b) => {
-      const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
-      if (puestoDiff !== 0) return puestoDiff;
+    // ID del parque
+    const parkId = brigade?.park?.id_parque || 1;
 
-      const assignmentA = getAssignmentValue(a);
-      const assignmentB = getAssignmentValue(b);
+    // Obtener todos los tipos de asignaciones que necesitamos procesar
+    const allAssignments = [];
 
-      // Resto de la lógica de ordenación...
-      return assignmentA.localeCompare(assignmentB);
+    // Extraer todos los tipos de asignación únicos de los bomberos
+    firefighters.forEach(ff => {
+      const assignmentValue = getAssignmentValue(ff);
+      if (assignmentValue !== 'No asignado') {
+        // Dividir en caso de que haya múltiples asignaciones
+        const assignments = assignmentValue.split(',').map(a => a.trim());
+        assignments.forEach(a => {
+          if (!a.startsWith('Operador') && a !== 'Telefonista' && a !== 'Jefe de Guardia' && !allAssignments.includes(a)) {
+            allAssignments.push(a);
+          }
+        });
+      }
     });
 
-    // Crear arrays separados para números pares e impares ya utilizados
-    const usedEvenNumbers = [];
-    const usedOddNumbers = [];
+    // Ordenar las asignaciones por tipo (primero letra, luego número)
+    allAssignments.sort((a, b) => {
+      const letterA = a.charAt(0);
+      const letterB = b.charAt(0);
 
-    // Función para obtener el número base inicial según la asignación
-    const getBaseNumber = (assignment, parkId) => {
-      if (!assignment || assignment === 'No asignado') return null;
-      
-      const letter = assignment.charAt(0).toUpperCase();
-      const number = parseInt(assignment.slice(1), 10);
-      
-      if (isNaN(number)) return null;
-      
-      if (letter === 'J') return 1;
-      
-      if (letter === 'N') {
-        if (number === 1) return 1;
-        if (number === 2) return 3;
-        if (number === 3 || number === 4) return 5;
-      } else if (letter === 'S') {
-        if (number === 1) return 2;
-        if (number === 2) return 4;
-        if (number === 3) return 6;
-      } else if (letter === 'C') {
-        if (parkId === 2) {
-          if (number === 1) return 8;
-          if (number === 2) return 10;
-          if (number === 3) return 12;
-          if (number === 4) return 14;
-          if (number === 5) return 16;
-        } else {
-          if (number === 1) return 7;
-          if (number === 2) return 9;
-          if (number === 3) return 11;
-          if (number === 4) return 13;
-          if (number === 5) return 15;
-        }
-      } else if (letter === 'B') {
-        if (parkId === 2) {
-          return 14 + number * 2;
-        } else {
-          return 13 + number * 2;
-        }
+      if (letterA !== letterB) {
+        return letterA.localeCompare(letterB);
       }
-      
-      return null;
+
+      const numA = parseInt(a.slice(1), 10);
+      const numB = parseInt(b.slice(1), 10);
+      return numA - numB;
+    });
+
+    // Separar las asignaciones por tipo
+    const nAssignments = allAssignments.filter(a => a.startsWith('N'));
+    const sAssignments = allAssignments.filter(a => a.startsWith('S'));
+    const cAssignments = allAssignments.filter(a => a.startsWith('C'));
+    const bAssignments = allAssignments.filter(a => a.startsWith('B'));
+
+    // Valores iniciales fijos (no necesitan verificación)
+    const fixedAssignments = {
+      'N1': 1,
+      'N2': 3,
+      'N3': 5,
+      'N4': 5,
+      'S1': 2,
+      'S2': 4,
+      'S3': 6,
+      'J': 1,
+      'Jefe de Guardia': 1
     };
 
-    // Función mejorada para verificar la disponibilidad y obtener el siguiente número
-    const getNextAvailableNumber = async (baseNumber) => {
-      // Si no hay número base, no se asigna número de radio
-      if (baseNumber === null) return '';
-      
+    // Registros de números ya utilizados (separados por paridad)
+    const usedRadioNumbers = new Set();
+
+    // Mapa para almacenar las asignaciones de radio finales
+    const radioNumberByAssignment = {};
+
+    // Asignar los valores fijos
+    Object.keys(fixedAssignments).forEach(key => {
+      radioNumberByAssignment[key] = fixedAssignments[key];
+      usedRadioNumbers.add(fixedAssignments[key]);
+    });
+
+    // Función para encontrar el siguiente número disponible
+    const findNextAvailableNumber = async (baseNumber) => {
       let currentNumber = baseNumber;
-      const isEven = currentNumber % 2 === 0;
-      const usedNumbers = isEven ? usedEvenNumbers : usedOddNumbers;
       
-      // Verificar si el número ya se ha usado o no está disponible
+      // Verificar si el número está disponible
       while (
-        usedNumbers.includes(currentNumber) ||
+        usedRadioNumbers.has(currentNumber) || 
         !(await isEquipmentAvailable(currentNumber))
       ) {
-        currentNumber += 2; // Mantener paridad (incrementar de 2 en 2)
+        currentNumber += 2; // Mantener la paridad
       }
       
-      // Marcar como usado
-      usedNumbers.push(currentNumber);
-      
+      // Marcar como utilizado
+      usedRadioNumbers.add(currentNumber);
       return currentNumber;
     };
 
-    // Diccionario para almacenar las asignaciones de radio (para evitar consultas duplicadas)
-    const radioAssignmentCache = {};
+    // Procesar secuencialmente las asignaciones C
+    for (const assignment of cAssignments) {
+      // Valores fijos para C1
+      if (assignment === 'C1') {
+        const fixedValue = parkId === 2 ? 8 : 7;
+        radioNumberByAssignment[assignment] = fixedValue;
+        usedRadioNumbers.add(fixedValue);
+        continue;
+      }
+      
+      // Para C2, C3, etc.
+      const number = parseInt(assignment.slice(1), 10);
+      let baseNumber;
+      
+      if (parkId === 2) {
+        // Parque 2: C2 -> 10, C3 -> 12...
+        baseNumber = 8 + (number - 1) * 2;
+      } else {
+        // Parque 1: C2 -> 9, C3 -> 11...
+        baseNumber = 7 + (number - 1) * 2;
+      }
+      
+      // Encontrar el siguiente número disponible
+      const radioNumber = await findNextAvailableNumber(baseNumber);
+      radioNumberByAssignment[assignment] = radioNumber;
+    }
 
-    // Procesar cada bombero en orden y obtener su número de radio
-    const radioAssignments = {};
-    
-    for (const firefighter of sortedFirefighters) {
-      const assignmentValue = getAssignmentValue(firefighter);
-      
-      if (assignmentValue === 'No asignado') {
-        radioAssignments[firefighter.id_empleado] = '';
+    // Procesar secuencialmente las asignaciones B
+    for (const assignment of bAssignments) {
+      // Valores fijos para B1
+      if (assignment === 'B1') {
+        const fixedValue = parkId === 2 ? 16 : 15;
+        radioNumberByAssignment[assignment] = fixedValue;
+        usedRadioNumbers.add(fixedValue);
         continue;
       }
       
-      // Si hay varias asignaciones (separadas por coma), tomar solo la primera para el número de radio
-      const primaryAssignment = assignmentValue.split(',')[0].trim();
+      // Para B2, B3, etc.
+      const number = parseInt(assignment.slice(1), 10);
+      let baseNumber;
       
-      // Verificar si ya hemos calculado un número para esta asignación exacta
-      if (radioAssignmentCache[primaryAssignment]) {
-        radioAssignments[firefighter.id_empleado] = radioAssignmentCache[primaryAssignment];
-        continue;
+      if (parkId === 2) {
+        // Parque 2: B2 -> 18, B3 -> 20...
+        baseNumber = 16 + (number - 1) * 2;
+      } else {
+        // Parque 1: B2 -> 17, B3 -> 19...
+        baseNumber = 15 + (number - 1) * 2;
       }
       
-      // Para operadores y telefonistas, no asignar número
-      if (primaryAssignment.startsWith('Operador') || primaryAssignment === 'Telefonista') {
-        radioAssignments[firefighter.id_empleado] = '';
-        radioAssignmentCache[primaryAssignment] = '';
-        continue;
-      }
-      
-      // Obtener el número base y luego el siguiente disponible
-      const baseNumber = getBaseNumber(primaryAssignment, brigade?.park?.id_parque);
-      const radioNumber = await getNextAvailableNumber(baseNumber);
-      
-      // Guardar la asignación
-      radioAssignments[firefighter.id_empleado] = radioNumber;
-      
-      // No guardar en caché para garantizar números únicos para cada bombero
-      // radioAssignmentCache[primaryAssignment] = radioNumber;
+      // Encontrar el siguiente número disponible
+      const radioNumber = await findNextAvailableNumber(baseNumber);
+      radioNumberByAssignment[assignment] = radioNumber;
     }
 
     // Construir el cuerpo de la tabla con los números de radio asignados
+    const sortedFirefighters = [...firefighters].sort((a, b) => {
+      // Lógica de ordenación existente...
+      const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
+      if (puestoDiff !== 0) return puestoDiff;
+      return 0;
+    });
+
     const headers = ['Nombre', 'Puesto', 'Turno', 'Asignación', 'Vehículos'];
     const body = sortedFirefighters.map(firefighter => {
       const assignmentValue = getAssignmentValue(firefighter);
       const morningAssignment = getMorningAssignment(firefighter.id_empleado);
       
-      // Usar el número de radio ya calculado
-      const radioNumber = radioAssignments[firefighter.id_empleado];
-      const radio = radioNumber ? ` (${radioNumber})` : '';
+      // Obtener número de radio para esta asignación
+      let radioNumber = '';
+      if (assignmentValue !== 'No asignado') {
+        // Tomar la primera asignación para el número de radio
+        const primaryAssignment = assignmentValue.split(',')[0].trim();
+        
+        if (radioNumberByAssignment[primaryAssignment]) {
+          radioNumber = ` (${radioNumberByAssignment[primaryAssignment]})`;
+        } else if (primaryAssignment === 'Jefe de Guardia') {
+          radioNumber = ' (1)';
+        }
+      }
       
-      const fullName = `${firefighter.nombre} ${firefighter.apellido}${radio}`;
+      const fullName = `${firefighter.nombre} ${firefighter.apellido}${radioNumber}`;
       
       // Verificar si el bombero está en turno de mañana
       const turnoLower = firefighter.turno.toLowerCase();
@@ -872,7 +901,6 @@ const exportToPDF = async () => {
     alert('Ha ocurrido un error al generar el PDF. Por favor, inténtelo de nuevo.');
   }
 };
-
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!brigade) return <div>No brigade data available.</div>;

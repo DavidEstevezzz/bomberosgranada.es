@@ -184,7 +184,7 @@ const PersonalEquipment = () => {
     doc.text("Por favor, notifique al departamento de mantenimiento.", 105, finalY + 15, { align: 'center' });
     
     // Guardar el PDF
-    doc.save(`equipos_no_disponibles_${parkTitle.replace(/\s+/g, '_').toLowerCase()}.pdf`);
+    doc.save(`Equipos_no_disponibles_${parkTitle.replace(/\s+/g, '_').toLowerCase()}.pdf`);
   };
 
   const handleEditClick = (equipment) => {

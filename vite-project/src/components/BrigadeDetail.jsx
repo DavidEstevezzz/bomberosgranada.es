@@ -65,6 +65,8 @@ const BrigadeDetail = () => {
   const [showEditInterventionModal, setShowEditInterventionModal] = useState(false);
   const [selectedIntervention, setSelectedIntervention] = useState(null);
   const [refreshInterventions, setRefreshInterventions] = useState(false);
+  const [assignedRadioNumbers, setAssignedRadioNumbers] = useState(new Set());
+
 
   const handleEditIntervention = (intervention) => {
     setSelectedIntervention(intervention);
@@ -341,15 +343,21 @@ const BrigadeDetail = () => {
   };
 
   // Función auxiliar para encontrar el siguiente número disponible
-  const findNextAvailableNumber = async (startNumber, increment = 2) => {
+  const findNextAvailableNumber = async (startNumber, increment = 2, usedNumbers = new Set()) => {
     let currentNumber = startNumber;
-    let isAvailable = await isEquipmentAvailable(currentNumber);
 
-    while (!isAvailable) {
+    // Verificar si el número ya está en uso o no está disponible
+    let isUsed = usedNumbers.has(currentNumber);
+    let isAvailable = !isUsed && await isEquipmentAvailable(currentNumber);
+
+    while (isUsed || !isAvailable) {
       currentNumber += increment;
-      isAvailable = await isEquipmentAvailable(currentNumber);
+      isUsed = usedNumbers.has(currentNumber);
+      isAvailable = !isUsed && await isEquipmentAvailable(currentNumber);
     }
 
+    // Agregar el número encontrado al conjunto de usados
+    usedNumbers.add(currentNumber);
     return currentNumber;
   };
 
@@ -493,7 +501,7 @@ const BrigadeDetail = () => {
 
 
   // Función auxiliar para calcular el número de radio según la asignación y parque
-  const getRadioNumber = async (assignment, parkId) => {
+  const getRadioNumber = async (assignment, parkId, usedNumbers = new Set()) => {
     if (!assignment || assignment === 'No asignado') return '';
     const cleanAssignment = assignment.trim();
     const letter = cleanAssignment.charAt(0).toUpperCase();
@@ -509,73 +517,74 @@ const BrigadeDetail = () => {
       if (number === 1) return 1;
       if (number === 2) {
         const baseNumber = 3;
-        return await findNextAvailableNumber(baseNumber, 2);
+        return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
       }
       if (number === 3 || number === 4) {
         const baseNumber = 5;
-        return await findNextAvailableNumber(baseNumber, 2);
+        return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
       }
     } else if (letter === 'S') {
       if (number === 1) return 2;
       if (number === 2) {
         const baseNumber = 4;
-        return await findNextAvailableNumber(baseNumber, 2);
+        return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
       }
       if (number === 3) {
         const baseNumber = 6;
-        return await findNextAvailableNumber(baseNumber, 2);
+        return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
       }
     } else if (letter === 'C') {
       if (parkId === 2) {
         if (number === 1) return 8;
         if (number === 2) {
           const baseNumber = 10;
-          return await findNextAvailableNumber(baseNumber, 2);
+          return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
         }
         if (number === 3) {
           const baseNumber = 12;
-          return await findNextAvailableNumber(baseNumber, 2);
+          return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
         }
         if (number === 4) {
           const baseNumber = 14;
-          return await findNextAvailableNumber(baseNumber, 2);
+          return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
         }
         if (number === 5) {
           const baseNumber = 16;
-          return await findNextAvailableNumber(baseNumber, 2);
+          return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
         }
       } else {
         if (number === 1) return 7;
         if (number === 2) {
           const baseNumber = 9;
-          return await findNextAvailableNumber(baseNumber, 2);
+          return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
         }
         if (number === 3) {
           const baseNumber = 11;
-          return await findNextAvailableNumber(baseNumber, 2);
+          return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
         }
         if (number === 4) {
           const baseNumber = 13;
-          return await findNextAvailableNumber(baseNumber, 2);
+          return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
         }
         if (number === 5) {
           const baseNumber = 15;
-          return await findNextAvailableNumber(baseNumber, 2);
+          return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
         }
       }
     } else if (letter === 'B') {
       if (parkId === 2) {
         const baseNumber = 14 + number * 2;
-        return await findNextAvailableNumber(baseNumber, 2);
+        return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
       } else {
         const baseNumber = 13 + number * 2;
-        return await findNextAvailableNumber(baseNumber, 2);
+        return await findNextAvailableNumber(baseNumber, 2, usedNumbers);
       }
     }
 
     return '-';
   };
 
+  // Función para exportar a PDF (modificada para usar la asignación específica del turno de mañana)
   // Función para exportar a PDF (modificada para usar la asignación específica del turno de mañana)
   const exportToPDF = async () => {
     try {
@@ -617,26 +626,32 @@ const BrigadeDetail = () => {
         pdfHeaderTextColor = '#ffffff';
       }
 
-      // Usar la misma lógica de ordenación que ya tenías
+      // Función de ordenación modificada que ordena primero por puesto, luego por asignación
       const sortedFirefighters = [...firefighters].sort((a, b) => {
+        // Primero ordenar por prioridad de puesto
         const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
         if (puestoDiff !== 0) return puestoDiff;
 
+        // Ordenar por la asignación completa
         const assignmentA = getAssignmentValue(a);
         const assignmentB = getAssignmentValue(b);
 
+        // Si ambas asignaciones completas son iguales, usar la asignación de la mañana para desempatar
         if (assignmentA === assignmentB) {
           const morningAssignmentA = getMorningAssignment(a.id_empleado);
           const morningAssignmentB = getMorningAssignment(b.id_empleado);
 
+          // Manejar el caso de 'No asignado'
           if (morningAssignmentA === 'No asignado' && morningAssignmentB !== 'No asignado') return 1;
           if (morningAssignmentB === 'No asignado' && morningAssignmentA !== 'No asignado') return -1;
           if (morningAssignmentA === 'No asignado' && morningAssignmentB === 'No asignado') return 0;
 
+          // Comparar la letra de la asignación de la mañana
           const letterA = morningAssignmentA.charAt(0);
           const letterB = morningAssignmentB.charAt(0);
           if (letterA !== letterB) return letterA.localeCompare(letterB);
 
+          // Luego comparar numéricamente
           const numberA = parseInt(morningAssignmentA.slice(1), 10);
           const numberB = parseInt(morningAssignmentB.slice(1), 10);
           if (!isNaN(numberA) && !isNaN(numberB)) {
@@ -645,14 +660,17 @@ const BrigadeDetail = () => {
           return morningAssignmentA.localeCompare(morningAssignmentB);
         }
 
+        // Si las asignaciones completas son distintas, comparar teniendo en cuenta 'No asignado'
         if (assignmentA === 'No asignado' && assignmentB !== 'No asignado') return 1;
         if (assignmentB === 'No asignado' && assignmentA !== 'No asignado') return -1;
         if (assignmentA === 'No asignado' && assignmentB === 'No asignado') return 0;
 
+        // Extraer la letra para comparar
         const letterA = assignmentA.charAt(0);
         const letterB = assignmentB.charAt(0);
         if (letterA !== letterB) return letterA.localeCompare(letterB);
 
+        // Comparar numéricamente
         const numberA = parseInt(assignmentA.slice(1), 10);
         const numberB = parseInt(assignmentB.slice(1), 10);
         if (!isNaN(numberA) && !isNaN(numberB)) {
@@ -662,7 +680,6 @@ const BrigadeDetail = () => {
       });
 
       const getNameCellBgColor = (assignment, puesto) => {
-        // Mantener la misma lógica que ya tenías
         if (puesto.toLowerCase() === 'operador') return [255, 255, 255];
         if (!assignment || assignment === 'No asignado') return [255, 255, 255];
         const cleanAssignment = assignment.trim().toUpperCase();
@@ -682,17 +699,124 @@ const BrigadeDetail = () => {
         return [255, 255, 255];
       };
 
-      // PARTE NUEVA: Calcular los números de radio de manera asíncrona
-      const radioAssignmentsPromises = sortedFirefighters.map(async (firefighter) => {
+      // Conjunto para mantener registro de los números asignados en esta generación de PDF
+      const usedRadioNumbers = new Set();
+
+      // Calcular los números de radio secuencialmente
+      const radioAssignments = [];
+      for (const firefighter of sortedFirefighters) {
         const assignmentValue = getAssignmentValue(firefighter);
         if (assignmentValue !== 'No asignado') {
-          return await getRadioNumber(assignmentValue, brigade.park?.id_parque);
-        }
-        return '';
-      });
+          // Modificar getRadioNumber para usar el conjunto de números usados
+          const modifiedGetRadioNumber = async (assignment, parkId) => {
+            if (!assignment || assignment === 'No asignado') return '';
+            const cleanAssignment = assignment.trim();
+            const letter = cleanAssignment.charAt(0).toUpperCase();
+            const number = parseInt(cleanAssignment.slice(1), 10);
+            if (isNaN(number)) return '-';
 
-      // Esperar a que se resuelvan todas las promesas
-      const radioAssignments = await Promise.all(radioAssignmentsPromises);
+            // Casos específicos que no requieren verificación
+            if (letter === 'J') {
+              return 1;
+            }
+
+            // Función auxiliar modificada para encontrar el siguiente número disponible
+            const findNextAvailableNumber = async (startNumber, increment = 2) => {
+              let currentNumber = startNumber;
+
+              // Verificar si el número ya está en uso o no está disponible
+              let isUsed = usedRadioNumbers.has(currentNumber);
+              let isAvailable = !isUsed && await isEquipmentAvailable(currentNumber);
+
+              while (isUsed || !isAvailable) {
+                currentNumber += increment;
+                isUsed = usedRadioNumbers.has(currentNumber);
+                isAvailable = !isUsed && await isEquipmentAvailable(currentNumber);
+              }
+
+              // Agregar el número encontrado al conjunto de usados
+              usedRadioNumbers.add(currentNumber);
+              return currentNumber;
+            };
+
+            if (letter === 'N') {
+              if (number === 1) return 1;
+              if (number === 2) {
+                const baseNumber = 3;
+                return await findNextAvailableNumber(baseNumber, 2);
+              }
+              if (number === 3 || number === 4) {
+                const baseNumber = 5;
+                return await findNextAvailableNumber(baseNumber, 2);
+              }
+            } else if (letter === 'S') {
+              if (number === 1) return 2;
+              if (number === 2) {
+                const baseNumber = 4;
+                return await findNextAvailableNumber(baseNumber, 2);
+              }
+              if (number === 3) {
+                const baseNumber = 6;
+                return await findNextAvailableNumber(baseNumber, 2);
+              }
+            } else if (letter === 'C') {
+              if (parkId === 2) {
+                if (number === 1) return 8;
+                if (number === 2) {
+                  const baseNumber = 10;
+                  return await findNextAvailableNumber(baseNumber, 2);
+                }
+                if (number === 3) {
+                  const baseNumber = 12;
+                  return await findNextAvailableNumber(baseNumber, 2);
+                }
+                if (number === 4) {
+                  const baseNumber = 14;
+                  return await findNextAvailableNumber(baseNumber, 2);
+                }
+                if (number === 5) {
+                  const baseNumber = 16;
+                  return await findNextAvailableNumber(baseNumber, 2);
+                }
+              } else {
+                if (number === 1) return 7;
+                if (number === 2) {
+                  const baseNumber = 9;
+                  return await findNextAvailableNumber(baseNumber, 2);
+                }
+                if (number === 3) {
+                  const baseNumber = 11;
+                  return await findNextAvailableNumber(baseNumber, 2);
+                }
+                if (number === 4) {
+                  const baseNumber = 13;
+                  return await findNextAvailableNumber(baseNumber, 2);
+                }
+                if (number === 5) {
+                  const baseNumber = 15;
+                  return await findNextAvailableNumber(baseNumber, 2);
+                }
+              }
+            } else if (letter === 'B') {
+              if (parkId === 2) {
+                const baseNumber = 14 + number * 2;
+                return await findNextAvailableNumber(baseNumber, 2);
+              } else {
+                const baseNumber = 13 + number * 2;
+                return await findNextAvailableNumber(baseNumber, 2);
+              }
+            }
+
+            return '-';
+          };
+
+          // Usar la función modificada para obtener el número de radio
+          const radioNumber = await modifiedGetRadioNumber(assignmentValue, brigade.park?.id_parque);
+          radioAssignments.push(radioNumber);
+        } else {
+          radioAssignments.push('');
+        }
+      }
 
       // Ahora construir el cuerpo de la tabla con los números de radio calculados
       const headers = ['Nombre', 'Puesto', 'Turno', 'Asignación', 'Vehículos'];
@@ -748,9 +872,7 @@ const BrigadeDetail = () => {
         }
       });
 
-      // El resto de la función para los comentarios y datos adicionales
       if (guardDetails) {
-        // Mantener la misma lógica para los comentarios que ya tenías
         const commentsData = guardDetails.guard || guardDetails;
         const commentFieldsRow1 = ['revision', 'practica', 'basura'];
         const commentFieldsRow2 = ['anotaciones', 'incidencias_de_trafico', 'mando'];
@@ -791,6 +913,7 @@ const BrigadeDetail = () => {
       alert('Ha ocurrido un error al generar el PDF. Por favor, inténtelo de nuevo.');
     }
   };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!brigade) return <div>No brigade data available.</div>;

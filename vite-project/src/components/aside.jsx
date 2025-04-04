@@ -87,7 +87,7 @@ const Aside = ({ className }) => {
 
   return (
     <aside
-    className={`w-64 h-screen overflow-y-auto ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'} ${className}`}
+      className={`w-64 h-screen overflow-y-auto ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'} ${className}`}
 
     >
       <nav className="mt-6">
@@ -253,28 +253,13 @@ const Aside = ({ className }) => {
           <FontAwesomeIcon icon={faLightbulb} className="w-5 h-5 mr-2" />
           Sugerencias
         </a>
-        
-        {/* Organización */}
+
         {(userType === 'jefe' || userType === 'mando') && (
-          <div className="relative">
-            <button onClick={() => toggleDropdown('organization')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-              <span className="flex items-center">
-                <FontAwesomeIcon icon={faSitemap} className="w-5 h-5 mr-2" />
-                Organización
-              </span>
-              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.organization ? 'rotate-180' : ''}`} />
-            </button>
-            {dropdownOpen.organization && (
-              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                <a href="/transfers" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
-                  <FontAwesomeIcon icon={faExchangeAlt} className="w-5 h-5 mr-2" />
-                  Traslados</a>               
-                <a href="/rubish" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
-                  <FontAwesomeIcon icon={faTrashAlt} className="w-5 h-5 mr-2" />
-                  Limpieza</a>              
-              </div>
-            )}
-          </div>
+          <a href="/transfers" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
+            <FontAwesomeIcon icon={faExchangeAlt} className="w-5 h-5 mr-2" />
+            Traslados
+          </a>
+
         )}
       </nav>
     </aside>

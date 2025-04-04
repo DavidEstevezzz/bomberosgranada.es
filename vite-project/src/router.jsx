@@ -62,7 +62,6 @@ const router = createBrowserRouter([
       { path: 'incidents', element: <ProtectedRoute element={<Incidents />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'transfers', element: <ProtectedRoute element={<Transfers />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'horas-requerimientos',element: <ProtectedRoute element={<HorasOfrecidas />} rolesAllowed={['Jefe', 'Mando']} /> },
-      { path: 'rubish', element: <ProtectedRoute element={<RubishList />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'personal-equipment', element: <ProtectedRoute element={<PersonalEquipment />} rolesAllowed={['Jefe', 'Mando']} /> },
 
 

@@ -14,6 +14,7 @@ import {
   faExclamationTriangle,
   faLightbulb,
   faExchangeAlt,
+  faFilePdf,
   faSitemap,
   faTrashAlt,
   faRadio // Icono para equipos de radio

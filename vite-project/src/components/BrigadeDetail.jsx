@@ -1057,7 +1057,8 @@ const BrigadeDetail = () => {
         },
         headStyles: { 
           fillColor: [52, 73, 94], 
-          textColor: pdfHeaderTextColor, 
+          textColor: fixedHeaderTextColor, 
+          fontStyle: 'bold',
           fontSize: fontSize + 1 
         },
         alternateRowStyles: { fillColor: [240, 240, 240] },
@@ -1149,15 +1150,19 @@ const BrigadeDetail = () => {
         
         // Si no hay suficiente espacio, empezar en nueva página
         let commentStartY = finalY + 5;
+        let titleWritten = false;
+        
         if (remainingHeight < estimatedTablesHeight) {
           doc.addPage();
           commentStartY = 20; // Empezar cerca del inicio de la nueva página
-          
-          // Repetir el título en la nueva página
+          // No escribimos el título aquí, lo haremos después
+        } else {
+          // Solo escribimos el título si hay espacio en la página actual
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(12);
           doc.setTextColor(40, 40, 40);
-          doc.text('DATOS ADICIONALES DEL SERVICIO', pageWidth / 2, 10, { align: 'center' });
+          doc.text('DATOS ADICIONALES DEL SERVICIO', pageWidth / 2, finalY, { align: 'center' });
+          titleWritten = true;
         }
         
         // Primera tabla de comentarios (mejorada)
@@ -1185,7 +1190,18 @@ const BrigadeDetail = () => {
           },
           margin: { horizontal: 10 },
           // Evitar división entre páginas
-          rowPageBreak: 'avoid'
+          rowPageBreak: 'avoid',
+          // Verificamos si necesitamos añadir el título antes de la tabla
+          didDrawPage: function(data) {
+            if (!titleWritten && data.pageCount > 1) {
+              // Añadir título en nueva página solo si no se ha escrito ya
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(12);
+              doc.setTextColor(40, 40, 40);
+              doc.text('DATOS ADICIONALES DEL SERVICIO', pageWidth / 2, 10, { align: 'center' });
+              titleWritten = true;
+            }
+          }
         });
   
         // Segunda tabla de comentarios (mejorada)

@@ -38,6 +38,7 @@ import Transfers from './views/TransferList.jsx';
 import HorasOfrecidas from './views/HoursCountTable.jsx';
 import RubishList from './views/RubishList.jsx';
 import PersonalEquipment from './views/PersonalEquipment.jsx';
+import PdfViewerPage from './views/PdfViewerPage.jsx';
 
 
 const router = createBrowserRouter([
@@ -63,7 +64,7 @@ const router = createBrowserRouter([
       { path: 'transfers', element: <ProtectedRoute element={<Transfers />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'horas-requerimientos',element: <ProtectedRoute element={<HorasOfrecidas />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'personal-equipment', element: <ProtectedRoute element={<PersonalEquipment />} rolesAllowed={['Jefe', 'Mando']} /> },
-
+      { path: '/pdf', element: <ProtectedRoute element={<PdfViewerPage  />} rolesAllowed={['Jefe', 'Mando']} /> },
 
 
 

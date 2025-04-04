@@ -259,8 +259,16 @@ const Aside = ({ className }) => {
             <FontAwesomeIcon icon={faExchangeAlt} className="w-5 h-5 mr-2" />
             Traslados
           </a>
-
         )}
+
+      {(userType === 'jefe' || userType === 'mando') && (
+          <a href="/pdf" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
+            <FontAwesomeIcon icon={faFilePdf} className="w-5 h-5 mr-2" />
+            Parte Jefatura
+          </a>
+        )}
+
+        
       </nav>
     </aside>
   );

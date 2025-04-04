@@ -1,0 +1,141 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\PdfDocument;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
+
+class PdfDocumentController extends Controller
+{
+    /**
+     * Obtener el documento PDF más reciente.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getLatest()
+    {
+        $document = PdfDocument::latest()->first();
+        
+        if (!$document) {
+            return response()->json(['message' => 'No hay documentos disponibles'], 404);
+        }
+        
+        return response()->json($document);
+    }
+
+    /**
+     * Subir un nuevo documento PDF.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function upload(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'pdf_file' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
+        ]);
+
+        try {
+            // Si existe un documento previo, lo eliminamos
+            $existingDocuments = PdfDocument::all();
+            foreach ($existingDocuments as $doc) {
+                Storage::delete($doc->file_path);
+                $doc->delete();
+            }
+
+            $file = $request->file('pdf_file');
+            $originalName = $file->getClientOriginalName();
+            $fileSize = $file->getSize();
+            
+            // Crear un nombre único para el archivo
+            $filename = Str::random(40) . '.' . $file->getClientOriginalExtension();
+            
+            // Guardar el archivo en el almacenamiento
+            $path = $file->storeAs('pdfs', $filename, 'public');
+            
+            // Crear el registro en la base de datos
+            $document = PdfDocument::create([
+                'title' => $request->title,
+                'filename' => $filename,
+                'original_filename' => $originalName,
+                'file_path' => $path,
+                'file_size' => $fileSize,
+                'uploaded_by' => Auth::id(),
+            ]);
+            
+            return response()->json([
+                'message' => 'Documento PDF subido correctamente',
+                'document' => $document
+            ], 201);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al subir el documento',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mostrar un documento PDF específico.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        $document = PdfDocument::findOrFail($id);
+        
+        // Comprobar si el archivo existe físicamente
+        if (!Storage::disk('public')->exists($document->file_path)) {
+            return response()->json(['message' => 'Archivo no encontrado'], 404);
+        }
+        
+        return response()->file(storage_path('app/public/' . $document->file_path));
+    }
+
+    /**
+     * Descargar un documento PDF.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function download($id)
+    {
+        $document = PdfDocument::findOrFail($id);
+        
+        if (!Storage::disk('public')->exists($document->file_path)) {
+            return response()->json(['message' => 'Archivo no encontrado'], 404);
+        }
+        
+        return response()->download(
+            storage_path('app/public/' . $document->file_path),
+            $document->original_filename
+        );
+    }
+
+    /**
+     * Eliminar un documento PDF.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        $document = PdfDocument::findOrFail($id);
+        
+        // Eliminar el archivo físico
+        if (Storage::disk('public')->exists($document->file_path)) {
+            Storage::disk('public')->delete($document->file_path);
+        }
+        
+        // Eliminar el registro de la base de datos
+        $document->delete();
+        
+        return response()->json(['message' => 'Documento eliminado correctamente']);
+    }
+}

@@ -184,7 +184,14 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::put('/users/{id}/update-traslado', [UserController::class, 'updateTraslado']);
     Route::put('/users/{id}/{field}', [UserController::class, 'updateUserField']);
 
-
+    Route::prefix('pdf-documents')->group(function () {
+        Route::get('/latest', [PdfDocumentController::class, 'getLatest']);
+        Route::post('/upload', [PdfDocumentController::class, 'upload']);
+        Route::get('/{id}', [PdfDocumentController::class, 'show']);
+        Route::get('/{id}/download', [PdfDocumentController::class, 'download']);
+        Route::delete('/{id}', [PdfDocumentController::class, 'destroy']);
+    });
+    
     // CRUD de Parques
     Route::post('/parks', [ParkController::class, 'store']);
     Route::put('/parks/{id_parque}', [ParkController::class, 'update']);

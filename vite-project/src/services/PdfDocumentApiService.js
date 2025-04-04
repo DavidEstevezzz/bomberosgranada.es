@@ -16,6 +16,7 @@ class PdfDocumentApiService {
    * @param {FormData} formData - Contiene title y pdf_file
    */
   async uploadDocument(formData) {
+    // Se quita la configuración manual del header para que Axios lo gestione
     return await BaseApiService.post(`${API_URL}/upload`, formData);
   }
 

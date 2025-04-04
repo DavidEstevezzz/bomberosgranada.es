@@ -40,7 +40,7 @@ class PdfDocumentController extends Controller
 
         $request->validate([
             'title' => 'required|string|max:255',
-            'pdf_file' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
+            //'pdf_file' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
         ]);
 
         try {

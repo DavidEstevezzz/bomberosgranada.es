@@ -22,6 +22,7 @@ use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\SuggestionController;
 use App\Http\Controllers\SuggestionVoteController;
 use App\Http\Controllers\PersonalEquipmentController;
+use App\Http\Controllers\PdfDocumentController;
 
 
 
@@ -191,7 +192,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
         Route::get('/{id}/download', [PdfDocumentController::class, 'download']);
         Route::delete('/{id}', [PdfDocumentController::class, 'destroy']);
     });
-    
+
     // CRUD de Parques
     Route::post('/parks', [ParkController::class, 'store']);
     Route::put('/parks/{id_parque}', [ParkController::class, 'update']);

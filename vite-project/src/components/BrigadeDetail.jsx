@@ -1056,8 +1056,8 @@ const BrigadeDetail = () => {
           fontSize: fontSize
         },
         headStyles: { 
-          fillColor: [52, 73, 94], 
-          textColor: fixedHeaderTextColor, 
+          fillColor: [52, 73, 94], // Color gris fijo igual que las tablas inferiores
+          textColor: [255, 255, 255], // Texto blanco
           fontStyle: 'bold',
           fontSize: fontSize + 1 
         },

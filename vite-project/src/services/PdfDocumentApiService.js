@@ -16,11 +16,7 @@ class PdfDocumentApiService {
    * @param {FormData} formData - Contiene title y pdf_file
    */
   async uploadDocument(formData) {
-    return await BaseApiService.post(`${API_URL}/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    return await BaseApiService.post(`${API_URL}/upload`, formData);
   }
 
   /**

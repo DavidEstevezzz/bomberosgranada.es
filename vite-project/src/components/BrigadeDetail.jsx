@@ -1026,14 +1026,40 @@ const BrigadeDetail = () => {
         return [255, 255, 255];
       };
   
-      // Generar la tabla
+      // Calcular espacio disponible en la página
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const availableSpace = pageHeight - startY - 20; // 20 es margen de seguridad
+      
+      // Estimar altura necesaria para la tabla principal
+      // Aproximadamente 10 puntos por fila (considerando que cada fila tiene aprox. 9pts de alto + pequeño margen)
+      const estimatedTableHeight = (body.length * 10) + 15; // 15 para el encabezado
+      
+      // Ajustar el tamaño de fuente si la tabla es demasiado grande para la página
+      let fontSize = 9;
+      let cellPadding = 2.5;
+      
+      if (estimatedTableHeight > availableSpace && body.length > 10) {
+        // Reducir tamaño si hay muchas filas y no caben
+        fontSize = Math.max(7, fontSize - Math.ceil((estimatedTableHeight - availableSpace) / 100));
+        cellPadding = Math.max(1.5, cellPadding - 0.5);
+      }
+      
+      // Generar la tabla con configuración para evitar divisiones entre páginas
       doc.autoTable({
         startY,
         head: [headers],
         body: body,
         theme: 'striped',
-        styles: { halign: 'center', cellPadding: 2.5, fontSize: 9 },
-        headStyles: { fillColor: pdfHeaderFillColor, textColor: pdfHeaderTextColor, fontSize: 10 },
+        styles: { 
+          halign: 'center', 
+          cellPadding: cellPadding, 
+          fontSize: fontSize
+        },
+        headStyles: { 
+          fillColor: [52, 73, 94], 
+          textColor: pdfHeaderTextColor, 
+          fontSize: fontSize + 1 
+        },
         alternateRowStyles: { fillColor: [240, 240, 240] },
         margin: { top: startY, horizontal: 10 },
         didParseCell: function (data) {
@@ -1043,6 +1069,15 @@ const BrigadeDetail = () => {
             const bgColor = getNameCellBgColor(assignmentValue, employee.puesto);
             data.cell.styles.fillColor = bgColor;
           }
+        },
+        // Evitar división de filas entre páginas
+        rowPageBreak: 'avoid',
+        // Si no cabe toda la tabla, ponerla en la siguiente página
+        startY: function(pageCount, doc) {
+          if (pageCount > 1 && estimatedTableHeight > availableSpace) {
+            return 10; // Empezar casi al principio de la nueva página
+          }
+          return startY;
         }
       });
   
@@ -1108,9 +1143,26 @@ const BrigadeDetail = () => {
         const fixedHeaderColor = [52, 73, 94]; // Azul oscuro/gris
         const fixedHeaderTextColor = [255, 255, 255]; // Blanco
         
+        // Verificar espacio disponible para tablas de comentarios
+        const remainingHeight = doc.internal.pageSize.getHeight() - finalY - 30; // 30 margen de seguridad
+        const estimatedTablesHeight = 80; // Aproximado para dos tablas con sus encabezados
+        
+        // Si no hay suficiente espacio, empezar en nueva página
+        let commentStartY = finalY + 5;
+        if (remainingHeight < estimatedTablesHeight) {
+          doc.addPage();
+          commentStartY = 20; // Empezar cerca del inicio de la nueva página
+          
+          // Repetir el título en la nueva página
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.setTextColor(40, 40, 40);
+          doc.text('DATOS ADICIONALES DEL SERVICIO', pageWidth / 2, 10, { align: 'center' });
+        }
+        
         // Primera tabla de comentarios (mejorada)
         doc.autoTable({
-          startY: finalY + 5,
+          startY: commentStartY,
           head: [headersRow1],
           body: [valuesRow1],
           theme: 'grid',
@@ -1131,7 +1183,9 @@ const BrigadeDetail = () => {
           bodyStyles: {
             halign: 'center' // Asegurar que el contenido esté centrado
           },
-          margin: { horizontal: 10 }
+          margin: { horizontal: 10 },
+          // Evitar división entre páginas
+          rowPageBreak: 'avoid'
         });
   
         // Segunda tabla de comentarios (mejorada)
@@ -1157,7 +1211,9 @@ const BrigadeDetail = () => {
           bodyStyles: {
             halign: 'center' // Asegurar que el contenido esté centrado
           },
-          margin: { horizontal: 10 }
+          margin: { horizontal: 10 },
+          // Evitar división entre páginas
+          rowPageBreak: 'avoid'
         });
         
         // Añadir pie de página con fecha de generación

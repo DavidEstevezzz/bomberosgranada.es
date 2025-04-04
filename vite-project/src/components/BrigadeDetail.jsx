@@ -588,17 +588,66 @@ const BrigadeDetail = () => {
     try {
       // Iniciar el PDF
       const doc = new jsPDF();
-      doc.addImage(logo, 'PNG', 10, 10, 20, 30);
-      doc.setFont('helvetica', 'bold');
       const pageWidth = doc.internal.pageSize.getWidth();
       const parqueNombre = brigade?.park ? brigade.park.nombre : 'Parque no disponible';
       const brigadeNombre = brigade ? brigade.nombre : 'Brigada no disponible';
       const fechaCompleta = dayjs(selectedDate).format('[Día] D [de] MMMM [de] YYYY');
+      
+      // Barra de color en la parte superior
+      let headerColor;
+      if (brigade?.nombre === 'Brigada A') {
+        headerColor = [34, 197, 94]; // verde
+      } else if (brigade?.nombre === 'Brigada B') {
+        headerColor = [250, 250, 250]; // blanco
+      } else if (brigade?.nombre === 'Brigada C') {
+        headerColor = [59, 130, 246]; // azul
+      } else if (brigade?.nombre === 'Brigada D') {
+        headerColor = [220, 38, 38]; // rojo
+      } else if (brigade?.nombre === 'Brigada E') {
+        headerColor = [253, 224, 71]; // amarillo
+      } else if (brigade?.nombre === 'Brigada F') {
+        headerColor = [209, 213, 219]; // gris
+      } else {
+        headerColor = [150, 154, 133]; // gris verde
+      }
+      
+      // Añadir rectángulo de color en la parte superior
+      doc.setFillColor(...headerColor);
+      doc.rect(0, 0, pageWidth, 35, 'F');
+      
+      // Añadir logo con mejor posición
+      doc.addImage(logo, 'PNG', 10, 5, 18, 25);
+      
+      // Línea separadora debajo del encabezado de color
+      doc.setDrawColor(100, 100, 100);
+      doc.setLineWidth(0.3);
+      doc.line(0, 35, pageWidth, 35);
+      
+      // Configurar textos del encabezado
+      doc.setFont('helvetica', 'bold');
+      
+      // Determinar color de texto basado en el fondo
+      let textColor;
+      if (brigade?.nombre === 'Brigada B' || brigade?.nombre === 'Brigada E') {
+        textColor = [0, 0, 0]; // negro para fondos claros
+      } else {
+        textColor = [255, 255, 255]; // blanco para fondos oscuros
+      }
+      
+      // Título y subtítulos con mejor posicionamiento
+      doc.setTextColor(...textColor);
       doc.setFontSize(16);
-      doc.text(parqueNombre, pageWidth / 2, 20, { align: 'center' });
-      doc.text(brigadeNombre, pageWidth / 2, 30, { align: 'center' });
+      doc.text(brigadeNombre, 40, 15);
+      
       doc.setFontSize(14);
-      doc.text(fechaCompleta, pageWidth / 2, 40, { align: 'center' });
+      doc.text(parqueNombre, 40, 25);
+      
+      // Fecha con formato elegante a la derecha
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'italic');
+      doc.text(fechaCompleta, pageWidth - 10, 20, { align: 'right' });
+      
+      // Espacio para comenzar la tabla
       const startY = 45;
   
       // Configuración de colores para el PDF

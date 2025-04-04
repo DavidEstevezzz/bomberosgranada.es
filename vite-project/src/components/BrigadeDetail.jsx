@@ -1104,6 +1104,10 @@ const BrigadeDetail = () => {
         
         const commentHeaderFillColor = darkenColor(headerFillColor);
         
+        // Color fijo para los encabezados de ambas tablas
+        const fixedHeaderColor = [52, 73, 94]; // Azul oscuro/gris
+        const fixedHeaderTextColor = [255, 255, 255]; // Blanco
+        
         // Primera tabla de comentarios (mejorada)
         doc.autoTable({
           startY: finalY + 5,
@@ -1115,13 +1119,17 @@ const BrigadeDetail = () => {
             cellPadding: 5,
             lineWidth: 0.1,
             lineColor: [200, 200, 200],
-            halign: 'left',
+            halign: 'center', // Texto centrado
             valign: 'middle'
           },
           headStyles: { 
-            fillColor: commentHeaderFillColor, 
-            textColor: pdfHeaderTextColor,
-            fontStyle: 'bold'
+            fillColor: fixedHeaderColor, 
+            textColor: fixedHeaderTextColor,
+            fontStyle: 'bold',
+            halign: 'center' // Asegurar que los encabezados estén centrados
+          },
+          bodyStyles: {
+            halign: 'center' // Asegurar que el contenido esté centrado
           },
           margin: { horizontal: 10 }
         });
@@ -1137,13 +1145,17 @@ const BrigadeDetail = () => {
             cellPadding: 5,
             lineWidth: 0.1,
             lineColor: [200, 200, 200],
-            halign: 'left',
+            halign: 'center', // Texto centrado
             valign: 'middle'
           },
           headStyles: { 
-            fillColor: commentHeaderFillColor, 
-            textColor: pdfHeaderTextColor,
-            fontStyle: 'bold'
+            fillColor: fixedHeaderColor, 
+            textColor: fixedHeaderTextColor,
+            fontStyle: 'bold',
+            halign: 'center' // Asegurar que los encabezados estén centrados
+          },
+          bodyStyles: {
+            halign: 'center' // Asegurar que el contenido esté centrado
           },
           margin: { horizontal: 10 }
         });

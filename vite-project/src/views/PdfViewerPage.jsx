@@ -55,6 +55,7 @@ const PdfViewerPage = () => {
   // Manejar cambio en el input de archivo
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
+    console.log("Selected File in handleFileChange:", selectedFile); // Add this line
     if (selectedFile && selectedFile.type === 'application/pdf') {
       setFile(selectedFile);
       // Usar el nombre del archivo como título por defecto (sin la extensión)
@@ -85,16 +86,23 @@ const PdfViewerPage = () => {
     setError(null);
     setUploadSuccess(false);
 
+    console.log("File state before upload:", file); // Debugging log
+
     const formData = new FormData();
     formData.append('title', title);
     formData.append('pdf_file', file);
+
+    console.log("FormData contents:"); // Debugging log
+    for (const pair of formData.entries()) {
+      console.log(pair[0] + ', ' + pair[1]);
+    }
 
     try {
       const response = await PdfDocumentApiService.uploadDocument(formData);
       setCurrentDocument(response.data.document);
       setPdfUrl(PdfDocumentApiService.getDocumentUrl(response.data.document.id));
       setUploadSuccess(true);
-      
+
       // Resetear formulario
       setTitle('');
       setFile(null);

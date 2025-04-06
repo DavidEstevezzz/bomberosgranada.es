@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\GuardAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Guard;
 
 class GuardAssignmentController extends Controller
 {
@@ -124,5 +125,26 @@ class GuardAssignmentController extends Controller
             'message' => 'Assignment updated or created successfully',
             'assignment' => $assignment
         ], 200);
+    }
+
+    public function getGuardIdByDateAndParque(Request $request)
+    {
+        // Validar los parámetros de entrada
+        $validated = $request->validate([
+            'date'      => 'required|date',
+            'id_parque' => 'required|integer',
+        ]);
+
+        // Buscar la guardia según la fecha y el id_parque
+        $guard = Guard::where('date', $validated['date'])
+                      ->where('id_parque', $validated['id_parque'])
+                      ->first();
+
+        if (!$guard) {
+            return response()->json(['message' => 'Guardia no encontrada'], 404);
+        }
+
+        // Retornar el id de la guardia encontrada
+        return response()->json(['id_guardia' => $guard->id], 200);
     }
 }

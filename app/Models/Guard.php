@@ -12,6 +12,7 @@ class Guard extends Model
     protected $fillable = [
         'date',
         'id_brigada',
+        'id_parque',
         'id_salario',
         'tipo',
         'comentarios',

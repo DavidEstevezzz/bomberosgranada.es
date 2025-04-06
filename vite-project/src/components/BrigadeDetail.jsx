@@ -217,10 +217,6 @@ const BrigadeDetail = () => {
       return;
     }
 
-    if (!window.confirm('¿Estás seguro de que deseas resetear todas las asignaciones de equipos para este parque y fecha? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
     setIsResettingEquipments(true);
     try {
       const response = await PersonalEquipmentApiService.resetEquipmentAssignments(
@@ -229,7 +225,7 @@ const BrigadeDetail = () => {
       );
       
       if (response && response.data && response.data.success) {
-        alert(`Asignaciones reseteadas correctamente: ${response.data.message}`);
+        //alert(`Asignaciones reseteadas correctamente: ${response.data.message}`);
         
         // Recargar datos para actualizar la interfaz
         handleRefreshData();

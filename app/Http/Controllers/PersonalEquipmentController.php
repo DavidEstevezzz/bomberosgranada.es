@@ -236,23 +236,26 @@ class PersonalEquipmentController extends Controller
     // Verificar si estamos en el parque Sur (parkId = 2)
     $esPar = ($parkId == 2);
     
-    // Obtener la primera letra y el número de la asignación
+    // Limpiar y obtener la primera letra y el número de la asignación
+    $assignment = trim($assignment);
     $firstLetter = substr($assignment, 0, 1);
-    $number = substr($assignment, 1);
+    $number = preg_replace('/[^0-9]/', '', $assignment); // Asegurar que sea solo números
     
     // Clave específica para Sur (ejemplo: B1S)
     $suAssignment = $firstLetter . $number . 'S';
+    
+    // Log adicional para diagnóstico
+    Log::info("Assignment limpio: $assignment, First letter: $firstLetter, Number: $number, Sur Assignment: $suAssignment");
+    Log::info("¿Existe $suAssignment en reservedNumbers? " . (isset($this->reservedNumbers[$suAssignment]) ? "Sí" : "No"));
+    if (isset($this->reservedNumbers[$suAssignment])) {
+        Log::info("¿Existe $categoria para $suAssignment? " . (isset($this->reservedNumbers[$suAssignment][$categoria]) ? "Sí" : "No"));
+    }
     
     // Verificar si existe una entrada específica para Sur
     if ($esPar && isset($this->reservedNumbers[$suAssignment]) && isset($this->reservedNumbers[$suAssignment][$categoria])) {
         return $this->reservedNumbers[$suAssignment][$categoria];
     }   
 
-    // Dentro de getReservedNumber, agrega estos logs:
-Log::info("Assignment: $assignment, Parque: $parkId, Categoría: $categoria");
-Log::info("First letter: $firstLetter, Number: $number, Sur Assignment: $suAssignment");
-Log::info("¿Existe entrada específica para Sur? " . (($esPar && isset($this->reservedNumbers[$suAssignment]) && isset($this->reservedNumbers[$suAssignment][$categoria])) ? "Sí" : "No"));
-    
     // Verificar si hay una entrada en la tabla para la asignación original
     if (isset($this->reservedNumbers[$assignment]) && isset($this->reservedNumbers[$assignment][$categoria])) {
         $numero = $this->reservedNumbers[$assignment][$categoria];

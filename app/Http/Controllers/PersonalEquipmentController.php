@@ -263,6 +263,20 @@ class PersonalEquipmentController extends Controller
     // Si no hay un número explícitamente definido, calcularlo según las reglas generales
     return $this->getInitialEquipmentNumber($firstLetter, $number, $parkId);
 }
+
+private function getAssignedNumbersByDateAndCategory($parque, $fecha, $categoria)
+{
+    $asignaciones = EquipmentAssignment::where('parque', $parque)
+        ->where('fecha', $fecha)
+        ->where('categoria', $categoria)
+        ->where('activo', true)
+        ->get();
+
+    // Extraer solo los números asignados para esta categoría específica
+    $numeros = $asignaciones->pluck('numero')->unique()->toArray();
+
+    return $numeros;
+}
     /**
      * Verificar disponibilidad y asignar equipos individualmente para un puesto específico
      * 
@@ -321,11 +335,11 @@ class PersonalEquipmentController extends Controller
         $equiposNoExistentes = [];
 
         // Mantener un conjunto de números ya asignados para esta fecha y parque
-        $numerosYaAsignados = $this->getAssignedNumbersByDate($parkId, $date);
-        Log::info("Números ya asignados para esta fecha: " . implode(", ", $numerosYaAsignados));
 
         foreach ($categoriasAVerificar as $categoria) {
             Log::info("Verificando categoría: $categoria para asignación $assignment");
+
+            $numerosYaAsignados = $this->getAssignedNumbersByDateAndCategory($parkId, $date, $categoria);
 
             // Obtener el número reservado para esta asignación y categoría
             $numeroReservado = $this->getReservedNumber($assignment, $categoria, $parkId);
@@ -475,29 +489,28 @@ class PersonalEquipmentController extends Controller
     $reservados = [];
     $esPar = ($parque == 2);
     
-    // Iterar sobre todas las asignaciones en la tabla de reservas
     foreach ($this->reservedNumbers as $asignacion => $equipos) {
         // Solo considerar la asignación si está en las asignaciones reales del día
         if (!in_array($asignacion, $currentAssignments)) {
             continue;
         }
         
-        // Verificar lógica para Sur/Norte como antes
-        if (($esPar && strpos($asignacion, 'S') === false && in_array(substr($asignacion, 0, 1), ['B', 'C'])) ||
-            (!$esPar && strpos($asignacion, 'S') !== false)) {
+        // Si estamos en Sur y la asignación no termina en 'S' (o viceversa), saltar según la lógica actual
+        if (
+            ($esPar && strpos($asignacion, 'S') === false && in_array(substr($asignacion, 0, 1), ['B', 'C'])) ||
+            (!$esPar && strpos($asignacion, 'S') !== false)
+        ) {
             continue;
         }
         
-        // CAMBIO IMPORTANTE: Solo reservar si existe la categoría específica que estamos buscando
         if (isset($equipos[$categoria])) {
             $numero = $equipos[$categoria];
-            
-            // Ajustar para parque Sur si es necesario
+            // Ajustar números para parque Sur si es necesario
             if ($esPar && in_array(substr($asignacion, 0, 1), ['B', 'C']) && $numero % 2 == 1) {
                 $numero += 1;
             }
             
-            // Guardar la reserva para esta asignación y esta categoría específica
+            // Extraer la asignación base (sin la 'S' final, si corresponde)
             $baseAssignment = preg_replace('/S$/', '', $asignacion);
             $reservados[$baseAssignment] = $numero;
         }

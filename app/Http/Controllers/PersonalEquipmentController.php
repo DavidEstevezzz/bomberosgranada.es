@@ -292,7 +292,7 @@ class PersonalEquipmentController extends Controller
                 // Mandos (N, S, Jefe de Guardia)
                 return [
                     'Portátil',
-                    'Micro-altavoz',
+                    'Micro',
                     'PTT',
                     'Linterna casco',
                     'Linterna pecho'
@@ -301,7 +301,7 @@ class PersonalEquipmentController extends Controller
                 // Conductores
                 return [
                     'Portátil',
-                    'Micro-altavoz',
+                    'Micro',
                     'Linterna casco',
                     'Linterna pecho'
                 ];

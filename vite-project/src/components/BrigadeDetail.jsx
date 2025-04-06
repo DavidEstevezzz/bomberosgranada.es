@@ -43,6 +43,7 @@ const BrigadeDetail = () => {
   const [showRequireFirefighterModal, setShowRequireFirefighterModal] = useState(false);
   const [showAssignFirefighterModal, setShowAssignFirefighterModal] = useState(false);
   const [isUpdatingPersonal, setIsUpdatingPersonal] = useState(false);
+  const [isResettingEquipments, setIsResettingEquipments] = useState(false);
   const navigate = useNavigate();
   const { darkMode } = useDarkMode();
 
@@ -205,6 +206,41 @@ const BrigadeDetail = () => {
       setFirefighters(Object.values(response.data.firefighters));
     } catch (error) {
       console.error('Error recargando datos:', error);
+    }
+  };
+
+  /**
+   * Función para resetear todas las asignaciones de equipos para el parque y fecha actuales
+   */
+  const handleResetEquipmentAssignments = async () => {
+    if (!user || !['mando', 'jefe'].includes(user.type)) {
+      return;
+    }
+
+    if (!window.confirm('¿Estás seguro de que deseas resetear todas las asignaciones de equipos para este parque y fecha? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    setIsResettingEquipments(true);
+    try {
+      const response = await PersonalEquipmentApiService.resetEquipmentAssignments(
+        brigade?.park?.id_parque || 1,
+        selectedDate
+      );
+      
+      if (response && response.data && response.data.success) {
+        alert(`Asignaciones reseteadas correctamente: ${response.data.message}`);
+        
+        // Recargar datos para actualizar la interfaz
+        handleRefreshData();
+      } else {
+        alert('Error al resetear las asignaciones de equipos');
+      }
+    } catch (error) {
+      console.error('Error al resetear las asignaciones de equipos:', error);
+      alert('Ha ocurrido un error al resetear las asignaciones de equipos');
+    } finally {
+      setIsResettingEquipments(false);
     }
   };
 
@@ -386,11 +422,12 @@ const BrigadeDetail = () => {
         const primaryAssignment = assignmentValue.split(',')[0].trim();
   
         try {
-          // Obtener equipos usando la nueva API
+          // Obtener equipos usando la nueva API y pasar la fecha
           const response = await PersonalEquipmentApiService.checkAndAssignEquipment({
             parkId: brigade?.park?.id_parque || 1,
             assignment: primaryAssignment,
-            maxAssignment
+            maxAssignment,
+            date: selectedDate // Incluir la fecha seleccionada
           });
   
           if (response && response.data && response.data.equipment_details) {
@@ -969,7 +1006,6 @@ const BrigadeDetail = () => {
           return startY;
         }
       });
-  
       // Añadir comentarios y otros detalles - SECCIÓN MEJORADA
       if (guardDetails) {
         // Título para la sección de datos adicionales
@@ -1138,7 +1174,7 @@ const BrigadeDetail = () => {
           'Asignación',
           'Portátil',
           'PTT',
-          'Micro-altavoz',
+          'Micro',
           'Linterna casco',
           'Linterna pecho'
         ];
@@ -1167,7 +1203,7 @@ const BrigadeDetail = () => {
               primaryAssignment,
               '-', // Portátil
               '-', // PTT
-              '-', // Micro-altavoz
+              '-', // Micro
               '-', // Linterna casco
               '-'  // Linterna pecho
             ];
@@ -1376,7 +1412,7 @@ const BrigadeDetail = () => {
         </button>
 
         {['mando', 'jefe'].includes(user.type) && (
-          <div className="flex gap-4 mt-4">
+          <div className="flex flex-wrap gap-4 mt-4">
             <button
               onClick={handleOpenModal}
               className="px-4 py-2 bg-green-500 text-white rounded"
@@ -1403,6 +1439,14 @@ const BrigadeDetail = () => {
               className="px-4 py-2 bg-teal-500 text-white rounded"
             >
               Asignar Baja Sobrevenida
+            </button>
+            {/* Botón para resetear asignaciones de equipos */}
+            <button
+              onClick={handleResetEquipmentAssignments}
+              className={`px-4 py-2 ${isResettingEquipments ? 'bg-gray-500' : 'bg-red-500'} text-white rounded`}
+              disabled={isResettingEquipments}
+            >
+              {isResettingEquipments ? 'Reseteando...' : 'Resetear Asignaciones'}
             </button>
           </div>
         )}
@@ -1549,3 +1593,4 @@ const BrigadeDetail = () => {
 
 
 export default BrigadeDetail;
+

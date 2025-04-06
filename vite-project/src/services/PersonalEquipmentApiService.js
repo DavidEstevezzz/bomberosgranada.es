@@ -15,6 +15,7 @@ class PersonalEquipmentApiService {
         return await BaseApiService.get(`${API_URL}/${id}`);
     }
 
+    // Verificar y asignar equipos para un bombero o mando
     async checkAndAssignEquipment(data) {
         return await BaseApiService.post(`${API_URL}/check-and-assign`, data);
     }
@@ -50,12 +51,24 @@ class PersonalEquipmentApiService {
     async toggleDisponibilidad(id) {
         return await BaseApiService.put(`${API_URL}/${id}/toggle-disponibilidad`);
     }
+    
+    // Obtener equipos por parque
     async getEquipmentsByPark(parkId) {
         return await BaseApiService.get(`${API_URL}/parque/${parkId}`);
     }
 
+    // Verificar disponibilidad de un equipo por número
     async checkEquipmentAvailability(equipmentNumber) {
         return await BaseApiService.get(`${API_URL}/check-availability/${equipmentNumber}`);
+    }
+    
+    // Resetear todas las asignaciones de equipos para un parque y fecha específica
+    async resetEquipmentAssignments(parkId, date = null) {
+        const data = {
+            parkId: parkId,
+            date: date
+        };
+        return await BaseApiService.post(`${API_URL}/reset-assignments`, data);
     }
 }
 

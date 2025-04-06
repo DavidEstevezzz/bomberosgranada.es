@@ -57,20 +57,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy'])
     ->where('parte', '.*');
 
-    Route::prefix('equipos-personales')->group(function () {
-        Route::get('/', [PersonalEquipmentController::class, 'index']);
-        Route::post('/', [PersonalEquipmentController::class, 'store']);
-        Route::get('/check-availability/{equipmentNumber}', [PersonalEquipmentController::class, 'checkAvailability']);
-        // Añadir esta nueva ruta
-        Route::post('/check-and-assign', [PersonalEquipmentController::class, 'checkAndAssignEquipment']);
-        Route::get('/parque/{parkId}', [PersonalEquipmentController::class, 'getByPark']);
-        Route::get('/{equipo}', [PersonalEquipmentController::class, 'show']);
-        Route::put('/{equipo}', [PersonalEquipmentController::class, 'update']);
-        Route::delete('/{equipo}', [PersonalEquipmentController::class, 'destroy']);
-        Route::put('/{equipo}/toggle-disponibilidad', [PersonalEquipmentController::class, 'toggleDisponibilidad']);
-    });
-    
-    Route::get('/categorias-equipos', [PersonalEquipmentController::class, 'getCategories']);
+    // Rutas para equipos personales
+Route::prefix('equipos-personales')->group(function () {
+    Route::get('/', [PersonalEquipmentController::class, 'index']);
+    Route::post('/', [PersonalEquipmentController::class, 'store']);
+    Route::get('/check-availability/{equipmentNumber}', [PersonalEquipmentController::class, 'checkAvailability']);
+    Route::post('/check-and-assign', [PersonalEquipmentController::class, 'checkAndAssignEquipment']);
+    Route::post('/reset-assignments', [PersonalEquipmentController::class, 'resetEquipmentAssignments']); // Esta ruta falta
+    Route::get('/parque/{parkId}', [PersonalEquipmentController::class, 'getByPark']);
+    Route::get('/{equipo}', [PersonalEquipmentController::class, 'show']);
+    Route::put('/{equipo}', [PersonalEquipmentController::class, 'update']);
+    Route::delete('/{equipo}', [PersonalEquipmentController::class, 'destroy']);
+    Route::put('/{equipo}/toggle-disponibilidad', [PersonalEquipmentController::class, 'toggleDisponibilidad']);
+});
+
+// Ruta para obtener categorías de equipos (fuera del grupo)
+Route::get('/categorias-equipos', [PersonalEquipmentController::class, 'getCategories']);
 
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);

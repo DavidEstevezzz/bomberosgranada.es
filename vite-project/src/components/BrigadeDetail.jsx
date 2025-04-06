@@ -407,10 +407,6 @@ const BrigadeDetail = () => {
         }
       }
     }
-  
-    return equipmentByFirefighter;
-  };
-
     return equipmentByFirefighter;
   };
 
@@ -1548,6 +1544,8 @@ const BrigadeDetail = () => {
       </div>
     </div>
   );
+
+};
 
 
 export default BrigadeDetail;

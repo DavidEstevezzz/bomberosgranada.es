@@ -497,27 +497,29 @@ private function getAssignedNumbersByDateAndCategory($parque, $fecha, $categoria
     $reservados = [];
     $esPar = ($parque == 2);
     
-    Log::info("getReservedNumbersForCategory para $categoria, parque $parque");
-    Log::info("CurrentAssignments: " . json_encode($currentAssignments));
+    // Convertir currentAssignments a un conjunto de asignaciones procesadas
+    $processedAssignments = [];
+    foreach ($currentAssignments as $assignment) {
+        $processedAssignments[] = $assignment;
+        // Para el parque sur, también considerar la versión con sufijo 'S'
+        if ($esPar && in_array(substr($assignment, 0, 1), ['B', 'C']) && substr($assignment, -1) !== 'S') {
+            $processedAssignments[] = $assignment . 'S';
+        }
+    }
     
     foreach ($this->reservedNumbers as $asignacion => $equipos) {
-        // Verificar si está en las asignaciones actuales
-        $estaEnAsignaciones = in_array($asignacion, $currentAssignments);
-        Log::info("Asignación $asignacion: ¿Está en currentAssignments? " . ($estaEnAsignaciones ? "Sí" : "No"));
-        
-        // Solo considerar la asignación si está en las asignaciones reales del día
-        if (!$estaEnAsignaciones) {
+        // Verificar si esta asignación está en nuestro conjunto procesado
+        if (!in_array($asignacion, $processedAssignments)) {
             continue;
         }
         
-        // Verificar la condición de filtrado por Sur/Norte
-        $pasaFiltroPorParque = !(
-            ($esPar && strpos($asignacion, 'S') === false && in_array(substr($asignacion, 0, 1), ['B', 'C'])) ||
-            (!$esPar && strpos($asignacion, 'S') !== false)
-        );
-        Log::info("Asignación $asignacion: ¿Pasa filtro por parque? " . ($pasaFiltroPorParque ? "Sí" : "No"));
+        // Si estamos en el parque sur, para B y C solo considerar versiones con 'S'
+        if ($esPar && in_array(substr($asignacion, 0, 1), ['B', 'C']) && substr($asignacion, -1) !== 'S') {
+            continue;
+        }
         
-        if (!$pasaFiltroPorParque) {
+        // Si estamos en el parque norte, para B y C solo considerar versiones sin 'S'
+        if (!$esPar && in_array(substr($asignacion, 0, 1), ['B', 'C']) && substr($asignacion, -1) === 'S') {
             continue;
         }
         
@@ -528,14 +530,12 @@ private function getAssignedNumbersByDateAndCategory($parque, $fecha, $categoria
                 $numero += 1;
             }
             
-            Log::info("Reservando para $asignacion el número $numero de $categoria");
-            // Extraer la asignación base (sin la 'S' final, si corresponde)
+            // Quitar el sufijo 'S' para guardar la asignación base
             $baseAssignment = preg_replace('/S$/', '', $asignacion);
             $reservados[$baseAssignment] = $numero;
         }
     }
     
-    Log::info("Números reservados finales: " . json_encode($reservados));
     return $reservados;
 }
 

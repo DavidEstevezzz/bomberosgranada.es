@@ -274,246 +274,229 @@ class PersonalEquipmentController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function checkAndAssignEquipment(Request $request)
-{
-    $request->validate([
-        'parkId'     => 'required|integer|in:1,2',
-        'assignment' => 'required|string',
-        'maxAssignment' => 'required|string',
-        'date'       => 'nullable|date' // Fecha opcional
-    ]);
-
-    $parkId        = $request->parkId;
-    $assignment    = strtoupper($request->assignment);
-    $maxAssignment = strtoupper($request->maxAssignment);
-    $date          = $request->date ?? now()->toDateString();
-
-    Log::info("Procesando asignación: $assignment, maxAssignment: $maxAssignment, parque: $parkId, fecha: $date");
-
-    // 1. Obtener las asignaciones reales para la fecha y parque usando el método del modelo
-    $guardAssignments = \App\Models\GuardAssignment::getAssignmentsByDateAndParque($date, $parkId);
-
-    if (!$guardAssignments || $guardAssignments->isEmpty()) {
-        Log::warning("No se encontraron asignaciones activas para la fecha $date y parque $parkId");
-        return response()->json([
-            'message' => 'No hay asignaciones activas para la fecha y parque indicados'
-        ], 404);
-    }
-
-    Log::info("Asignaciones activas para el día: " . $guardAssignments->implode(', '));
-
-    // 2. Verificar que la asignación recibida esté entre las activas
-    if (!$guardAssignments->contains($assignment)) {
-        Log::info("La asignación $assignment no está activa para la fecha $date y parque $parkId. No se reserva equipo.");
-        return response()->json([
-            'assignment' => $assignment,
-            'message'    => 'Esta asignación no está activa para el día actual, por lo que no se reservan equipos'
+    {
+        $request->validate([
+            'parkId' => 'required|integer|in:1,2',
+            'assignment' => 'required|string',
+            'maxAssignment' => 'required|string',
+            'date' => 'nullable|date' // Fecha opcional
         ]);
-    }
 
-    // 3. Filtrar el arreglo de reservas fijas para conservar solo las asignaciones activas
-    $activeReservedNumbers = array_intersect_key(
-        $this->reservedNumbers,
-        array_flip($guardAssignments->toArray())
-    );
-    Log::info("Números reservados activos: " . json_encode($activeReservedNumbers));
+        
+        $parkId = $request->parkId;
+        $assignment = strtoupper($request->assignment);
+        $maxAssignment = strtoupper($request->maxAssignment);
+        $date = $request->date ?? now()->toDateString();
 
-    // Si la asignación actual se encuentra entre las activas, continuamos:
-    // Determinar el rol basado en la primera letra de la asignación
-    $role = substr($assignment, 0, 1);
+        $currentAssignments = \App\Models\GuardAssignment::getAssignmentsByDateAndParque($date, $parkId)->toArray();
+        Log::info("Asignaciones obtenidaaaaaaas: " . json_encode($currentAssignments));
 
-    // Si es operador, devolver respuesta vacía porque no necesitan equipos
-    if ($role == 'O' || strpos($assignment, 'OPERADOR') !== false) {
-        Log::info("Asignación de Operador detectada, no se asignan equipos");
-        return response()->json([
-            'assignment'          => $assignment,
-            'initial_number'      => 0,
-            'equipment_assigned'  => [],
-            'equipment_details'   => [],
-            'unavailable_equipment' => [],
-            'nonexistent_equipment' => []
-        ]);
-    }
 
-    // Determinar las categorías a verificar según el rol
-    $categoriasAVerificar = $this->getCategoriasForRole($role);
-    Log::info("Rol: $role, Categorías a verificar: " . implode(", ", $categoriasAVerificar));
+        // Agregar logs para depuración
+        Log::info("Procesando asignación: $assignment, maxAssignment: $maxAssignment, parque: $parkId, fecha: $date");
 
-    // Asignar equipos individualmente
-    $equipoAsignado      = [];
-    $equiposNoDisponibles = [];
-    $equiposNoExistentes  = [];
+        // Determinar el rol basado en la primera letra de la asignación
+        $role = substr($assignment, 0, 1);
 
-    // Mantener un conjunto de números ya asignados para esta fecha y parque
-    $numerosYaAsignados = $this->getAssignedNumbersByDate($parkId, $date);
-    Log::info("Números ya asignados para esta fecha: " . implode(", ", $numerosYaAsignados));
+        // Si es operador, devolver respuesta vacía porque no necesitan equipos
+        if ($role == 'O' || strpos($assignment, 'OPERADOR') !== false) {
+            Log::info("Asignación de Operador detectada, no se asignan equipos");
+            return response()->json([
+                'assignment' => $assignment,
+                'initial_number' => 0,
+                'equipment_assigned' => [],
+                'equipment_details' => [],
+                'unavailable_equipment' => [],
+                'nonexistent_equipment' => []
+            ]);
+        }
 
-    foreach ($categoriasAVerificar as $categoria) {
-        Log::info("Verificando categoría: $categoria para asignación $assignment");
+        // Determinar las categorías a verificar según el rol
+        $categoriasAVerificar = $this->getCategoriasForRole($role);
+        Log::info("Rol: $role, Categorías a verificar: " . implode(", ", $categoriasAVerificar));
 
-        // Obtener el número reservado para esta asignación y categoría
-        $numeroReservado = $this->getReservedNumber($assignment, $categoria, $parkId);
-        Log::info("Número reservado para $assignment - $categoria: $numeroReservado");
+        // Asignar equipos individualmente
+        $equipoAsignado = [];
+        $equiposNoDisponibles = [];
+        $equiposNoExistentes = [];
 
-        // PASO 1: Intentar asignar primero el número reservado según la tabla
-        $asignacionCompletada = false;
+        // Mantener un conjunto de números ya asignados para esta fecha y parque
+        $numerosYaAsignados = $this->getAssignedNumbersByDate($parkId, $date);
+        Log::info("Números ya asignados para esta fecha: " . implode(", ", $numerosYaAsignados));
 
-        // Comprobar si el equipo con el número reservado existe
-        $equipoExiste = $this->checkEquipmentExists($categoria, $numeroReservado);
+        foreach ($categoriasAVerificar as $categoria) {
+            Log::info("Verificando categoría: $categoria para asignación $assignment");
 
-        if ($equipoExiste) {
-            // Verificar si el número ya ha sido asignado para esta categoría en esta fecha
-            $yaAsignado = $this->isEquipmentAlreadyAssigned($categoria, $numeroReservado, $parkId, $date);
+            // Obtener el número reservado para esta asignación y categoría
+            $numeroReservado = $this->getReservedNumber($assignment, $categoria, $parkId);
+            Log::info("Número reservado para $assignment - $categoria: $numeroReservado");
 
-            if (!$yaAsignado) {
-                // Comprobar si el equipo está disponible en general
-                $disponible = $this->isEquipmentAvailable($categoria, $numeroReservado);
+            // PASO 1: Intentar asignar primero el número reservado según la tabla
+            $asignacionCompletada = false;
 
-                if ($disponible) {
-                    $equipoAsignado[$categoria] = $numeroReservado;
+            // Comprobar si el equipo con el número reservado existe
+            $equipoExiste = $this->checkEquipmentExists($categoria, $numeroReservado);
+
+            if ($equipoExiste) {
+                // Verificar si el número ya ha sido asignado para esta categoría en esta fecha
+                $yaAsignado = $this->isEquipmentAlreadyAssigned($categoria, $numeroReservado, $parkId, $date);
+
+                if (!$yaAsignado) {
+                    // Comprobar si el equipo está disponible en general
+                    $disponible = $this->isEquipmentAvailable($categoria, $numeroReservado);
+
+                    if ($disponible) {
+                        $equipoAsignado[$categoria] = $numeroReservado;
+
+                        // Marcar este equipo como asignado en la base de datos
+                        $this->markEquipmentAsAssigned(
+                            $categoria,
+                            $numeroReservado,
+                            $parkId,
+                            $assignment,
+                            $date
+                        );
+
+                        // Añadir al conjunto de números asignados
+                        $numerosYaAsignados[] = $numeroReservado;
+
+                        Log::info("Asignado número reservado para $categoria: $numeroReservado - COINCIDE CON REGLA");
+                        $asignacionCompletada = true;
+                    } else {
+                        Log::info("Equipo $categoria $numeroReservado existe pero no está disponible");
+                        $equiposNoDisponibles[] = "$categoria $numeroReservado";
+                    }
+                } else {
+                    Log::info("Equipo $categoria $numeroReservado ya asignado a otro en esta fecha");
+                    $equiposNoDisponibles[] = "$categoria $numeroReservado (ya asignado)";
+                }
+            } else {
+                Log::info("Equipo $categoria $numeroReservado no existe en el sistema");
+                $equiposNoExistentes[] = "$categoria $numeroReservado";
+            }
+
+            // PASO 2: Si no se pudo asignar el número reservado, buscar alternativas
+            if (!$asignacionCompletada) {
+                Log::info("Buscando alternativa para $categoria, ya que el número reservado $numeroReservado no está disponible");
+
+                // Obtener un rango para buscar alternativas
+                $rangoBusqueda = $this->calcularRangoBusqueda($role, $parkId);
+
+                // Buscar el número más cercano disponible
+                $numeroAlternativo = $this->findAvailableInRange(
+                    $categoria,
+                    $numeroReservado,
+                    $rangoBusqueda['min'],
+                    $rangoBusqueda['max'],
+                    $parkId,
+                    $date,
+                    $numerosYaAsignados,
+                    $assignment,
+                    $currentAssignments // Agregar este parámetro
+                );
+
+                if ($numeroAlternativo !== null) {
+                    $equipoAsignado[$categoria] = $numeroAlternativo;
 
                     // Marcar este equipo como asignado en la base de datos
                     $this->markEquipmentAsAssigned(
                         $categoria,
-                        $numeroReservado,
+                        $numeroAlternativo,
                         $parkId,
                         $assignment,
                         $date
                     );
 
                     // Añadir al conjunto de números asignados
-                    $numerosYaAsignados[] = $numeroReservado;
+                    $numerosYaAsignados[] = $numeroAlternativo;
 
-                    Log::info("Asignado número reservado para $categoria: $numeroReservado - COINCIDE CON REGLA");
-                    $asignacionCompletada = true;
+                    Log::info("Asignado número alternativo para $categoria: $numeroAlternativo");
                 } else {
-                    Log::info("Equipo $categoria $numeroReservado existe pero no está disponible");
-                    $equiposNoDisponibles[] = "$categoria $numeroReservado";
-                }
-            } else {
-                Log::info("Equipo $categoria $numeroReservado ya asignado a otro en esta fecha");
-                $equiposNoDisponibles[] = "$categoria $numeroReservado (ya asignado)";
-            }
-        } else {
-            Log::info("Equipo $categoria $numeroReservado no existe en el sistema");
-            $equiposNoExistentes[] = "$categoria $numeroReservado";
-        }
+                    Log::warning("No se encontró alternativa para $categoria");
 
-        // PASO 2: Si no se pudo asignar el número reservado, buscar alternativas
-        if (!$asignacionCompletada) {
-            Log::info("Buscando alternativa para $categoria, ya que el número reservado $numeroReservado no está disponible");
-
-            // Obtener un rango para buscar alternativas
-            $rangoBusqueda = $this->calcularRangoBusqueda($role, $parkId);
-
-            // Buscar el número más cercano disponible
-            $numeroAlternativo = $this->findAvailableInRange(
-                $categoria,
-                $numeroReservado,
-                $rangoBusqueda['min'],
-                $rangoBusqueda['max'],
-                $parkId,
-                $date,
-                $numerosYaAsignados,
-                $assignment
-            );
-
-            if ($numeroAlternativo !== null) {
-                $equipoAsignado[$categoria] = $numeroAlternativo;
-
-                // Marcar este equipo como asignado en la base de datos
-                $this->markEquipmentAsAssigned(
-                    $categoria,
-                    $numeroAlternativo,
-                    $parkId,
-                    $assignment,
-                    $date
-                );
-
-                // Añadir al conjunto de números asignados
-                $numerosYaAsignados[] = $numeroAlternativo;
-
-                Log::info("Asignado número alternativo para $categoria: $numeroAlternativo");
-            } else {
-                Log::warning("No se encontró alternativa para $categoria");
-
-                // Intentar cualquier número como último recurso
-                $numeroFueraDeRango = $this->findAnyAvailableNumber(
-                    $categoria,
-                    $parkId,
-                    $date,
-                    $numerosYaAsignados
-                );
-
-                if ($numeroFueraDeRango !== null) {
-                    $equipoAsignado[$categoria] = $numeroFueraDeRango;
-
-                    $this->markEquipmentAsAssigned(
+                    // Intentar cualquier número como último recurso
+                    $numeroFueraDeRango = $this->findAnyAvailableNumber(
                         $categoria,
-                        $numeroFueraDeRango,
                         $parkId,
-                        $assignment,
-                        $date
+                        $date,
+                        $numerosYaAsignados
                     );
 
-                    $numerosYaAsignados[] = $numeroFueraDeRango;
+                    if ($numeroFueraDeRango !== null) {
+                        $equipoAsignado[$categoria] = $numeroFueraDeRango;
 
-                    Log::info("Asignado número (último recurso) para $categoria: $numeroFueraDeRango");
-                } else {
-                    Log::warning("No se encontró NINGÚN número disponible para $categoria");
+                        $this->markEquipmentAsAssigned(
+                            $categoria,
+                            $numeroFueraDeRango,
+                            $parkId,
+                            $assignment,
+                            $date
+                        );
+
+                        $numerosYaAsignados[] = $numeroFueraDeRango;
+
+                        Log::info("Asignado número (último recurso) para $categoria: $numeroFueraDeRango");
+                    } else {
+                        Log::warning("No se encontró NINGÚN número disponible para $categoria");
+                    }
                 }
             }
         }
-    }
 
-    // Generar nombres completos de equipos para facilitar la visualización
-    $equiposCompletos = [];
-    foreach ($equipoAsignado as $categoria => $numero) {
-        // Determinar el nombre completo según la categoría
-        $nombreCompleto = ($categoria === 'Micro') ? "Micro $numero" : "$categoria $numero";
+        // Generar nombres completos de equipos para facilitar la visualización
+        $equiposCompletos = [];
+        foreach ($equipoAsignado as $categoria => $numero) {
+            // Determinar el nombre completo según la categoría
+            $nombreCompleto = ($categoria === 'Micro') ? "Micro $numero" : "$categoria $numero";
 
-        $equiposCompletos[] = [
-            'categoria'      => $categoria,
-            'numero'         => $numero,
-            'nombre_completo'=> $nombreCompleto
+            $equiposCompletos[] = [
+                'categoria' => $categoria,
+                'numero' => $numero,
+                'nombre_completo' => $nombreCompleto
+            ];
+        }
+
+        $response = [
+            'assignment' => $assignment,
+            'initial_number' => isset($numeroReservado) ? $numeroReservado : 0,
+            'equipment_assigned' => $equipoAsignado,
+            'equipment_details' => $equiposCompletos,
+            'unavailable_equipment' => $equiposNoDisponibles,
+            'nonexistent_equipment' => $equiposNoExistentes
         ];
+
+        Log::info("Respuesta final para $assignment: " . json_encode($response));
+
+        return response()->json($response);
     }
 
-    $response = [
-        'assignment'             => $assignment,
-        'initial_number'         => isset($numeroReservado) ? $numeroReservado : 0,
-        'equipment_assigned'     => $equipoAsignado,
-        'equipment_details'      => $equiposCompletos,
-        'unavailable_equipment'  => $equiposNoDisponibles,
-        'nonexistent_equipment'  => $equiposNoExistentes
-    ];
-
-    Log::info("Respuesta final para $assignment: " . json_encode($response));
-
-    return response()->json($response);
-}
-
-
-    private function getReservedNumbersForCategory($categoria, $parque)
+    private function getReservedNumbersForCategory($categoria, $parque, array $currentAssignments)
 {
     $reservados = [];
     $esPar = ($parque == 2);
     
     foreach ($this->reservedNumbers as $asignacion => $equipos) {
-        // Ignorar asignaciones específicas para Sur si estamos en Norte y viceversa
-        if (($esPar && strpos($asignacion, 'S') === false && in_array(substr($asignacion, 0, 1), ['B', 'C']))
-            || (!$esPar && strpos($asignacion, 'S') !== false)) {
+        // Solo considerar la asignación si está en las asignaciones reales del día
+        if (!in_array($asignacion, $currentAssignments)) {
+            continue;
+        }
+        
+        // Si estamos en Sur y la asignación no termina en 'S' (o viceversa), saltar según la lógica actual
+        if (
+            ($esPar && strpos($asignacion, 'S') === false && in_array(substr($asignacion, 0, 1), ['B', 'C'])) ||
+            (!$esPar && strpos($asignacion, 'S') !== false)
+        ) {
             continue;
         }
         
         if (isset($equipos[$categoria])) {
             $numero = $equipos[$categoria];
-            
-            // Para parque Sur, ajustar números impares a pares
+            // Ajustar números para parque Sur si es necesario
             if ($esPar && in_array(substr($asignacion, 0, 1), ['B', 'C']) && $numero % 2 == 1) {
                 $numero += 1;
             }
             
-            // Extraer solo la parte alfanumérica de la asignación (sin 'S' para Sur)
+            // Extraer la asignación base (sin la 'S' final, si corresponde)
             $baseAssignment = preg_replace('/S$/', '', $asignacion);
             $reservados[$baseAssignment] = $numero;
         }
@@ -521,6 +504,7 @@ class PersonalEquipmentController extends Controller
     
     return $reservados;
 }
+
 
     /**
      * Calcular el rango de búsqueda para números alternativos según el rol y parque
@@ -592,8 +576,8 @@ class PersonalEquipmentController extends Controller
     /**
      * Buscar un número disponible dentro de un rango específico
      */
-    private function findAvailableInRange($categoria, $numeroInicial, $min, $max, $parque, $fecha, $numerosYaAsignados, $assignment)
-{
+    private function findAvailableInRange($categoria, $numeroInicial, $min, $max, $parque, $fecha, $numerosYaAsignados, $assignment, array $currentAssignments)
+    {
     // Verificar paridad según parque
     $esPar = $parque == 2; // Sur: Pares, Norte: Impares
     $incremento = 2; // Siempre saltamos de 2 en 2 para mantener paridad
@@ -615,7 +599,7 @@ class PersonalEquipmentController extends Controller
     $numerosDisponibles = array_diff($posiblesNumeros, $numerosYaAsignados);
 
     // Obtener números reservados para otras asignaciones
-    $numerosReservados = $this->getReservedNumbersForCategory($categoria, $parque);
+    $numerosReservados = $this->getReservedNumbersForCategory($categoria, $parque, $currentAssignments);
     
     // Extraer la asignación base (B1, B2, etc.) sin información adicional
     $baseAssignment = preg_replace('/[^A-Z0-9]/', '', $assignment);

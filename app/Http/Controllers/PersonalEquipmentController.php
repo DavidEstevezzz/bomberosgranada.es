@@ -144,14 +144,15 @@ class PersonalEquipmentController extends Controller
         Log::info("Siguiente número disponible base: $siguienteNumeroDisponible");
         
         // Registrar los números ya utilizados globalmente para evitar repeticiones
+        // Usamos una variable estática para mantener el estado durante la ejecución
         static $numerosUtilizadosGlobal = [];
         
-        // Inicializar el array de números utilizados para esta petición si no existe
+        // Inicializamos por primera vez si es necesario
         if (!isset($numerosUtilizadosGlobal[$parkId])) {
             $numerosUtilizadosGlobal[$parkId] = [];
         }
         
-        // Usar un array separado para cada categoría
+        // Asegurarse de que exista un seguimiento por categoría
         foreach ($categoriasAVerificar as $categoria) {
             if (!isset($numerosUtilizadosGlobal[$parkId][$categoria])) {
                 $numerosUtilizadosGlobal[$parkId][$categoria] = [];
@@ -193,8 +194,8 @@ class PersonalEquipmentController extends Controller
             
             // Verificar si el número ya ha sido utilizado para esta categoría
             if (in_array($numeroInicial, $numerosUtilizadosGlobal[$parkId][$categoria])) {
-                Log::info("Equipo $categoria $numeroInicial ya asignado, buscando alternativa");
-                $equiposNoDisponibles[] = "$categoria $numeroInicial";
+                Log::info("Equipo $categoria $numeroInicial ya asignado a otro, buscando alternativa");
+                $equiposNoDisponibles[] = "$categoria $numeroInicial (ya asignado)";
                 
                 // Buscar un equipo alternativo
                 $numeroAlternativo = $this->findAvailableEquipment(
@@ -463,9 +464,9 @@ class PersonalEquipmentController extends Controller
                 }
             }
             
-            // Verificar si este número ya ha sido utilizado
+            // Verificar si este número ya ha sido utilizado por esta categoría
             if (in_array($currentNumber, $numerosUtilizados)) {
-                Log::info("Saltando número $currentNumber porque ya está asignado");
+                Log::info("Saltando número $currentNumber porque ya está asignado a otro en la misma categoría");
                 $currentNumber += 2;
                 $iterations++;
                 continue;

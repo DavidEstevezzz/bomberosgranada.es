@@ -117,6 +117,19 @@ class PersonalEquipmentController extends Controller
         // Determinar el rol basado en la primera letra de la asignación
         $role = substr($assignment, 0, 1);
         
+        // Si es operador, devolver respuesta vacía porque no necesitan equipos
+        if ($role == 'O' || strpos($assignment, 'OPERADOR') !== false) {
+            Log::info("Asignación de Operador detectada, no se asignan equipos");
+            return response()->json([
+                'assignment' => $assignment,
+                'initial_number' => 0,
+                'equipment_assigned' => [],
+                'equipment_details' => [],
+                'unavailable_equipment' => [],
+                'nonexistent_equipment' => []
+            ]);
+        }
+        
         // Determinar las categorías a verificar según el rol
         $categoriasAVerificar = $this->getCategoriasForRole($role);
         Log::info("Rol: $role, Categorías a verificar: " . implode(", ", $categoriasAVerificar));
@@ -130,8 +143,20 @@ class PersonalEquipmentController extends Controller
         $siguienteNumeroDisponible = $this->getNextAvailableBaseNumber($maxAssignment, $parkId);
         Log::info("Siguiente número disponible base: $siguienteNumeroDisponible");
         
-        // Registrar los números ya utilizados para evitar repeticiones
-        $numerosUtilizados = [];
+        // Registrar los números ya utilizados globalmente para evitar repeticiones
+        static $numerosUtilizadosGlobal = [];
+        
+        // Inicializar el array de números utilizados para esta petición si no existe
+        if (!isset($numerosUtilizadosGlobal[$parkId])) {
+            $numerosUtilizadosGlobal[$parkId] = [];
+        }
+        
+        // Usar un array separado para cada categoría
+        foreach ($categoriasAVerificar as $categoria) {
+            if (!isset($numerosUtilizadosGlobal[$parkId][$categoria])) {
+                $numerosUtilizadosGlobal[$parkId][$categoria] = [];
+            }
+        }
         
         // Asignar equipos individualmente
         $equipoAsignado = [];
@@ -147,14 +172,45 @@ class PersonalEquipmentController extends Controller
                 $equiposNoExistentes[] = "$categoria $numeroInicial";
                 
                 // Buscar un equipo alternativo que exista y esté disponible
-                $numeroAlternativo = $this->findAvailableEquipment($categoria, $siguienteNumeroDisponible, $role, $parkId, $numerosUtilizados);
+                $numeroAlternativo = $this->findAvailableEquipment(
+                    $categoria, 
+                    $siguienteNumeroDisponible, 
+                    $role, 
+                    $parkId, 
+                    $numerosUtilizadosGlobal[$parkId][$categoria]
+                );
                 
                 if ($numeroAlternativo !== null) {
                     $equipoAsignado[$categoria] = $numeroAlternativo;
-                    $numerosUtilizados[$categoria] = $numeroAlternativo;
+                    $numerosUtilizadosGlobal[$parkId][$categoria][] = $numeroAlternativo;
                     Log::info("Asignado número alternativo para $categoria: $numeroAlternativo (no existía el inicial)");
                 } else {
                     Log::warning("No se encontró número alternativo para $categoria");
+                }
+                
+                continue;
+            }
+            
+            // Verificar si el número ya ha sido utilizado para esta categoría
+            if (in_array($numeroInicial, $numerosUtilizadosGlobal[$parkId][$categoria])) {
+                Log::info("Equipo $categoria $numeroInicial ya asignado, buscando alternativa");
+                $equiposNoDisponibles[] = "$categoria $numeroInicial";
+                
+                // Buscar un equipo alternativo
+                $numeroAlternativo = $this->findAvailableEquipment(
+                    $categoria, 
+                    $siguienteNumeroDisponible, 
+                    $role, 
+                    $parkId, 
+                    $numerosUtilizadosGlobal[$parkId][$categoria]
+                );
+                
+                if ($numeroAlternativo !== null) {
+                    $equipoAsignado[$categoria] = $numeroAlternativo;
+                    $numerosUtilizadosGlobal[$parkId][$categoria][] = $numeroAlternativo;
+                    Log::info("Asignado número alternativo para $categoria: $numeroAlternativo (el inicial ya estaba asignado)");
+                } else {
+                    Log::warning("No se encontró número alternativo para $categoria después de verificar uso previo");
                 }
                 
                 continue;
@@ -165,18 +221,24 @@ class PersonalEquipmentController extends Controller
             
             if ($disponible) {
                 $equipoAsignado[$categoria] = $numeroInicial;
-                $numerosUtilizados[$categoria] = $numeroInicial;
+                $numerosUtilizadosGlobal[$parkId][$categoria][] = $numeroInicial;
                 Log::info("Asignado número inicial para $categoria: $numeroInicial");
             } else {
                 Log::info("Equipo $categoria $numeroInicial no disponible, buscando alternativa");
                 $equiposNoDisponibles[] = "$categoria $numeroInicial";
                 
                 // Si no está disponible, buscar el siguiente disponible evitando números ya utilizados
-                $numeroAlternativo = $this->findAvailableEquipment($categoria, $siguienteNumeroDisponible, $role, $parkId, $numerosUtilizados);
+                $numeroAlternativo = $this->findAvailableEquipment(
+                    $categoria, 
+                    $siguienteNumeroDisponible, 
+                    $role, 
+                    $parkId, 
+                    $numerosUtilizadosGlobal[$parkId][$categoria]
+                );
                 
                 if ($numeroAlternativo !== null) {
                     $equipoAsignado[$categoria] = $numeroAlternativo;
-                    $numerosUtilizados[$categoria] = $numeroAlternativo;
+                    $numerosUtilizadosGlobal[$parkId][$categoria][] = $numeroAlternativo;
                     Log::info("Asignado número alternativo para $categoria: $numeroAlternativo");
                 } else {
                     Log::warning("No se encontró número alternativo para $categoria");
@@ -386,11 +448,6 @@ class PersonalEquipmentController extends Controller
         $maxIterations = 50;
         $iterations = 0;
         
-        // Comprobar si este número ya ha sido utilizado para esta categoría
-        if (isset($numerosUtilizados[$categoria])) {
-            Log::info("Evitando número ya utilizado para $categoria: " . $numerosUtilizados[$categoria]);
-        }
-        
         // Conjunto para registrar números ya comprobados
         $checkedNumbers = [];
         
@@ -406,9 +463,9 @@ class PersonalEquipmentController extends Controller
                 }
             }
             
-            // Evitar números ya utilizados para esta categoría
-            if (isset($numerosUtilizados[$categoria]) && $numerosUtilizados[$categoria] == $currentNumber) {
-                Log::info("Saltando número $currentNumber porque ya está asignado para $categoria");
+            // Verificar si este número ya ha sido utilizado
+            if (in_array($currentNumber, $numerosUtilizados)) {
+                Log::info("Saltando número $currentNumber porque ya está asignado");
                 $currentNumber += 2;
                 $iterations++;
                 continue;

@@ -370,18 +370,21 @@ const BrigadeDetail = () => {
   const collectEquipmentData = async () => {
     // Mapa para almacenar la asignación de equipos por bombero
     const equipmentByFirefighter = new Map();
-
+  
     // Encontrar la última asignación entre todos los bomberos
     const maxAssignment = findMaxAssignment(firefighters);
-
+  
     // Para cada bombero con asignación, obtener sus equipos
     for (const firefighter of firefighters) {
+      // Omitir operadores solo para la tabla de equipos
+      if (firefighter.puesto === 'Operador') continue;
+      
       const assignmentValue = getAssignmentValue(firefighter);
-
+  
       if (assignmentValue !== 'No asignado') {
         // Tomar la primera asignación (si hay varias separadas por comas)
         const primaryAssignment = assignmentValue.split(',')[0].trim();
-
+  
         try {
           // Obtener equipos usando la nueva API
           const response = await PersonalEquipmentApiService.checkAndAssignEquipment({
@@ -389,7 +392,7 @@ const BrigadeDetail = () => {
             assignment: primaryAssignment,
             maxAssignment
           });
-
+  
           if (response && response.data && response.data.equipment_details) {
             // Guardar los detalles de equipos para este bombero
             equipmentByFirefighter.set(firefighter.id_empleado, {
@@ -404,6 +407,9 @@ const BrigadeDetail = () => {
         }
       }
     }
+  
+    return equipmentByFirefighter;
+  };
 
     return equipmentByFirefighter;
   };
@@ -1146,6 +1152,9 @@ const BrigadeDetail = () => {
   
         // Procesar cada bombero en el orden de la tabla principal
         for (const firefighter of sortedFirefighters) {
+
+          if (firefighter.puesto === 'Operador') continue;
+
           const assignmentValue = getAssignmentValue(firefighter);
   
           if (assignmentValue !== 'No asignado') {
@@ -1539,6 +1548,6 @@ const BrigadeDetail = () => {
       </div>
     </div>
   );
-};
+
 
 export default BrigadeDetail;

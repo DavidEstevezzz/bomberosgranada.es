@@ -246,7 +246,12 @@ class PersonalEquipmentController extends Controller
     // Verificar si existe una entrada específica para Sur
     if ($esPar && isset($this->reservedNumbers[$suAssignment]) && isset($this->reservedNumbers[$suAssignment][$categoria])) {
         return $this->reservedNumbers[$suAssignment][$categoria];
-    }
+    }   
+
+    // Dentro de getReservedNumber, agrega estos logs:
+Log::info("Assignment: $assignment, Parque: $parkId, Categoría: $categoria");
+Log::info("First letter: $firstLetter, Number: $number, Sur Assignment: $suAssignment");
+Log::info("¿Existe entrada específica para Sur? " . (($esPar && isset($this->reservedNumbers[$suAssignment]) && isset($this->reservedNumbers[$suAssignment][$categoria])) ? "Sí" : "No"));
     
     // Verificar si hay una entrada en la tabla para la asignación original
     if (isset($this->reservedNumbers[$assignment]) && isset($this->reservedNumbers[$assignment][$categoria])) {

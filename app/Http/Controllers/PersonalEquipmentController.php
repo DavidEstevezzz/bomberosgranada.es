@@ -163,17 +163,23 @@ class PersonalEquipmentController extends Controller
      * @param string|null $fecha Fecha para verificar (por defecto hoy)
      * @return bool
      */
-    private function isEquipmentAlreadyAssigned($categoria, $numero, $parque, $fecha = null)
-    {
-        $fecha = $fecha ?? now()->toDateString();
-        
-        return EquipmentAssignment::where('categoria', $categoria)
+    private function isEquipmentAlreadyAssigned($categoria, $numero, $parque, $fecha = null, $currentAssignment = null)
+{
+    $fecha = $fecha ?? now()->toDateString();
+    
+    $query = EquipmentAssignment::where('categoria', $categoria)
             ->where('numero', $numero)
             ->where('parque', $parque)
             ->where('fecha', $fecha)
-            ->where('activo', true)
-            ->exists();
+            ->where('activo', true);
+            
+    // Si se proporciona la asignación actual, ignorar si ya está asignada al mismo bombero
+    if ($currentAssignment !== null) {
+        $query->where('asignacion', '<>', $currentAssignment);
     }
+    
+    return $query->exists();
+}
 
     /**
      * Verificar disponibilidad y asignar equipos individualmente para un puesto específico
@@ -274,7 +280,7 @@ class PersonalEquipmentController extends Controller
             }
             
             // Verificar si el número ya ha sido asignado para esta categoría
-            $yaAsignado = $this->isEquipmentAlreadyAssigned($categoria, $numeroInicial, $parkId, $date);
+            $yaAsignado = $this->isEquipmentAlreadyAssigned($categoria, $numeroInicial, $parkId, $date, $assignment);
             
             if ($yaAsignado) {
                 Log::info("Equipo $categoria $numeroInicial ya asignado a otro, buscando alternativa");

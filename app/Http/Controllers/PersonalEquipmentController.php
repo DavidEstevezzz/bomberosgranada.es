@@ -585,8 +585,12 @@ class PersonalEquipmentController extends Controller
     // Filtrar números ya asignados
     $numerosDisponibles = array_diff($posiblesNumeros, $numerosYaAsignados);
 
-    // Obtener números reservados para otras asignaciones
-    $numerosReservados = $this->getReservedNumbersForCategory($categoria, $parque);
+    // Obtener asignaciones activas para esta fecha
+    $asignacionesActivas = $this->getActiveAssignmentsForDate($parque, $fecha);
+    Log::info("Asignaciones activas para fecha $fecha: " . implode(", ", $asignacionesActivas));
+
+    // Obtener números reservados solo para asignaciones activas
+    $numerosReservados = $this->getReservedNumbersForActiveAssignments($categoria, $parque, $asignacionesActivas);
     
     // Extraer la asignación base (B1, B2, etc.) sin información adicional
     $baseAssignment = preg_replace('/[^A-Z0-9]/', '', $assignment);
@@ -595,13 +599,12 @@ class PersonalEquipmentController extends Controller
     $numerosAFiltrar = [];
     foreach ($numerosReservados as $asign => $numero) {
         // Si no es la asignación actual y el número está disponible
-        // (es decir, no ha sido asignado todavía porque no está en $numerosYaAsignados)
         if ($asign !== $baseAssignment && !in_array($numero, $numerosYaAsignados)) {
             $numerosAFiltrar[] = $numero;
         }
     }
     
-    // Filtrar números reservados para otras asignaciones
+    // Filtrar números reservados para otras asignaciones activas
     $numerosDisponibles = array_diff($numerosDisponibles, $numerosAFiltrar);
 
     if (empty($numerosDisponibles)) {
@@ -642,6 +645,59 @@ class PersonalEquipmentController extends Controller
 
     Log::warning("No se encontró ningún número disponible para $categoria dentro del rango");
     return null;
+}
+
+/**
+ * Obtener todas las asignaciones activas para una fecha y parque específicos
+ * 
+ * @param int $parque ID del parque
+ * @param string $fecha Fecha para verificar
+ * @return array Lista de asignaciones activas (B1, B2, etc.)
+ */
+private function getActiveAssignmentsForDate($parque, $fecha)
+{
+    // Consultar las asignaciones activas desde la tabla de asignaciones de guardia
+    $asignaciones = EquipmentAssignment::where('parque', $parque)
+        ->where('fecha', $fecha)
+        ->where('activo', true)
+        ->pluck('asignacion')
+        ->unique()
+        ->toArray();
+    
+    // Extraer solo la parte base de la asignación (B1, N2, etc.)
+    $asignacionesBasicas = [];
+    foreach ($asignaciones as $asignacion) {
+        // Extraer solo letras y números, ignorando cualquier texto adicional
+        preg_match('/^([A-Z][0-9]+)/i', $asignacion, $matches);
+        if (!empty($matches[1])) {
+            $asignacionesBasicas[] = strtoupper($matches[1]);
+        }
+    }
+    
+    return array_unique($asignacionesBasicas);
+}
+
+/**
+ * Obtener números reservados solo para asignaciones activas
+ * 
+ * @param string $categoria Categoría del equipo
+ * @param int $parque ID del parque
+ * @param array $asignacionesActivas Lista de asignaciones activas
+ * @return array Mapa de asignaciones activas a sus números reservados
+ */
+private function getReservedNumbersForActiveAssignments($categoria, $parque, $asignacionesActivas)
+{
+    $reservados = [];
+    $numerosReservados = $this->getReservedNumbersForCategory($categoria, $parque);
+    
+    // Filtrar solo las asignaciones activas
+    foreach ($numerosReservados as $asignacion => $numero) {
+        if (in_array($asignacion, $asignacionesActivas)) {
+            $reservados[$asignacion] = $numero;
+        }
+    }
+    
+    return $reservados;
 }
 
     /**

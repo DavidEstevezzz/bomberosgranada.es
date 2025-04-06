@@ -771,7 +771,8 @@ const BrigadeDetail = () => {
       const parqueNombre = brigade?.park ? brigade.park.nombre : 'Parque no disponible';
       const brigadeNombre = brigade ? brigade.nombre : 'Brigada no disponible';
       const fechaCompleta = dayjs(selectedDate).format('[Día] D [de] MMMM [de] YYYY');
-  
+      await handleResetEquipmentAssignments();
+      await handleRefreshData();
       // Barra de color en la parte superior
       let headerColor;
       if (brigade?.nombre === 'Brigada A') {
@@ -1503,14 +1504,7 @@ const BrigadeDetail = () => {
             >
               Asignar Baja Sobrevenida
             </button>
-            {/* Botón para resetear asignaciones de equipos */}
-            <button
-              onClick={handleResetEquipmentAssignments}
-              className={`px-4 py-2 ${isResettingEquipments ? 'bg-gray-500' : 'bg-red-500'} text-white rounded`}
-              disabled={isResettingEquipments}
-            >
-              {isResettingEquipments ? 'Reseteando...' : 'Resetear Asignaciones'}
-            </button>
+            
           </div>
         )}
 

@@ -36,14 +36,34 @@ class PdfDocumentController extends Controller
     public function upload(Request $request)
     {
         Log::info('Inicio de la subida de documento PDF.');
-        Log::info('Datos de la petición:', $request->all());
+        Log::info('Datos de la petición (parámetros):', $request->all());
+        Log::info('Archivos recibidos:', $request->files->all());
 
+        // Validar la petición
         $request->validate([
             'title' => 'required|string|max:255',
-            //'pdf_file' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
+            'pdf_file' => 'required|file|mimes:pdf|max:10240', // 10MB máximo
         ]);
 
         try {
+            // Comprobar si el archivo realmente se encuentra en el request
+            if (!$request->hasFile('pdf_file')) {
+                Log::error('No se encontró el archivo pdf_file en el request.');
+                return response()->json(['message' => 'No se ha seleccionado ningún archivo PDF'], 400);
+            }
+
+            // Obtener el archivo y loguear su información
+            $file = $request->file('pdf_file');
+            if (!$file) {
+                Log::error('La variable $file es null después de obtener pdf_file.');
+                return response()->json(['message' => 'Archivo PDF no recibido'], 400);
+            }
+
+            Log::info('Información del archivo subido:');
+            Log::info('Nombre original: ' . $file->getClientOriginalName());
+            Log::info('Tamaño: ' . $file->getSize());
+            Log::info('Tipo MIME: ' . $file->getMimeType());
+
             // Si existe un documento previo, lo eliminamos
             $existingDocuments = PdfDocument::all();
             Log::info('Número de documentos existentes encontrados: ' . count($existingDocuments));
@@ -58,12 +78,6 @@ class PdfDocumentController extends Controller
                 $doc->delete();
                 Log::info('Registro de documento eliminado de la base de datos: ' . $doc->id);
             }
-
-            $file = $request->file('pdf_file');
-            Log::info('Información del archivo subido:');
-            Log::info('Nombre original: ' . $file->getClientOriginalName());
-            Log::info('Tamaño: ' . $file->getSize());
-            Log::info('Tipo MIME: ' . $file->getMimeType());
 
             $originalName = $file->getClientOriginalName();
             $fileSize = $file->getSize();
@@ -110,7 +124,6 @@ class PdfDocumentController extends Controller
             Log::info('Fin del proceso de subida de documento PDF.');
         }
     }
-
 
     /**
      * Mostrar un documento PDF específico.

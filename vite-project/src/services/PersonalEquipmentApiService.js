@@ -15,6 +15,10 @@ class PersonalEquipmentApiService {
         return await BaseApiService.get(`${API_URL}/${id}`);
     }
 
+    async checkAndAssignEquipment(data) {
+        return await BaseApiService.post(`${API_URL}/check-and-assign`, data);
+    }
+    
     // Crear un nuevo equipo personal
     async createPersonalEquipment(personalEquipment) {
         let headers = {};

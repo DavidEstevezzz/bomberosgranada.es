@@ -61,12 +61,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [PersonalEquipmentController::class, 'index']);
         Route::post('/', [PersonalEquipmentController::class, 'store']);
         Route::get('/check-availability/{equipmentNumber}', [PersonalEquipmentController::class, 'checkAvailability']);
+        // Añadir esta nueva ruta
+        Route::post('/check-and-assign', [PersonalEquipmentController::class, 'checkAndAssignEquipment']);
         Route::get('/parque/{parkId}', [PersonalEquipmentController::class, 'getByPark']);
         Route::get('/{equipo}', [PersonalEquipmentController::class, 'show']);
         Route::put('/{equipo}', [PersonalEquipmentController::class, 'update']);
         Route::delete('/{equipo}', [PersonalEquipmentController::class, 'destroy']);
         Route::put('/{equipo}/toggle-disponibilidad', [PersonalEquipmentController::class, 'toggleDisponibilidad']);
-
     });
     
     Route::get('/categorias-equipos', [PersonalEquipmentController::class, 'getCategories']);

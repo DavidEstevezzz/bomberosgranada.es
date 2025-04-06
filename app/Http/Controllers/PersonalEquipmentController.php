@@ -497,30 +497,31 @@ private function getAssignedNumbersByDateAndCategory($parque, $fecha, $categoria
     $reservados = [];
     $esPar = ($parque == 2);
     
-    foreach ($this->reservedNumbers as $asignacion => $equipos) {
-        // Solo considerar la asignación si está en las asignaciones reales del día
-        if (!in_array($asignacion, $currentAssignments)) {
-            continue;
-        }
+    foreach ($currentAssignments as $asignacion) {
+        // Limpiar asignación de caracteres no deseados
+        $asignacionLimpia = preg_replace('/[^A-Z0-9]/', '', $asignacion);
         
-        // Si estamos en Sur y la asignación no termina en 'S' (o viceversa), saltar según la lógica actual
-        if (
-            ($esPar && strpos($asignacion, 'S') === false && in_array(substr($asignacion, 0, 1), ['B', 'C'])) ||
-            (!$esPar && strpos($asignacion, 'S') !== false)
-        ) {
-            continue;
-        }
-        
-        if (isset($equipos[$categoria])) {
-            $numero = $equipos[$categoria];
-            // Ajustar números para parque Sur si es necesario
-            if ($esPar && in_array(substr($asignacion, 0, 1), ['B', 'C']) && $numero % 2 == 1) {
-                $numero += 1;
+        // Para el parque sur, verificar tanto la versión con 'S' como sin ella
+        $versiones = [$asignacionLimpia];
+        if ($esPar && in_array(substr($asignacionLimpia, 0, 1), ['B', 'C'])) {
+            // Agregar versión con 'S' si no la tiene ya
+            if (substr($asignacionLimpia, -1) !== 'S') {
+                $versiones[] = $asignacionLimpia . 'S';
             }
-            
-            // Extraer la asignación base (sin la 'S' final, si corresponde)
-            $baseAssignment = preg_replace('/S$/', '', $asignacion);
-            $reservados[$baseAssignment] = $numero;
+        }
+        
+        foreach ($versiones as $version) {
+            if (isset($this->reservedNumbers[$version]) && isset($this->reservedNumbers[$version][$categoria])) {
+                $numero = $this->reservedNumbers[$version][$categoria];
+                
+                // Ajustar para parque sur si es necesario
+                if ($esPar && in_array(substr($version, 0, 1), ['B', 'C']) && $numero % 2 == 1) {
+                    $numero += 1;
+                }
+                
+                $reservados[$asignacionLimpia] = $numero;
+                break;  // Si encontramos una versión, salimos del bucle interno
+            }
         }
     }
     

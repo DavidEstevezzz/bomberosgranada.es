@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PersonalEquipment;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 
 class PersonalEquipmentController extends Controller
 {
@@ -110,37 +111,75 @@ class PersonalEquipmentController extends Controller
         $assignment = strtoupper($request->assignment);
         $maxAssignment = strtoupper($request->maxAssignment);
         
+        // Agregar logs para depuración
+        Log::info("Procesando asignación: $assignment, maxAssignment: $maxAssignment, parque: $parkId");
+        
         // Determinar el rol basado en la primera letra de la asignación
         $role = substr($assignment, 0, 1);
         
         // Determinar las categorías a verificar según el rol
         $categoriasAVerificar = $this->getCategoriasForRole($role);
+        Log::info("Rol: $role, Categorías a verificar: " . implode(", ", $categoriasAVerificar));
         
         // Obtener el número estático inicial basado en el rol, número y parque
         $numeroInicial = $this->getInitialEquipmentNumber($role, substr($assignment, 1), $parkId);
+        Log::info("Número inicial asignado: $numeroInicial");
         
         // Calcular el siguiente número disponible para asignaciones adicionales
         // basado en el maxAssignment (último bombero asignado)
         $siguienteNumeroDisponible = $this->getNextAvailableBaseNumber($maxAssignment, $parkId);
+        Log::info("Siguiente número disponible base: $siguienteNumeroDisponible");
+        
+        // Registrar los números ya utilizados para evitar repeticiones
+        $numerosUtilizados = [];
         
         // Asignar equipos individualmente
         $equipoAsignado = [];
         $equiposNoDisponibles = [];
+        $equiposNoExistentes = [];
         
         foreach ($categoriasAVerificar as $categoria) {
-            // Comprobar si el equipo con el número inicial está disponible
+            // Comprobar primero si el equipo con el número inicial existe
+            $equipoExiste = $this->checkEquipmentExists($categoria, $numeroInicial);
+            
+            if (!$equipoExiste) {
+                Log::info("Equipo $categoria $numeroInicial no existe");
+                $equiposNoExistentes[] = "$categoria $numeroInicial";
+                
+                // Buscar un equipo alternativo que exista y esté disponible
+                $numeroAlternativo = $this->findAvailableEquipment($categoria, $siguienteNumeroDisponible, $role, $parkId, $numerosUtilizados);
+                
+                if ($numeroAlternativo !== null) {
+                    $equipoAsignado[$categoria] = $numeroAlternativo;
+                    $numerosUtilizados[$categoria] = $numeroAlternativo;
+                    Log::info("Asignado número alternativo para $categoria: $numeroAlternativo (no existía el inicial)");
+                } else {
+                    Log::warning("No se encontró número alternativo para $categoria");
+                }
+                
+                continue;
+            }
+            
+            // Comprobar si el equipo está disponible
             $disponible = $this->isEquipmentAvailable($categoria, $numeroInicial);
             
             if ($disponible) {
                 $equipoAsignado[$categoria] = $numeroInicial;
+                $numerosUtilizados[$categoria] = $numeroInicial;
+                Log::info("Asignado número inicial para $categoria: $numeroInicial");
             } else {
-                // Si no está disponible, buscar el siguiente disponible
-                $numeroAlternativo = $this->findNextAvailableEquipment($categoria, $siguienteNumeroDisponible, $role, $parkId);
+                Log::info("Equipo $categoria $numeroInicial no disponible, buscando alternativa");
+                $equiposNoDisponibles[] = "$categoria $numeroInicial";
+                
+                // Si no está disponible, buscar el siguiente disponible evitando números ya utilizados
+                $numeroAlternativo = $this->findAvailableEquipment($categoria, $siguienteNumeroDisponible, $role, $parkId, $numerosUtilizados);
                 
                 if ($numeroAlternativo !== null) {
                     $equipoAsignado[$categoria] = $numeroAlternativo;
+                    $numerosUtilizados[$categoria] = $numeroAlternativo;
+                    Log::info("Asignado número alternativo para $categoria: $numeroAlternativo");
                 } else {
-                    $equiposNoDisponibles[] = "$categoria $numeroInicial";
+                    Log::warning("No se encontró número alternativo para $categoria");
                 }
             }
         }
@@ -155,13 +194,27 @@ class PersonalEquipmentController extends Controller
             ];
         }
         
-        return response()->json([
+        $response = [
             'assignment' => $assignment,
             'initial_number' => $numeroInicial,
             'equipment_assigned' => $equipoAsignado,
             'equipment_details' => $equiposCompletos,
-            'unavailable_equipment' => $equiposNoDisponibles
-        ]);
+            'unavailable_equipment' => $equiposNoDisponibles,
+            'nonexistent_equipment' => $equiposNoExistentes
+        ];
+        
+        Log::info("Respuesta final para $assignment: " . json_encode($response));
+        
+        return response()->json($response);
+    }
+    
+    /**
+     * Comprobar si un equipo existe en la base de datos
+     */
+    private function checkEquipmentExists($categoria, $numero)
+    {
+        $equipo = PersonalEquipment::where('nombre', "$categoria $numero")->exists();
+        return $equipo;
     }
     
     /**
@@ -207,49 +260,49 @@ class PersonalEquipmentController extends Controller
     private function getInitialEquipmentNumber($role, $number, $parkId)
     {
         $numberInt = (int)$number;
+        $result = 0;
         
         switch ($role) {
             case 'N':
                 // Parque Norte - Mandos N
-                if ($numberInt == 1) return 1;
-                if ($numberInt == 2) return 3;
-                if ($numberInt >= 3) return 5 + (($numberInt - 3) * 2);
+                if ($numberInt == 1) $result = 1;
+                elseif ($numberInt == 2) $result = 3;
+                elseif ($numberInt >= 3) $result = 5 + (($numberInt - 3) * 2);
                 break;
                 
             case 'S':
                 // Parque Sur - Mandos S
-                if ($numberInt == 1) return 2;
-                if ($numberInt == 2) return 4;
-                if ($numberInt >= 3) return 6 + (($numberInt - 3) * 2);
+                if ($numberInt == 1) $result = 2;
+                elseif ($numberInt == 2) $result = 4;
+                elseif ($numberInt >= 3) $result = 6 + (($numberInt - 3) * 2);
                 break;
                 
             case 'C':
                 // Conductores
                 if ($parkId == 1) { // Norte
-                    return 7 + (($numberInt - 1) * 2);
+                    $result = 7 + (($numberInt - 1) * 2);
                 } else { // Sur
-                    return 8 + (($numberInt - 1) * 2);
+                    $result = 8 + (($numberInt - 1) * 2);
                 }
                 break;
                 
             case 'B':
                 // Bomberos
                 if ($parkId == 1) { // Norte
-                    return 15 + (($numberInt - 1) * 2);
+                    $result = 15 + (($numberInt - 1) * 2);
                 } else { // Sur
-                    return 16 + (($numberInt - 1) * 2);
+                    $result = 16 + (($numberInt - 1) * 2);
                 }
                 break;
                 
             case 'J':
                 // Jefe de Guardia
-                return 1;
-                
-            default:
-                return 0;
+                $result = 1;
+                break;
         }
         
-        return 0;
+        Log::info("Calculado número inicial para $role$number en parque $parkId: $result");
+        return $result;
     }
     
     /**
@@ -259,34 +312,35 @@ class PersonalEquipmentController extends Controller
     {
         $role = substr($maxAssignment, 0, 1);
         $number = (int)substr($maxAssignment, 1);
+        $result = 50; // Valor por defecto alto
         
         // Calcular el próximo número después del último asignado
         if ($role == 'B') {
             $number++; // Siguiente bombero
             if ($parkId == 1) { // Norte
-                return 15 + (($number - 1) * 2);
+                $result = 15 + (($number - 1) * 2);
             } else { // Sur
-                return 16 + (($number - 1) * 2);
+                $result = 16 + (($number - 1) * 2);
             }
         } elseif ($role == 'C') {
             $number++; // Siguiente conductor
             if ($parkId == 1) { // Norte
-                return 7 + (($number - 1) * 2);
+                $result = 7 + (($number - 1) * 2);
             } else { // Sur
-                return 8 + (($number - 1) * 2);
+                $result = 8 + (($number - 1) * 2);
             }
         } elseif ($role == 'N') {
             $number++;
-            if ($number == 2) return 3;
-            if ($number >= 3) return 5 + (($number - 3) * 2);
+            if ($number == 2) $result = 3;
+            else if ($number >= 3) $result = 5 + (($number - 3) * 2);
         } elseif ($role == 'S') {
             $number++;
-            if ($number == 2) return 4;
-            if ($number >= 3) return 6 + (($number - 3) * 2);
+            if ($number == 2) $result = 4;
+            else if ($number >= 3) $result = 6 + (($number - 3) * 2);
         }
         
-        // Si no es un rol reconocido, empezar en un número alto
-        return 50;
+        Log::info("Calculado siguiente número base para $maxAssignment en parque $parkId: $result");
+        return $result;
     }
     
     /**
@@ -298,13 +352,16 @@ class PersonalEquipmentController extends Controller
                                    ->first();
         
         // Si el equipo no existe o está disponible
-        return !$equipo || $equipo->disponible;
+        $disponible = !$equipo || $equipo->disponible;
+        Log::info("Verificando disponibilidad de $categoria $numero: " . ($disponible ? "Disponible" : "No disponible"));
+        return $disponible;
     }
     
     /**
-     * Encontrar el siguiente equipo disponible de una categoría específica
+     * Encontrar un equipo que exista y esté disponible
+     * Considera los números ya utilizados para evitar repeticiones
      */
-    private function findNextAvailableEquipment($categoria, $numeroInicio, $role, $parkId)
+    private function findAvailableEquipment($categoria, $numeroInicio, $role, $parkId, $numerosUtilizados)
     {
         // Establecer límites para los roles específicos
         $minNumber = 1;
@@ -317,25 +374,59 @@ class PersonalEquipmentController extends Controller
         }
         
         $currentNumber = $numeroInicio;
+        Log::info("Buscando equipo disponible para $categoria, inicio en $currentNumber");
         
         // Si es conductor y el número inicial está fuera del rango, ajustarlo
         if ($role == 'C' && ($currentNumber < $minNumber || $currentNumber > $maxNumber)) {
             $currentNumber = $minNumber;
+            Log::info("Ajustando número para conductor a $currentNumber (min: $minNumber, max: $maxNumber)");
         }
         
         // Limite para evitar bucles infinitos
         $maxIterations = 50;
         $iterations = 0;
         
+        // Comprobar si este número ya ha sido utilizado para esta categoría
+        if (isset($numerosUtilizados[$categoria])) {
+            Log::info("Evitando número ya utilizado para $categoria: " . $numerosUtilizados[$categoria]);
+        }
+        
+        // Conjunto para registrar números ya comprobados
+        $checkedNumbers = [];
+        
         while ($iterations < $maxIterations) {
+            // Marcar este número como comprobado
+            $checkedNumbers[] = $currentNumber;
+            
             // Si es conductor, mantener dentro del rango permitido
             if ($role == 'C') {
                 if ($currentNumber > $maxNumber) {
                     $currentNumber = $minNumber; // Volver al inicio del rango
+                    Log::info("Conductor: volviendo al inicio del rango: $currentNumber");
                 }
             }
             
+            // Evitar números ya utilizados para esta categoría
+            if (isset($numerosUtilizados[$categoria]) && $numerosUtilizados[$categoria] == $currentNumber) {
+                Log::info("Saltando número $currentNumber porque ya está asignado para $categoria");
+                $currentNumber += 2;
+                $iterations++;
+                continue;
+            }
+            
+            // Verificar si el equipo existe
+            $existe = $this->checkEquipmentExists($categoria, $currentNumber);
+            
+            if (!$existe) {
+                Log::info("Equipo $categoria $currentNumber no existe, probando siguiente");
+                $currentNumber += 2;
+                $iterations++;
+                continue;
+            }
+            
+            // Verificar si está disponible
             if ($this->isEquipmentAvailable($categoria, $currentNumber)) {
+                Log::info("Encontrado equipo disponible: $categoria $currentNumber");
                 return $currentNumber;
             }
             
@@ -344,7 +435,8 @@ class PersonalEquipmentController extends Controller
             $iterations++;
         }
         
-        return null; // No se encontró equipo disponible después de 50 intentos
+        Log::warning("No se encontró equipo disponible para $categoria después de $iterations iteraciones. Números comprobados: " . implode(", ", $checkedNumbers));
+        return null; // No se encontró equipo disponible después de máximas iteraciones
     }
     
     /**

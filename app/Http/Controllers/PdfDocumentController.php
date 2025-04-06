@@ -19,11 +19,11 @@ class PdfDocumentController extends Controller
     public function getLatest()
     {
         $document = PdfDocument::latest()->first();
-        
+
         if (!$document) {
             return response()->json(['message' => 'No hay documentos disponibles'], 404);
         }
-        
+
         return response()->json($document);
     }
 
@@ -46,13 +46,12 @@ class PdfDocumentController extends Controller
         ]);
 
         try {
-            // Comprobar si el archivo realmente se encuentra en el request
+            // Verificar que se ha recibido el archivo
             if (!$request->hasFile('pdf_file')) {
                 Log::error('No se encontró el archivo pdf_file en el request.');
                 return response()->json(['message' => 'No se ha seleccionado ningún archivo PDF'], 400);
             }
 
-            // Obtener el archivo y loguear su información
             $file = $request->file('pdf_file');
             if (!$file) {
                 Log::error('La variable $file es null después de obtener pdf_file.');
@@ -64,16 +63,17 @@ class PdfDocumentController extends Controller
             Log::info('Tamaño: ' . $file->getSize());
             Log::info('Tipo MIME: ' . $file->getMimeType());
 
-            // Si existe un documento previo, lo eliminamos
+            // Eliminar documentos previos (si existen)
             $existingDocuments = PdfDocument::all();
             Log::info('Número de documentos existentes encontrados: ' . count($existingDocuments));
             foreach ($existingDocuments as $doc) {
                 Log::info('Eliminando documento existente: ' . $doc->original_filename . ' con ruta: ' . $doc->file_path);
-                if (Storage::exists($doc->file_path)) {
-                    Storage::delete($doc->file_path);
-                    Log::info('Archivo eliminado correctamente: ' . $doc->file_path);
+                $absolutePath = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $doc->file_path;
+                if (file_exists($absolutePath)) {
+                    unlink($absolutePath);
+                    Log::info('Archivo eliminado correctamente: ' . $absolutePath);
                 } else {
-                    Log::warning('Archivo no encontrado durante la eliminación: ' . $doc->file_path);
+                    Log::warning('Archivo no encontrado durante la eliminación: ' . $absolutePath);
                 }
                 $doc->delete();
                 Log::info('Registro de documento eliminado de la base de datos: ' . $doc->id);
@@ -85,9 +85,17 @@ class PdfDocumentController extends Controller
             // Crear un nombre único para el archivo
             $filename = Str::random(40) . '.' . $file->getClientOriginalExtension();
 
-            // Guardar el archivo en el almacenamiento
-            $path = $file->storeAs('pdfs', $filename, 'public');
-            Log::info('Archivo guardado en la ruta: ' . $path);
+            // Definir la ruta destino absoluta
+            $destinationDir = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/pdfs';
+            if (!is_dir($destinationDir)) {
+                mkdir($destinationDir, 0777, true);
+            }
+
+            // Mover el archivo a la carpeta de destino
+            $file->move($destinationDir, $filename);
+            // Guardar la ruta relativa en la base de datos
+            $path = 'pdfs/' . $filename;
+            Log::info('Archivo guardado en la ruta: ' . $destinationDir . '/' . $filename);
 
             // Crear el registro en la base de datos
             $document = PdfDocument::create([
@@ -104,7 +112,6 @@ class PdfDocumentController extends Controller
                 'message' => 'Documento PDF subido correctamente',
                 'document' => $document
             ], 201);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Error de validación al subir el documento:', $e->errors());
             return response()->json([
@@ -125,6 +132,7 @@ class PdfDocumentController extends Controller
         }
     }
 
+
     /**
      * Mostrar un documento PDF específico.
      *
@@ -134,14 +142,16 @@ class PdfDocumentController extends Controller
     public function show($id)
     {
         $document = PdfDocument::findOrFail($id);
-        
-        // Comprobar si el archivo existe físicamente
-        if (!Storage::disk('public')->exists($document->file_path)) {
+
+        // Construir la ruta absoluta del archivo
+        $fullPath = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $document->file_path;
+        if (!file_exists($fullPath)) {
             return response()->json(['message' => 'Archivo no encontrado'], 404);
         }
-        
-        return response()->file(storage_path('app/public/' . $document->file_path));
+
+        return response()->file($fullPath);
     }
+
 
     /**
      * Descargar un documento PDF.
@@ -152,11 +162,11 @@ class PdfDocumentController extends Controller
     public function download($id)
     {
         $document = PdfDocument::findOrFail($id);
-        
+
         if (!Storage::disk('public')->exists($document->file_path)) {
             return response()->json(['message' => 'Archivo no encontrado'], 404);
         }
-        
+
         return response()->download(
             storage_path('app/public/' . $document->file_path),
             $document->original_filename
@@ -172,15 +182,15 @@ class PdfDocumentController extends Controller
     public function destroy($id)
     {
         $document = PdfDocument::findOrFail($id);
-        
+
         // Eliminar el archivo físico
         if (Storage::disk('public')->exists($document->file_path)) {
             Storage::disk('public')->delete($document->file_path);
         }
-        
+
         // Eliminar el registro de la base de datos
         $document->delete();
-        
+
         return response()->json(['message' => 'Documento eliminado correctamente']);
     }
 }

@@ -409,9 +409,65 @@ const BrigadeDetail = () => {
   
     // Encontrar la última asignación entre todos los bomberos
     const maxAssignment = findMaxAssignment(firefighters);
+    
+    // Conjunto de números ya usados para minimizar conflictos
+    const usedEquipmentNumbers = new Set();
   
-    // Para cada bombero con asignación, obtener sus equipos
-    for (const firefighter of firefighters) {
+    // Ordenar primero los bomberos por prioridad de puesto y luego por asignación
+    const sortedFirefighters = [...firefighters].sort((a, b) => {
+      // Primero ordenar por prioridad de puesto
+      const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
+      if (puestoDiff !== 0) return puestoDiff;
+  
+      // Ordenar por la asignación completa
+      const assignmentA = getAssignmentValue(a);
+      const assignmentB = getAssignmentValue(b);
+  
+      // Si ambas asignaciones completas son iguales, usar la asignación de la mañana para desempatar
+      if (assignmentA === assignmentB) {
+        const morningAssignmentA = getMorningAssignment(a.id_empleado);
+        const morningAssignmentB = getMorningAssignment(b.id_empleado);
+  
+        // Manejar el caso de 'No asignado'
+        if (morningAssignmentA === 'No asignado' && morningAssignmentB !== 'No asignado') return 1;
+        if (morningAssignmentB === 'No asignado' && morningAssignmentA !== 'No asignado') return -1;
+        if (morningAssignmentA === 'No asignado' && morningAssignmentB === 'No asignado') return 0;
+  
+        // Comparar la letra de la asignación de la mañana
+        const letterA = morningAssignmentA.charAt(0);
+        const letterB = morningAssignmentB.charAt(0);
+        if (letterA !== letterB) return letterA.localeCompare(letterB);
+  
+        // Luego comparar numéricamente
+        const numberA = parseInt(morningAssignmentA.slice(1), 10);
+        const numberB = parseInt(morningAssignmentB.slice(1), 10);
+        if (!isNaN(numberA) && !isNaN(numberB)) {
+          return numberA - numberB;
+        }
+        return morningAssignmentA.localeCompare(morningAssignmentB);
+      }
+  
+      // Si las asignaciones completas son distintas, comparar teniendo en cuenta 'No asignado'
+      if (assignmentA === 'No asignado' && assignmentB !== 'No asignado') return 1;
+      if (assignmentB === 'No asignado' && assignmentA !== 'No asignado') return -1;
+      if (assignmentA === 'No asignado' && assignmentB === 'No asignado') return 0;
+  
+      // Extraer la letra para comparar
+      const letterA = assignmentA.charAt(0);
+      const letterB = assignmentB.charAt(0);
+      if (letterA !== letterB) return letterA.localeCompare(letterB);
+  
+      // Comparar numéricamente
+      const numberA = parseInt(assignmentA.slice(1), 10);
+      const numberB = parseInt(assignmentB.slice(1), 10);
+      if (!isNaN(numberA) && !isNaN(numberB)) {
+        return numberA - numberB;
+      }
+      return assignmentA.localeCompare(assignmentB);
+    });
+  
+    // Para cada bombero con asignación, obtener sus equipos en el orden correcto
+    for (const firefighter of sortedFirefighters) {
       // Omitir operadores solo para la tabla de equipos
       if (firefighter.puesto === 'Operador') continue;
       
@@ -422,7 +478,7 @@ const BrigadeDetail = () => {
         const primaryAssignment = assignmentValue.split(',')[0].trim();
   
         try {
-          // Obtener equipos usando la nueva API y pasar la fecha
+          // Obtener equipos usando la API mejorada y pasar la fecha
           const response = await PersonalEquipmentApiService.checkAndAssignEquipment({
             parkId: brigade?.park?.id_parque || 1,
             assignment: primaryAssignment,
@@ -438,6 +494,13 @@ const BrigadeDetail = () => {
               asignacion: primaryAssignment,
               equipos: response.data.equipment_details
             });
+            
+            // Actualizar el conjunto de números usados para minimizar conflictos
+            if (response.data.equipment_assigned) {
+              Object.values(response.data.equipment_assigned).forEach(numero => {
+                usedEquipmentNumbers.add(parseInt(numero));
+              });
+            }
           }
         } catch (error) {
           console.error(`Error al obtener equipos para ${firefighter.nombre}:`, error);

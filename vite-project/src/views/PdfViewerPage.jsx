@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faUpload,
@@ -24,6 +25,24 @@ const PdfViewerPage = () => {
     const { darkMode } = useDarkMode();
     const { user } = useStateContext();
 
+    // Función para obtener el PDF como blob e inicializar la URL del blob
+    const fetchPdfBlob = async (documentId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(PdfDocumentApiService.getDocumentUrl(documentId), {
+                responseType: 'blob',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            const blobUrl = window.URL.createObjectURL(response.data);
+            setPdfUrl(blobUrl);
+        } catch (err) {
+            console.error('Error al cargar el PDF:', err);
+            setError('Error al cargar el PDF');
+        }
+    };
+
     // Cargar documento al iniciar
     useEffect(() => {
         fetchLatestDocument();
@@ -36,7 +55,7 @@ const PdfViewerPage = () => {
             const response = await PdfDocumentApiService.getLatestDocument();
             setCurrentDocument(response.data);
             if (response.data && response.data.id) {
-                setPdfUrl(PdfDocumentApiService.getDocumentUrl(response.data.id));
+                await fetchPdfBlob(response.data.id);
             }
             setError(null);
         } catch (err) {
@@ -55,7 +74,7 @@ const PdfViewerPage = () => {
     // Manejar cambio en el input de archivo
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
-        console.log("Selected File in handleFileChange:", selectedFile); // Add this line
+        console.log("Selected File in handleFileChange:", selectedFile);
         if (selectedFile && selectedFile.type === 'application/pdf') {
             setFile(selectedFile);
             // Usar el nombre del archivo como título por defecto (sin la extensión)
@@ -86,13 +105,13 @@ const PdfViewerPage = () => {
         setError(null);
         setUploadSuccess(false);
 
-        console.log("File state before upload:", file); // Debugging log
+        console.log("File state before upload:", file);
 
         const formData = new FormData();
         formData.append('title', title);
         formData.append('pdf_file', file);
 
-        console.log("FormData contents:"); // Debugging log
+        console.log("FormData contents:");
         for (const pair of formData.entries()) {
             console.log(pair[0] + ', ' + pair[1]);
         }
@@ -100,7 +119,7 @@ const PdfViewerPage = () => {
         try {
             const response = await PdfDocumentApiService.uploadDocument(formData);
             setCurrentDocument(response.data.document);
-            setPdfUrl(PdfDocumentApiService.getDocumentUrl(response.data.document.id));
+            await fetchPdfBlob(response.data.document.id);
             setUploadSuccess(true);
 
             // Resetear formulario
@@ -137,10 +156,28 @@ const PdfViewerPage = () => {
         }
     };
 
-    // Función para descargar el PDF
-    const handleDownload = () => {
+    // Función para descargar el PDF usando Axios (con token)
+    const handleDownload = async () => {
         if (currentDocument && currentDocument.id) {
-            window.open(PdfDocumentApiService.getDownloadUrl(currentDocument.id), '_blank');
+            try {
+                const token = localStorage.getItem('token');
+                const response = await axios.get(PdfDocumentApiService.getDownloadUrl(currentDocument.id), {
+                    responseType: 'blob',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+                const blobUrl = window.URL.createObjectURL(response.data);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.setAttribute('download', currentDocument.original_filename || 'documento.pdf');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            } catch (error) {
+                console.error('Error al descargar el documento:', error);
+                setError('Error al descargar el documento');
+            }
         }
     };
 
@@ -179,7 +216,7 @@ const PdfViewerPage = () => {
                                     Archivo PDF
                                 </label>
                                 <input
-                                    name="pdf_file" // Agregado para asegurar el nombre del campo
+                                    name="pdf_file"
                                     id="pdf-upload"
                                     type="file"
                                     onChange={handleFileChange}
@@ -301,7 +338,6 @@ const PdfViewerPage = () => {
                                         {user && user.type === 'jefe' && (
                                             <p className="text-gray-500">Usa el formulario de arriba para subir un PDF</p>
                                         )}
-
                                     </div>
                                 )}
                             </div>

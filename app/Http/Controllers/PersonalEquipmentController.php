@@ -226,6 +226,10 @@ class PersonalEquipmentController extends Controller
         $numeroInicial = $this->getInitialEquipmentNumber($role, substr($assignment, 1), $parkId);
         Log::info("Número inicial asignado: $numeroInicial");
         
+        // Calcular un rango de búsqueda para números alternativos basado en la asignación
+        $rangoBusqueda = $this->calcularRangoBusqueda($role, $parkId);
+        Log::info("Rango de búsqueda para alternativas: " . json_encode($rangoBusqueda));
+        
         // Asignar equipos individualmente
         $equipoAsignado = [];
         $equiposNoDisponibles = [];
@@ -285,12 +289,14 @@ class PersonalEquipmentController extends Controller
             
             // PASO 2: Si no se pudo asignar el número inicial, buscar el próximo disponible
             if (!$asignacionCompletada) {
-                Log::info("Buscando número alternativo para $categoria, partiendo de $numeroInicial");
+                Log::info("Buscando número alternativo para $categoria, partiendo de $numeroInicial con rango: " . json_encode($rangoBusqueda));
                 
                 // Buscar el siguiente número disponible más cercano al inicial
-                $numeroAlternativo = $this->findNextAvailableNumber(
+                $numeroAlternativo = $this->findAvailableInRange(
                     $categoria,
                     $numeroInicial,
+                    $rangoBusqueda['min'], 
+                    $rangoBusqueda['max'],
                     $parkId,
                     $date,
                     $numerosYaAsignados
@@ -311,9 +317,35 @@ class PersonalEquipmentController extends Controller
                     // Añadir al conjunto de números asignados
                     $numerosYaAsignados[] = $numeroAlternativo;
                     
-                    Log::info("Asignado número alternativo para $categoria: $numeroAlternativo - PRÓXIMO DISPONIBLE");
+                    Log::info("Asignado número alternativo para $categoria: $numeroAlternativo - DENTRO DEL RANGO");
                 } else {
-                    Log::warning("No se encontró número alternativo para $categoria");
+                    Log::warning("No se encontró número alternativo para $categoria dentro del rango");
+                    
+                    // Intentar una búsqueda más amplia fuera del rango normal
+                    $numeroFueraDeRango = $this->findAnyAvailableNumber(
+                        $categoria,
+                        $parkId,
+                        $date,
+                        $numerosYaAsignados
+                    );
+                    
+                    if ($numeroFueraDeRango !== null) {
+                        $equipoAsignado[$categoria] = $numeroFueraDeRango;
+                        
+                        $this->markEquipmentAsAssigned(
+                            $categoria, 
+                            $numeroFueraDeRango, 
+                            $parkId, 
+                            $assignment,
+                            $date
+                        );
+                        
+                        $numerosYaAsignados[] = $numeroFueraDeRango;
+                        
+                        Log::info("Asignado número alternativo para $categoria: $numeroFueraDeRango - FUERA DE RANGO");
+                    } else {
+                        Log::warning("No se encontró ningún número disponible para $categoria");
+                    }
                 }
             }
         }
@@ -346,6 +378,59 @@ class PersonalEquipmentController extends Controller
     }
 
     /**
+     * Calcular el rango de búsqueda para números alternativos según el rol y parque
+     * 
+     * @param string $role Rol (B, C, N, S, J)
+     * @param int $parque ID del parque (1: Norte, 2: Sur)
+     * @return array Array con min y max para el rango
+     */
+    private function calcularRangoBusqueda($role, $parque)
+    {
+        $min = 1;
+        $max = 100;
+        
+        // Ajustar rangos según el tipo de rol
+        switch ($role) {
+            case 'B': // Bomberos
+                if ($parque == 1) { // Norte (impares)
+                    $min = 15;
+                    $max = 39;
+                } else { // Sur (pares)
+                    $min = 16;
+                    $max = 40;
+                }
+                break;
+                
+            case 'C': // Conductores
+                if ($parque == 1) { // Norte (impares)
+                    $min = 7;
+                    $max = 15;
+                } else { // Sur (pares)
+                    $min = 8;
+                    $max = 16;
+                }
+                break;
+                
+            case 'N': // Mandos Norte
+                $min = 1;
+                $max = 9;
+                break;
+                
+            case 'S': // Mandos Sur
+                $min = 2;
+                $max = 10;
+                break;
+                
+            case 'J': // Jefe de Guardia
+                $min = 1;
+                $max = 5;
+                break;
+        }
+        
+        return ['min' => $min, 'max' => $max];
+    }
+
+    /**
      * Obtener todos los números ya asignados para una fecha y parque
      * 
      * @param int $parque ID del parque
@@ -366,59 +451,138 @@ class PersonalEquipmentController extends Controller
     }
 
     /**
-     * Buscar el siguiente número disponible mayor al inicial
+     * Buscar un número disponible dentro de un rango específico
      * 
      * @param string $categoria Categoría del equipo
-     * @param int $numeroInicial Número inicial a partir del cual buscar
+     * @param int $numeroInicial Número inicial para calcular cercanía
+     * @param int $min Valor mínimo del rango
+     * @param int $max Valor máximo del rango
      * @param int $parque ID del parque
      * @param string $fecha Fecha para la asignación
      * @param array $numerosYaAsignados Conjunto de números ya asignados
      * @return int|null Número encontrado o null si no se encuentra ninguno
      */
-    private function findNextAvailableNumber($categoria, $numeroInicial, $parque, $fecha, $numerosYaAsignados)
+    private function findAvailableInRange($categoria, $numeroInicial, $min, $max, $parque, $fecha, $numerosYaAsignados)
     {
-        // Definir límites según el tipo de parque (par/impar)
-        $esPar = $numeroInicial % 2 === 0;
+        // Verificar paridad según parque
+        $esPar = $parque == 2; // Sur: Pares, Norte: Impares
         $incremento = 2; // Siempre saltamos de 2 en 2 para mantener paridad
         
-        // Límites para evitar bucles infinitos
-        $maxIteraciones = 50;
-        $iteraciones = 0;
+        // Ajustar el mínimo y máximo según paridad
+        if ($esPar) {
+            $min = ($min % 2 == 0) ? $min : $min + 1; // Asegurar que min sea par
+        } else {
+            $min = ($min % 2 == 1) ? $min : $min + 1; // Asegurar que min sea impar
+        }
         
-        // Buscamos siempre en números mayores (ascendentes)
-        $numero = $numeroInicial;
+        // Crear una lista de todos los números posibles dentro del rango respetando paridad
+        $posiblesNumeros = [];
+        for ($i = $min; $i <= $max; $i += $incremento) {
+            $posiblesNumeros[] = $i;
+        }
         
-        while ($iteraciones < $maxIteraciones) {
-            $numero += $incremento;
-            $iteraciones++;
-            
+        // Filtrar números ya asignados
+        $numerosDisponibles = array_diff($posiblesNumeros, $numerosYaAsignados);
+        
+        if (empty($numerosDisponibles)) {
+            Log::info("No hay números disponibles dentro del rango ($min-$max) respetando paridad");
+            return null;
+        }
+        
+        // Ordenar números disponibles por cercanía al número inicial
+        usort($numerosDisponibles, function($a, $b) use ($numeroInicial) {
+            return abs($a - $numeroInicial) - abs($b - $numeroInicial);
+        });
+        
+        Log::info("Números disponibles ordenados por cercanía: " . implode(", ", $numerosDisponibles));
+        
+        // Verificar cada número (del más cercano al más lejano)
+        foreach ($numerosDisponibles as $numero) {
             // Comprobar si el equipo existe
             $existe = $this->checkEquipmentExists($categoria, $numero);
             if (!$existe) {
-                continue;
-            }
-            
-            // Verificar si ya está asignado para esta fecha y parque
-            if (in_array($numero, $numerosYaAsignados)) {
+                Log::info("Equipo $categoria $numero no existe, intentando siguiente");
                 continue;
             }
             
             // Verificar si ya ha sido asignado específicamente para esta categoría
             $yaAsignado = $this->isEquipmentAlreadyAssigned($categoria, $numero, $parque, $fecha);
             if ($yaAsignado) {
+                Log::info("Equipo $categoria $numero ya asignado específicamente, intentando siguiente");
                 continue;
             }
             
             // Verificar disponibilidad general
             $disponible = $this->isEquipmentAvailable($categoria, $numero);
             if ($disponible) {
-                Log::info("Encontrado número disponible ASCENDENTE: $categoria $numero");
+                Log::info("Encontrado número disponible para $categoria: $numero (dentro del rango)");
                 return $numero;
             }
         }
         
-        // No se encontró ningún número disponible
-        Log::warning("No se encontró ningún número disponible para $categoria en ascendente desde $numeroInicial");
+        Log::warning("No se encontró ningún número disponible para $categoria dentro del rango");
+        return null;
+    }
+    
+    /**
+     * Buscar cualquier número disponible sin restricciones de rango
+     * (último recurso cuando no se encuentra nada dentro del rango normal)
+     */
+    private function findAnyAvailableNumber($categoria, $parque, $fecha, $numerosYaAsignados)
+    {
+        // Verificar paridad según parque
+        $esPar = $parque == 2; // Sur: Pares, Norte: Impares
+        
+        // Obtener todos los equipos disponibles de esta categoría
+        $query = PersonalEquipment::where('categoria', $categoria)
+            ->where('disponible', true);
+            
+        // Filtrar por paridad (par/impar) según el parque
+        if ($esPar) {
+            $query->whereRaw('CAST(SUBSTRING(nombre, LOCATE(" ", nombre) + 1) AS UNSIGNED) % 2 = 0');
+        } else {
+            $query->whereRaw('CAST(SUBSTRING(nombre, LOCATE(" ", nombre) + 1) AS UNSIGNED) % 2 = 1');
+        }
+        
+        $equiposDisponibles = $query->get();
+        
+        if ($equiposDisponibles->isEmpty()) {
+            Log::warning("No hay equipos disponibles de $categoria con la paridad correcta");
+            return null;
+        }
+        
+        // Extraer los números de los equipos disponibles
+        $numerosDisponibles = [];
+        foreach ($equiposDisponibles as $equipo) {
+            $nombrePartes = explode(' ', $equipo->nombre);
+            $numero = end($nombrePartes);
+            
+            if (is_numeric($numero)) {
+                $numerosDisponibles[] = (int) $numero;
+            }
+        }
+        
+        // Filtrar números ya asignados
+        $numerosDisponibles = array_diff($numerosDisponibles, $numerosYaAsignados);
+        
+        if (empty($numerosDisponibles)) {
+            Log::warning("Todos los equipos disponibles ya están asignados");
+            return null;
+        }
+        
+        // Ordenar de menor a mayor
+        sort($numerosDisponibles);
+        
+        // Verificar si cada número está realmente disponible
+        foreach ($numerosDisponibles as $numero) {
+            $yaAsignado = $this->isEquipmentAlreadyAssigned($categoria, $numero, $parque, $fecha);
+            if (!$yaAsignado) {
+                Log::info("Encontrado número EMERGENCIA para $categoria: $numero (fuera del rango normal)");
+                return $numero;
+            }
+        }
+        
+        Log::warning("No se encontró NINGÚN número disponible para $categoria");
         return null;
     }
     
@@ -544,44 +708,6 @@ class PersonalEquipmentController extends Controller
         }
         
         Log::info("Calculado número inicial para $role$number en parque $parkId: $result");
-        return $result;
-    }
-    
-    /**
-     * Obtener el siguiente número base disponible después del último bombero asignado
-     */
-    private function getNextAvailableBaseNumber($maxAssignment, $parkId)
-    {
-        $role = substr($maxAssignment, 0, 1);
-        $number = (int)substr($maxAssignment, 1);
-        $result = 50; // Valor por defecto alto
-        
-        // Calcular el próximo número después del último asignado
-        if ($role == 'B') {
-            $number++; // Siguiente bombero
-            if ($parkId == 1) { // Norte
-                $result = 15 + (($number - 1) * 2);
-            } else { // Sur
-                $result = 16 + (($number - 1) * 2);
-            }
-        } elseif ($role == 'C') {
-            $number++; // Siguiente conductor
-            if ($parkId == 1) { // Norte
-                $result = 7 + (($number - 1) * 2);
-            } else { // Sur
-                $result = 8 + (($number - 1) * 2);
-            }
-        } elseif ($role == 'N') {
-            $number++;
-            if ($number == 2) $result = 3;
-            else if ($number >= 3) $result = 5 + (($number - 3) * 2);
-        } elseif ($role == 'S') {
-            $number++;
-            if ($number == 2) $result = 4;
-            else if ($number >= 3) $result = 6 + (($number - 3) * 2);
-        }
-        
-        Log::info("Calculado siguiente número base para $maxAssignment en parque $parkId: $result");
         return $result;
     }
     

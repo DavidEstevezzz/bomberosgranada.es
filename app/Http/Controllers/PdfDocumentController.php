@@ -163,14 +163,13 @@ class PdfDocumentController extends Controller
     {
         $document = PdfDocument::findOrFail($id);
 
-        if (!Storage::disk('public')->exists($document->file_path)) {
+        // Construir la ruta absoluta del archivo
+        $fullPath = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $document->file_path;
+        if (!file_exists($fullPath)) {
             return response()->json(['message' => 'Archivo no encontrado'], 404);
         }
 
-        return response()->download(
-            storage_path('app/public/' . $document->file_path),
-            $document->original_filename
-        );
+        return response()->download($fullPath, $document->original_filename);
     }
 
     /**

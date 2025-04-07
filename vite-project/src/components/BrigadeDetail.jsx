@@ -465,7 +465,8 @@ const BrigadeDetail = () => {
     // Para cada bombero con asignación, obtener sus equipos en el orden correcto
     for (const firefighter of sortedFirefighters) {
       // Omitir operadores solo para la tabla de equipos
-      if (firefighter.puesto === 'Operador') continue;
+      if (firefighter.puesto === 'Operador' || 
+        getAssignmentValue(firefighter) === 'Telefonista') continue;
       
       const assignmentValue = getAssignmentValue(firefighter);
   
@@ -1245,7 +1246,8 @@ const BrigadeDetail = () => {
         // Procesar cada bombero en el orden de la tabla principal
         for (const firefighter of sortedFirefighters) {
 
-          if (firefighter.puesto === 'Operador') continue;
+          if (firefighter.puesto === 'Operador' || 
+            getAssignmentValue(firefighter) === 'Telefonista') continue;
 
           const assignmentValue = getAssignmentValue(firefighter);
   

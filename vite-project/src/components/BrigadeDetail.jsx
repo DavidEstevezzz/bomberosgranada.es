@@ -301,6 +301,7 @@ const BrigadeDetail = () => {
   // Al tener guardDetails, cargar asignaciones actuales y previas
   useEffect(() => {
     if (guardDetails && guardDetails.id) {
+
       // Asignaciones actuales
       GuardAssignmentApiService.getGuardAssignments()
         .then(response => {
@@ -1070,11 +1071,12 @@ const BrigadeDetail = () => {
       // Añadir comentarios y otros detalles - SECCIÓN MEJORADA
       if (guardDetails) {
         // Título para la sección de datos adicionales
-        const finalY = doc.previousAutoTable ? doc.previousAutoTable.finalY + 10 : startY + 10;
+        doc.addPage();
+        const newStartY = 20;
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.setTextColor(40, 40, 40);
-        doc.text('DATOS ADICIONALES DEL SERVICIO', pageWidth / 2, finalY, { align: 'center' });
+        doc.text('DATOS ADICIONALES DEL SERVICIO', pageWidth / 2, newStartY, { align: 'center' });
   
         // Preparar los datos de comentarios
         const commentsData = guardDetails.guard || guardDetails;

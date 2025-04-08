@@ -93,47 +93,26 @@ const RequestListPage = () => {
       const request = requests.find((req) => req.id === id);
       const currentStatus = request?.estado;
   
+      // Validación inicial para tipos específicos
       if (tipo === 'asuntos propios') {
-        let requestedAPDays;
-        if (turno === 'Día Completo') {
-          requestedAPDays = 3;
-        } else if (turno === 'Mañana y tarde' || turno === 'Tarde y noche') {
-          requestedAPDays = 2;
-        } else {
-          requestedAPDays = 1;
-        }
-  
+        let jornadasSolicitadas = calcularJornadasPorTurno(turno);
         const remainingAPDays = getAPDaysRemaining(idEmpleado);
   
         if (newStatus === 'Confirmada' && currentStatus !== 'Confirmada') {
-          if (requestedAPDays > remainingAPDays) {
-            alert('No te quedan suficientes días de asuntos propios (AP) para aceptar esta solicitud.');
+          if (jornadasSolicitadas > remainingAPDays) {
+            alert('No te quedan suficientes jornadas de asuntos propios (AP) para aceptar esta solicitud.');
             return;
           }
-          await updateUserAPDays(idEmpleado, -requestedAPDays);
-        } else if (newStatus !== 'Confirmada' && currentStatus === 'Confirmada') {
-          await updateUserAPDays(idEmpleado, requestedAPDays);
         }
-      } else if (tipo === 'compensación') {
-        let requestedCompensacionDays;
-        if (turno === 'Día Completo') {
-          requestedCompensacionDays = 3;
-        } else if (turno === 'Mañana y tarde' || turno === 'Tarde y noche') {
-          requestedCompensacionDays = 2;
-        } else {
-          requestedCompensacionDays = 1;
-        }
-  
+      } else if (tipo === 'compensacion grupos especiales') {
+        let jornadasSolicitadas = calcularJornadasPorTurno(turno);
         const remainingCompensacionDays = getCompensacionDaysRemaining(idEmpleado);
   
         if (newStatus === 'Confirmada' && currentStatus !== 'Confirmada') {
-          if (requestedCompensacionDays > remainingCompensacionDays) {
-            alert('No te quedan suficientes días de compensación para aceptar esta solicitud.');
+          if (jornadasSolicitadas > remainingCompensacionDays) {
+            alert('No te quedan suficientes jornadas de compensación de grupos especiales para aceptar esta solicitud.');
             return;
           }
-          await updateUserAPDays(idEmpleado, -requestedCompensacionDays); // Cambia a una función específica si es necesario
-        } else if (newStatus !== 'Confirmada' && currentStatus === 'Confirmada') {
-          await updateUserAPDays(idEmpleado, requestedCompensacionDays); // Cambia a una función específica si es necesario
         }
       }
   
@@ -142,10 +121,26 @@ const RequestListPage = () => {
         payload.turno = turno;
       }
   
+      // Enviar al backend para procesar - el backend manejará todo lo demás
       await RequestApiService.updateRequest(id, payload);
+      
+      // Actualizar la lista de solicitudes después de la actualización
       fetchRequests();
+      // Actualizar la lista de usuarios para reflejar los cambios en días disponibles
+      fetchUsers();
     } catch (error) {
       console.error('Error al actualizar el estado de la solicitud:', error);
+    }
+  };
+
+  
+  const calcularJornadasPorTurno = (turno) => {
+    if (turno === 'Día Completo') {
+      return 3;
+    } else if (turno === 'Mañana y tarde' || turno === 'Tarde y noche') {
+      return 2;
+    } else {
+      return 1;
     }
   };
   

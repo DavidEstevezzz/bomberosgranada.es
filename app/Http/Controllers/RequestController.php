@@ -500,6 +500,17 @@ private function adjustModuloDays($miRequest, $oldEstado, $newEstado)
     $user->save();
 }
 
+private function calcularJornadasPorTurno($turno)
+{
+    if ($turno === 'Día Completo') {
+        return 3;
+    } else if ($turno === 'Mañana y tarde' || $turno === 'Tarde y noche') {
+        return 2;
+    } else {
+        return 1;
+    }
+}
+
 private function adjustAPDays($miRequest, $oldEstado, $newEstado)
 {
     $user = $miRequest->EnviadaPor;

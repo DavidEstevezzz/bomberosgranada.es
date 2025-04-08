@@ -216,19 +216,6 @@ class UserController extends Controller
     }
 
 
-    public function updateAP(Request $request, $id)
-    {
-        $validatedData = $request->validate([
-            'AP' => 'required|integer|min:0',
-        ]);
-
-        $user = User::findOrFail($id);
-        $user->AP = $validatedData['AP'];
-        $user->save();
-
-        return response()->json($user, 200);
-    }
-
 
 
     public function updateUserField(Request $request, $id, $field)

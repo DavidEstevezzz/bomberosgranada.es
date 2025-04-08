@@ -521,6 +521,11 @@ private function adjustAPDays($miRequest, $oldEstado, $newEstado)
 
     // Calcular jornadas según el turno
     $jornadasSolicitadas = $this->calcularJornadasPorTurno($miRequest->turno);
+    
+    Log::info("Solicitud ID: {$miRequest->id}, Tipo: {$miRequest->tipo}, Turno: {$miRequest->turno}");
+    Log::info("Jornadas calculadas: {$jornadasSolicitadas}");
+    Log::info("Estado anterior: {$oldEstado}, Nuevo estado: {$newEstado}");
+    Log::info("AP disponibles antes de operación: {$user->AP}");
 
     // Restar jornadas de AP cuando se confirma la solicitud
     if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
@@ -534,6 +539,7 @@ private function adjustAPDays($miRequest, $oldEstado, $newEstado)
         Log::info("Sumando {$jornadasSolicitadas} jornadas de asuntos propios al usuario ID: {$user->id_empleado}");
     }
 
+    Log::info("AP disponibles después de operación: {$user->AP}");
     $user->save();
 }
 

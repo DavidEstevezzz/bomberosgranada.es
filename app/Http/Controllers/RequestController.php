@@ -14,231 +14,232 @@ use Illuminate\Support\Facades\Mail;
 class RequestController extends Controller
 {
     public function index()
-{
-    // 1) Obtenemos las solicitudes ordenadas por 'fecha_ini' en orden ascendente
-    $requests = MiRequest::orderBy('fecha_ini', 'asc')->get();
+    {
+        // 1) Obtenemos las solicitudes ordenadas por 'fecha_ini' en orden ascendente
+        $requests = MiRequest::orderBy('fecha_ini', 'asc')->get();
 
-    // 2) Transformamos cada solicitud para agregar 'creacion' con solo la fecha
-    //    y conservamos el resto de campos habituales
-    $data = $requests->map(function ($req) {
-        return [
-            'id'            => $req->id,
-            'id_empleado'   => $req->id_empleado,
-            'tipo'          => $req->tipo,
-            'motivo'        => $req->motivo,
-            'fecha_ini'     => $req->fecha_ini,
-            'fecha_fin'     => $req->fecha_fin,
-            'estado'        => $req->estado,
-            'turno'         => $req->turno,
-            'file'          => $req->file,
-            // Este es el campo nuevo que mostrará solo la fecha de created_at
-            'creacion'      => $req->created_at ? $req->created_at->format('Y-m-d') : null,
-        ];
-    });
+        // 2) Transformamos cada solicitud para agregar 'creacion' con solo la fecha
+        //    y conservamos el resto de campos habituales
+        $data = $requests->map(function ($req) {
+            return [
+                'id'            => $req->id,
+                'id_empleado'   => $req->id_empleado,
+                'tipo'          => $req->tipo,
+                'motivo'        => $req->motivo,
+                'fecha_ini'     => $req->fecha_ini,
+                'fecha_fin'     => $req->fecha_fin,
+                'estado'        => $req->estado,
+                'turno'         => $req->turno,
+                'file'          => $req->file,
+                // Este es el campo nuevo que mostrará solo la fecha de created_at
+                'creacion'      => $req->created_at ? $req->created_at->format('Y-m-d') : null,
+            ];
+        });
 
-    return response()->json($data);
-}
+        return response()->json($data);
+    }
 
 
     public function store(Request $request)
-{
-    Log::info('Datos de la solicitud recibidos:', $request->all());
+    {
+        Log::info('Datos de la solicitud recibidos:', $request->all());
 
-    // Reglas generales
-    $rules = [
-        'id_empleado' => 'required|exists:users,id_empleado',
-        'tipo' => 'required|in:vacaciones,asuntos propios,horas sindicales,salidas personales,vestuario,licencias por jornadas,licencias por dias,modulo,compensacion grupos especiales',
-        'fecha_ini' => 'required|date',
-        'fecha_fin' => 'required|date',
-        'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
-        'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048', // Validación del archivo
-    ];
+        // Reglas generales
+        $rules = [
+            'id_empleado' => 'required|exists:users,id_empleado',
+            'tipo' => 'required|in:vacaciones,asuntos propios,horas sindicales,salidas personales,vestuario,licencias por jornadas,licencias por dias,modulo,compensacion grupos especiales',
+            'fecha_ini' => 'required|date',
+            'fecha_fin' => 'required|date',
+            'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
+            'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048', // Validación del archivo
+        ];
 
-    // Reglas específicas para "asuntos propios"
-    if ($request->tipo === 'asuntos propios' || $request->tipo === 'licencias por jornadas') {
-        $rules['turno'] = 'required|in:Mañana,Tarde,Noche,Día Completo,Mañana y tarde,Tarde y noche';
-    }
-
-    if ($request->tipo === 'salidas personales' || $request->tipo === 'horas sindicales' ) {
-    
-        $rules['horas'] = 'required|numeric|min:1|max:24'; // Validar las horas
-        $request->merge([
-            'fecha_fin' => $request->fecha_ini, // Asegurar que fecha_ini y fecha_fin sean iguales
-        ]);
-    }
-
-    if ($request->tipo === 'licencias por dias' || request()->tipo === 'compensacion grupos especiales') {
-        $request->merge([
-            'fecha_fin' => $request->fecha_fin ?? $request->fecha_ini, // Asegura que haya fecha_fin
-        ]);
-    }
-
-    // Validar los datos
-    $validator = Validator::make($request->all(), $rules);
-
-    if ($validator->fails()) {
-        Log::error('Errores de validación:', $validator->errors()->toArray());
-        return response()->json($validator->errors(), 400);
-    }
-
-    // Guardar el archivo si se proporciona
-    $filePath = null;
-    if ($request->hasFile('file')) {
-        $filePath = $request->file('file')->store('files', 'shared');
-        Log::info("Ruta de archivo adjunto: " . $filePath);
-
-    }
-
-    Log::info('Datos de la solicitud recibidos:', $request->all());
-
-    if ($request->hasFile('file')) {
-        $file = $request->file('file');
-        Log::info('Archivo recibido:', ['nombre' => $file->getClientOriginalName()]);
-    } else {
-        Log::warning('No se recibió ningún archivo.');
-    }
-
-    // Crear la solicitud
-    $miRequest = MiRequest::create(array_merge($request->all(), ['file' => $filePath]));
-
-    Log::info('Solicitud creada con éxito:', $miRequest->toArray());
-    return response()->json($miRequest, 201);
-}
-
-
-
-public function show(string $id)
-{
-    $miRequest = MiRequest::find($id);
-
-    if (!$miRequest) {
-        return response()->json(['message' => 'Request not found'], 404);
-    }
-
-    
-    
-    $fileExists = $miRequest->file && file_exists(public_path('storage/' . $miRequest->file));
-
-    return response()->json([
-        'request' => $miRequest,
-        'file_url' => $fileExists ? url('storage/' . $miRequest->file) : null,
-    ]);
-
-}
-
-public function downloadFile(string $id)
-{
-    // Buscar la solicitud por ID
-    $miRequest = MiRequest::find($id);
-
-    // Verificar si la solicitud existe y tiene un archivo asociado
-    if (!$miRequest || !$miRequest->file) {
-        return response()->json(['message' => 'Archivo no encontrado'], 404);
-    }
-
-    // Obtener la ruta completa al archivo almacenado
-    $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $miRequest->file);
-
-    // Verificar si el archivo existe físicamente en el servidor
-    if (!file_exists($filePath)) {
-        return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
-    }
-
-    // Responder con el archivo para que el navegador inicie la descarga
-    return response()->download($filePath);
-}
-
-
-
-public function update(Request $request, $id)
-{
-    $miRequest = MiRequest::findOrFail($id);
-
-    $rules = [
-        'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
-    ];
-
-    $validator = Validator::make($request->all(), $rules);
-    if ($validator->fails()) {
-        return response()->json($validator->errors(), 400);
-    }
-
-    $oldEstado = $miRequest->estado;
-    $newEstado = $request->estado;
-
-    // Validación de disponibilidad según el tipo de solicitud
-    if ($newEstado === 'Confirmada') {
-        $user = $miRequest->EnviadaPor;
-        if (!$user) {
-            return response()->json(['error' => 'Usuario no encontrado para esta solicitud'], 404);
+        // Reglas específicas para "asuntos propios"
+        if ($request->tipo === 'asuntos propios' || $request->tipo === 'licencias por jornadas') {
+            $rules['turno'] = 'required|in:Mañana,Tarde,Noche,Día Completo,Mañana y tarde,Tarde y noche';
         }
 
-        $fechaInicio = new \DateTime($miRequest->fecha_ini);
-        $fechaFin = new \DateTime($miRequest->fecha_fin);
-        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+        if ($request->tipo === 'salidas personales' || $request->tipo === 'horas sindicales') {
 
-        // Verificaciones específicas por tipo
-        switch($miRequest->tipo) {
+            $rules['horas'] = 'required|numeric|min:1|max:24'; // Validar las horas
+            $request->merge([
+                'fecha_fin' => $request->fecha_ini, // Asegurar que fecha_ini y fecha_fin sean iguales
+            ]);
+        }
+
+        if ($request->tipo === 'licencias por dias' || request()->tipo === 'compensacion grupos especiales') {
+            $request->merge([
+                'fecha_fin' => $request->fecha_fin ?? $request->fecha_ini, // Asegura que haya fecha_fin
+            ]);
+        }
+
+        // Validar los datos
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            Log::error('Errores de validación:', $validator->errors()->toArray());
+            return response()->json($validator->errors(), 400);
+        }
+
+        // Guardar el archivo si se proporciona
+        $filePath = null;
+        if ($request->hasFile('file')) {
+            $filePath = $request->file('file')->store('files', 'shared');
+            Log::info("Ruta de archivo adjunto: " . $filePath);
+        }
+
+        Log::info('Datos de la solicitud recibidos:', $request->all());
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            Log::info('Archivo recibido:', ['nombre' => $file->getClientOriginalName()]);
+        } else {
+            Log::warning('No se recibió ningún archivo.');
+        }
+
+        // Crear la solicitud
+        $miRequest = MiRequest::create(array_merge($request->all(), ['file' => $filePath]));
+
+        Log::info('Solicitud creada con éxito:', $miRequest->toArray());
+        return response()->json($miRequest, 201);
+    }
+
+
+
+    public function show(string $id)
+    {
+        $miRequest = MiRequest::find($id);
+
+        if (!$miRequest) {
+            return response()->json(['message' => 'Request not found'], 404);
+        }
+
+
+
+        $fileExists = $miRequest->file && file_exists(public_path('storage/' . $miRequest->file));
+
+        return response()->json([
+            'request' => $miRequest,
+            'file_url' => $fileExists ? url('storage/' . $miRequest->file) : null,
+        ]);
+    }
+
+    public function downloadFile(string $id)
+    {
+        // Buscar la solicitud por ID
+        $miRequest = MiRequest::find($id);
+
+        // Verificar si la solicitud existe y tiene un archivo asociado
+        if (!$miRequest || !$miRequest->file) {
+            return response()->json(['message' => 'Archivo no encontrado'], 404);
+        }
+
+        // Obtener la ruta completa al archivo almacenado
+        $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $miRequest->file);
+
+        // Verificar si el archivo existe físicamente en el servidor
+        if (!file_exists($filePath)) {
+            return response()->json(['message' => 'Archivo no encontrado en el servidor'], 404);
+        }
+
+        // Responder con el archivo para que el navegador inicie la descarga
+        return response()->download($filePath);
+    }
+
+
+
+    public function update(Request $request, $id)
+    {
+        $miRequest = MiRequest::findOrFail($id);
+
+        $rules = [
+            'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $oldEstado = $miRequest->estado;
+        $newEstado = $request->estado;
+
+        // Validación de disponibilidad según el tipo de solicitud
+        if ($newEstado === 'Confirmada') {
+            $user = $miRequest->EnviadaPor;
+            if (!$user) {
+                return response()->json(['error' => 'Usuario no encontrado para esta solicitud'], 404);
+            }
+
+            $fechaInicio = new \DateTime($miRequest->fecha_ini);
+            $fechaFin = new \DateTime($miRequest->fecha_fin);
+            $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+
+            // Verificaciones específicas por tipo
+            switch ($miRequest->tipo) {
+                case 'vacaciones':
+                    if ($user->vacaciones < $diasSolicitados) {
+                        return response()->json(['error' => 'El usuario no tiene suficientes días de vacaciones disponibles'], 400);
+                    }
+                    break;
+                case 'modulo':
+                    if ($user->modulo < $diasSolicitados) {
+                        return response()->json(['error' => 'El usuario no tiene suficientes días en su módulo disponibles'], 400);
+                    }
+                    break;
+                case 'horas sindicales':
+                    if ($user->horas_sindicales < $miRequest->horas) {
+                        return response()->json(['error' => 'El usuario no tiene suficientes horas sindicales disponibles'], 400);
+                    }
+                    break;
+            }
+        }
+
+        // Actualizar el estado de la solicitud
+        $miRequest->estado = $newEstado;
+        $miRequest->save();
+
+        // Ajustar las columnas específicas según el tipo
+        switch ($miRequest->tipo) {
             case 'vacaciones':
-                if ($user->vacaciones < $diasSolicitados) {
-                    return response()->json(['error' => 'El usuario no tiene suficientes días de vacaciones disponibles'], 400);
-                }
+                $this->adjustVacationDays($miRequest, $oldEstado, $newEstado);
                 break;
             case 'modulo':
-                if ($user->modulo < $diasSolicitados) {
-                    return response()->json(['error' => 'El usuario no tiene suficientes días en su módulo disponibles'], 400);
-                }
+                $this->adjustModuloDays($miRequest, $oldEstado, $newEstado);
+                break;
+            case 'salidas personales':
+                $this->adjustSPHours($miRequest, $oldEstado, $newEstado);
                 break;
             case 'horas sindicales':
-                if ($user->horas_sindicales < $miRequest->horas) {
-                    return response()->json(['error' => 'El usuario no tiene suficientes horas sindicales disponibles'], 400);
-                }
+                $this->adjustSindicalHours($miRequest, $oldEstado, $newEstado);
                 break;
+            case 'compensacion grupos especiales':
+                $this->adjustCompensacionGrupos($miRequest, $oldEstado, $newEstado);
+                break;
+            default:
+                // Para otros tipos de solicitudes
+                if (!in_array($miRequest->tipo, ['vestuario'])) {
+                    if ($newEstado === 'Confirmada') {
+                        $this->createAssignments($miRequest);
+                    }
+                    if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+                        $this->deleteAssignments($miRequest);
+                    }
+                }
         }
-    }
 
-    // Actualizar el estado de la solicitud
-    $miRequest->estado = $newEstado;
-    $miRequest->save();
-
-    // Ajustar las columnas específicas según el tipo
-    switch($miRequest->tipo) {
-        case 'vacaciones':
-            $this->adjustVacationDays($miRequest, $oldEstado, $newEstado);
-            break;
-        case 'modulo':
-            $this->adjustModuloDays($miRequest, $oldEstado, $newEstado);
-            break;
-        case 'salidas personales':
-            $this->adjustSPHours($miRequest, $oldEstado, $newEstado);
-            break;
-        case 'horas sindicales':
-            $this->adjustSindicalHours($miRequest, $oldEstado, $newEstado);
-            break;
-        default:
-            // Para otros tipos de solicitudes
-            if (!in_array($miRequest->tipo, ['vestuario'])) {
-                if ($newEstado === 'Confirmada') {
-                    $this->createAssignments($miRequest);
-                }
-                if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
-                    $this->deleteAssignments($miRequest);
-                }
+        // Enviar correo de notificación
+        $user = $miRequest->EnviadaPor;
+        if ($user && $user->email) {
+            try {
+                Mail::to($user->email)->send(new RequestStatusUpdatedMail($miRequest, $newEstado));
+            } catch (\Exception $e) {
+                Log::error("Error enviando correo: " . $e->getMessage());
             }
-    }
-
-    // Enviar correo de notificación
-    $user = $miRequest->EnviadaPor;
-    if ($user && $user->email) {
-        try {
-            Mail::to($user->email)->send(new RequestStatusUpdatedMail($miRequest, $newEstado));
-        } catch (\Exception $e) {
-            Log::error("Error enviando correo: " . $e->getMessage());
         }
-    }
 
-    return response()->json($miRequest, 200);
-}
+        return response()->json($miRequest, 200);
+    }
 
 
 
@@ -273,8 +274,8 @@ public function update(Request $request, $id)
                 $brigadeId = \App\Models\Brigade::where('nombre', 'Modulo')->value('id_brigada');
                 break;
             case 'compensacion grupos especiales':
-                    $brigadeId = \App\Models\Brigade::where('nombre', 'Compensacion grupos especiales')->value('id_brigada');
-                    break;
+                $brigadeId = \App\Models\Brigade::where('nombre', 'Compensacion grupos especiales')->value('id_brigada');
+                break;
         }
 
         if (!$brigadeId) {
@@ -346,27 +347,27 @@ public function update(Request $request, $id)
     {
         return match ($turnoActual) {
             'Tarde', 'Mañana y tarde' => 'Noche',
-            'Tarde y noche','Noche', 'Día Completo' => 'Mañana',
+            'Tarde y noche', 'Noche', 'Día Completo' => 'Mañana',
             'Mañana' => 'Tarde',
         };
     }
 
     private function determinarFechaDevolucion($fechaInicio, $fechaFin, $turno, $tipoSolicitud)
-{
-    // Si el tipo de solicitud incluye una fecha de fin y es de los tipos específicos
-    if (in_array($tipoSolicitud, ['vacaciones', 'licencias por dias', 'modulo']) && $fechaFin) {
-        $fechaFin = new \DateTime($fechaFin);
-        $fechaFin->modify('+1 day'); // Incrementar un día para la devolución
-        return $fechaFin->format('Y-m-d');
-    }
+    {
+        // Si el tipo de solicitud incluye una fecha de fin y es de los tipos específicos
+        if (in_array($tipoSolicitud, ['vacaciones', 'licencias por dias', 'modulo']) && $fechaFin) {
+            $fechaFin = new \DateTime($fechaFin);
+            $fechaFin->modify('+1 day'); // Incrementar un día para la devolución
+            return $fechaFin->format('Y-m-d');
+        }
 
-    // Para los demás tipos de solicitud, usar la lógica previa
-    $fechaInicio = new \DateTime($fechaInicio);
-    if (in_array($turno, ['Noche', 'Día Completo', 'Tarde y noche', null])) {
-        $fechaInicio->modify('+1 day'); // Incrementar un día si es nocturno o día completo
+        // Para los demás tipos de solicitud, usar la lógica previa
+        $fechaInicio = new \DateTime($fechaInicio);
+        if (in_array($turno, ['Noche', 'Día Completo', 'Tarde y noche', null])) {
+            $fechaInicio->modify('+1 day'); // Incrementar un día si es nocturno o día completo
+        }
+        return $fechaInicio->format('Y-m-d');
     }
-    return $fechaInicio->format('Y-m-d');
-}
 
 
     private function deleteAssignments($miRequest)
@@ -403,7 +404,6 @@ public function update(Request $request, $id)
         ]);
 
         return $assignment->id_brigada_destino;
-
     }
 
 
@@ -415,82 +415,111 @@ public function update(Request $request, $id)
     }
 
     private function adjustVacationDays($miRequest, $oldEstado, $newEstado)
-{
-    $user = $miRequest->EnviadaPor;
-    if (!$user) {
-        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-        return;
+    {
+        $user = $miRequest->EnviadaPor;
+        if (!$user) {
+            Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return;
+        }
+
+        // Calcular los días solicitados
+        $fechaInicio = new \DateTime($miRequest->fecha_ini);
+        $fechaFin = new \DateTime($miRequest->fecha_fin);
+        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+
+        // Restar días de vacaciones si la solicitud es confirmada
+        if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
+            $user->vacaciones = max(0, $user->vacaciones - $diasSolicitados);
+            Log::info("Restando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
+        }
+
+        // Sumar días de vacaciones si la solicitud es cancelada
+        if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+            $user->vacaciones += $diasSolicitados;
+            Log::info("Sumando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
+        }
+
+        $user->save();
     }
 
-    // Calcular los días solicitados
-    $fechaInicio = new \DateTime($miRequest->fecha_ini);
-    $fechaFin = new \DateTime($miRequest->fecha_fin);
-    $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+    private function adjustCompensacionGrupos($miRequest, $oldEstado, $newEstado)
+    {
+        $user = $miRequest->EnviadaPor;
+        if (!$user) {
+            Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return;
+        }
 
-    // Restar días de vacaciones si la solicitud es confirmada
-    if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
-        $user->vacaciones = max(0, $user->vacaciones - $diasSolicitados);
-        Log::info("Restando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
+        // Calcular los días solicitados
+        $fechaInicio = new \DateTime($miRequest->fecha_ini);
+        $fechaFin = new \DateTime($miRequest->fecha_fin);
+        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+
+        // Restar días de compensacion_grupos si la solicitud es confirmada
+        if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
+            $user->compensacion_grupos = max(0, $user->compensacion_grupos - $diasSolicitados); // Evitar valores negativos
+            Log::info("Restando {$diasSolicitados} días de compensación grupos al usuario ID: {$user->id_empleado}");
+        }
+
+        // Sumar días de compensacion_grupos si la solicitud es cancelada
+        if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+            $user->compensacion_grupos += $diasSolicitados;
+            Log::info("Sumando {$diasSolicitados} días de compensación grupos al usuario ID: {$user->id_empleado}");
+        }
+
+        $user->save();
     }
 
-    // Sumar días de vacaciones si la solicitud es cancelada
-    if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
-        $user->vacaciones += $diasSolicitados;
-        Log::info("Sumando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
+    private function adjustModuloDays($miRequest, $oldEstado, $newEstado)
+    {
+        $user = $miRequest->EnviadaPor; // Relación con el modelo User
+        if (!$user) {
+            Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return;
+        }
+
+        // Calcular los días solicitados
+        $fechaInicio = new \DateTime($miRequest->fecha_ini);
+        $fechaFin = new \DateTime($miRequest->fecha_fin);
+        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+
+        // Restar días de `modulo` si la solicitud es confirmada
+        if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
+            $user->modulo = max(0, $user->modulo - $diasSolicitados); // Evitar valores negativos
+        }
+
+        // Sumar días de `modulo` si la solicitud es cancelada
+        if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+            $user->modulo += $diasSolicitados;
+        }
+
+        $user->save();
+        Log::info("Columna modulo ajustada para el usuario ID: {$user->id_empleado}, días ajustados: {$diasSolicitados}");
     }
 
-    $user->save();
-}
-private function adjustModuloDays($miRequest, $oldEstado, $newEstado)
-{
-    $user = $miRequest->EnviadaPor; // Relación con el modelo User
-    if (!$user) {
-        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-        return;
+    private function adjustSindicalHours($miRequest, $oldEstado, $newEstado)
+    {
+        $user = $miRequest->EnviadaPor; // Relación con el modelo User
+        if (!$user) {
+            Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return;
+        }
+
+        $hours = $miRequest->horas; // Asegúrate de que este campo esté presente y sea válido
+
+        // Restar horas de `horas_sindicales` si la solicitud pasa de Pendiente a Confirmada
+        if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
+            $user->horas_sindicales = max(0, $user->horas_sindicales - $hours);
+        }
+
+        // Sumar horas de `horas_sindicales` si la solicitud pasa de Confirmada a Cancelada
+        if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
+            $user->horas_sindicales += $hours;
+        }
+
+        $user->save();
+        Log::info("Columna horas_sindicales ajustada para el usuario ID: {$user->id_empleado}, horas ajustadas: {$hours}");
     }
-    
-    // Calcular los días solicitados
-    $fechaInicio = new \DateTime($miRequest->fecha_ini);
-    $fechaFin = new \DateTime($miRequest->fecha_fin);
-    $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
-
-    // Restar días de `modulo` si la solicitud es confirmada
-    if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
-        $user->modulo = max(0, $user->modulo - $diasSolicitados); // Evitar valores negativos
-    }
-
-    // Sumar días de `modulo` si la solicitud es cancelada
-    if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
-        $user->modulo += $diasSolicitados;
-    }
-
-    $user->save();
-    Log::info("Columna modulo ajustada para el usuario ID: {$user->id_empleado}, días ajustados: {$diasSolicitados}");
-}
-
-private function adjustSindicalHours($miRequest, $oldEstado, $newEstado)
-{
-    $user = $miRequest->EnviadaPor; // Relación con el modelo User
-    if (!$user) {
-        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-        return;
-    }
-
-    $hours = $miRequest->horas; // Asegúrate de que este campo esté presente y sea válido
-
-    // Restar horas de `horas_sindicales` si la solicitud pasa de Pendiente a Confirmada
-    if ($oldEstado === 'Pendiente' && $newEstado === 'Confirmada') {
-        $user->horas_sindicales = max(0, $user->horas_sindicales - $hours);
-    }
-
-    // Sumar horas de `horas_sindicales` si la solicitud pasa de Confirmada a Cancelada
-    if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
-        $user->horas_sindicales += $hours;
-    }
-
-    $user->save();
-    Log::info("Columna horas_sindicales ajustada para el usuario ID: {$user->id_empleado}, horas ajustadas: {$hours}");
-}
 
 
     private function adjustSPHours($miRequest, $oldEstado, $newEstado)

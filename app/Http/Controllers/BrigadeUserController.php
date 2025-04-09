@@ -7,6 +7,7 @@ use App\Models\Brigade;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class BrigadeUserController extends Controller
 {
@@ -118,29 +119,38 @@ class BrigadeUserController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function getUsersByBrigade($brigadeId)
-    {
-        // Verificar que la brigada existe
-        $brigade = Brigade::find($brigadeId);
-        if (!$brigade) {
-            return response()->json(['message' => 'Brigada no encontrada'], 404);
-        }
+{
+    // Log para indicar que el método se ha iniciado y mostrar el ID recibido
+    Log::info('Iniciando getUsersByBrigade', ['brigadeId' => $brigadeId]);
 
-        // Obtener todos los usuarios relacionados con esta brigada
-        $users = User::whereHas('brigadeUsers', function($query) use ($brigadeId) {
-            $query->where('id_brigada', $brigadeId);
-        })->get();
-
-        // Alternativamente, podemos obtener los registros de la tabla pivot con información adicional
-        $brigadeUsers = BrigadeUser::where('id_brigada', $brigadeId)
-                                 ->with('user')
-                                 ->get();
-
-        return response()->json([
-            'brigade' => $brigade->nombre,
-            'users' => $users,
-            'brigadeUsers' => $brigadeUsers
-        ]);
+    // Intentar buscar la brigada por su ID
+    $brigade = Brigade::find($brigadeId);
+    if (!$brigade) {
+        Log::error('Brigada no encontrada', ['brigadeId' => $brigadeId]);
+        return response()->json(['message' => 'Brigada no encontrada'], 404);
     }
+    // Brigada encontrada, se registra la información
+    Log::info('Brigada encontrada', ['brigade' => $brigade->toArray()]);
+
+    // Obtener los usuarios asociados a la brigada mediante la relación pivot
+    $users = User::whereHas('brigadeUsers', function($query) use ($brigadeId) {
+        $query->where('id_brigada', $brigadeId);
+    })->get();
+    Log::info('Usuarios obtenidos', ['users_count' => $users->count()]);
+
+    // Obtener los registros de BrigadeUser con la relación del usuario
+    $brigadeUsers = BrigadeUser::where('id_brigada', $brigadeId)
+                         ->with('user')
+                         ->get();
+    Log::info('Registros de brigadeUsers obtenidos', ['brigadeUsers_count' => $brigadeUsers->count()]);
+
+    return response()->json([
+        'brigade' => $brigade->nombre,
+        'users' => $users,
+        'brigadeUsers' => $brigadeUsers
+    ]);
+}
+
 
     /**
      * Obtener el número de prácticas para un empleado específico en relación a las brigadas

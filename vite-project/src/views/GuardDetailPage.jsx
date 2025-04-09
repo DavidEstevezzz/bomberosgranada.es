@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import GuardsApiService from '../services/GuardsApiService';
 import BrigadesApiService from '../services/BrigadesApiService';
-import BrigadeUsersApiService from '../services/BrigadeUsersApiService';
+import BrigadeUsersApiService from '../services/BrigadeUserApiService';
 import AssignmentsApiService from '../services/AssignmentsApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
@@ -22,55 +22,99 @@ const GuardDetailPage = () => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                
+
+                // Log del inicio de la función y los parámetros recibidos
+                console.log('Iniciando fetchData con parámetros:', { brigadeId, date });
+
                 // Obtener datos de la brigada
+                console.log('Solicitando datos de la brigada:', brigadeId);
                 const brigadeResponse = await BrigadesApiService.getBrigade(brigadeId);
-                setBrigade(brigadeResponse.data);
-                
-                // Obtener la guardia específica
-                const guardsResponse = await GuardsApiService.getGuards();
-                const guardsFiltered = guardsResponse.data.filter(g => 
-                    g.id_brigada == brigadeId && 
-                    g.date === date && 
-                    g.especiales !== null && 
-                    g.especiales !== undefined && 
-                    g.especiales !== ""
-                );
-                
-                // Si encontramos una guardia, la usamos
-                if (guardsFiltered.length > 0) {
-                    setGuard(guardsFiltered[0]);
+                console.log('Respuesta de brigada recibida:', brigadeResponse);
+
+                if (!brigadeResponse || !brigadeResponse.data) {
+                    console.error('Respuesta de brigada inválida:', brigadeResponse);
+                    setError('No se pudo obtener información de la brigada');
+                    setLoading(false);
+                    return;
                 }
-                
-                // Obtener usuarios de la brigada
-                const brigadeUsersResponse = await BrigadeUsersApiService.getUsersByBrigade(brigadeId);
-                setBrigadeUsers(brigadeUsersResponse.data.brigadeUsers || []);
-                
-                // Verificar para cada usuario si está asignado para esta guardia especial
-                const assignmentsData = {};
-                
-                if (brigadeUsersResponse.data && brigadeUsersResponse.data.brigadeUsers) {
-                    for (const user of brigadeUsersResponse.data.brigadeUsers) {
-                        try {
-                            // Verificar si el bombero está asignado para esta fecha
-                            const checkResponse = await AssignmentsApiService.checkEspecialAssignment(
-                                brigadeId, 
-                                date
-                            );
-                            
-                            // Guardar el estado de asignación para este usuario
-                            assignmentsData[user.id_usuario] = checkResponse.data.assigned || false;
-                        } catch (err) {
-                            console.error(`Error checking assignment for user ${user.id_usuario}:`, err);
-                            assignmentsData[user.id_usuario] = false;
-                        }
+
+                setBrigade(brigadeResponse.data);
+                console.log('Brigada establecida en el estado:', brigadeResponse.data);
+
+                // Obtener la guardia específica
+                console.log('Solicitando guardias');
+                const guardsResponse = await GuardsApiService.getGuards();
+                console.log('Respuesta de guardias recibida:', guardsResponse);
+
+                if (!guardsResponse || !guardsResponse.data) {
+                    console.error('Respuesta de guardias inválida:', guardsResponse);
+                    // Continuamos aunque no haya guardias, no es un error fatal
+                } else {
+                    console.log('Filtrando guardias para brigada y fecha:', { brigadeId, date });
+                    const guardsFiltered = guardsResponse.data.filter(g =>
+                        g.id_brigada == brigadeId &&
+                        g.date === date &&
+                        g.especiales !== null &&
+                        g.especiales !== undefined &&
+                        g.especiales !== ""
+                    );
+
+                    console.log('Guardias filtradas:', guardsFiltered);
+
+                    // Si encontramos una guardia, la usamos
+                    if (guardsFiltered.length > 0) {
+                        setGuard(guardsFiltered[0]);
+                        console.log('Guardia establecida en el estado:', guardsFiltered[0]);
+                    } else {
+                        console.log('No se encontraron guardias especiales para esta brigada y fecha');
                     }
                 }
-                
+
+                // Obtener usuarios de la brigada
+                console.log('Solicitando bomberos para la brigada:', brigadeId);
+                const brigadeUsersResponse = await BrigadeUsersApiService.getUsersByBrigade(brigadeId);
+
+                console.log('Respuesta de bomberos recibida:', brigadeUsersResponse);
+
+                let formattedUsers = [];
+                if (brigadeUsersResponse.data && brigadeUsersResponse.data.firefighters) {
+                    formattedUsers = brigadeUsersResponse.data.firefighters.map(firefighter => ({
+                        id: firefighter.id || firefighter.id_empleado,
+                        id_usuario: firefighter.id_empleado,
+                        user: {
+                            nombre: firefighter.nombre,
+                            apellido: firefighter.apellido
+                        }
+                    }));
+                }
+
+                setBrigadeUsers(formattedUsers);
+                const assignmentsData = {};
+
+                console.log('Verificando asignaciones para cada usuario');
+                for (const user of formattedUsers) {
+                    try {
+                        console.log('Verificando asignación para usuario:', user.id_usuario);
+                        const checkResponse = await AssignmentsApiService.checkEspecialAssignment(
+                            brigadeId,
+                            date
+                        );
+                        console.log('Respuesta de verificación recibida:', checkResponse);
+
+                        // Guardar el estado de asignación para este usuario
+                        assignmentsData[user.id_usuario] = checkResponse.data.has_assignments || false;
+                        console.log(`Estado de asignación para ${user.id_usuario}:`, assignmentsData[user.id_usuario]);
+                    } catch (err) {
+                        console.error(`Error checking assignment for user ${user.id_usuario}:`, err);
+                        assignmentsData[user.id_usuario] = false;
+                    }
+                }
+
+                console.log('Datos de asignaciones completos:', assignmentsData);
                 setAssignments(assignmentsData);
                 setLoading(false);
             } catch (error) {
-                console.error('Error fetching guard details:', error);
+                console.error('Error en fetchData:', error);
                 setError('Ocurrió un error al cargar los detalles de la guardia.');
                 setLoading(false);
             }
@@ -85,21 +129,21 @@ const GuardDetailPage = () => {
 
     const formatDate = (dateString) => {
         if (!dateString) return '';
-        
+
         const date = new Date(dateString);
-        
+
         // Obtener los componentes de la fecha
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const year = date.getFullYear();
-        
+
         // Formatear la fecha en formato español
         return `${day}/${month}/${year}`;
     };
 
     const toggleUserAssignment = async (userId) => {
         if (!guard || !guard.especiales) return;
-        
+
         try {
             setProcessingUser(userId);
             const isCurrentlyAssigned = assignments[userId];
@@ -108,7 +152,7 @@ const GuardDetailPage = () => {
                 fecha: date,
                 id_usuario: userId
             };
-            
+
             if (isCurrentlyAssigned) {
                 // Quitar al bombero de la asignación
                 if (guard.especiales.includes('Prácticas')) {
@@ -116,7 +160,7 @@ const GuardDetailPage = () => {
                 } else if (guard.especiales.includes('Guardia Localizada')) {
                     await AssignmentsApiService.deleteRTAssignments(brigadeId, date);
                 }
-                
+
                 // Actualizar el estado local
                 setAssignments(prev => ({
                     ...prev,
@@ -126,25 +170,25 @@ const GuardDetailPage = () => {
                 // Asignar al bombero
                 if (guard.especiales.includes('Prácticas')) {
                     await AssignmentsApiService.createPracticesAssignments(payload);
-                    
+
                     // Incrementar el contador de prácticas
                     await BrigadeUsersApiService.incrementPracticas({
                         id_brigada: parseInt(brigadeId),
                         id_usuario: userId,
                         increment: 1
                     });
-                    
+
                 } else if (guard.especiales.includes('Guardia Localizada')) {
                     await AssignmentsApiService.createRTAssignments(payload);
                 }
-                
+
                 // Actualizar el estado local
                 setAssignments(prev => ({
                     ...prev,
                     [userId]: true
                 }));
             }
-            
+
             setProcessingUser(null);
         } catch (error) {
             console.error('Error toggling user assignment:', error);
@@ -169,7 +213,7 @@ const GuardDetailPage = () => {
                     <strong className="font-bold">Error!</strong>
                     <span className="block sm:inline"> {error}</span>
                 </div>
-                <button 
+                <button
                     onClick={handleBack}
                     className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                 >
@@ -184,7 +228,7 @@ const GuardDetailPage = () => {
         return (
             <div className={`min-h-screen p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
                 <div className={`max-w-4xl mx-auto p-6 rounded-lg shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                    <button 
+                    <button
                         onClick={handleBack}
                         className="mb-4 flex items-center text-blue-500 hover:text-blue-700"
                     >
@@ -205,7 +249,7 @@ const GuardDetailPage = () => {
     return (
         <div className={`min-h-screen p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
             <div className={`max-w-4xl mx-auto p-6 rounded-lg shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                <button 
+                <button
                     onClick={handleBack}
                     className="mb-4 flex items-center text-blue-500 hover:text-blue-700"
                 >
@@ -216,7 +260,7 @@ const GuardDetailPage = () => {
                 </button>
 
                 <h1 className="text-2xl font-bold mb-6">Detalle de Guardia Especial</h1>
-                
+
                 <div className="space-y-6">
                     <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                         <h2 className="text-xl font-semibold mb-2">Información de la Brigada</h2>
@@ -254,7 +298,7 @@ const GuardDetailPage = () => {
                                 </div>
                             )}
                         </div>
-                        
+
                         {!guard && (
                             <div className="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded">
                                 <p>No se encontró información detallada de esta guardia para la fecha seleccionada.</p>
@@ -264,7 +308,7 @@ const GuardDetailPage = () => {
 
                     <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                         <h2 className="text-xl font-semibold mb-2">Personal Asignado</h2>
-                        
+
                         {brigadeUsers && brigadeUsers.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <table className={`min-w-full ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
@@ -282,11 +326,10 @@ const GuardDetailPage = () => {
                                                     {brigadeUser.user?.nombre} {brigadeUser.user?.apellido}
                                                 </td>
                                                 <td className="py-2 px-4 text-center">
-                                                    <span className={`px-2 py-1 rounded text-sm font-medium ${
-                                                        assignments[brigadeUser.id_usuario] 
-                                                            ? 'bg-green-100 text-green-800' 
-                                                            : 'bg-red-100 text-red-800'
-                                                    }`}>
+                                                    <span className={`px-2 py-1 rounded text-sm font-medium ${assignments[brigadeUser.id_usuario]
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : 'bg-red-100 text-red-800'
+                                                        }`}>
                                                         {assignments[brigadeUser.id_usuario] ? 'Acude' : 'No acude'}
                                                     </span>
                                                 </td>
@@ -294,14 +337,13 @@ const GuardDetailPage = () => {
                                                     <button
                                                         onClick={() => toggleUserAssignment(brigadeUser.id_usuario)}
                                                         disabled={processingUser === brigadeUser.id_usuario}
-                                                        className={`px-3 py-1 rounded ${
-                                                            assignments[brigadeUser.id_usuario]
-                                                                ? 'bg-red-500 hover:bg-red-600 text-white' 
-                                                                : 'bg-green-500 hover:bg-green-600 text-white'
-                                                        } ${processingUser === brigadeUser.id_usuario ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        className={`px-3 py-1 rounded ${assignments[brigadeUser.id_usuario]
+                                                            ? 'bg-red-500 hover:bg-red-600 text-white'
+                                                            : 'bg-green-500 hover:bg-green-600 text-white'
+                                                            } ${processingUser === brigadeUser.id_usuario ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                     >
-                                                        {processingUser === brigadeUser.id_usuario 
-                                                            ? 'Procesando...' 
+                                                        {processingUser === brigadeUser.id_usuario
+                                                            ? 'Procesando...'
                                                             : (assignments[brigadeUser.id_usuario] ? 'Quitar' : 'Asignar')
                                                         }
                                                     </button>

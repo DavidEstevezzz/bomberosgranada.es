@@ -27,6 +27,7 @@ class BrigadeUsersApiService {
 
     // Métodos específicos
     async getUsersByBrigade(brigadeId) {
+        // La ruta debe ser `/api/brigade/${brigadeId}/users` o ajustarla según corresponda
         return await BaseApiService.get(`${API_URL}/brigade/${brigadeId}`);
     }
 

@@ -8,28 +8,16 @@ import { useDarkMode } from '../contexts/DarkModeContext';
 
 const GuardEspecialModal = ({ isOpen, onClose, guardDate, setGuards, brigades }) => {
   const [brigadeId, setBrigadeId] = useState('');
-  const [salaryId, setSalaryId] = useState('');
-  const [type, setType] = useState('Guardia localizada'); // Valor predeterminado para guardias especiales
-  const [salaries, setSalaries] = useState([]);
+  const [type, setType] = useState('Laborable'); // Tipo de día (predeterminado: Laborable)
+  const [especialType, setEspecialType] = useState('Guardia localizada'); // Tipo de guardia especial
   const [loading, setLoading] = useState(false);
   const { darkMode } = useDarkMode();
-
-  useEffect(() => {
-    const fetchSalaries = async () => {
-      const response = await SalariesApiService.getSalaries();
-      setSalaries(response.data);
-    };
-
-    if (isOpen) {
-      fetchSalaries();
-    }
-  }, [isOpen, guardDate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
   
-    if (!brigadeId || !type) {
+    if (!brigadeId || !type || !especialType) {
       console.error('Error: Todos los campos son obligatorios.');
       alert('Por favor, completa todos los campos.');
       setLoading(false);
@@ -42,7 +30,8 @@ const GuardEspecialModal = ({ isOpen, onClose, guardDate, setGuards, brigades })
       date: dateUTC.toISOString().slice(0, 10),
       id_brigada: brigadeId,
       id_salario: '16', // ID de salario por defecto
-      tipo: type, // Usar "Guardia localizada" o "Prácticas"
+      tipo: type, // Tipo de día: Laborable, Festivo, etc.
+      especiales: especialType, // Tipo de guardia especial: Guardia localizada o Prácticas
     };
   
     try {
@@ -56,7 +45,6 @@ const GuardEspecialModal = ({ isOpen, onClose, guardDate, setGuards, brigades })
     }
   };
   
-
   return (
     isOpen && (
       <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -81,12 +69,12 @@ const GuardEspecialModal = ({ isOpen, onClose, guardDate, setGuards, brigades })
                   ))}
                 </select>
                 
-                <label className={`${darkMode ? 'text-white' : 'text-gray-900'}`} htmlFor="type">Tipo de guardia especial</label>
+                <label className={`${darkMode ? 'text-white' : 'text-gray-900'}`} htmlFor="especialType">Tipo de guardia especial</label>
                 <select
-                  id="type"
+                  id="especialType"
                   className="mt-1 mb-4 p-2 border rounded w-full"
-                  value={type}
-                  onChange={e => setType(e.target.value)}
+                  value={especialType}
+                  onChange={e => setEspecialType(e.target.value)}
                   required
                 >
                   <option value="Guardia localizada">Guardia localizada</option>

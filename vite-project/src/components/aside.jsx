@@ -253,33 +253,33 @@ const Aside = ({ className }) => {
           </a>
         )}
 
-        {/* Menú desplegable para Calendarios */}
-        <div className="relative">
-          <button onClick={() => toggleDropdown('calendars')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-            <span className="flex items-center">
-              <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 mr-2" />
-              Calendarios
-            </span>
-            <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.calendars ? 'rotate-180' : ''}`} />
-          </button>
-          {dropdownOpen.calendars && (
-            <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-              {userType === 'jefe' && (
-                <a href="/calendario-norte" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Calendario Norte</a>
-              )}
-              {userType === 'jefe' && (
-                <a href="/calendario-sur" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Calendario Sur</a>
-              )}
-              {/* Solo mostrar el enlace a Calendario Especial si el usuario es mando especial */}
-              {isMandoEspecial && (
-                <a href="/calendario-especial" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
-                  <FontAwesomeIcon icon={faCalendarCheck} className="w-4 h-4 mr-2" />
-                  Guardias Especiales
-                </a>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Menú desplegable para Calendarios - Solo visible para jefes o mandos especiales */}
+        {(userType === 'jefe' || isMandoEspecial) && (
+          <div className="relative">
+            <button onClick={() => toggleDropdown('calendars')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+              <span className="flex items-center">
+                <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 mr-2" />
+                Calendarios
+              </span>
+              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.calendars ? 'rotate-180' : ''}`} />
+            </button>
+            {dropdownOpen.calendars && (
+              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                {userType === 'jefe' && (
+                  <a href="/calendario-norte" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Calendario Guardias</a>
+                )}
+
+                {/* Solo mostrar el enlace a Calendario Especial si el usuario es mando especial */}
+                {isMandoEspecial && (
+                  <a href="/calendario-especial" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
+                    <FontAwesomeIcon icon={faCalendarCheck} className="w-4 h-4 mr-2" />
+                    Crear Guardias Especiales
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Sugerencias */}
         <a href="/sugerencias" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
@@ -294,14 +294,14 @@ const Aside = ({ className }) => {
           </a>
         )}
 
-      {(userType === 'jefe' || userType === 'mando') && (
+        {(userType === 'jefe' || userType === 'mando') && (
           <a href="/pdf" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
             <FontAwesomeIcon icon={faFilePdf} className="w-5 h-5 mr-2" />
             Parte Jefatura
           </a>
         )}
 
-        
+
       </nav>
     </aside>
   );

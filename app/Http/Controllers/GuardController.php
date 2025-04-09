@@ -240,10 +240,10 @@ class GuardController extends Controller
     {
         return response()->json(['message' => 'Route accessed successfully']);
     }
-    
+
     public function getEspecialGuards()
 {
-    $especialGuards = Guard::whereNotNull('tipo')->get();
+    $especialGuards = Guard::whereNotNull('especiales')->get();
     return response()->json($especialGuards);
 }
 }

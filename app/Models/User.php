@@ -81,4 +81,18 @@ class User extends Authenticatable
     {
         return $this->hasMany('App\Models\PersonalsIncident');
     }
+
+    // Nueva relación con brigadas a través de la tabla pivot
+    public function brigades()
+    {
+        return $this->belongsToMany(Brigade::class, 'brigade_user', 'id_usuario', 'id_brigada')
+                    ->withPivot('practicas')
+                    ->withTimestamps();
+    }
+
+    // Relación directa con la tabla pivot
+    public function brigadeUsers()
+    {
+        return $this->hasMany(BrigadeUser::class, 'id_usuario', 'id_empleado');
+    }
 }

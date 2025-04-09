@@ -6,8 +6,9 @@ import {
   faUser,
   faPeopleGroup,
   faGear,
-  faFile,
   faClock,
+  
+  faFile,
   faCalendar,
   faCaretDown,
   faTruck,
@@ -15,10 +16,9 @@ import {
   faLightbulb,
   faExchangeAlt,
   faFilePdf,
-  faSitemap,
-  faTrashAlt,
   faRadio,
-  faCalendarCheck // Icono para calendario especial
+  faCalendarCheck,
+  faClipboardList // Nuevo icono para ver detalles
 } from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -36,7 +36,7 @@ const Aside = ({ className }) => {
     solicitudes: false,
     organization: false,
     equipment: false,
-    calendars: false, // Nuevo estado para el menú desplegable de calendarios
+    calendars: false,
   });
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingIncidentsCount, setPendingIncidentsCount] = useState(0);
@@ -215,7 +215,6 @@ const Aside = ({ className }) => {
               <a href="/requerimientos" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos 24h</a>
               <a href="/requerimientos-10-horas" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos 10h</a>
               <a href="/requerimientos-operadores-mañana" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos Operadores Mañana</a>
-              <a href="/requerimientos-operadores-noche" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos Operadores Noche</a>
             </div>
           )}
         </div>
@@ -266,15 +265,25 @@ const Aside = ({ className }) => {
             {dropdownOpen.calendars && (
               <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
                 {userType === 'jefe' && (
-                  <a href="/calendario-norte" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Calendario Guardias</a>
+                  <a href="/calendario-norte" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
+                    <FontAwesomeIcon icon={faCalendar} className="w-4 h-4 mr-2" />
+                    Calendario Guardias
+                  </a>
                 )}
 
-                {/* Solo mostrar el enlace a Calendario Especial si el usuario es mando especial */}
+                {/* Solo mostrar los enlaces relacionados con guardias especiales si el usuario es mando especial */}
                 {isMandoEspecial && (
-                  <a href="/calendario-especial" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
-                    <FontAwesomeIcon icon={faCalendarCheck} className="w-4 h-4 mr-2" />
-                    Crear Guardias Especiales
-                  </a>
+                  <>
+                    <a href="/calendario-especial" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
+                      <FontAwesomeIcon icon={faCalendarCheck} className="w-4 h-4 mr-2" />
+                      Gestionar Guardias Especiales
+                    </a>
+                    
+                    <a href="/detalle-guardia-calendario" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
+                      <FontAwesomeIcon icon={faClipboardList} className="w-4 h-4 mr-2" />
+                      Ver Detalles de Guardias
+                    </a>
+                  </>
                 )}
               </div>
             )}
@@ -300,8 +309,6 @@ const Aside = ({ className }) => {
             Parte Jefatura
           </a>
         )}
-
-
       </nav>
     </aside>
   );

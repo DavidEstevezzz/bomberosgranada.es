@@ -41,6 +41,8 @@ import PersonalEquipment from './views/PersonalEquipment.jsx';
 import PdfViewerPage from './views/PdfViewerPage.jsx';
 import CalendarEspecialPage from './views/CalendarEspecialPage.jsx';
 import MandoEspecialRoute from './components/MandoEspecialRoute.jsx';
+import GuardDetailCalendarPage from './views/GuardDetailCalendarPage.jsx';
+import GuardDetailPage from './views/GuardDetailPage.jsx';
 
 const router = createBrowserRouter([
   {
@@ -68,6 +70,8 @@ const router = createBrowserRouter([
       
       // Nueva ruta para el calendario especial (solo para usuarios con mando_especial=true)
       { path: 'calendario-especial', element: <MandoEspecialRoute element={<CalendarEspecialPage />} /> },
+{ path: 'detalle-guardia-calendario', element: <MandoEspecialRoute element={<GuardDetailCalendarPage />} /> },
+{ path: 'guard-detail/:brigadeId/:date', element: <MandoEspecialRoute element={<GuardDetailPage />} /> },
 
       // Rutas existentes
       { path: 'horas-requerimientos', element: <HorasOfrecidas /> },

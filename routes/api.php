@@ -23,6 +23,7 @@ use App\Http\Controllers\SuggestionController;
 use App\Http\Controllers\SuggestionVoteController;
 use App\Http\Controllers\PersonalEquipmentController;
 use App\Http\Controllers\PdfDocumentController;
+use App\Http\Controllers\BrigadeUserController;
 
 
 
@@ -55,24 +56,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/intervenciones', [InterventionController::class, 'store']);
     Route::put('/intervenciones/{parte}', [InterventionController::class, 'update']);
     Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy'])
-    ->where('parte', '.*');
+        ->where('parte', '.*');
 
     // Rutas para equipos personales
-Route::prefix('equipos-personales')->group(function () {
-    Route::get('/', [PersonalEquipmentController::class, 'index']);
-    Route::post('/', [PersonalEquipmentController::class, 'store']);
-    Route::get('/check-availability/{equipmentNumber}', [PersonalEquipmentController::class, 'checkAvailability']);
-    Route::post('/check-and-assign', [PersonalEquipmentController::class, 'checkAndAssignEquipment']);
-    Route::post('/reset-assignments', [PersonalEquipmentController::class, 'resetEquipmentAssignments']); // Esta ruta falta
-    Route::get('/parque/{parkId}', [PersonalEquipmentController::class, 'getByPark']);
-    Route::get('/{equipo}', [PersonalEquipmentController::class, 'show']);
-    Route::put('/{equipo}', [PersonalEquipmentController::class, 'update']);
-    Route::delete('/{equipo}', [PersonalEquipmentController::class, 'destroy']);
-    Route::put('/{equipo}/toggle-disponibilidad', [PersonalEquipmentController::class, 'toggleDisponibilidad']);
-});
+    Route::prefix('equipos-personales')->group(function () {
+        Route::get('/', [PersonalEquipmentController::class, 'index']);
+        Route::post('/', [PersonalEquipmentController::class, 'store']);
+        Route::get('/check-availability/{equipmentNumber}', [PersonalEquipmentController::class, 'checkAvailability']);
+        Route::post('/check-and-assign', [PersonalEquipmentController::class, 'checkAndAssignEquipment']);
+        Route::post('/reset-assignments', [PersonalEquipmentController::class, 'resetEquipmentAssignments']); // Esta ruta falta
+        Route::get('/parque/{parkId}', [PersonalEquipmentController::class, 'getByPark']);
+        Route::get('/{equipo}', [PersonalEquipmentController::class, 'show']);
+        Route::put('/{equipo}', [PersonalEquipmentController::class, 'update']);
+        Route::delete('/{equipo}', [PersonalEquipmentController::class, 'destroy']);
+        Route::put('/{equipo}/toggle-disponibilidad', [PersonalEquipmentController::class, 'toggleDisponibilidad']);
+    });
 
-// Ruta para obtener categorías de equipos (fuera del grupo)
-Route::get('/categorias-equipos', [PersonalEquipmentController::class, 'getCategories']);
+    // Ruta para obtener categorías de equipos (fuera del grupo)
+    Route::get('/categorias-equipos', [PersonalEquipmentController::class, 'getCategories']);
 
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);
@@ -81,7 +82,7 @@ Route::get('/categorias-equipos', [PersonalEquipmentController::class, 'getCateg
     Route::get('/users/{id}', [UserController::class, 'show']);
     Route::put('/users/{id}', [UserController::class, 'update']);
 
-    
+
 
     // Bandeja de entrada
     Route::get('/messages', [MessageController::class, 'index']);
@@ -114,6 +115,21 @@ Route::get('/categorias-equipos', [PersonalEquipmentController::class, 'getCateg
     Route::get('/parks/{id_parque}', [ParkController::class, 'show']);
 
     Route::apiResource('vehicles', VehicleController::class);
+
+    Route::middleware(['auth:sanctum', 'auth.special.command'])->prefix('brigade-users')->group(function () {
+        // CRUD básico
+        Route::get('/', [BrigadeUserController::class, 'index']);
+        Route::post('/', [BrigadeUserController::class, 'store']);
+        Route::get('/{id}', [BrigadeUserController::class, 'show']);
+        Route::put('/{id}', [BrigadeUserController::class, 'update']);
+        Route::delete('/{id}', [BrigadeUserController::class, 'destroy']);
+
+        // Métodos específicos
+        Route::get('/brigade/{brigadeId}', [BrigadeUserController::class, 'getUsersByBrigade']);
+        Route::get('/user/{employeeId}/practicas', [BrigadeUserController::class, 'getUserPracticas']);
+        Route::post('/update-practicas', [BrigadeUserController::class, 'updatePracticas']);
+        Route::post('/increment-practicas', [BrigadeUserController::class, 'incrementPracticas']);
+    });
 
     Route::get('/brigades', [BrigadeController::class, 'index']);
     Route::get('/brigades/especial', [BrigadeController::class, 'getEspecialBrigades']);
@@ -192,7 +208,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::put('/users/{id}/update-ap', [UserController::class, 'updateAP']);
     Route::put('/users/{id}/update-traslado', [UserController::class, 'updateTraslado']);
     Route::put('/users/{id}/{field}', [UserController::class, 'updateUserField']);
-    
+
 
     Route::prefix('pdf-documents')->group(function () {
         Route::get('/latest', [PdfDocumentController::class, 'getLatest']);
@@ -243,6 +259,11 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('/firefighters-assignments/{id}/move-to-top/{column}', [FirefighterAssignmentController::class, 'moveToTop']);
     Route::post('/firefighters-assignments/{id}/move-to-bottom/{column}', [FirefighterAssignmentController::class, 'moveToBottom']);
     Route::post('firefighters-assignments/require-firefighter', [FirefighterAssignmentController::class, 'requireFirefighter']);
+    Route::post('/firefighters-assignments/create-practices', [FirefighterAssignmentController::class, 'createPracticesAssigments']);
+    Route::post('/firefighters-assignments/create-rt', [FirefighterAssignmentController::class, 'createRTAssigments']);
+    Route::post('/firefighters-assignments/delete-practices', [FirefighterAssignmentController::class, 'deletePracticesAssigments']);
+    Route::post('/firefighters-assignments/delete-rt', [FirefighterAssignmentController::class, 'deleteRTAssigments']);
+    Route::get('/firefighters-assignments/check-especial', [FirefighterAssignmentController::class, 'getEspecialAssigment']);
 
 
 

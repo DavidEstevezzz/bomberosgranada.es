@@ -19,9 +19,9 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
     const daysInPrevMonth = new Date(year, month, 0).getDate();
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     const lastDayOfMonth = new Date(year, month + 1, 0).getDay();
-  
+
     let days = [];
-  
+
     for (let i = (firstDayOfMonth + 6) % 7; i > 0; i--) {
       const date = new Date(year, month - 1, daysInPrevMonth - i + 1);
       date.setHours(0, 0, 0, 0); // Normaliza la hora
@@ -31,7 +31,7 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
         date,
       });
     }
-  
+
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(year, month, i);
       date.setHours(0, 0, 0, 0); // Normaliza la hora
@@ -41,7 +41,7 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
         date,
       });
     }
-  
+
     for (let i = 1; i < 7 - (lastDayOfMonth + 6) % 7; i++) {
       const date = new Date(year, month + 1, i);
       date.setHours(0, 0, 0, 0); // Normaliza la hora
@@ -51,10 +51,9 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
         date,
       });
     }
-  
+
     return days;
   };
-  
 
   const days = generateCalendar(year, month);
 
@@ -75,7 +74,7 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
   const handleDateClick = (date) => {
     const dateString = format(date, 'yyyy-MM-dd');
     const existingGuard = guards.find((guard) => guard.date === dateString);
-    if (existingGuard  && onEditClick) {
+    if (existingGuard && onEditClick) {
       onEditClick(existingGuard);
     } else {
       onDateClick(date);
@@ -107,13 +106,14 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
           </div>
         ))}
         {days.map((day, index) => {
-  const { date } = day;
-          const brigadeName = getGuardForDate(date);
+          const { date } = day;
+          let brigadeName = getGuardForDate(date);
 
-          // Define el color según el nombre de la brigada
+          // Define el color y la abreviación según el nombre de la brigada
           let brigadeColor = '';
-          let nameColor = '';
+          let nameColor = 'text-black';
           switch (brigadeName) {
+            // Casos originales
             case 'Brigada A':
               brigadeColor = 'bg-green-500';
               nameColor = 'text-black';
@@ -125,7 +125,6 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
             case 'Brigada C':
               brigadeColor = 'bg-blue-500';
               nameColor = 'text-black';
-            
               break;
             case 'Brigada D':
               brigadeColor = 'bg-red-600';
@@ -138,6 +137,29 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap }) => {
             case 'Brigada F':
               brigadeColor = 'bg-gray-300';
               nameColor = 'text-gray-600';
+              break;
+            // Nuevas brigadas
+            case 'GREPS':
+              brigadeColor = 'bg-orange-500';
+              nameColor = 'text-white';
+              break;
+            case 'GRAFOR':
+              brigadeColor = 'bg-green-500'; // Se mantiene el verde solicitado
+              nameColor = 'text-white';
+              break;
+            case 'UNIBUL':
+              brigadeColor = 'bg-indigo-500';
+              nameColor = 'text-white';
+              break;
+            case 'Riesgos Tecnológicos':
+              brigadeColor = 'bg-teal-500';
+              brigadeName = 'RiTec'; // Abreviación para que quepa en el cuadro
+              nameColor = 'text-white';
+              break;
+            case 'Rescate Accidentes Tráfico':
+              brigadeColor = 'bg-blue-500';
+              brigadeName = 'RAT'; // Abreviación para que quepa en el cuadro
+              nameColor = 'text-white';
               break;
             default:
               brigadeColor = '';

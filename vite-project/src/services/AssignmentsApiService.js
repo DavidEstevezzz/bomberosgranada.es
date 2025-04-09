@@ -7,6 +7,9 @@ const API_URL4 = `${API_BASE_URL}/firefighters-assignments/available-firefighter
 const API_URL_NO_TODAY_TOMORROW   = `${API_BASE_URL}/firefighters-assignments/no-today-and-tomorrow`;
 const API_URL_NO_TODAY_YESTERDAY = `${API_BASE_URL}/firefighters-assignments/no-today-and-yesterday`;
 const API_URL_WORKING_FIRE = `${API_BASE_URL}/firefighters-assignments/working-firefighters`;
+const API_URL_CREATE_PRACTICES = `${API_BASE_URL}/firefighters-assignments/create-practices`;
+const API_URL_CREATE_RT = `${API_BASE_URL}/firefighters-assignments/create-rt`;
+const API_URL_CHECK_ESPECIAL = `${API_BASE_URL}/firefighters-assignments/check-especial`;
 
 import BaseApiService from './BaseApiService';
 
@@ -67,9 +70,41 @@ class AssignmentsApiService {
     return await BaseApiService.put(`${API_URL}/${id}/increment-user-column`, payload);
   }
   
-  // Nuevo método para obtener los bomberos que están trabajando
+  // Método para obtener los bomberos que están trabajando
   async getWorkingFirefighters(date) {
     return await BaseApiService.get(API_URL_WORKING_FIRE, { date });
+  }
+
+  // Método para crear asignaciones de prácticas (ida por la mañana, vuelta por la tarde)
+  async createPracticesAssignments(payload) {
+    return await BaseApiService.post(API_URL_CREATE_PRACTICES, payload);
+  }
+
+  // Método para crear asignaciones de retén (ida por la mañana, vuelta al día siguiente por la mañana)
+  async createRTAssignments(payload) {
+    return await BaseApiService.post(API_URL_CREATE_RT, payload);
+  }
+
+  // Método para verificar si existe una asignación especial para una brigada en una fecha
+  async checkEspecialAssignment(brigadeId, date) {
+    return await BaseApiService.get(API_URL_CHECK_ESPECIAL, { 
+      id_brigada: brigadeId, 
+      fecha: date 
+    });
+  }
+
+  async deletePracticesAssignments(brigadeId, date) {
+    return await BaseApiService.post(API_URL_DELETE_PRACTICES, {
+      id_brigada: brigadeId,
+      fecha: date
+    });
+  }
+  
+  async deleteRTAssignments(brigadeId, date) {
+    return await BaseApiService.post(API_URL_DELETE_RT, {
+      id_brigada: brigadeId,
+      fecha: date
+    });
   }
 }
 

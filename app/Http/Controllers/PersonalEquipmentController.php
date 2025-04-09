@@ -612,86 +612,149 @@ class PersonalEquipmentController extends Controller
      * Buscar un número disponible dentro de un rango específico
      */
     private function findAvailableInRange($categoria, $numeroInicial, $min, $max, $parque, $fecha, $numerosYaAsignados, $assignment, array $currentAssignments)
-    {
-        // Verificar paridad según parque
-        $esPar = $parque == 2; // Sur: Pares, Norte: Impares
-        $incremento = 2; // Siempre saltamos de 2 en 2 para mantener paridad
+{
+    // Ampliar el rango para PTT específicamente ya que parece más escaso
+    if ($categoria === 'PTT') {
+        $max = $max + 20; // Ampliar el rango máximo para PTT
+    }
+    
+    // Verificar paridad según parque
+    $esPar = $parque == 2; // Sur: Pares, Norte: Impares
+    $incremento = 2; // Siempre saltamos de 2 en 2 para mantener paridad
 
-        // Ajustar el mínimo y máximo según paridad
-        if ($esPar) {
-            $min = ($min % 2 == 0) ? $min : $min + 1; // Asegurar que min sea par
-        } else {
-            $min = ($min % 2 == 1) ? $min : $min + 1; // Asegurar que min sea impar
-        }
-
-        // Crear una lista de todos los números posibles dentro del rango respetando paridad
-        $posiblesNumeros = [];
-        for ($i = $min; $i <= $max; $i += $incremento) {
-            $posiblesNumeros[] = $i;
-        }
-
-        // Filtrar números ya asignados
-        $numerosDisponibles = array_diff($posiblesNumeros, $numerosYaAsignados);
-
-        // Obtener números reservados para otras asignaciones
-        $numerosReservados = $this->getReservedNumbersForCategory($categoria, $parque, $currentAssignments);
-
-        // Extraer la asignación base (B1, B2, etc.) sin información adicional
-        $baseAssignment = preg_replace('/[^A-Z0-9]/', '', $assignment);
-
-        // Filtrar números reservados excepto el propio de la asignación actual
-        $numerosAFiltrar = [];
-        foreach ($numerosReservados as $asign => $numero) {
-            // Si no es la asignación actual y el número está disponible
-            // (es decir, no ha sido asignado todavía porque no está en $numerosYaAsignados)
-            if ($asign !== $baseAssignment && !in_array($numero, $numerosYaAsignados)) {
-                $numerosAFiltrar[] = $numero;
-            }
-        }
-
-        // Filtrar números reservados para otras asignaciones
-        $numerosDisponibles = array_diff($numerosDisponibles, $numerosAFiltrar);
-
-        if (empty($numerosDisponibles)) {
-            Log::info("No hay números disponibles dentro del rango ($min-$max) respetando paridad y reservas");
-            return null;
-        }
-
-        // Ordenar números disponibles por cercanía al número inicial
-        usort($numerosDisponibles, function ($a, $b) use ($numeroInicial) {
-            return abs($a - $numeroInicial) - abs($b - $numeroInicial);
-        });
-
-        Log::info("Números disponibles ordenados por cercanía: " . implode(", ", $numerosDisponibles));
-
-        // Verificar cada número (del más cercano al más lejano)
-        foreach ($numerosDisponibles as $numero) {
-            // Comprobar si el equipo existe
-            $existe = $this->checkEquipmentExists($categoria, $numero);
-            if (!$existe) {
-                Log::info("Equipo $categoria $numero no existe, intentando siguiente");
-                continue;
-            }
-
-            // Verificar si ya ha sido asignado específicamente para esta categoría
-            $yaAsignado = $this->isEquipmentAlreadyAssigned($categoria, $numero, $parque, $fecha);
-            if ($yaAsignado) {
-                Log::info("Equipo $categoria $numero ya asignado específicamente, intentando siguiente");
-                continue;
-            }
-
-            // Verificar disponibilidad general
-            $disponible = $this->isEquipmentAvailable($categoria, $numero);
-            if ($disponible) {
-                Log::info("Encontrado número disponible para $categoria: $numero (dentro del rango)");
-                return $numero;
-            }
-        }
-
-        Log::warning("No se encontró ningún número disponible para $categoria dentro del rango");
-        return null;
+    // Ajustar el mínimo y máximo según paridad
+    if ($esPar) {
+        $min = ($min % 2 == 0) ? $min : $min + 1; // Asegurar que min sea par
+    } else {
+        $min = ($min % 2 == 1) ? $min : $min + 1; // Asegurar que min sea impar
     }
 
+    // Crear una lista de todos los números posibles dentro del rango respetando paridad
+    $posiblesNumeros = [];
+    for ($i = $min; $i <= $max; $i += $incremento) {
+        $posiblesNumeros[] = $i;
+    }
+
+    // Filtrar números ya asignados
+    $numerosDisponibles = array_diff($posiblesNumeros, $numerosYaAsignados);
+
+    // Obtener números reservados para otras asignaciones
+    $numerosReservados = $this->getReservedNumbersForCategory($categoria, $parque, $currentAssignments);
+
+    // Extraer la asignación base (B1, B2, etc.) sin información adicional
+    $baseAssignment = preg_replace('/[^A-Z0-9]/', '', $assignment);
+
+    // Filtrar números reservados excepto el propio de la asignación actual
+    $numerosAFiltrar = [];
+    foreach ($numerosReservados as $asign => $numero) {
+        // Si no es la asignación actual y el número está disponible
+        // (es decir, no ha sido asignado todavía porque no está en $numerosYaAsignados)
+        if ($asign !== $baseAssignment && !in_array($numero, $numerosYaAsignados)) {
+            $numerosAFiltrar[] = $numero;
+        }
+    }
+
+    // Filtrar números reservados para otras asignaciones
+    // Excepto para PTT donde somos más flexibles si hay escasez
+    if ($categoria === 'PTT') {
+        // Para PTT, solo filtramos los números específicamente reservados para mandos
+        // (permitimos usar números de otros bomberos/conductores si es necesario)
+        $numerosAFiltrarPTT = [];
+        foreach ($numerosAFiltrar as $num) {
+            if ($num <= 6) { // Suponiendo que 1-6 son para mandos (N/S)
+                $numerosAFiltrarPTT[] = $num;
+            }
+        }
+        $numerosDisponibles = array_diff($numerosDisponibles, $numerosAFiltrarPTT);
+    } else {
+        // Para el resto de categorías, mantenemos la lógica original
+        $numerosDisponibles = array_diff($numerosDisponibles, $numerosAFiltrar);
+    }
+
+    if (empty($numerosDisponibles)) {
+        Log::info("No hay números disponibles dentro del rango ($min-$max) respetando paridad y reservas para $categoria");
+        
+        // Si es PTT y no hay números disponibles, intentar con un rango más amplio
+        if ($categoria === 'PTT') {
+            Log::info("Ampliando rango de búsqueda para PTT");
+            $maxAmpliado = $max + 30; // Aún más amplio
+            
+            $posiblesNumerosAmpliados = [];
+            for ($i = $max + $incremento; $i <= $maxAmpliado; $i += $incremento) {
+                $posiblesNumerosAmpliados[] = $i;
+            }
+            
+            // Filtrar números ya asignados del rango ampliado
+            $numerosDisponiblesAmpliados = array_diff($posiblesNumerosAmpliados, $numerosYaAsignados);
+            
+            if (!empty($numerosDisponiblesAmpliados)) {
+                Log::info("Encontrados números en rango ampliado para PTT: " . implode(", ", $numerosDisponiblesAmpliados));
+                $numerosDisponibles = $numerosDisponiblesAmpliados;
+            }
+        }
+        
+        // Si después de la ampliación sigue vacío
+        if (empty($numerosDisponibles)) {
+            return null;
+        }
+    }
+
+    // Ordenar números disponibles por cercanía al número inicial
+    usort($numerosDisponibles, function ($a, $b) use ($numeroInicial) {
+        return abs($a - $numeroInicial) - abs($b - $numeroInicial);
+    });
+
+    Log::info("Números disponibles ordenados por cercanía para $categoria: " . implode(", ", $numerosDisponibles));
+
+    // Verificar cada número (del más cercano al más lejano)
+    foreach ($numerosDisponibles as $numero) {
+        // Para PTT, verificar primero la existencia y crearlo si no existe
+        if ($categoria === 'PTT' && !$this->checkEquipmentExists($categoria, $numero)) {
+            // Log intento de creación automática
+            Log::info("Intentando crear automáticamente equipo $categoria $numero si no existe");
+            
+            try {
+                // Intentar crear el equipo PTT que falta
+                $nuevoEquipo = new PersonalEquipment();
+                $nuevoEquipo->nombre = "PTT $numero";
+                $nuevoEquipo->categoria = 'PTT';
+                $nuevoEquipo->disponible = true;
+                $nuevoEquipo->save();
+                
+                Log::info("Equipo $categoria $numero creado automáticamente con éxito");
+                $existe = true;
+            } catch (\Exception $e) {
+                Log::error("Error al crear equipo $categoria $numero: " . $e->getMessage());
+                $existe = false;
+            }
+        } else {
+            // Comprobar si el equipo existe para otras categorías
+            $existe = $this->checkEquipmentExists($categoria, $numero);
+        }
+        
+        if (!$existe) {
+            Log::info("Equipo $categoria $numero no existe, intentando siguiente");
+            continue;
+        }
+
+        // Verificar si ya ha sido asignado específicamente para esta categoría
+        $yaAsignado = $this->isEquipmentAlreadyAssigned($categoria, $numero, $parque, $fecha);
+        if ($yaAsignado) {
+            Log::info("Equipo $categoria $numero ya asignado específicamente, intentando siguiente");
+            continue;
+        }
+
+        // Verificar disponibilidad general
+        $disponible = $this->isEquipmentAvailable($categoria, $numero);
+        if ($disponible) {
+            Log::info("Encontrado número disponible para $categoria: $numero (dentro del rango)");
+            return $numero;
+        }
+    }
+
+    Log::warning("No se encontró ningún número disponible para $categoria dentro del rango");
+    return null;
+}
     /**
      * Buscar cualquier número disponible sin restricciones de rango
      * (último recurso cuando no se encuentra nada dentro del rango normal)

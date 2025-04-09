@@ -1068,6 +1068,10 @@ const BrigadeDetail = () => {
           return startY;
         }
       });
+      
+      // Obtener la posición Y final después de generar la tabla principal
+      let finalY = doc.previousAutoTable ? doc.previousAutoTable.finalY : startY;
+  
       // Añadir comentarios y otros detalles - SECCIÓN MEJORADA
       if (guardDetails) {
         // Título para la sección de datos adicionales
@@ -1131,26 +1135,9 @@ const BrigadeDetail = () => {
         const fixedHeaderColor = [52, 73, 94]; // Azul oscuro/gris
         const fixedHeaderTextColor = [255, 255, 255]; // Blanco
   
-        // Verificar espacio disponible para tablas de comentarios
-        const remainingHeight = doc.internal.pageSize.getHeight() - finalY - 30; // 30 margen de seguridad
-        const estimatedTablesHeight = 80; // Aproximado para dos tablas con sus encabezados
-  
-        // Si no hay suficiente espacio, empezar en nueva página
-        let commentStartY = finalY + 5;
-        let titleWritten = false;
-  
-        if (remainingHeight < estimatedTablesHeight) {
-          doc.addPage();
-          commentStartY = 20; // Empezar cerca del inicio de la nueva página
-          // No escribimos el título aquí, lo haremos después
-        } else {
-          // Solo escribimos el título si hay espacio en la página actual
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(12);
-          doc.setTextColor(40, 40, 40);
-          doc.text('DATOS ADICIONALES DEL SERVICIO', pageWidth / 2, finalY, { align: 'center' });
-          titleWritten = true;
-        }
+        // Verificar espacio disponible para tablas de comentarios en la página actual
+        let commentStartY = newStartY + 10; // Ajustar según sea necesario
+        let titleWritten = true; // Ya hemos escrito el título
   
         // Primera tabla de comentarios (mejorada)
         doc.autoTable({
@@ -1177,23 +1164,15 @@ const BrigadeDetail = () => {
           },
           margin: { horizontal: 10 },
           // Evitar división entre páginas
-          rowPageBreak: 'avoid',
-          // Verificamos si necesitamos añadir el título antes de la tabla
-          didDrawPage: function (data) {
-            if (!titleWritten && data.pageCount > 1) {
-              // Añadir título en nueva página solo si no se ha escrito ya
-              doc.setFont('helvetica', 'bold');
-              doc.setFontSize(12);
-              doc.setTextColor(40, 40, 40);
-              doc.text('DATOS ADICIONALES DEL SERVICIO', pageWidth / 2, 10, { align: 'center' });
-              titleWritten = true;
-            }
-          }
+          rowPageBreak: 'avoid'
         });
+  
+        // Obtener la posición Y después de la primera tabla
+        finalY = doc.previousAutoTable.finalY;
   
         // Segunda tabla de comentarios (mejorada)
         doc.autoTable({
-          startY: doc.previousAutoTable.finalY + 8,
+          startY: finalY + 8,
           head: [headersRow2],
           body: [valuesRow2],
           theme: 'grid',
@@ -1218,11 +1197,14 @@ const BrigadeDetail = () => {
           // Evitar división entre páginas
           rowPageBreak: 'avoid'
         });
+        
+        // Actualizar finalY después de la segunda tabla
+        finalY = doc.previousAutoTable.finalY;
       }
   
       // NUEVA SECCIÓN - TABLA DE EQUIPOS ASIGNADOS
       if (doc.previousAutoTable) {
-        const finalY = doc.previousAutoTable.finalY + 15;
+        finalY = doc.previousAutoTable.finalY + 15;
   
         // Encabezado para la sección de equipos
         doc.setFont('helvetica', 'bold');
@@ -1247,10 +1229,9 @@ const BrigadeDetail = () => {
   
         // Procesar cada bombero en el orden de la tabla principal
         for (const firefighter of sortedFirefighters) {
-
           if (firefighter.puesto === 'Operador' || 
             getAssignmentValue(firefighter) === 'Telefonista') continue;
-
+  
           const assignmentValue = getAssignmentValue(firefighter);
   
           if (assignmentValue !== 'No asignado') {
@@ -1348,7 +1329,8 @@ const BrigadeDetail = () => {
       console.error('Error al generar el PDF:', error);
       alert('Ha ocurrido un error al generar el PDF. Por favor, inténtelo de nuevo.');
     }
-  };  if (loading) return <div>Loading...</div>;
+  };
+   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!brigade) return <div>No brigade data available.</div>;
 

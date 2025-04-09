@@ -118,17 +118,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware(['auth:sanctum', 'auth.special.command'])->prefix('brigade-users')->group(function () {
         // CRUD básico
+        Route::get('/brigade/{brigadeId}', [BrigadeUserController::class, 'getUsersByBrigade']);
+        Route::get('/user/{employeeId}/practicas', [BrigadeUserController::class, 'getUserPracticas']);
+        Route::post('/update-practicas', [BrigadeUserController::class, 'updatePracticas']);
+        Route::post('/increment-practicas', [BrigadeUserController::class, 'incrementPracticas']);
+    
+        // Luego las rutas CRUD genéricas
         Route::get('/', [BrigadeUserController::class, 'index']);
         Route::post('/', [BrigadeUserController::class, 'store']);
         Route::get('/{id}', [BrigadeUserController::class, 'show']);
         Route::put('/{id}', [BrigadeUserController::class, 'update']);
         Route::delete('/{id}', [BrigadeUserController::class, 'destroy']);
-
-        // Métodos específicos
-        Route::get('/brigade/{brigadeId}', [BrigadeUserController::class, 'getUsersByBrigade']);
-        Route::get('/user/{employeeId}/practicas', [BrigadeUserController::class, 'getUserPracticas']);
-        Route::post('/update-practicas', [BrigadeUserController::class, 'updatePracticas']);
-        Route::post('/increment-practicas', [BrigadeUserController::class, 'incrementPracticas']);
     });
 
     Route::get('/brigades', [BrigadeController::class, 'index']);

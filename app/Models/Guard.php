@@ -28,7 +28,8 @@ class Guard extends Model
         'callejero',
         'ejercicios',
         'repostaje',
-        'botellas'
+        'botellas',
+        'especiales',
     ];
     
 

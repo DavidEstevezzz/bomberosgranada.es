@@ -38,6 +38,10 @@ class GuardsApiService {
     return await BaseApiService.get(url,  params );
 }
 
+async getEspecialGuards() {
+  return await BaseApiService.get(`${API_URL}/especial`);
+}
+
 async getGuardsByDate(date) {
   const url = `${API_URL}/by-date?date=${date}`;
   return await BaseApiService.get(url);

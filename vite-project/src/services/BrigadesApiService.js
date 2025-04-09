@@ -13,6 +13,14 @@ class BrigadesApiService {
         return await BaseApiService.get(`${API_URL}/${id}`);
     }
 
+    async checkBrigadaEspecial(id) {
+        return await BaseApiService.get(`${API_URL}/${id}/check-especial`);
+    }
+
+    async getEspecialBrigades() {
+        return await BaseApiService.get(`${API_URL}/especial`);
+    }
+
     async createBrigade(brigade) {
         return await BaseApiService.post(API_URL, brigade);
     }

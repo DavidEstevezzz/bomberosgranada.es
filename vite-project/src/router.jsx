@@ -39,7 +39,8 @@ import HorasOfrecidas from './views/HoursCountTable.jsx';
 import RubishList from './views/RubishList.jsx';
 import PersonalEquipment from './views/PersonalEquipment.jsx';
 import PdfViewerPage from './views/PdfViewerPage.jsx';
-
+import CalendarEspecialPage from './views/CalendarEspecialPage.jsx';
+import MandoEspecialRoute from './components/MandoEspecialRoute.jsx';
 
 const router = createBrowserRouter([
   {
@@ -62,15 +63,14 @@ const router = createBrowserRouter([
       { path: 'vehicles', element: <ProtectedRoute element={<Vehicles />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'incidents', element: <ProtectedRoute element={<Incidents />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'transfers', element: <ProtectedRoute element={<Transfers />} rolesAllowed={['Jefe', 'Mando']} /> },
-      { path: 'horas-requerimientos',element: <ProtectedRoute element={<HorasOfrecidas />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: 'personal-equipment', element: <ProtectedRoute element={<PersonalEquipment />} rolesAllowed={['Jefe', 'Mando']} /> },
       { path: '/pdf', element: <ProtectedRoute element={<PdfViewerPage  />} rolesAllowed={['Jefe', 'Mando']} /> },
-
-
-
-
+      
+      // Nueva ruta para el calendario especial (solo para usuarios con mando_especial=true)
+      { path: 'calendario-especial', element: <MandoEspecialRoute element={<CalendarEspecialPage />} /> },
 
       // Rutas existentes
+      { path: 'horas-requerimientos', element: <HorasOfrecidas /> },
       { path: '/brigades/:id_brigada', element: <BrigadeDetail /> },
       { path: '/messages', element: <MessagesPage /> },
       { path: 'calendario-norte', element: <CalendarPage /> },
@@ -83,7 +83,6 @@ const router = createBrowserRouter([
       { path: 'solicitud', element: <CreateRequestPage /> },
       { path: 'lista-solicitudes', element: <RequestAndShiftChangePage /> },
       { path: 'sugerencias', element: <SuggestionListPage /> },
-
     ],
   },
   {

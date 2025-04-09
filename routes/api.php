@@ -77,8 +77,10 @@ Route::get('/categorias-equipos', [PersonalEquipmentController::class, 'getCateg
     // Métodos index y show abiertos a todos los roles
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/por-puesto', [UserController::class, 'getUsersByPuesto']);
+    Route::get('/users/{id}/check-mando-especial', [UserController::class, 'checkMandoEspecial']);
     Route::get('/users/{id}', [UserController::class, 'show']);
     Route::put('/users/{id}', [UserController::class, 'update']);
+
     
 
     // Bandeja de entrada
@@ -114,8 +116,11 @@ Route::get('/categorias-equipos', [PersonalEquipmentController::class, 'getCateg
     Route::apiResource('vehicles', VehicleController::class);
 
     Route::get('/brigades', [BrigadeController::class, 'index']);
+    Route::get('/brigades/especial', [BrigadeController::class, 'getEspecialBrigades']);
     Route::get('/brigades/{id}', [BrigadeController::class, 'show']);
     Route::get('/brigades/{id}/firefighters', [BrigadeController::class, 'getFirefightersByBrigade']);
+    Route::get('/brigades/{id}/check-especial', [BrigadeController::class, 'checkBrigadaEspecial']);
+    Route::get('/guards/especial', [GuardController::class, 'getEspecialGuards']);
     Route::get('/guards/by-brigades', [GuardController::class, 'getGuardsByBrigades']);
     Route::get('/guards/by-date', [GuardController::class, 'getGuardsByDate']);
     Route::get('/guards/by-brigade-and-date', [GuardController::class, 'getGuardByBrigadeAndDate']);
@@ -187,6 +192,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::put('/users/{id}/update-ap', [UserController::class, 'updateAP']);
     Route::put('/users/{id}/update-traslado', [UserController::class, 'updateTraslado']);
     Route::put('/users/{id}/{field}', [UserController::class, 'updateUserField']);
+    
 
     Route::prefix('pdf-documents')->group(function () {
         Route::get('/latest', [PdfDocumentController::class, 'getLatest']);

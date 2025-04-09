@@ -235,6 +235,7 @@ class UserController extends Controller
             'modulo',
             'compensacion_grupos',
             'horas_sindicales',
+            'practicas',
         ];
 
         if (!in_array($field, $allowedFields)) {
@@ -286,6 +287,18 @@ class UserController extends Controller
         return response()->json($usuario);
     }
 
+    public function checkMandoEspecial(string $id)
+{
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json(['message' => 'Usuario no encontrado'], 404);
+    }
+
+    return response()->json([
+        'mando_especial' => (bool) $user->mando_especial
+    ]);
+}
     public function updateTraslado(Request $request, $id)
 {
     // Validamos que se envíe el campo "traslado" como entero

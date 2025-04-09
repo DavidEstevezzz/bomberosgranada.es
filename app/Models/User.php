@@ -36,6 +36,8 @@ class User extends Authenticatable
         'traslados',
         'basura',
         'fecha_basura',
+        'practicas',
+        'mando_especial',
     ];
 
     protected $hidden = [
@@ -47,6 +49,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'mando_especial' => 'boolean',
     ];
 
     public function getRoleNameAttribute()

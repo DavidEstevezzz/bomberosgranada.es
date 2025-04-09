@@ -30,6 +30,10 @@ class UsuariosApiService {
         return await BaseApiService.put(`${API_URL}/${id}/${field}`, { [field]: value });
     }
 
+    async checkMandoEspecial(id) {
+        return await BaseApiService.get(`${API_URL}/${id}/check-mando-especial`);
+    }
+    
     async updateUserTraslado(id, traslado) {
         return await BaseApiService.put(`${API_URL}/${id}/update-traslado`, { traslado });
     }

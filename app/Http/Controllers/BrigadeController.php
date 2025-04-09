@@ -187,19 +187,19 @@ class BrigadeController extends Controller
 
             Log::info("Asignaciones por turno para el usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado})", $assignmentsByTurno);
 
-                $lastAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)
-                    ->whereDate('fecha_ini', '<', $fecha)
-                    ->orderBy('fecha_ini', 'desc')
-                    ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
-                    ->first();
+            $lastAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)
+                ->whereDate('fecha_ini', '<', $fecha)
+                ->orderBy('fecha_ini', 'desc')
+                ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+                ->first();
 
-                if ($lastAssignment) {
-                    Log::info("ULTIMA ASIGNACION para el empleado {$user->id_empleado}", [
-                        'lastAssignment' => $lastAssignment ? $lastAssignment->toArray() : null
-                    ]);
-                } else {
-                    Log::info("No se encontró última asignación para el empleado {$user->id_empleado} con fecha <= {$fecha}");
-                }
+            if ($lastAssignment) {
+                Log::info("ULTIMA ASIGNACION para el empleado {$user->id_empleado}", [
+                    'lastAssignment' => $lastAssignment ? $lastAssignment->toArray() : null
+                ]);
+            } else {
+                Log::info("No se encontró última asignación para el empleado {$user->id_empleado} con fecha <= {$fecha}");
+            }
 
             $firefighters = [];
 
@@ -416,4 +416,35 @@ class BrigadeController extends Controller
             'fecha' => $fecha,
         ]);
     }
+    /**
+     * Verifica si la brigada es especial.
+     * 
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function checkBrigadaEspecial(string $id)
+    {
+        $brigade = Brigade::find($id);
+
+        if (!$brigade) {
+            return response()->json(['message' => 'Brigada no encontrada'], 404);
+        }
+
+        return response()->json([
+            'especial' => (bool) $brigade->especial
+        ]);
+    }
+
+    /**
+ * Obtiene todas las brigadas que son especiales.
+ *
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function getEspecialBrigades()
+{
+    $especialBrigades = Brigade::where('especial', true)
+                              ->where('id_parque', 1)
+                              ->get();
+    return response()->json($especialBrigades);
+}
 }

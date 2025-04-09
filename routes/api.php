@@ -35,6 +35,7 @@ Route::post('users/reset-password', [PasswordResetController::class, 'resetPassw
 Route::middleware('auth:sanctum')->group(function () {
     // Usuario autenticado
     Route::get('/user', [UserController::class, 'getUserByToken']);
+    Route::get('/firefighters-assignments/check-especial', [FirefighterAssignmentController::class, 'checkEspecialAssignment']);
     Route::get('/firefighters-assignments/available-firefighters', [FirefighterAssignmentController::class, 'availableFirefighters']);
     Route::get('/firefighters-assignments/available-firefighters-without-mands', [FirefighterAssignmentController::class, 'availableFirefightersWithoutMands']);
     Route::get('/firefighters-assignments/available-firefighters-no-adjacent-days', [FirefighterAssignmentController::class, 'availableFirefightersNoAdjacentDays']);

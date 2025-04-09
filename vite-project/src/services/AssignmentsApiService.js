@@ -86,10 +86,11 @@ class AssignmentsApiService {
   }
 
   // Método para verificar si existe una asignación especial para una brigada en una fecha
-  async checkEspecialAssignment(brigadeId, date) {
+  async checkEspecialAssignment(brigadeId, date, userId) {
     return await BaseApiService.get(API_URL_CHECK_ESPECIAL, { 
       id_brigada: brigadeId, 
-      fecha: date 
+      fecha: date,
+      id_usuario: userId
     });
   }
 

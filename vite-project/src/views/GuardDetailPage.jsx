@@ -20,108 +20,96 @@ const GuardDetailPage = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            try {
-                setLoading(true);
-
-                // Log del inicio de la función y los parámetros recibidos
-                console.log('Iniciando fetchData con parámetros:', { brigadeId, date });
-
-                // Obtener datos de la brigada
-                console.log('Solicitando datos de la brigada:', brigadeId);
-                const brigadeResponse = await BrigadesApiService.getBrigade(brigadeId);
-                console.log('Respuesta de brigada recibida:', brigadeResponse);
-
-                if (!brigadeResponse || !brigadeResponse.data) {
-                    console.error('Respuesta de brigada inválida:', brigadeResponse);
-                    setError('No se pudo obtener información de la brigada');
-                    setLoading(false);
-                    return;
-                }
-
-                setBrigade(brigadeResponse.data);
-                console.log('Brigada establecida en el estado:', brigadeResponse.data);
-
-                // Obtener la guardia específica
-                console.log('Solicitando guardias');
-                const guardsResponse = await GuardsApiService.getGuards();
-                console.log('Respuesta de guardias recibida:', guardsResponse);
-
-                if (!guardsResponse || !guardsResponse.data) {
-                    console.error('Respuesta de guardias inválida:', guardsResponse);
-                    // Continuamos aunque no haya guardias, no es un error fatal
-                } else {
-                    console.log('Filtrando guardias para brigada y fecha:', { brigadeId, date });
-                    const guardsFiltered = guardsResponse.data.filter(g =>
-                        g.id_brigada == brigadeId &&
-                        g.date === date &&
-                        g.especiales !== null &&
-                        g.especiales !== undefined &&
-                        g.especiales !== ""
-                    );
-
-                    console.log('Guardias filtradas:', guardsFiltered);
-
-                    // Si encontramos una guardia, la usamos
-                    if (guardsFiltered.length > 0) {
-                        setGuard(guardsFiltered[0]);
-                        console.log('Guardia establecida en el estado:', guardsFiltered[0]);
-                    } else {
-                        console.log('No se encontraron guardias especiales para esta brigada y fecha');
-                    }
-                }
-
-                // Obtener usuarios de la brigada
-                console.log('Solicitando bomberos para la brigada:', brigadeId);
-                const brigadeUsersResponse = await BrigadeUsersApiService.getUsersByBrigade(brigadeId);
-
-                console.log('Respuesta de bomberos recibida:', brigadeUsersResponse);
-
-                let formattedUsers = [];
-                if (brigadeUsersResponse.data && brigadeUsersResponse.data.firefighters) {
-                    formattedUsers = brigadeUsersResponse.data.firefighters.map(firefighter => ({
-                        id: firefighter.id || firefighter.id_empleado,
-                        id_usuario: firefighter.id_empleado,
-                        user: {
-                            nombre: firefighter.nombre,
-                            apellido: firefighter.apellido
-                        }
-                    }));
-                }
-
-                setBrigadeUsers(formattedUsers);
-                const assignmentsData = {};
-
-                console.log('Verificando asignaciones para cada usuario');
-                for (const user of formattedUsers) {
-                    try {
-                        console.log('Verificando asignación para usuario:', user.id_usuario);
-                        const checkResponse = await AssignmentsApiService.checkEspecialAssignment(
-                            brigadeId,
-                            date
-                        );
-                        console.log('Respuesta de verificación recibida:', checkResponse);
-
-                        // Guardar el estado de asignación para este usuario
-                        assignmentsData[user.id_usuario] = checkResponse.data.has_assignments || false;
-                        console.log(`Estado de asignación para ${user.id_usuario}:`, assignmentsData[user.id_usuario]);
-                    } catch (err) {
-                        console.error(`Error checking assignment for user ${user.id_usuario}:`, err);
-                        assignmentsData[user.id_usuario] = false;
-                    }
-                }
-
-                console.log('Datos de asignaciones completos:', assignmentsData);
-                setAssignments(assignmentsData);
-                setLoading(false);
-            } catch (error) {
-                console.error('Error en fetchData:', error);
-                setError('Ocurrió un error al cargar los detalles de la guardia.');
-                setLoading(false);
+          try {
+            setLoading(true);
+      
+            console.log('Iniciando fetchData con parámetros:', { brigadeId, date });
+      
+            // Obtener datos de la brigada
+            console.log('Solicitando datos de la brigada:', brigadeId);
+            const brigadeResponse = await BrigadesApiService.getBrigade(brigadeId);
+            console.log('Respuesta de brigada recibida:', brigadeResponse);
+      
+            if (!brigadeResponse || !brigadeResponse.data) {
+              console.error('Respuesta de brigada inválida:', brigadeResponse);
+              setError('No se pudo obtener información de la brigada');
+              setLoading(false);
+              return;
             }
+      
+            setBrigade(brigadeResponse.data);
+            console.log('Brigada establecida en el estado:', brigadeResponse.data);
+      
+            // Obtener la guardia específica
+            console.log('Solicitando guardias');
+            const guardsResponse = await GuardsApiService.getGuards();
+            console.log('Respuesta de guardias recibida:', guardsResponse);
+      
+            if (!guardsResponse || !guardsResponse.data) {
+              console.error('Respuesta de guardias inválida:', guardsResponse);
+            } else {
+              console.log('Filtrando guardias para brigada y fecha:', { brigadeId, date });
+              const guardsFiltered = guardsResponse.data.filter(g =>
+                g.id_brigada == brigadeId &&
+                g.date === date &&
+                g.especiales !== null &&
+                g.especiales !== undefined &&
+                g.especiales !== ""
+              );
+      
+              console.log('Guardias filtradas:', guardsFiltered);
+      
+              if (guardsFiltered.length > 0) {
+                setGuard(guardsFiltered[0]);
+                console.log('Guardia establecida en el estado:', guardsFiltered[0]);
+              } else {
+                console.log('No se encontraron guardias especiales para esta brigada y fecha');
+              }
+            }
+      
+            // Obtener usuarios de la brigada
+            console.log('Solicitando bomberos para la brigada:', brigadeId);
+            const brigadeUsersResponse = await BrigadeUsersApiService.getUsersByBrigade(brigadeId);
+            console.log('Respuesta de bomberos recibida:', brigadeUsersResponse);
+      
+            let formattedUsers = [];
+            // Usamos la propiedad "brigadeUsers" que viene de la API, la cual ya incluye la relación 'user'
+            if (brigadeUsersResponse.data && brigadeUsersResponse.data.brigadeUsers) {
+              formattedUsers = brigadeUsersResponse.data.brigadeUsers;
+            }
+            setBrigadeUsers(formattedUsers);
+      
+            // Procesamos asignaciones para cada usuario
+            const assignmentsData = {};
+            console.log('Verificando asignaciones para cada usuario');
+            for (const user of formattedUsers) {
+              try {
+                console.log('Verificando asignación para usuario:', user.id_usuario);
+                const checkResponse = await AssignmentsApiService.checkEspecialAssignment(brigadeId, date, user.id_usuario);
+                
+                console.log('Respuesta de verificación recibida:', checkResponse);
+      
+                assignmentsData[user.id_usuario] = checkResponse.data.has_assignments || false;
+                console.log(`Estado de asignación para ${user.id_usuario}:`, assignmentsData[user.id_usuario]);
+              } catch (err) {
+                console.error(`Error checking assignment for user ${user.id_usuario}:`, err);
+                assignmentsData[user.id_usuario] = false;
+              }
+            }
+      
+            console.log('Datos de asignaciones completos:', assignmentsData);
+            setAssignments(assignmentsData);
+            setLoading(false);
+          } catch (error) {
+            console.error('Error en fetchData:', error);
+            setError('Ocurrió un error al cargar los detalles de la guardia.');
+            setLoading(false);
+          }
         };
-
+      
         fetchData();
-    }, [brigadeId, date]);
+      }, [brigadeId, date]);
+      
 
     const handleBack = () => {
         navigate(-1);

@@ -615,7 +615,9 @@ class PersonalEquipmentController extends Controller
 {
     // Ampliar el rango para PTT específicamente ya que parece más escaso
     if ($categoria === 'PTT') {
+        $maxOriginal = $max;
         $max = $max + 20; // Ampliar el rango máximo para PTT
+        Log::info("Ampliando rango para PTT de $maxOriginal a $max");
     }
     
     // Verificar paridad según parque
@@ -654,29 +656,15 @@ class PersonalEquipmentController extends Controller
         }
     }
 
-    // Filtrar números reservados para otras asignaciones
-    // Excepto para PTT donde somos más flexibles si hay escasez
-    if ($categoria === 'PTT') {
-        // Para PTT, solo filtramos los números específicamente reservados para mandos
-        // (permitimos usar números de otros bomberos/conductores si es necesario)
-        $numerosAFiltrarPTT = [];
-        foreach ($numerosAFiltrar as $num) {
-            if ($num <= 6) { // Suponiendo que 1-6 son para mandos (N/S)
-                $numerosAFiltrarPTT[] = $num;
-            }
-        }
-        $numerosDisponibles = array_diff($numerosDisponibles, $numerosAFiltrarPTT);
-    } else {
-        // Para el resto de categorías, mantenemos la lógica original
-        $numerosDisponibles = array_diff($numerosDisponibles, $numerosAFiltrar);
-    }
+    // Filtrar números reservados para otras asignaciones - NUNCA saltamos esta parte
+    $numerosDisponibles = array_diff($numerosDisponibles, $numerosAFiltrar);
 
     if (empty($numerosDisponibles)) {
         Log::info("No hay números disponibles dentro del rango ($min-$max) respetando paridad y reservas para $categoria");
         
-        // Si es PTT y no hay números disponibles, intentar con un rango más amplio
+        // Si es PTT y no hay números disponibles, intentar con un rango más amplio pero SIEMPRE respetando reservas
         if ($categoria === 'PTT') {
-            Log::info("Ampliando rango de búsqueda para PTT");
+            Log::info("Ampliando rango de búsqueda para PTT, pero respetando reservas");
             $maxAmpliado = $max + 30; // Aún más amplio
             
             $posiblesNumerosAmpliados = [];
@@ -684,8 +672,8 @@ class PersonalEquipmentController extends Controller
                 $posiblesNumerosAmpliados[] = $i;
             }
             
-            // Filtrar números ya asignados del rango ampliado
-            $numerosDisponiblesAmpliados = array_diff($posiblesNumerosAmpliados, $numerosYaAsignados);
+            // Filtrar números ya asignados y reservados del rango ampliado
+            $numerosDisponiblesAmpliados = array_diff($posiblesNumerosAmpliados, $numerosYaAsignados, $numerosAFiltrar);
             
             if (!empty($numerosDisponiblesAmpliados)) {
                 Log::info("Encontrados números en rango ampliado para PTT: " . implode(", ", $numerosDisponiblesAmpliados));
@@ -708,30 +696,14 @@ class PersonalEquipmentController extends Controller
 
     // Verificar cada número (del más cercano al más lejano)
     foreach ($numerosDisponibles as $numero) {
-        // Para PTT, verificar primero la existencia y crearlo si no existe
-        if ($categoria === 'PTT' && !$this->checkEquipmentExists($categoria, $numero)) {
-            // Log intento de creación automática
-            Log::info("Intentando crear automáticamente equipo $categoria $numero si no existe");
-            
-            try {
-                // Intentar crear el equipo PTT que falta
-                $nuevoEquipo = new PersonalEquipment();
-                $nuevoEquipo->nombre = "PTT $numero";
-                $nuevoEquipo->categoria = 'PTT';
-                $nuevoEquipo->disponible = true;
-                $nuevoEquipo->save();
-                
-                Log::info("Equipo $categoria $numero creado automáticamente con éxito");
-                $existe = true;
-            } catch (\Exception $e) {
-                Log::error("Error al crear equipo $categoria $numero: " . $e->getMessage());
-                $existe = false;
-            }
-        } else {
-            // Comprobar si el equipo existe para otras categorías
-            $existe = $this->checkEquipmentExists($categoria, $numero);
+        // Verificar explícitamente que este número NO está reservado para otra asignación
+        if (in_array($numero, $numerosAFiltrar)) {
+            Log::info("Saltando número $numero para $categoria porque está reservado para otra asignación");
+            continue;
         }
         
+        // Comprobar si el equipo existe
+        $existe = $this->checkEquipmentExists($categoria, $numero);
         if (!$existe) {
             Log::info("Equipo $categoria $numero no existe, intentando siguiente");
             continue;
@@ -747,6 +719,12 @@ class PersonalEquipmentController extends Controller
         // Verificar disponibilidad general
         $disponible = $this->isEquipmentAvailable($categoria, $numero);
         if ($disponible) {
+            // VERIFICACIÓN FINAL: asegurarse que no está reservado
+            if (in_array($numero, $numerosAFiltrar)) {
+                Log::info("Equipo $categoria $numero está disponible pero está reservado para otra asignación - SALTANDO");
+                continue;
+            }
+            
             Log::info("Encontrado número disponible para $categoria: $numero (dentro del rango)");
             return $numero;
         }

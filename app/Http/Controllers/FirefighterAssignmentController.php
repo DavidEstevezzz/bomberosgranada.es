@@ -312,17 +312,18 @@ class FirefighterAssignmentController extends Controller
         return $unavailableFirefighterIds;
     }
 
-    private function isFirefighterInGuardBrigade($firefighterId, $date) {
+    private function isFirefighterInGuardBrigade($firefighterId, $date)
+    {
         $lastAssignment = Firefighters_assignment::where('id_empleado', $firefighterId)
             ->where('fecha_ini', '<=', $date)
             ->orderBy('fecha_ini', 'desc')
             ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->first();
-        
+
         if (!$lastAssignment || !$lastAssignment->brigadeDestination) {
             return false;
         }
-        
+
         $brigadeName = $lastAssignment->brigadeDestination->nombre;
         $guardsToday = Guard::with('brigade')
             ->where('date', $date)
@@ -330,79 +331,79 @@ class FirefighterAssignmentController extends Controller
             ->pluck('brigade.nombre')
             ->unique()
             ->toArray();
-        
+
         return in_array($brigadeName, $guardsToday);
     }
 
     private function isProtectedByRequests($firefighterId, $previousDay, $currentDay, $nextDay)
-{
-    // Tipos que NO tienen turno
-    $typesWithoutTurno = [
-        'vacaciones',
-        'modulo',
-        'licencias por dias'
-    ];
+    {
+        // Tipos que NO tienen turno
+        $typesWithoutTurno = [
+            'vacaciones',
+            'modulo',
+            'licencias por dias'
+        ];
 
-    // Tipos que SÍ requieren comprobación de turnos
-    $typesWithTurno = [
-        'asuntos propios',
-        'compensacion grupos especiales',
-        'licencias por jornadas'
-    ];
+        // Tipos que SÍ requieren comprobación de turnos
+        $typesWithTurno = [
+            'asuntos propios',
+            'compensacion grupos especiales',
+            'licencias por jornadas'
+        ];
 
-    // Verificar si el bombero está en guardia HOY
-    $isInGuardToday = $this->isFirefighterInGuardBrigade($firefighterId, $currentDay);
+        // Verificar si el bombero está en guardia HOY
+        $isInGuardToday = $this->isFirefighterInGuardBrigade($firefighterId, $currentDay);
 
-    // Si está en guardia HOY, nunca debe estar protegido para HOY
-    if ($isInGuardToday) {
-        Log::info("isProtectedByRequests - Bombero {$firefighterId} en guardia HOY, no puede estar protegido.");
-        return false;
+        // Si está en guardia HOY, nunca debe estar protegido para HOY
+        if ($isInGuardToday) {
+            Log::info("isProtectedByRequests - Bombero {$firefighterId} en guardia HOY, no puede estar protegido.");
+            return false;
+        }
+
+        // Verificar día anterior
+        $protectedPrevious = \App\Models\Request::where('id_empleado', $firefighterId)
+            ->where('estado', 'Confirmada')
+            ->where(function ($query) use ($previousDay, $typesWithoutTurno, $typesWithTurno) {
+                $query->where(function ($q) use ($previousDay, $typesWithoutTurno) {
+                    $q->whereIn('tipo', $typesWithoutTurno)
+                        ->where('fecha_ini', '<=', $previousDay)
+                        ->where('fecha_fin', '=', $previousDay);
+                })
+                    ->orWhere(function ($q) use ($previousDay, $typesWithTurno) {
+                        $q->whereIn('tipo', $typesWithTurno)
+                            ->where('fecha_ini', '<=', $previousDay)
+                            ->where('fecha_fin', '>=', $previousDay)
+                            ->whereIn('turno', ['Tarde y noche', 'Día Completo']);
+                    });
+            })
+            ->exists();
+
+        Log::info("isProtectedByRequests - Bombero {$firefighterId} - Día anterior: " . ($protectedPrevious ? "Protegido" : "No protegido"));
+
+        // Verificar día siguiente
+        $protectedNext = \App\Models\Request::where('id_empleado', $firefighterId)
+            ->where('estado', 'Confirmada')
+            ->where(function ($query) use ($nextDay, $typesWithoutTurno, $typesWithTurno) {
+                $query->where(function ($q) use ($nextDay, $typesWithoutTurno) {
+                    $q->whereIn('tipo', $typesWithoutTurno)
+                        ->where('fecha_ini', '=', $nextDay);
+                })
+                    ->orWhere(function ($q) use ($nextDay, $typesWithTurno) {
+                        $q->whereIn('tipo', $typesWithTurno)
+                            ->where('fecha_ini', '=', $nextDay)
+                            ->whereIn('turno', ['Mañana y tarde', 'Día Completo']);
+                    });
+            })
+            ->exists();
+
+        Log::info("isProtectedByRequests - Bombero {$firefighterId} - Día siguiente: " . ($protectedNext ? "Protegido" : "No protegido"));
+
+        // Protegido si cualquiera de las condiciones es verdadera
+        $result = $protectedPrevious || $protectedNext;
+        Log::info("isProtectedByRequests - Bombero {$firefighterId} - Resultado final: " . ($result ? "Protegido" : "No protegido"));
+
+        return $result;
     }
-
-    // Verificar día anterior
-    $protectedPrevious = \App\Models\Request::where('id_empleado', $firefighterId)
-        ->where('estado', 'Confirmada')
-        ->where(function ($query) use ($previousDay, $typesWithoutTurno, $typesWithTurno) {
-            $query->where(function ($q) use ($previousDay, $typesWithoutTurno) {
-                $q->whereIn('tipo', $typesWithoutTurno)
-                    ->where('fecha_ini', '<=', $previousDay)
-                    ->where('fecha_fin', '=', $previousDay);
-            })
-            ->orWhere(function ($q) use ($previousDay, $typesWithTurno) {
-                $q->whereIn('tipo', $typesWithTurno)
-                    ->where('fecha_ini', '<=', $previousDay)
-                    ->where('fecha_fin', '>=', $previousDay)
-                    ->whereIn('turno', ['Tarde y noche', 'Día Completo']);
-            });
-        })
-        ->exists();
-    
-    Log::info("isProtectedByRequests - Bombero {$firefighterId} - Día anterior: " . ($protectedPrevious ? "Protegido" : "No protegido"));
-
-    // Verificar día siguiente
-    $protectedNext = \App\Models\Request::where('id_empleado', $firefighterId)
-        ->where('estado', 'Confirmada')
-        ->where(function ($query) use ($nextDay, $typesWithoutTurno, $typesWithTurno) {
-            $query->where(function ($q) use ($nextDay, $typesWithoutTurno) {
-                $q->whereIn('tipo', $typesWithoutTurno)
-                    ->where('fecha_ini', '=', $nextDay);
-            })
-            ->orWhere(function ($q) use ($nextDay, $typesWithTurno) {
-                $q->whereIn('tipo', $typesWithTurno)
-                    ->where('fecha_ini', '=', $nextDay)
-                    ->whereIn('turno', ['Mañana y tarde', 'Día Completo']);
-            });
-        })
-        ->exists();
-    
-    Log::info("isProtectedByRequests - Bombero {$firefighterId} - Día siguiente: " . ($protectedNext ? "Protegido" : "No protegido"));
-
-    // Protegido si cualquiera de las condiciones es verdadera
-    $result = $protectedPrevious || $protectedNext;
-    Log::info("isProtectedByRequests - Bombero {$firefighterId} - Resultado final: " . ($result ? "Protegido" : "No protegido"));
-
-    return $result;
-}
 
 
 
@@ -963,5 +964,329 @@ class FirefighterAssignmentController extends Controller
         ]);
     }
 
-    
+    /**
+     * Crear asignaciones de prácticas para usuarios
+     * Crea una asignación de ida por la mañana y otra de vuelta por la tarde el mismo día
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function createPracticesAssigments(Request $request)
+    {
+        Log::info("createPracticesAssigments - Datos recibidos:", $request->all());
+
+        // Validar los campos recibidos
+        $validator = Validator::make($request->all(), [
+            'id_empleado' => 'required|exists:users,id_empleado',
+            'id_brigada_destino' => 'required|exists:brigades,id_brigada',
+            'fecha' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idEmpleado = $request->input('id_empleado');
+        $idBrigadaDestino = $request->input('id_brigada_destino');
+        $fecha = $request->input('fecha');
+
+        // 1. Determinar la brigada original (última antes de $fecha)
+        $assignmentAnterior = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', '<=', $fecha)
+            ->orderBy('fecha_ini', 'desc')
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->first();
+
+        $brigadaOrigen = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
+
+        // 2. Crear la asignación de ida por la mañana (prácticas)
+        $asignacionIda = Firefighters_assignment::create([
+            'id_empleado' => $idEmpleado,
+            'id_brigada_origen' => $brigadaOrigen,
+            'id_brigada_destino' => $idBrigadaDestino,
+            'fecha_ini' => $fecha,
+            'turno' => 'Mañana',
+            'requerimiento' => true,
+        ]);
+
+        // 3. Crear la asignación de vuelta por la tarde (mismo día)
+        $asignacionVuelta = Firefighters_assignment::create([
+            'id_empleado' => $idEmpleado,
+            'id_brigada_origen' => $idBrigadaDestino,
+            'id_brigada_destino' => $brigadaOrigen,
+            'fecha_ini' => $fecha,
+            'turno' => 'Tarde',
+            'requerimiento' => false,
+        ]);
+
+        return response()->json([
+            'asignacion_ida' => $asignacionIda,
+            'asignacion_vuelta' => $asignacionVuelta,
+            'message' => 'Asignaciones de prácticas creadas correctamente'
+        ], 201);
+    }
+
+    /**
+     * Crear asignaciones de retén (RT)
+     * Crea una asignación de ida por la mañana y otra de vuelta por la mañana del día siguiente
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function createRTAssigments(Request $request)
+    {
+        Log::info("createRTAssigments - Datos recibidos:", $request->all());
+
+        // Validar los campos recibidos
+        $validator = Validator::make($request->all(), [
+            'id_empleado' => 'required|exists:users,id_empleado',
+            'id_brigada_destino' => 'required|exists:brigades,id_brigada',
+            'fecha' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idEmpleado = $request->input('id_empleado');
+        $idBrigadaDestino = $request->input('id_brigada_destino');
+        $fecha = $request->input('fecha');
+
+        // Calcular la fecha del día siguiente para la asignación de vuelta
+        $fechaVuelta = date('Y-m-d', strtotime($fecha . ' +1 day'));
+
+        // 1. Determinar la brigada original (última antes de $fecha)
+        $assignmentAnterior = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', '<=', $fecha)
+            ->orderBy('fecha_ini', 'desc')
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->first();
+
+        $brigadaOrigen = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
+
+        // 2. Crear la asignación de ida por la mañana
+        $asignacionIda = Firefighters_assignment::create([
+            'id_empleado' => $idEmpleado,
+            'id_brigada_origen' => $brigadaOrigen,
+            'id_brigada_destino' => $idBrigadaDestino,
+            'fecha_ini' => $fecha,
+            'turno' => 'Mañana',
+            'requerimiento' => true,
+        ]);
+
+        // 3. Crear la asignación de vuelta por la mañana del día siguiente
+        $asignacionVuelta = Firefighters_assignment::create([
+            'id_empleado' => $idEmpleado,
+            'id_brigada_origen' => $idBrigadaDestino,
+            'id_brigada_destino' => $brigadaOrigen,
+            'fecha_ini' => $fechaVuelta,
+            'turno' => 'Mañana',
+            'requerimiento' => false,
+        ]);
+
+        return response()->json([
+            'asignacion_ida' => $asignacionIda,
+            'asignacion_vuelta' => $asignacionVuelta,
+            'message' => 'Asignaciones de retén (RT) creadas correctamente'
+        ], 201);
+    }
+
+    /**
+     * Verificar si existe una asignación especial para una brigada en una fecha específica
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function getEspecialAssigment(Request $request)
+    {
+        // Validar los campos recibidos
+        $validator = Validator::make($request->all(), [
+            'id_brigada' => 'required|exists:brigades,id_brigada',
+            'fecha' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idBrigada = $request->input('id_brigada');
+        $fecha = $request->input('fecha');
+
+        // Buscar todas las asignaciones para esa brigada en esa fecha como brigada de destino
+        $existenAsignaciones = Firefighters_assignment::where('id_brigada_destino', $idBrigada)
+            ->where('fecha_ini', $fecha)
+            ->exists();
+
+        Log::info("getEspecialAssigment - Verificando brigada {$idBrigada} en fecha {$fecha}: " .
+            ($existenAsignaciones ? 'Tiene asignaciones' : 'No tiene asignaciones'));
+
+        return response()->json([
+            'id_brigada' => $idBrigada,
+            'fecha' => $fecha,
+            'has_assignments' => $existenAsignaciones
+        ]);
+    }
+
+    public function checkEspecialAssignment(Request $request)
+    {
+        // Validar los campos recibidos
+        $validator = Validator::make($request->all(), [
+            'id_brigada' => 'required|exists:brigades,id_brigada',
+            'fecha' => 'required|date',
+            'id_usuario' => 'required|exists:users,id_empleado',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idBrigada = $request->input('id_brigada');
+        $fecha = $request->input('fecha');
+        $idUsuario = $request->input('id_usuario');
+
+        // Buscar si existe alguna asignación especial para ese usuario en la brigada y fecha especificadas
+        $existeAsignacion = Firefighters_assignment::where('id_brigada_destino', $idBrigada)
+            ->where('fecha_ini', $fecha)
+            ->where('id_empleado', $idUsuario)
+            ->exists();
+
+        Log::info("checkEspecialAssignment - Verificando asignación especial para usuario {$idUsuario} en brigada {$idBrigada} en fecha {$fecha}: " .
+            ($existeAsignacion ? 'Existe' : 'No existe'));
+
+        return response()->json([
+            'id_brigada' => $idBrigada,
+            'fecha' => $fecha,
+            'id_usuario' => $idUsuario,
+            'has_assignments' => $existeAsignacion
+        ]);
+    }
+
+
+    /**
+     * Eliminar asignaciones de prácticas para una brigada en una fecha específica
+     * Elimina las asignaciones donde la brigada origen o destino coincida con la brigada especificada
+     * y que sean del mismo día (ida por la mañana y vuelta por la tarde)
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function deletePracticesAssigments(Request $request)
+    {
+        Log::info("deletePracticesAssigments - Datos recibidos:", $request->all());
+
+        // Validar los campos recibidos
+        $validator = Validator::make($request->all(), [
+            'id_brigada' => 'required|exists:brigades,id_brigada',
+            'fecha' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idBrigada = $request->input('id_brigada');
+        $fecha = $request->input('fecha');
+
+        // Buscar y eliminar todas las asignaciones relacionadas con esa brigada en esa fecha
+        // (tanto como origen como destino)
+        $eliminadas = Firefighters_assignment::where('fecha_ini', $fecha)
+            ->where(function ($query) use ($idBrigada) {
+                $query->where('id_brigada_origen', $idBrigada)
+                    ->orWhere('id_brigada_destino', $idBrigada);
+            })
+            ->get();
+
+        // Almacenar los IDs antes de eliminar
+        $idsEliminados = $eliminadas->pluck('id_asignacion')->toArray();
+
+        // Cantidad de registros que serán eliminados
+        $count = $eliminadas->count();
+
+        // Eliminar los registros
+        Firefighters_assignment::where('fecha_ini', $fecha)
+            ->where(function ($query) use ($idBrigada) {
+                $query->where('id_brigada_origen', $idBrigada)
+                    ->orWhere('id_brigada_destino', $idBrigada);
+            })
+            ->delete();
+
+        Log::info("Asignaciones de prácticas eliminadas:", [
+            'fecha' => $fecha,
+            'id_brigada' => $idBrigada,
+            'cantidad' => $count,
+            'ids_eliminados' => $idsEliminados
+        ]);
+
+        return response()->json([
+            'message' => "Se han eliminado {$count} asignaciones de prácticas para la brigada {$idBrigada} en la fecha {$fecha}",
+            'deleted_count' => $count,
+            'deleted_ids' => $idsEliminados
+        ]);
+    }
+
+    /**
+     * Eliminar asignaciones de retén (RT) para una brigada en una fecha específica
+     * Elimina las asignaciones donde la brigada origen o destino coincida con la brigada especificada
+     * en la fecha especificada y en el día siguiente (ida por la mañana y vuelta por la mañana del día siguiente)
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function deleteRTAssigments(Request $request)
+    {
+        Log::info("deleteRTAssigments - Datos recibidos:", $request->all());
+
+        // Validar los campos recibidos
+        $validator = Validator::make($request->all(), [
+            'id_brigada' => 'required|exists:brigades,id_brigada',
+            'fecha' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idBrigada = $request->input('id_brigada');
+        $fecha = $request->input('fecha');
+
+        // Calcular la fecha del día siguiente para la asignación de vuelta
+        $fechaSiguiente = date('Y-m-d', strtotime($fecha . ' +1 day'));
+
+        // Buscar y eliminar todas las asignaciones relacionadas con esa brigada en la fecha especificada
+        // y en el día siguiente (tanto como origen como destino)
+        $eliminadas = Firefighters_assignment::whereIn('fecha_ini', [$fecha, $fechaSiguiente])
+            ->where(function ($query) use ($idBrigada) {
+                $query->where('id_brigada_origen', $idBrigada)
+                    ->orWhere('id_brigada_destino', $idBrigada);
+            })
+            ->get();
+
+        // Almacenar los IDs antes de eliminar
+        $idsEliminados = $eliminadas->pluck('id_asignacion')->toArray();
+
+        // Cantidad de registros que serán eliminados
+        $count = $eliminadas->count();
+
+        // Eliminar los registros
+        Firefighters_assignment::whereIn('fecha_ini', [$fecha, $fechaSiguiente])
+            ->where(function ($query) use ($idBrigada) {
+                $query->where('id_brigada_origen', $idBrigada)
+                    ->orWhere('id_brigada_destino', $idBrigada);
+            })
+            ->delete();
+
+        Log::info("Asignaciones de retén (RT) eliminadas:", [
+            'fecha' => $fecha,
+            'fecha_siguiente' => $fechaSiguiente,
+            'id_brigada' => $idBrigada,
+            'cantidad' => $count,
+            'ids_eliminados' => $idsEliminados
+        ]);
+
+        return response()->json([
+            'message' => "Se han eliminado {$count} asignaciones de retén (RT) para la brigada {$idBrigada} en las fechas {$fecha} y {$fechaSiguiente}",
+            'deleted_count' => $count,
+            'deleted_ids' => $idsEliminados
+        ]);
+    }
 }

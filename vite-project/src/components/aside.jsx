@@ -7,7 +7,7 @@ import {
   faPeopleGroup,
   faGear,
   faClock,
-  
+
   faFile,
   faCalendar,
   faCaretDown,
@@ -279,10 +279,14 @@ const Aside = ({ className }) => {
                       <FontAwesomeIcon icon={faCalendarCheck} className="w-4 h-4 mr-2" />
                       Gestionar Guardias Especiales
                     </a>
-                    
+
                     <a href="/detalle-guardia-calendario" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
                       <FontAwesomeIcon icon={faClipboardList} className="w-4 h-4 mr-2" />
                       Ver Detalles de Guardias
+                    </a>
+                    <a href="/brigade-practices" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
+                      <FontAwesomeIcon icon={faChartBar} className="w-4 h-4 mr-2" />
+                      Registro de Prácticas
                     </a>
                   </>
                 )}

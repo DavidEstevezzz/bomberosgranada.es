@@ -77,6 +77,7 @@ const router = createBrowserRouter([
       { path: 'horas-requerimientos', element: <HorasOfrecidas /> },
       { path: '/brigades/:id_brigada', element: <BrigadeDetail /> },
       { path: '/messages', element: <MessagesPage /> },
+      { path: 'brigade-practices', element: <BrigadePracticesPage /> },
       { path: 'calendario-norte', element: <CalendarPage /> },
       { path: 'calendario-sur', element: <CalendarPage2 /> },
       { path: 'requerimientos', element: <AvailableFirefighters /> },

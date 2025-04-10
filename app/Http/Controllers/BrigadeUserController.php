@@ -17,10 +17,10 @@ class BrigadeUserController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function index()
-    {
-        $brigadeUsers = BrigadeUser::all();
-        return response()->json($brigadeUsers);
-    }
+{
+    $brigadeUsers = BrigadeUser::with(['brigade:id_brigada,nombre', 'user:id_empleado,nombre,apellido'])->get();
+    return response()->json($brigadeUsers);
+}
 
     /**
      * Crear una nueva asignación de brigada a usuario

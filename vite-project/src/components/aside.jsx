@@ -7,7 +7,7 @@ import {
   faPeopleGroup,
   faGear,
   faClock,
-
+  faChartBar,
   faFile,
   faCalendar,
   faCaretDown,

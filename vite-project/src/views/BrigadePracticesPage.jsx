@@ -8,57 +8,78 @@ const BrigadePracticesPage = () => {
   const [error, setError] = useState(null);
   const [brigadeData, setBrigadeData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // Obtener todos los usuarios de brigadas con una sola llamada a la API
-        const response = await BrigadeUsersApiService.getBrigadeUsers();
-        const allBrigadeUsers = response.data;
-        
-        // Agrupar por brigada
-        const groupedByBrigade = {};
-        
-        allBrigadeUsers.forEach(brigadeUser => {
-          if (!brigadeUser.id_brigada) return;
-          
-          // Si la brigada no existe en nuestro objeto, la creamos
-          if (!groupedByBrigade[brigadeUser.id_brigada]) {
-            groupedByBrigade[brigadeUser.id_brigada] = {
-              id: brigadeUser.id_brigada,
-              name: brigadeUser.brigade ? brigadeUser.brigade.nombre : `Brigada ${brigadeUser.id_brigada}`,
-              users: []
-            };
-          }
-          
-          // Agregar el usuario a la brigada
-          if (brigadeUser.user) {
-            groupedByBrigade[brigadeUser.id_brigada].users.push({
-              id: brigadeUser.id_usuario,
-              name: brigadeUser.user.nombre || 'Usuario desconocido',
-              lastname: brigadeUser.user.apellido || '',
-              practices: brigadeUser.practicas || 0
-            });
-          }
-        });
-        
-        // Convertir el objeto a array para facilitar la renderización
-        const brigadesArray = Object.values(groupedByBrigade);
-        setBrigadeData(brigadesArray);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error al cargar los datos:', err);
-        setError('Error al cargar los datos. Por favor, inténtalo de nuevo más tarde.');
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Obtener todos los usuarios de brigadas con una sola llamada a la API
+      const response = await BrigadeUsersApiService.getBrigadeUsers();
+      const allBrigadeUsers = response.data;
+      
+      // Agrupar por brigada
+      const groupedByBrigade = {};
+      
+      allBrigadeUsers.forEach(brigadeUser => {
+        if (!brigadeUser.id_brigada) return;
+        
+        // Si la brigada no existe en nuestro objeto, la creamos
+        if (!groupedByBrigade[brigadeUser.id_brigada]) {
+          groupedByBrigade[brigadeUser.id_brigada] = {
+            id: brigadeUser.id_brigada,
+            name: brigadeUser.brigade?.nombre || `Brigada ${brigadeUser.id_brigada}`,
+            users: []
+          };
+        }
+        
+        // Agregar el usuario a la brigada
+        if (brigadeUser.user) {
+          groupedByBrigade[brigadeUser.id_brigada].users.push({
+            id: brigadeUser.id_usuario,
+            name: brigadeUser.user.nombre || 'Usuario desconocido',
+            lastname: brigadeUser.user.apellido || '',
+            practices: brigadeUser.practicas || 0,
+            brigadeUserId: brigadeUser.id // Guardar ID para operaciones
+          });
+        }
+      });
+      
+      // Convertir el objeto a array para facilitar la renderización
+      const brigadesArray = Object.values(groupedByBrigade);
+      setBrigadeData(brigadesArray);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error al cargar los datos:', err);
+      setError('Error al cargar los datos. Por favor, inténtalo de nuevo más tarde.');
+      setLoading(false);
+    }
+  };
+
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
+  };
+
+  const handleIncrementPractice = async (brigadeId, userId) => {
+    try {
+      setUpdating(true);
+      await BrigadeUsersApiService.incrementPracticas({
+        id_brigada: brigadeId,
+        id_usuario: userId,
+        increment: 1
+      });
+      
+      // Recargar datos después de actualizar
+      await fetchData();
+      setUpdating(false);
+    } catch (err) {
+      console.error('Error al incrementar prácticas:', err);
+      setError('Error al actualizar prácticas. Inténtalo de nuevo más tarde.');
+      setUpdating(false);
+    }
   };
 
   const filterBrigadeData = () => {
@@ -83,22 +104,6 @@ const BrigadePracticesPage = () => {
       return null;
     }).filter(Boolean); // Eliminar null
   };
-
-  // Calcular total de prácticas por usuario
-  const totalPracticesByUser = {};
-
-  brigadeData.forEach(brigade => {
-    brigade.users.forEach(user => {
-      const userId = user.id;
-      if (!totalPracticesByUser[userId]) {
-        totalPracticesByUser[userId] = {
-          name: `${user.name} ${user.lastname}`,
-          total: 0
-        };
-      }
-      totalPracticesByUser[userId].total += user.practices;
-    });
-  });
 
   const processedBrigadeData = filterBrigadeData();
 
@@ -157,45 +162,16 @@ const BrigadePracticesPage = () => {
           </div>
         </header>
         
-        {/* Resumen de prácticas totales */}
-        <div className={`mb-12 p-6 rounded-xl shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-          <h2 className="text-2xl font-semibold mb-4 flex items-center">
-            <svg className="h-6 w-6 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Resumen Total de Prácticas
-          </h2>
-          <div className="overflow-x-auto">
-            <table className={`min-w-full divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-              <thead className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Bombero</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Total Prácticas</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                {Object.values(totalPracticesByUser)
-                  .sort((a, b) => b.total - a.total) // Ordenar por total descendente
-                  .map((user, index) => (
-                    <tr key={index} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                      <td className="px-6 py-3 whitespace-nowrap">{user.name}</td>
-                      <td className="px-6 py-3 text-center whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                          ${user.total > 10 
-                            ? 'bg-green-100 text-green-800' 
-                            : user.total > 5 
-                              ? 'bg-blue-100 text-blue-800' 
-                              : 'bg-yellow-100 text-yellow-800'}`}>
-                          {user.total}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+        {/* Overlay de carga durante actualización */}
+        {updating && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} rounded-lg p-6 flex flex-col items-center`}>
+              <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-blue-600 mb-3"></div>
+              <p>Actualizando prácticas...</p>
+            </div>
           </div>
-        </div>
-
+        )}
+        
         {/* Tablas por brigada */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {processedBrigadeData.map(brigade => (
@@ -219,26 +195,45 @@ const BrigadePracticesPage = () => {
                     <tr>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Bombero</th>
                       <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Prácticas</th>
+                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                    {brigade.users
-                      .sort((a, b) => b.practices - a.practices) // Ordenar por prácticas descendente
-                      .map(user => (
-                        <tr key={user.id} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                          <td className="px-6 py-3 whitespace-nowrap">{user.name} {user.lastname}</td>
-                          <td className="px-6 py-3 text-center whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                              ${user.practices > 5 
-                                ? 'bg-green-100 text-green-800' 
-                                : user.practices > 2 
-                                  ? 'bg-blue-100 text-blue-800' 
-                                  : 'bg-yellow-100 text-yellow-800'}`}>
-                              {user.practices}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                    {brigade.users.length > 0 ? (
+                      brigade.users
+                        .sort((a, b) => b.practices - a.practices) // Ordenar por prácticas descendente
+                        .map(user => (
+                          <tr key={user.id} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                            <td className="px-6 py-3 whitespace-nowrap">{user.name} {user.lastname}</td>
+                            <td className="px-6 py-3 text-center whitespace-nowrap">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                {user.practices}
+                              </span>
+                            </td>
+                            <td className="px-6 py-3 text-right whitespace-nowrap">
+                              <button 
+                                onClick={() => handleIncrementPractice(brigade.id, user.id)}
+                                className={`inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm ${
+                                  darkMode 
+                                    ? 'bg-blue-600 hover:bg-blue-700' 
+                                    : 'bg-blue-500 hover:bg-blue-600'
+                                } text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                                title="Añadir práctica"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3" className={`px-6 py-4 text-center text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          No hay bomberos asignados a esta brigada
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

@@ -43,6 +43,7 @@ import CalendarEspecialPage from './views/CalendarEspecialPage.jsx';
 import MandoEspecialRoute from './components/MandoEspecialRoute.jsx';
 import GuardDetailCalendarPage from './views/GuardDetailCalendarPage.jsx';
 import GuardDetailPage from './views/GuardDetailPage.jsx';
+import BrigadePracticesPage from './views/BrigadePracticesPage.jsx';
 
 const router = createBrowserRouter([
   {

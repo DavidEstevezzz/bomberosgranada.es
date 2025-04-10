@@ -231,7 +231,7 @@ class BrigadeUserController extends Controller
         $request->validate([
             'id_brigada' => 'required|exists:brigades,id_brigada',
             'id_usuario' => 'required|exists:users,id_empleado',
-            'increment' => 'required|integer|min:1'
+            'increment' => 'required|integer'
         ]);
 
         // Buscar la asignación

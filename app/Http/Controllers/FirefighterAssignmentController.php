@@ -1170,14 +1170,15 @@ class FirefighterAssignmentController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function deletePracticesAssigments(Request $request)
+    public function deletePracticesAssignments(Request $request)
     {
-        Log::info("deletePracticesAssigments - Datos recibidos:", $request->all());
+        Log::info("deletePracticesAssignments - Datos recibidos:", $request->all());
 
         // Validar los campos recibidos
         $validator = Validator::make($request->all(), [
             'id_brigada' => 'required|exists:brigades,id_brigada',
             'fecha' => 'required|date',
+            'id_usuario' => 'required|exists:users,id_empleado', // Nuevo campo obligatorio
         ]);
 
         if ($validator->fails()) {
@@ -1186,10 +1187,11 @@ class FirefighterAssignmentController extends Controller
 
         $idBrigada = $request->input('id_brigada');
         $fecha = $request->input('fecha');
+        $idUsuario = $request->input('id_usuario'); // Nuevo campo
 
-        // Buscar y eliminar todas las asignaciones relacionadas con esa brigada en esa fecha
-        // (tanto como origen como destino)
+        // Buscar y eliminar solo las asignaciones del usuario específico relacionadas con esa brigada en esa fecha
         $eliminadas = Firefighters_assignment::where('fecha_ini', $fecha)
+            ->where('id_empleado', $idUsuario) // Filtramos por ID de usuario
             ->where(function ($query) use ($idBrigada) {
                 $query->where('id_brigada_origen', $idBrigada)
                     ->orWhere('id_brigada_destino', $idBrigada);
@@ -1204,42 +1206,43 @@ class FirefighterAssignmentController extends Controller
 
         // Eliminar los registros
         Firefighters_assignment::where('fecha_ini', $fecha)
+            ->where('id_empleado', $idUsuario) // Filtramos por ID de usuario
             ->where(function ($query) use ($idBrigada) {
                 $query->where('id_brigada_origen', $idBrigada)
                     ->orWhere('id_brigada_destino', $idBrigada);
             })
             ->delete();
 
-        Log::info("Asignaciones de prácticas eliminadas:", [
+        Log::info("Asignaciones de prácticas eliminadas para usuario específico:", [
             'fecha' => $fecha,
             'id_brigada' => $idBrigada,
+            'id_usuario' => $idUsuario,
             'cantidad' => $count,
             'ids_eliminados' => $idsEliminados
         ]);
 
         return response()->json([
-            'message' => "Se han eliminado {$count} asignaciones de prácticas para la brigada {$idBrigada} en la fecha {$fecha}",
+            'message' => "Se han eliminado {$count} asignaciones de prácticas para el usuario {$idUsuario} en la brigada {$idBrigada} en la fecha {$fecha}",
             'deleted_count' => $count,
             'deleted_ids' => $idsEliminados
         ]);
     }
 
     /**
-     * Eliminar asignaciones de retén (RT) para una brigada en una fecha específica
-     * Elimina las asignaciones donde la brigada origen o destino coincida con la brigada especificada
-     * en la fecha especificada y en el día siguiente (ida por la mañana y vuelta por la mañana del día siguiente)
-     *
+     * Eliminar asignaciones de retén (RT) para un usuario específico en una brigada y fecha
+     * 
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function deleteRTAssigments(Request $request)
+    public function deleteRTAssignments(Request $request)
     {
-        Log::info("deleteRTAssigments - Datos recibidos:", $request->all());
+        Log::info("deleteRTAssignments - Datos recibidos:", $request->all());
 
         // Validar los campos recibidos
         $validator = Validator::make($request->all(), [
             'id_brigada' => 'required|exists:brigades,id_brigada',
             'fecha' => 'required|date',
+            'id_usuario' => 'required|exists:users,id_empleado', // Nuevo campo obligatorio
         ]);
 
         if ($validator->fails()) {
@@ -1248,13 +1251,15 @@ class FirefighterAssignmentController extends Controller
 
         $idBrigada = $request->input('id_brigada');
         $fecha = $request->input('fecha');
+        $idUsuario = $request->input('id_usuario'); // Nuevo campo
 
         // Calcular la fecha del día siguiente para la asignación de vuelta
         $fechaSiguiente = date('Y-m-d', strtotime($fecha . ' +1 day'));
 
-        // Buscar y eliminar todas las asignaciones relacionadas con esa brigada en la fecha especificada
-        // y en el día siguiente (tanto como origen como destino)
+        // Buscar y eliminar las asignaciones del usuario específico relacionadas con esa brigada
+        // en la fecha especificada y en el día siguiente
         $eliminadas = Firefighters_assignment::whereIn('fecha_ini', [$fecha, $fechaSiguiente])
+            ->where('id_empleado', $idUsuario) // Filtramos por ID de usuario
             ->where(function ($query) use ($idBrigada) {
                 $query->where('id_brigada_origen', $idBrigada)
                     ->orWhere('id_brigada_destino', $idBrigada);
@@ -1269,22 +1274,24 @@ class FirefighterAssignmentController extends Controller
 
         // Eliminar los registros
         Firefighters_assignment::whereIn('fecha_ini', [$fecha, $fechaSiguiente])
+            ->where('id_empleado', $idUsuario) // Filtramos por ID de usuario
             ->where(function ($query) use ($idBrigada) {
                 $query->where('id_brigada_origen', $idBrigada)
                     ->orWhere('id_brigada_destino', $idBrigada);
             })
             ->delete();
 
-        Log::info("Asignaciones de retén (RT) eliminadas:", [
+        Log::info("Asignaciones de retén (RT) eliminadas para usuario específico:", [
             'fecha' => $fecha,
             'fecha_siguiente' => $fechaSiguiente,
             'id_brigada' => $idBrigada,
+            'id_usuario' => $idUsuario,
             'cantidad' => $count,
             'ids_eliminados' => $idsEliminados
         ]);
 
         return response()->json([
-            'message' => "Se han eliminado {$count} asignaciones de retén (RT) para la brigada {$idBrigada} en las fechas {$fecha} y {$fechaSiguiente}",
+            'message' => "Se han eliminado {$count} asignaciones de retén (RT) para el usuario {$idUsuario} en la brigada {$idBrigada} en las fechas {$fecha} y {$fechaSiguiente}",
             'deleted_count' => $count,
             'deleted_ids' => $idsEliminados
         ]);

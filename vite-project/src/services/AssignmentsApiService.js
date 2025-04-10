@@ -10,6 +10,8 @@ const API_URL_WORKING_FIRE = `${API_BASE_URL}/firefighters-assignments/working-f
 const API_URL_CREATE_PRACTICES = `${API_BASE_URL}/firefighters-assignments/create-practices`;
 const API_URL_CREATE_RT = `${API_BASE_URL}/firefighters-assignments/create-rt`;
 const API_URL_CHECK_ESPECIAL = `${API_BASE_URL}/firefighters-assignments/check-especial`;
+const API_URL_DELETE_PRACTICES = `${API_BASE_URL}/firefighters-assignments/delete-practices`;
+const API_URL_DELETE_RT = `${API_BASE_URL}/firefighters-assignments/delete-rt`;
 
 import BaseApiService from './BaseApiService';
 
@@ -94,17 +96,19 @@ class AssignmentsApiService {
     });
   }
 
-  async deletePracticesAssignments(brigadeId, date) {
+  async deletePracticesAssignments(brigadeId, date, userId) {
     return await BaseApiService.post(API_URL_DELETE_PRACTICES, {
       id_brigada: brigadeId,
-      fecha: date
+      fecha: date,
+      id_usuario: userId  // Nuevo parámetro
     });
   }
   
-  async deleteRTAssignments(brigadeId, date) {
+  async deleteRTAssignments(brigadeId, date, userId) {
     return await BaseApiService.post(API_URL_DELETE_RT, {
       id_brigada: brigadeId,
-      fecha: date
+      fecha: date,
+      id_usuario: userId  // Nuevo parámetro
     });
   }
 }

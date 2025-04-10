@@ -136,17 +136,23 @@ const GuardDetailPage = () => {
             setProcessingUser(userId);
             const isCurrentlyAssigned = assignments[userId];
             const payload = {
-                id_brigada: parseInt(brigadeId),
-                fecha: date,
-                id_usuario: userId
+                id_empleado: userId,
+                id_brigada_destino: parseInt(brigadeId),
+                fecha: date
             };
 
             if (isCurrentlyAssigned) {
                 // Quitar al bombero de la asignación
                 if (guard.especiales.includes('Prácticas')) {
-                    await AssignmentsApiService.deletePracticesAssignments(brigadeId, date);
+                    await AssignmentsApiService.deletePracticesAssignments(brigadeId, date, userId);  // Añadido userId
+            
+                    await BrigadeUsersApiService.incrementPracticas({
+                        id_brigada: parseInt(brigadeId),
+                        id_usuario: userId,
+                        increment: -1
+                    });
                 } else if (guard.especiales.includes('Guardia Localizada')) {
-                    await AssignmentsApiService.deleteRTAssignments(brigadeId, date);
+                    await AssignmentsApiService.deleteRTAssignments(brigadeId, date, userId);  // Añadido userId
                 }
 
                 // Actualizar el estado local

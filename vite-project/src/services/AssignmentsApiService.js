@@ -9,7 +9,8 @@ const API_URL_NO_TODAY_YESTERDAY = `${API_BASE_URL}/firefighters-assignments/no-
 const API_URL_WORKING_FIRE = `${API_BASE_URL}/firefighters-assignments/working-firefighters`;
 const API_URL_CREATE_PRACTICES = `${API_BASE_URL}/firefighters-assignments/create-practices`;
 const API_URL_CREATE_RT = `${API_BASE_URL}/firefighters-assignments/create-rt`;
-const API_URL_CHECK_ESPECIAL = `${API_BASE_URL}/firefighters-assignments/check-especial`;
+const API_URL_CHECK_ESPECIAL_USER = `${API_BASE_URL}/firefighters-assignments/check-especial-user`;
+const API_URL_CHECK_ESPECIAL_BRIGADE = `${API_BASE_URL}/firefighters-assignments/check-especial-brigade`;
 const API_URL_DELETE_PRACTICES = `${API_BASE_URL}/firefighters-assignments/delete-practices`;
 const API_URL_DELETE_RT = `${API_BASE_URL}/firefighters-assignments/delete-rt`;
 
@@ -88,13 +89,21 @@ class AssignmentsApiService {
   }
 
   // Método para verificar si existe una asignación especial para una brigada en una fecha
-  async checkEspecialAssignment(brigadeId, date, userId) {
-    return await BaseApiService.get(API_URL_CHECK_ESPECIAL, { 
-      id_brigada: brigadeId, 
-      fecha: date,
-      id_usuario: userId
-    });
-  }
+async checkEspecialAssignment(brigadeId, date, userId) {
+  return await BaseApiService.get(API_URL_CHECK_ESPECIAL_USER, { 
+    id_brigada: brigadeId, 
+    fecha: date,
+    id_usuario: userId
+  });
+}
+
+// Método para verificar a nivel de brigada (si lo necesitas)
+async checkEspecialBrigade(brigadeId, date) {
+  return await BaseApiService.get(API_URL_CHECK_ESPECIAL_BRIGADE, { 
+    id_brigada: brigadeId, 
+    fecha: date
+  });
+}
 
   async deletePracticesAssignments(brigadeId, date, userId) {
     return await BaseApiService.post(API_URL_DELETE_PRACTICES, {

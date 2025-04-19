@@ -3,7 +3,7 @@ import UsuariosApiService from '../services/LogApiService';
 import { useNavigate } from 'react-router-dom';
 import { useStateContext } from '../contexts/ContextProvider.jsx';
 import logo from '../assets/logo.png';
-import fondo from '../assets/fondo.jpg';
+import fondo from '../assets/fondo3.webp';
 
 export default function Login() {
   const [email, setEmail] = useState('');

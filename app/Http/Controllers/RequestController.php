@@ -151,33 +151,33 @@ class RequestController extends Controller
     public function update(Request $request, $id)
     {
         $miRequest = MiRequest::findOrFail($id);
-    
+
         $rules = [
             'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
         ];
-    
+
         $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {
             return response()->json($validator->errors(), 400);
         }
-    
+
         $oldEstado = $miRequest->estado;
         $newEstado = $request->estado;
-    
+
         // Validación de disponibilidad según el tipo de solicitud
         if ($newEstado === 'Confirmada') {
             $user = $miRequest->EnviadaPor;
             if (!$user) {
                 return response()->json(['error' => 'Usuario no encontrado para esta solicitud'], 404);
             }
-    
+
             // Verificaciones específicas por tipo
-            switch($miRequest->tipo) {
+            switch ($miRequest->tipo) {
                 case 'vacaciones':
                     $fechaInicio = new \DateTime($miRequest->fecha_ini);
                     $fechaFin = new \DateTime($miRequest->fecha_fin);
                     $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
-                    
+
                     if ($user->vacaciones < $diasSolicitados) {
                         return response()->json(['error' => 'El usuario no tiene suficientes días de vacaciones disponibles'], 400);
                     }
@@ -186,7 +186,7 @@ class RequestController extends Controller
                     $fechaInicio = new \DateTime($miRequest->fecha_ini);
                     $fechaFin = new \DateTime($miRequest->fecha_fin);
                     $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
-                    
+
                     if ($user->modulo < $diasSolicitados) {
                         return response()->json(['error' => 'El usuario no tiene suficientes días en su módulo disponibles'], 400);
                     }
@@ -203,27 +203,27 @@ class RequestController extends Controller
                     break;
                 case 'asuntos propios':
                     $jornadasSolicitadas = $this->calcularJornadasPorTurno($miRequest->turno);
-                    
+
                     if ($user->AP < $jornadasSolicitadas) {
                         return response()->json(['error' => 'El usuario no tiene suficientes jornadas de asuntos propios disponibles'], 400);
                     }
                     break;
                 case 'compensacion grupos especiales':
                     $jornadasSolicitadas = $this->calcularJornadasPorTurno($miRequest->turno);
-                    
+
                     if ($user->compensacion_grupos < $jornadasSolicitadas) {
                         return response()->json(['error' => 'El usuario no tiene suficientes jornadas de compensación de grupos especiales disponibles'], 400);
                     }
                     break;
             }
         }
-    
+
         // Actualizar el estado de la solicitud
         $miRequest->estado = $newEstado;
         $miRequest->save();
-    
+
         // Ajustar las columnas específicas según el tipo (saldos de días/horas)
-        switch($miRequest->tipo) {
+        switch ($miRequest->tipo) {
             case 'vacaciones':
                 $this->adjustVacationDays($miRequest, $oldEstado, $newEstado);
                 break;
@@ -243,9 +243,9 @@ class RequestController extends Controller
                 $this->adjustCompensacionGrupos($miRequest, $oldEstado, $newEstado);
                 break;
         }
-    
+
         // Manejar las asignaciones para todos los tipos que lo requieran
-        $tiposSinAsignaciones = ['vestuario']; // Tipos que no requieren asignaciones
+        $tiposSinAsignaciones = ['vestuario', 'salidas personales']; // Tipos que no requieren asignaciones
         if (!in_array($miRequest->tipo, $tiposSinAsignaciones)) {
             if ($newEstado === 'Confirmada') {
                 $this->createAssignments($miRequest);
@@ -254,7 +254,7 @@ class RequestController extends Controller
                 $this->deleteAssignments($miRequest);
             }
         }
-    
+
         // Enviar correo de notificación
         $user = $miRequest->EnviadaPor;
         if ($user && $user->email) {
@@ -264,7 +264,7 @@ class RequestController extends Controller
                 Log::error("Error enviando correo: " . $e->getMessage());
             }
         }
-    
+
         return response()->json($miRequest, 200);
     }
 
@@ -442,180 +442,180 @@ class RequestController extends Controller
     }
 
     private function adjustVacationDays($miRequest, $oldEstado, $newEstado)
-{
-    $user = $miRequest->EnviadaPor;
-    if (!$user) {
-        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-        return;
+    {
+        $user = $miRequest->EnviadaPor;
+        if (!$user) {
+            Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return;
+        }
+
+        // Calcular los días solicitados
+        $fechaInicio = new \DateTime($miRequest->fecha_ini);
+        $fechaFin = new \DateTime($miRequest->fecha_fin);
+        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+
+        // Restar días de vacaciones cuando se confirma la solicitud
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+            Log::info("Días solicitados: {$diasSolicitados}");
+            Log::info("Vacaciones disponibles antes de la resta: {$user->vacaciones}");
+            $user->vacaciones = max(0, $user->vacaciones - $diasSolicitados);
+            Log::info("Restando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
+            Log::info("Vacaciones disponibles después de la resta: {$user->vacaciones}");
+        }
+
+        // Sumar días de vacaciones cuando se cancela la solicitud
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+            $user->vacaciones += $diasSolicitados;
+            Log::info("Sumando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
+        }
+
+        $user->save();
     }
 
-    // Calcular los días solicitados
-    $fechaInicio = new \DateTime($miRequest->fecha_ini);
-    $fechaFin = new \DateTime($miRequest->fecha_fin);
-    $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+    private function adjustModuloDays($miRequest, $oldEstado, $newEstado)
+    {
+        $user = $miRequest->EnviadaPor;
+        if (!$user) {
+            Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return;
+        }
 
-    // Restar días de vacaciones cuando se confirma la solicitud
-    if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
-        Log::info("Días solicitados: {$diasSolicitados}");
-        Log::info("Vacaciones disponibles antes de la resta: {$user->vacaciones}");
-        $user->vacaciones = max(0, $user->vacaciones - $diasSolicitados);
-        Log::info("Restando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
-        Log::info("Vacaciones disponibles después de la resta: {$user->vacaciones}");
+        // Calcular los días solicitados
+        $fechaInicio = new \DateTime($miRequest->fecha_ini);
+        $fechaFin = new \DateTime($miRequest->fecha_fin);
+        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+
+        // Restar días de módulo cuando se confirma la solicitud
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+            $user->modulo = max(0, $user->modulo - $diasSolicitados);
+            Log::info("Restando {$diasSolicitados} días de módulo al usuario ID: {$user->id_empleado}");
+        }
+
+        // Sumar días de módulo cuando se cancela la solicitud
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+            $user->modulo += $diasSolicitados;
+            Log::info("Sumando {$diasSolicitados} días de módulo al usuario ID: {$user->id_empleado}");
+        }
+
+        $user->save();
     }
 
-    // Sumar días de vacaciones cuando se cancela la solicitud
-    if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
-        $user->vacaciones += $diasSolicitados;
-        Log::info("Sumando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
+    private function calcularJornadasPorTurno($turno)
+    {
+        if ($turno === 'Día Completo') {
+            return 3;
+        } else if ($turno === 'Mañana y tarde' || $turno === 'Tarde y noche') {
+            return 2;
+        } else {
+            return 1;
+        }
     }
 
-    $user->save();
-}
+    private function adjustAPDays($miRequest, $oldEstado, $newEstado)
+    {
+        $user = $miRequest->EnviadaPor;
+        if (!$user) {
+            Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return;
+        }
 
-private function adjustModuloDays($miRequest, $oldEstado, $newEstado)
-{
-    $user = $miRequest->EnviadaPor;
-    if (!$user) {
-        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-        return;
+        // Calcular jornadas según el turno
+        $jornadasSolicitadas = $this->calcularJornadasPorTurno($miRequest->turno);
+
+        Log::info("Solicitud ID: {$miRequest->id}, Tipo: {$miRequest->tipo}, Turno: {$miRequest->turno}");
+        Log::info("Jornadas calculadas: {$jornadasSolicitadas}");
+        Log::info("Estado anterior: {$oldEstado}, Nuevo estado: {$newEstado}");
+        Log::info("AP disponibles antes de operación: {$user->AP}");
+
+        // Restar jornadas de AP cuando se confirma la solicitud
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+            $user->AP = max(0, $user->AP - $jornadasSolicitadas);
+            Log::info("Restando {$jornadasSolicitadas} jornadas de asuntos propios al usuario ID: {$user->id_empleado}");
+        }
+
+        // Sumar jornadas de AP cuando se cancela la solicitud
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+            $user->AP += $jornadasSolicitadas;
+            Log::info("Sumando {$jornadasSolicitadas} jornadas de asuntos propios al usuario ID: {$user->id_empleado}");
+        }
+
+        Log::info("AP disponibles después de operación: {$user->AP}");
+        $user->save();
     }
 
-    // Calcular los días solicitados
-    $fechaInicio = new \DateTime($miRequest->fecha_ini);
-    $fechaFin = new \DateTime($miRequest->fecha_fin);
-    $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+    private function adjustCompensacionGrupos($miRequest, $oldEstado, $newEstado)
+    {
+        $user = $miRequest->EnviadaPor;
+        if (!$user) {
+            Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return;
+        }
 
-    // Restar días de módulo cuando se confirma la solicitud
-    if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
-        $user->modulo = max(0, $user->modulo - $diasSolicitados);
-        Log::info("Restando {$diasSolicitados} días de módulo al usuario ID: {$user->id_empleado}");
+        // Calcular jornadas según el turno
+        $jornadasSolicitadas = $this->calcularJornadasPorTurno($miRequest->turno);
+
+        // Restar jornadas de compensacion_grupos cuando se confirma la solicitud
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+            $user->compensacion_grupos = max(0, $user->compensacion_grupos - $jornadasSolicitadas);
+            Log::info("Restando {$jornadasSolicitadas} jornadas de compensación grupos al usuario ID: {$user->id_empleado}");
+        }
+
+        // Sumar jornadas de compensacion_grupos cuando se cancela la solicitud
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+            $user->compensacion_grupos += $jornadasSolicitadas;
+            Log::info("Sumando {$jornadasSolicitadas} jornadas de compensación grupos al usuario ID: {$user->id_empleado}");
+        }
+
+        $user->save();
     }
 
-    // Sumar días de módulo cuando se cancela la solicitud
-    if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
-        $user->modulo += $diasSolicitados;
-        Log::info("Sumando {$diasSolicitados} días de módulo al usuario ID: {$user->id_empleado}");
+    private function adjustSindicalHours($miRequest, $oldEstado, $newEstado)
+    {
+        $user = $miRequest->EnviadaPor;
+        if (!$user) {
+            Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return;
+        }
+
+        $hours = $miRequest->horas;
+
+        // Restar horas sindicales cuando se confirma la solicitud
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+            $user->horas_sindicales = max(0, $user->horas_sindicales - $hours);
+            Log::info("Restando {$hours} horas sindicales al usuario ID: {$user->id_empleado}");
+        }
+
+        // Sumar horas sindicales cuando se cancela la solicitud
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+            $user->horas_sindicales += $hours;
+            Log::info("Sumando {$hours} horas sindicales al usuario ID: {$user->id_empleado}");
+        }
+
+        $user->save();
     }
 
-    $user->save();
-}
+    private function adjustSPHours($miRequest, $oldEstado, $newEstado)
+    {
+        $user = $miRequest->EnviadaPor;
+        if (!$user) {
+            Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return;
+        }
 
-private function calcularJornadasPorTurno($turno)
-{
-    if ($turno === 'Día Completo') {
-        return 3;
-    } else if ($turno === 'Mañana y tarde' || $turno === 'Tarde y noche') {
-        return 2;
-    } else {
-        return 1;
+        $hours = $miRequest->horas;
+
+        // Restar horas de SP cuando se confirma la solicitud
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+            $user->SP = max(0, $user->SP - $hours);
+            Log::info("Restando {$hours} horas de salidas personales al usuario ID: {$user->id_empleado}");
+        }
+
+        // Sumar horas de SP cuando se cancela la solicitud
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+            $user->SP += $hours;
+            Log::info("Sumando {$hours} horas de salidas personales al usuario ID: {$user->id_empleado}");
+        }
+
+        $user->save();
     }
-}
-
-private function adjustAPDays($miRequest, $oldEstado, $newEstado)
-{
-    $user = $miRequest->EnviadaPor;
-    if (!$user) {
-        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-        return;
-    }
-
-    // Calcular jornadas según el turno
-    $jornadasSolicitadas = $this->calcularJornadasPorTurno($miRequest->turno);
-    
-    Log::info("Solicitud ID: {$miRequest->id}, Tipo: {$miRequest->tipo}, Turno: {$miRequest->turno}");
-    Log::info("Jornadas calculadas: {$jornadasSolicitadas}");
-    Log::info("Estado anterior: {$oldEstado}, Nuevo estado: {$newEstado}");
-    Log::info("AP disponibles antes de operación: {$user->AP}");
-
-    // Restar jornadas de AP cuando se confirma la solicitud
-    if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
-        $user->AP = max(0, $user->AP - $jornadasSolicitadas);
-        Log::info("Restando {$jornadasSolicitadas} jornadas de asuntos propios al usuario ID: {$user->id_empleado}");
-    }
-
-    // Sumar jornadas de AP cuando se cancela la solicitud
-    if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
-        $user->AP += $jornadasSolicitadas;
-        Log::info("Sumando {$jornadasSolicitadas} jornadas de asuntos propios al usuario ID: {$user->id_empleado}");
-    }
-
-    Log::info("AP disponibles después de operación: {$user->AP}");
-    $user->save();
-}
-
-private function adjustCompensacionGrupos($miRequest, $oldEstado, $newEstado)
-{
-    $user = $miRequest->EnviadaPor;
-    if (!$user) {
-        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-        return;
-    }
-
-    // Calcular jornadas según el turno
-    $jornadasSolicitadas = $this->calcularJornadasPorTurno($miRequest->turno);
-
-    // Restar jornadas de compensacion_grupos cuando se confirma la solicitud
-    if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
-        $user->compensacion_grupos = max(0, $user->compensacion_grupos - $jornadasSolicitadas);
-        Log::info("Restando {$jornadasSolicitadas} jornadas de compensación grupos al usuario ID: {$user->id_empleado}");
-    }
-
-    // Sumar jornadas de compensacion_grupos cuando se cancela la solicitud
-    if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
-        $user->compensacion_grupos += $jornadasSolicitadas;
-        Log::info("Sumando {$jornadasSolicitadas} jornadas de compensación grupos al usuario ID: {$user->id_empleado}");
-    }
-
-    $user->save();
-}
-
-private function adjustSindicalHours($miRequest, $oldEstado, $newEstado)
-{
-    $user = $miRequest->EnviadaPor;
-    if (!$user) {
-        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-        return;
-    }
-
-    $hours = $miRequest->horas;
-
-    // Restar horas sindicales cuando se confirma la solicitud
-    if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
-        $user->horas_sindicales = max(0, $user->horas_sindicales - $hours);
-        Log::info("Restando {$hours} horas sindicales al usuario ID: {$user->id_empleado}");
-    }
-
-    // Sumar horas sindicales cuando se cancela la solicitud
-    if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
-        $user->horas_sindicales += $hours;
-        Log::info("Sumando {$hours} horas sindicales al usuario ID: {$user->id_empleado}");
-    }
-
-    $user->save();
-}
-
-private function adjustSPHours($miRequest, $oldEstado, $newEstado)
-{
-    $user = $miRequest->EnviadaPor;
-    if (!$user) {
-        Log::error("Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-        return;
-    }
-
-    $hours = $miRequest->horas;
-
-    // Restar horas de SP cuando se confirma la solicitud
-    if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
-        $user->SP = max(0, $user->SP - $hours);
-        Log::info("Restando {$hours} horas de salidas personales al usuario ID: {$user->id_empleado}");
-    }
-
-    // Sumar horas de SP cuando se cancela la solicitud
-    if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
-        $user->SP += $hours;
-        Log::info("Sumando {$hours} horas de salidas personales al usuario ID: {$user->id_empleado}");
-    }
-
-    $user->save();
-}
 }

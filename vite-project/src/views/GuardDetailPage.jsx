@@ -151,7 +151,7 @@ const GuardDetailPage = () => {
                         id_usuario: userId,
                         increment: -1
                     });
-                } else if (guard.especiales.includes('Guardia Localizada')) {
+                } else if (guard.especiales.includes('Guardia localizada')) {
                     await AssignmentsApiService.deleteRTAssignments(brigadeId, date, userId);
                 }
 
@@ -172,7 +172,7 @@ const GuardDetailPage = () => {
                         increment: 1
                     });
 
-                } else if (guard.especiales.includes('Guardia Localizada')) {
+                } else if (guard.especiales.includes('Guardia localizada')) {
                     await AssignmentsApiService.createRTAssignments(payload);
                 }
 

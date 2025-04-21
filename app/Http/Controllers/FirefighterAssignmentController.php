@@ -124,7 +124,7 @@ class FirefighterAssignmentController extends Controller
         Log::info("Fecha recibida en availableFirefighters:", ['date' => $date]);
 
         // Lista estática de exclusión
-        $staticExcluded = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales'];
+        $staticExcluded = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales', 'Brigada J'];
 
         // Obtenemos las brigadas que tienen guardia SOLO en el día consultado
         $guards = Guard::with('brigade')->where('date', $date)->get();
@@ -160,7 +160,7 @@ class FirefighterAssignmentController extends Controller
         $date = $request->query('date', date('Y-m-d'));
         Log::info("Fecha recibida en availableFirefighters antes de procesar:", ['date' => $date]);
 
-        $excludedBrigades = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales'];
+        $excludedBrigades = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales', 'Brigada J'];
 
         $guards = Guard::whereIn('date', [
             $date,
@@ -535,7 +535,7 @@ class FirefighterAssignmentController extends Controller
         Log::info("Fecha recibida en availableFirefightersNoAdjacentDays:", ['date' => $date]);
 
         // Lista estática de exclusión
-        $staticExcluded = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales'];
+        $staticExcluded = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales', 'Brigada J'];
 
         // Obtenemos las brigadas que tienen guardia SOLO en el día consultado
         $guards = Guard::with('brigade')->where('date', $date)->get();
@@ -764,7 +764,7 @@ class FirefighterAssignmentController extends Controller
             'Modulo',
             'Licencias por Jornadas',
             'Licencias por Días',
-            'Compensacion grupos especiales'
+            'Compensacion grupos especiales', 'Brigada J'
         ];
 
         // Brigadas que tienen guardia HOY

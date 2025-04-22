@@ -195,11 +195,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/incidents/count-pending', [IncidentController::class, 'countPending']);
     Route::apiResource('incidents', IncidentController::class);
-    Route::get('api/clothing-items', [ClothingItemController::class, 'index']);
-    Route::post('api/clothing-items', [ClothingItemController::class, 'store']);
-    Route::get('api/clothing-items/{id}', [ClothingItemController::class, 'show']);
-    Route::put('api/clothing-items/{id}', [ClothingItemController::class, 'update']);
-    Route::delete('api/clothing-items/{id}', [ClothingItemController::class, 'destroy']);
+    Route::get('/clothing-items', [ClothingItemController::class, 'index']);
+    Route::post('/clothing-items', [ClothingItemController::class, 'store']);
+    Route::get('/clothing-items/{id}', [ClothingItemController::class, 'show']);
+    Route::put('/clothing-items/{id}', [ClothingItemController::class, 'update']);
+    Route::delete('/clothing-items/{id}', [ClothingItemController::class, 'destroy']);
 });
 
 // Rutas de Login y Logout (abiertas)

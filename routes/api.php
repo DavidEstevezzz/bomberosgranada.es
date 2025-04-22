@@ -24,6 +24,7 @@ use App\Http\Controllers\SuggestionVoteController;
 use App\Http\Controllers\PersonalEquipmentController;
 use App\Http\Controllers\PdfDocumentController;
 use App\Http\Controllers\BrigadeUserController;
+use App\Http\Controllers\ClothingItemController;
 
 
 
@@ -194,6 +195,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/incidents/count-pending', [IncidentController::class, 'countPending']);
     Route::apiResource('incidents', IncidentController::class);
+    Route::apiResource('clothing-items', ClothingItemController::class);
+
 });
 
 // Rutas de Login y Logout (abiertas)

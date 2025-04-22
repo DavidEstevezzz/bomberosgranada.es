@@ -44,6 +44,7 @@ import MandoEspecialRoute from './components/MandoEspecialRoute.jsx';
 import GuardDetailCalendarPage from './views/GuardDetailCalendarPage.jsx';
 import GuardDetailPage from './views/GuardDetailPage.jsx';
 import BrigadePracticesPage from './views/BrigadePracticesPage.jsx';
+import ClothingItems from './views/ClothingItems.jsx';
 
 const router = createBrowserRouter([
   {
@@ -89,6 +90,7 @@ const router = createBrowserRouter([
       { path: 'solicitud', element: <CreateRequestPage /> },
       { path: 'lista-solicitudes', element: <RequestAndShiftChangePage /> },
       { path: 'sugerencias', element: <SuggestionListPage /> },
+      { path: 'clothing-items', element: <ClothingItems /> },
     ],
   },
   {

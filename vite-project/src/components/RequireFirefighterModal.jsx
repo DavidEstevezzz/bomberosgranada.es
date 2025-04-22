@@ -131,32 +131,22 @@ const RequireFirefighterModal = ({ show, onClose, onAdd, brigade, fecha }) => {
     }
 
     try {
-      // Payload para asignación de ida (requerimiento)
-      const payloadIda = {
+      // Un único payload - el controlador se encargará de crear ida y vuelta
+      const payload = {
         id_empleado: formData.id_empleado,
         id_brigada_destino: brigade.id_brigada,
-        fecha_ini: fecha_ida,
-        turno: assignmentDetails.ida,
+        fecha: fecha_ida,
+        fecha_ini: fecha_ida,  // Incluir ambos nombres
+        turno: formData.turno,
         requerimiento: true,
       };
-
-      // Payload para asignación de vuelta
-      const payloadVuelta = {
-        id_empleado: formData.id_empleado,
-        id_brigada_destino: formData.id_brigada_origen || null, // Brigada de origen si está disponible
-        fecha_ini: fecha_vuelta,
-        turno: assignmentDetails.vuelta,
-        requerimiento: false, // La vuelta no es un requerimiento
-      };
-
-      // Crear la asignación de ida
-      await AssignmentsApiService.requireFirefighter(payloadIda);
+    
+      // Imprimir para debug
+      console.log('Enviando payload:', payload);
       
-      // Crear la asignación de vuelta
-      // Nota: Es posible que necesites crear un endpoint específico para esto o modificar el existente
-      // dependiendo de cómo esté implementado tu API
-      await AssignmentsApiService.requireFirefighter(payloadVuelta);
-
+      // Solo una llamada API - el backend hace todo el trabajo
+      await AssignmentsApiService.requireFirefighter(payload);
+    
       setSuccess('Requerimiento creado con éxito');
       if (onAdd) onAdd();
       onClose();
@@ -174,7 +164,7 @@ const RequireFirefighterModal = ({ show, onClose, onAdd, brigade, fecha }) => {
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm"></div>
       <div className="relative bg-gray-800 p-6 rounded-lg z-10 max-w-md w-full mx-4 my-8">
-        <h2 className="text-2xl font-bold text-white mb-4">Requerir Bombero</h2>
+      <h2 className="text-2xl font-bold text-white mb-4">Requerir Bombero - TEST</h2>
         {success && <div className="bg-green-500 text-white p-2 mb-4 rounded">{success}</div>}
         {error && <div className="bg-red-500 text-white p-2 mb-4 rounded">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">

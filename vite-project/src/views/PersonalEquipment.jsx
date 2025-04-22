@@ -16,7 +16,7 @@ const PersonalEquipment = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
-  
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState(null);
@@ -43,7 +43,7 @@ const PersonalEquipment = () => {
     setLoading(true);
     try {
       let response;
-      
+
       if (selectedParkFilter === "Todas") {
         response = await PersonalEquipmentApiService.getPersonalEquipments();
       } else {
@@ -55,7 +55,7 @@ const PersonalEquipment = () => {
           response = await PersonalEquipmentApiService.getPersonalEquipments();
         }
       }
-      
+
       if (response.data) {
         setEquipments(response.data);
         setError(null);
@@ -81,13 +81,65 @@ const PersonalEquipment = () => {
       .toLowerCase();
   };
 
-  // Filtra equipos por nombre o categoría
-  const filteredEquipments = equipments.filter((equipment) => {
+  // Función para extraer el número del nombre
+const extractNumber = (name) => {
+  // Busca patrones como "Batería 10", "Portátil 5", etc.
+  const match = name.match(/(\d+)$/);
+  if (match) {
+    // Si hay un número al final, devuélvelo como entero
+    return parseInt(match[0], 10);
+  }
+  
+  // Si no hay número (como "Batería Norte-1"), retorna el texto original
+  return name;
+};
+
+// Modificación de la función filteredEquipments
+const filteredEquipments = equipments
+  .filter((equipment) => {
     const normalizedSearch = normalizeString(searchTerm);
     return (
       normalizeString(equipment.nombre).includes(normalizedSearch) ||
       normalizeString(equipment.categoria).includes(normalizedSearch)
     );
+  })
+  // Ordenar teniendo en cuenta el patrón "Nombre + Número"
+  .sort((a, b) => {
+    // Primero comparamos por categoría
+    const categoriasComparadas = normalizeString(a.categoria).localeCompare(normalizeString(b.categoria));
+    
+    if (categoriasComparadas !== 0) {
+      return categoriasComparadas;
+    }
+    
+    // Obtener la parte base del nombre (sin números)
+    const baseNameA = a.nombre.replace(/\d+$/, '').trim();
+    const baseNameB = b.nombre.replace(/\d+$/, '').trim();
+    
+    // Si las bases son diferentes, ordenar alfabéticamente
+    if (baseNameA !== baseNameB) {
+      return baseNameA.localeCompare(baseNameB);
+    }
+    
+    // Si las bases son iguales, ordenar por número
+    const numA = extractNumber(a.nombre);
+    const numB = extractNumber(b.nombre);
+    
+    // Si ambos son números, comparar numéricamente
+    if (typeof numA === 'number' && typeof numB === 'number') {
+      return numA - numB;
+    }
+    
+    // Caso especial para "Norte" y "Sur"
+    if (a.nombre.includes('Norte') && b.nombre.includes('Sur')) {
+      return -1; // Norte antes que Sur
+    }
+    if (a.nombre.includes('Sur') && b.nombre.includes('Norte')) {
+      return 1; // Sur después que Norte
+    }
+    
+    // Si llegamos aquí, ordenar alfabéticamente
+    return a.nombre.localeCompare(b.nombre);
   });
 
   // Función para exportar a PDF los equipos no disponibles
@@ -99,33 +151,33 @@ const PersonalEquipment = () => {
 
     // Crear el documento PDF
     const doc = new jsPDF();
-    
+
     // Título y configuración inicial
     doc.setFontSize(18);
     doc.setTextColor(0, 51, 102); // Azul oscuro para el título
-    
+
     // Logo o cabecera (simulado con un rectángulo de color)
     doc.setFillColor(0, 102, 204);
     doc.rect(10, 10, 190, 12, 'F');
-    
+
     doc.setTextColor(255, 255, 255);
     doc.text("SERVICIO DE BOMBEROS DE GRANADA", 105, 18, { align: 'center' });
-    
+
     // Configuración del título del informe
     doc.setTextColor(0, 51, 102);
     let parkTitle = selectedParkFilter === "Todas" ? "Todos los Parques" : selectedParkFilter;
     doc.text(`Informe de Equipos No Disponibles - ${parkTitle}`, 105, 30, { align: 'center' });
-    
+
     // Fecha actual
     const today = new Date();
-    const dateStr = today.toLocaleDateString('es-ES', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const dateStr = today.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
     doc.setFontSize(10);
     doc.text(`Fecha del informe: ${dateStr}`, 105, 38, { align: 'center' });
-    
+
     // Si no hay equipos no disponibles, mostrar mensaje
     if (unavailableEquipments.length === 0) {
       doc.setFontSize(12);
@@ -133,29 +185,29 @@ const PersonalEquipment = () => {
       doc.save(`equipos_no_disponibles_${parkTitle.replace(/\s+/g, '_').toLowerCase()}.pdf`);
       return;
     }
-    
+
     // Preparar datos para la tabla
     const tableData = unavailableEquipments.map(equipment => [
       equipment.nombre,
       equipment.categoria,
       getParkName(equipment.parque),
     ]);
-    
+
     // Configuración de la tabla
     const tableColumns = [
-      'Nombre del Equipo', 
-      'Categoría', 
-      'Parque', 
+      'Nombre del Equipo',
+      'Categoría',
+      'Parque',
     ];
-    
+
     // Añadir la tabla al documento
     doc.autoTable({
       startY: 45,
       head: [tableColumns],
       body: tableData,
       theme: 'grid',
-      headStyles: { 
-        fillColor: [0, 102, 204], 
+      headStyles: {
+        fillColor: [0, 102, 204],
         textColor: [255, 255, 255],
         fontStyle: 'bold'
       },
@@ -175,14 +227,14 @@ const PersonalEquipment = () => {
         3: { halign: 'center' }  // Fecha centrada
       }
     });
-    
+
     // Pie de página
     const finalY = doc.autoTable.previous.finalY;
     doc.setFontSize(10);
     doc.setTextColor(128, 128, 128); // Gris para el pie de página
     doc.text("Este informe contiene equipos que se encuentran inoperativos.", 105, finalY + 10, { align: 'center' });
     doc.text("Por favor, notifique al departamento de mantenimiento.", 105, finalY + 15, { align: 'center' });
-    
+
     // Guardar el PDF
     doc.save(`Equipos_no_disponibles_${parkTitle.replace(/\s+/g, '_').toLowerCase()}.pdf`);
   };
@@ -334,8 +386,8 @@ const PersonalEquipment = () => {
             </thead>
             <tbody>
               {filteredEquipments.map((equipment) => (
-                <tr 
-                  key={equipment.id} 
+                <tr
+                  key={equipment.id}
                   className={`border-b border-gray-700`}
                 >
                   <td className="py-2 px-2 text-center">{equipment.nombre}</td>
@@ -358,11 +410,10 @@ const PersonalEquipment = () => {
                     </button>
                     <button
                       onClick={() => handleToggleDisponibilidad(equipment)}
-                      className={`${
-                        equipment.disponible
+                      className={`${equipment.disponible
                           ? 'bg-red-600'
                           : 'bg-green-600'
-                      } text-white px-3 py-1 rounded flex items-center space-x-1`}
+                        } text-white px-3 py-1 rounded flex items-center space-x-1`}
                     >
                       {equipment.disponible ? 'Inhabilitar' : 'Habilitar'}
                     </button>

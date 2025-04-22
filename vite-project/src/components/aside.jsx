@@ -142,8 +142,8 @@ const Aside = ({ className }) => {
             {dropdownOpen.equipment && (
               <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
                 <a href="/personal-equipment" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Equipos Personales</a>
+                <a href="/clothing-items" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Vestuario</a>
               </div>
-              
             )}
           </div>
         )}

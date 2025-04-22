@@ -31,6 +31,7 @@ const IncidentListPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchParams] = useState();
   const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState("Todas");
   const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [resolutionText, setResolutionText] = useState("");
@@ -86,7 +87,13 @@ const IncidentListPage = () => {
       selectedParkFilter === "Todas" ||
       (incident.park &&
         incident.park.nombre.toLowerCase() === selectedParkFilter.toLowerCase());
-    return matchesPark;
+
+    const matchesType =
+      selectedTypeFilter === "Todas" ||
+      (incident.tipo &&
+        incident.tipo.toLowerCase() === selectedTypeFilter.toLowerCase());
+
+    return matchesPark && matchesType;
   });
 
   // Separar incidencias en pendientes y resueltas
@@ -166,6 +173,10 @@ const IncidentListPage = () => {
         extraInfo = incident.vehicle.nombre;
       } else if (incident.tipo.toLowerCase() === 'personal' && incident.employee2) {
         extraInfo = getEmployee2Name(incident);
+      } else if (incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item) {
+        extraInfo = incident.clothing_item.name;
+      } else if (incident.tipo.toLowerCase() === 'equipo' && incident.equipment) {
+        extraInfo = incident.equipment.nombre;
       }
       tableData.push({
         fecha: dayjs(incident.fecha).format('DD/MM/YYYY'),
@@ -279,25 +290,102 @@ const IncidentListPage = () => {
       </div>
 
       {/* Filtro por parque */}
-      <div className="flex justify-center space-x-4 mb-4">
-        <button
-          onClick={() => setSelectedParkFilter("Todas")}
-          className={`px-4 py-2 rounded ${selectedParkFilter === "Todas" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-800"}`}
-        >
-          Todas
-        </button>
-        <button
-          onClick={() => setSelectedParkFilter("Parque Sur")}
-          className={`px-4 py-2 rounded ${selectedParkFilter === "Parque Sur" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-800"}`}
-        >
-          Parque Sur
-        </button>
-        <button
-          onClick={() => setSelectedParkFilter("Parque Norte")}
-          className={`px-4 py-2 rounded ${selectedParkFilter === "Parque Norte" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-800"}`}
-        >
-          Parque Norte
-        </button>
+      <div className="mb-4">
+        <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
+          Filtrar por Parque
+        </h3>
+        <div className="flex flex-wrap justify-center gap-2">
+          <button
+            onClick={() => setSelectedParkFilter("Todas")}
+            className={`px-4 py-2 rounded transition-colors ${selectedParkFilter === "Todas"
+              ? "bg-blue-600 text-white shadow-md"
+              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+              }`}
+          >
+            Todos los Parques
+          </button>
+          <button
+            onClick={() => setSelectedParkFilter("Parque Sur")}
+            className={`px-4 py-2 rounded transition-colors ${selectedParkFilter === "Parque Sur"
+              ? "bg-blue-600 text-white shadow-md"
+              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+              }`}
+          >
+            Parque Sur
+          </button>
+          <button
+            onClick={() => setSelectedParkFilter("Parque Norte")}
+            className={`px-4 py-2 rounded transition-colors ${selectedParkFilter === "Parque Norte"
+              ? "bg-blue-600 text-white shadow-md"
+              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+              }`}
+          >
+            Parque Norte
+          </button>
+        </div>
+      </div>
+
+      {/* Filtro por tipo de incidencia */}
+      <div className="mb-6">
+        <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
+          Filtrar por Tipo
+        </h3>
+        <div className="flex flex-wrap justify-center gap-2">
+          <button
+            onClick={() => setSelectedTypeFilter("Todas")}
+            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "Todas"
+              ? "bg-indigo-600 text-white shadow-md"
+              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+              }`}
+          >
+            Todos los Tipos
+          </button>
+          <button
+            onClick={() => setSelectedTypeFilter("vehiculo")}
+            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "vehiculo"
+              ? "bg-indigo-600 text-white shadow-md"
+              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+              }`}
+          >
+            Vehículos
+          </button>
+          <button
+            onClick={() => setSelectedTypeFilter("personal")}
+            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "personal"
+              ? "bg-indigo-600 text-white shadow-md"
+              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+              }`}
+          >
+            Personal
+          </button>
+          <button
+            onClick={() => setSelectedTypeFilter("instalacion")}
+            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "instalacion"
+              ? "bg-indigo-600 text-white shadow-md"
+              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+              }`}
+          >
+            Instalaciones
+          </button>
+          <button
+            onClick={() => setSelectedTypeFilter("equipo")}
+            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "equipo"
+              ? "bg-indigo-600 text-white shadow-md"
+              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+              }`}
+          >
+            Equipos
+          </button>
+          <button
+            onClick={() => setSelectedTypeFilter("vestuario")}
+            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "vestuario"
+              ? "bg-indigo-600 text-white shadow-md"
+              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+              }`}
+          >
+            Vestuario
+          </button>
+        </div>
       </div>
 
       {/* Tabla de Incidencias Pendientes - Nivel Alto */}
@@ -342,6 +430,10 @@ const IncidentListPage = () => {
                         <span>{incident.vehicle.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
                         <span>{getEmployee2Name(incident)}</span>
+                      ) : incident.tipo.toLowerCase() === 'equipo' && incident.equipment ? (
+                        <span>{incident.equipment.nombre}</span>
+                      ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
+                        <span>{incident.clothing_item.name}</span>
                       ) : null}
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
@@ -464,6 +556,10 @@ const IncidentListPage = () => {
                         <span>{incident.vehicle.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
                         <span>{getEmployee2Name(incident)}</span>
+                      ) : incident.tipo.toLowerCase() === 'equipo' && incident.equipment ? (
+                        <span>{incident.equipment.nombre}</span>
+                      ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
+                        <span>{incident.clothing_item.name}</span>
                       ) : null}
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
@@ -585,6 +681,10 @@ const IncidentListPage = () => {
                         <span>{incident.vehicle.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
                         <span>{getEmployee2Name(incident)}</span>
+                      ) : incident.tipo.toLowerCase() === 'equipo' && incident.equipment ? (
+                        <span>{incident.equipment.nombre}</span>
+                      ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
+                        <span>{incident.clothing_item.name}</span>
                       ) : null}
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
@@ -733,6 +833,8 @@ const IncidentListPage = () => {
                         <span>{getEmployee2Name(incident)}</span>
                       ) : incident.tipo.toLowerCase() === 'equipo' && incident.equipment ? (
                         <span>{incident.equipment.nombre}</span>
+                      ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
+                        <span>{incident.clothing_item.name}</span>
                       ) : null}
                     </td>
                     <td className="py-2 px-2 flex space-x-2">

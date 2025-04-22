@@ -13,7 +13,7 @@ class IncidentController extends Controller
      */
     public function index()
     {
-        $incidents = Incident::with(['creator', 'employee2', 'vehicle', 'park', 'resolver'])->get();
+        $incidents = Incident::with(['creator', 'employee2', 'vehicle', 'park', 'resolver', 'clothing_item'])->get();
         return response()->json($incidents);
     }
 
@@ -25,17 +25,17 @@ class IncidentController extends Controller
         // Reglas básicas
         $rules = [
             'fecha'        => 'required|date',
-            'id_empleado'  => 'required|exists:users,id_empleado', // Empleado que crea la incidencia
-            'tipo'         => 'required|in:vehiculo,personal,instalacion,equipo', // Tipos válidos
+            'id_empleado'  => 'required|exists:users,id_empleado',
+            'tipo'         => 'required|in:vehiculo,personal,instalacion,equipo,vestuario', // Añade "vestuario"
             'estado'       => 'required|in:Pendiente,En proceso,Resuelto',
             'descripcion'  => 'required|string',
             'nivel'        => 'required|in:alto,medio,bajo',
             'id_parque'    => 'required|exists:parks,id_parque',
-            'leido'        => 'boolean', // Booleano opcional
+            'leido'        => 'boolean',
             'resolviendo'   => 'nullable|string',
         ];
-
-        // Reglas condicionales según el tipo
+        
+        // Añadir reglas condicionales para vestuario
         $tipo = $request->input('tipo');
         if ($tipo === 'vehiculo') {
             $rules['matricula'] = 'required';
@@ -43,6 +43,8 @@ class IncidentController extends Controller
             $rules['id_empleado2'] = 'required';
         } elseif ($tipo === 'equipo') {
             $rules['equipo'] = 'required';
+        } elseif ($tipo === 'vestuario') {
+            $rules['id_vestuario'] = 'required|exists:clothing_items,id'; // Nuevo campo para vestuario
         }
         
         $validator = Validator::make($request->all(), $rules);
@@ -78,16 +80,17 @@ class IncidentController extends Controller
 
         $rules = [
             'fecha'        => 'required|date',
-            'id_empleado'  => 'required|exists:users,id_empleado', // Empleado que crea la incidencia
-            'tipo'         => 'required|in:vehiculo,personal,instalacion,equipo', // Tipos válidos
+            'id_empleado'  => 'required|exists:users,id_empleado',
+            'tipo'         => 'required|in:vehiculo,personal,instalacion,equipo,vestuario', // Añade "vestuario"
             'estado'       => 'required|in:Pendiente,En proceso,Resuelto',
             'descripcion'  => 'required|string',
             'nivel'        => 'required|in:alto,medio,bajo',
             'id_parque'    => 'required|exists:parks,id_parque',
-            'leido'        => 'boolean', // Booleano opcional
+            'leido'        => 'boolean',
             'resolviendo'   => 'nullable|string',
         ];
-
+        
+        // Añadir reglas condicionales para vestuario
         $tipo = $request->input('tipo');
         if ($tipo === 'vehiculo') {
             $rules['matricula'] = 'required';
@@ -95,6 +98,8 @@ class IncidentController extends Controller
             $rules['id_empleado2'] = 'required';
         } elseif ($tipo === 'equipo') {
             $rules['equipo'] = 'required';
+        } elseif ($tipo === 'vestuario') {
+            $rules['id_vestuario'] = 'required|exists:clothing_items,id'; // Nuevo campo para vestuario
         }
 
         $validator = Validator::make($request->all(), $rules);

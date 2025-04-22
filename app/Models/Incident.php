@@ -62,4 +62,9 @@ class Incident extends Model
     {
         return $this->belongsTo(Park::class, 'id_parque');
     }
+
+    public function clothing_item()
+{
+    return $this->belongsTo(ClothingItem::class, 'id_vestuario');
+}
 }

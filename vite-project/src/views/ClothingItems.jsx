@@ -26,8 +26,9 @@ const ClothingItems = () => {
     setLoading(true);
     try {
       const response = await ClothingItemApiService.getClothingItems();
-      if (response.data) {
-        setClothingItems(response.data);
+      if (response && response.data && response.data.data) {
+        // Accede al array dentro de response.data.data
+        setClothingItems(response.data.data);
         setError(null);
       } else {
         throw new Error('No se retornaron ítems de vestuario desde el API');
@@ -35,6 +36,8 @@ const ClothingItems = () => {
     } catch (error) {
       console.error('Error al cargar ítems de vestuario:', error);
       setError('Error al cargar ítems de vestuario');
+      // Inicializa como array vacío para evitar errores
+      setClothingItems([]);
     } finally {
       setLoading(false);
     }

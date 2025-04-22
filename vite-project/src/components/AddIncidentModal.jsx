@@ -6,6 +6,7 @@ import UsersApiService from '../services/UsuariosApiService';
 import VehiclesApiService from '../services/VehiclesApiService';
 import ParksApiService from '../services/ParkApiService';
 import PersonalEquipmentApiService from '../services/PersonalEquipmentApiService';
+import ClothingItemApiService from '../services/ClothingItemApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
 
@@ -29,7 +30,8 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     estado: 'Pendiente',
     leido: false,
     nivel: '',
-    equipo: '' // Campo para el ID del equipo personal
+    equipo: '',
+    id_vestuario: '' // Nuevo campo para vestuario
   });
 
   const [errorMessages, setErrorMessages] = useState({});
@@ -51,6 +53,11 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [equipmentSearch, setEquipmentSearch] = useState('');
 
+  // Vestuario
+  const [clothingItems, setClothingItems] = useState([]);
+  const [filteredClothingItems, setFilteredClothingItems] = useState([]);
+  const [clothingSearch, setClothingSearch] = useState('');
+
   useEffect(() => {
     if (isOpen) {
       setFormValues({
@@ -64,13 +71,15 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
         estado: 'Pendiente',
         leido: false,
         nivel: '',
-        equipo: ''
+        equipo: '',
+        id_vestuario: ''
       });
       setErrorMessages({});
       setIsSubmitting(false);
       setUserSearch('');
       setVehicleSearch('');
       setEquipmentSearch('');
+      setClothingSearch('');
       setSelectedCategory('');
     }
   }, [isOpen, user]);
@@ -78,12 +87,13 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersResponse, vehiclesResponse, parksResponse, categoriesResponse, equipmentsResponse] = await Promise.all([
+        const [usersResponse, vehiclesResponse, parksResponse, categoriesResponse, equipmentsResponse, clothingItemsResponse] = await Promise.all([
           UsersApiService.getUsuarios(),
           VehiclesApiService.getVehicles(),
           ParksApiService.getParks(),
           PersonalEquipmentApiService.getCategories(),
-          PersonalEquipmentApiService.getPersonalEquipments()
+          PersonalEquipmentApiService.getPersonalEquipments(),
+          ClothingItemApiService.getClothingItems()
         ]);
         
         setUsers(usersResponse.data);
@@ -93,6 +103,12 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
         setParks(parksResponse.data);
         setEquipmentCategories(categoriesResponse.data);
         setAllEquipments(equipmentsResponse.data);
+        
+        // Manejar la respuesta de los ítems de vestuario
+        if (clothingItemsResponse.data && clothingItemsResponse.data.data) {
+          setClothingItems(clothingItemsResponse.data.data);
+          setFilteredClothingItems(clothingItemsResponse.data.data);
+        }
       } catch (error) {
         console.error('Error fetching data for incident modal:', error);
       }
@@ -138,6 +154,16 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
       setFilteredEquipments(filtered);
     }
   }, [equipmentSearch, selectedCategory, allEquipments]);
+
+  // Filtrar ítems de vestuario por búsqueda
+  useEffect(() => {
+    if (clothingItems.length > 0) {
+      const filtered = clothingItems.filter((item) =>
+        item.name.toLowerCase().includes(clothingSearch.toLowerCase())
+      );
+      setFilteredClothingItems(filtered);
+    }
+  }, [clothingSearch, clothingItems]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -203,6 +229,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
                 <option value="personal">Personal</option>
                 <option value="instalacion">Instalación</option>
                 <option value="equipo">Equipos Personales</option>
+                <option value="vestuario">Vestuario</option>
               </select>
               {errorMessages.tipo && <span className="text-red-500 text-sm">{errorMessages.tipo}</span>}
 
@@ -321,6 +348,36 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
                       {errorMessages.equipo && <span className="text-red-500 text-sm">{errorMessages.equipo}</span>}
                     </div>
                   )}
+                </div>
+              )}
+              {formValues.tipo === 'vestuario' && (
+                <div className="mt-4">
+                  <label htmlFor="id_vestuario" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Ítem de Vestuario
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Buscar ítem de vestuario..."
+                    value={clothingSearch}
+                    onChange={(e) => setClothingSearch(e.target.value)}
+                    className={`w-full px-4 py-2 rounded mb-2 ${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700'}`}
+                  />
+                  <select
+                    name="id_vestuario"
+                    id="id_vestuario"
+                    value={formValues.id_vestuario}
+                    onChange={handleChange}
+                    className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+                    required
+                  >
+                    <option value="">Seleccione un ítem de vestuario</option>
+                    {filteredClothingItems.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errorMessages.id_vestuario && <span className="text-red-500 text-sm">{errorMessages.id_vestuario}</span>}
                 </div>
               )}
             </div>

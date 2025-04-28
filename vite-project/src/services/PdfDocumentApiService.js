@@ -12,8 +12,8 @@ class PdfDocumentApiService {
   }
 
   /**
-   * Subir un documento PDF
-   * @param {FormData} formData - Contiene title y pdf_file
+   * Subir documentos PDF
+   * @param {FormData} formData - Contiene title, pdf_file y opcionalmente pdf_file_second
    */
   async uploadDocument(formData) {
     return await BaseApiService.post(
@@ -25,7 +25,7 @@ class PdfDocumentApiService {
   }
 
   /**
-   * Obtener URL para mostrar el documento
+   * Obtener URL para mostrar el documento primario
    * @param {number} id - ID del documento
    */
   getDocumentUrl(id) {
@@ -33,7 +33,15 @@ class PdfDocumentApiService {
   }
 
   /**
-   * Obtener URL para descargar el documento
+   * Obtener URL para mostrar el documento secundario
+   * @param {number} id - ID del documento
+   */
+  getSecondaryDocumentUrl(id) {
+    return `${API_URL}/${id}/secondary`;
+  }
+
+  /**
+   * Obtener URL para descargar el documento primario
    * @param {number} id - ID del documento
    */
   getDownloadUrl(id) {
@@ -41,7 +49,15 @@ class PdfDocumentApiService {
   }
 
   /**
-   * Eliminar un documento PDF
+   * Obtener URL para descargar el documento secundario
+   * @param {number} id - ID del documento
+   */
+  getSecondaryDownloadUrl(id) {
+    return `${API_URL}/${id}/download/secondary`;
+  }
+
+  /**
+   * Eliminar un documento PDF (ambos archivos)
    * @param {number} id - ID del documento
    */
   async deleteDocument(id) {

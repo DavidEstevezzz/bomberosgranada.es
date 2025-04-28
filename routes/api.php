@@ -219,10 +219,12 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
 
     Route::prefix('pdf-documents')->group(function () {
         Route::get('/latest', [PdfDocumentController::class, 'getLatest']);
-        Route::post('/upload', [PdfDocumentController::class, 'upload']);
-        Route::get('/{id}', [PdfDocumentController::class, 'show']);
-        Route::get('/{id}/download', [PdfDocumentController::class, 'download']);
-        Route::delete('/{id}', [PdfDocumentController::class, 'destroy']);
+    Route::post('/upload', [PdfDocumentController::class, 'upload']);
+    Route::get('/{id}', [PdfDocumentController::class, 'show']);
+    Route::get('/{id}/secondary', [PdfDocumentController::class, 'show'])->defaults('type', 'secondary');
+    Route::get('/{id}/download', [PdfDocumentController::class, 'download']);
+    Route::get('/{id}/download/secondary', [PdfDocumentController::class, 'download'])->defaults('type', 'secondary');
+    Route::delete('/{id}', [PdfDocumentController::class, 'destroy']);
     });
 
     // CRUD de Parques

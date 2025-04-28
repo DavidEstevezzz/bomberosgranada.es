@@ -17,9 +17,13 @@ class PdfDocument extends Model
     protected $fillable = [
         'title',
         'filename',
+        'filename_second',
         'original_filename',
+        'original_filename_second',
         'file_path',
+        'file_path_second',
         'file_size',
+        'file_size_second',
         'uploaded_by'
     ];
 

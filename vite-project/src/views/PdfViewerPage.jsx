@@ -31,41 +31,63 @@ const PdfViewerPage = () => {
     const { user } = useStateContext();
 
     // Función para obtener el PDF como blob e inicializar la URL del blob
-    const fetchPdfBlob = async (documentId) => {
+    const fetchPdfBlob = async (documentId, documentData) => {
         try {
             const token = localStorage.getItem('token');
+            console.log('Iniciando carga de documentos PDF con ID:', documentId);
+            console.log('Datos del documento:', documentData);
+            
             // Obtener el PDF principal
-            const response = await axios.get(PdfDocumentApiService.getDocumentUrl(documentId), {
-                responseType: 'blob',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-            const blobUrl = window.URL.createObjectURL(response.data);
-            setPdfUrl(blobUrl);
+            try {
+                console.log('Obteniendo PDF principal:', PdfDocumentApiService.getDocumentUrl(documentId));
+                const response = await axios.get(PdfDocumentApiService.getDocumentUrl(documentId), {
+                    responseType: 'blob',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+                console.log('PDF principal cargado correctamente, tamaño:', response.data.size);
+                const blobUrl = window.URL.createObjectURL(response.data);
+                setPdfUrl(blobUrl);
+            } catch (errPrimary) {
+                console.error('Error al cargar el PDF principal:', errPrimary);
+                setPdfUrl(null);
+                setError('Error al cargar el PDF principal');
+                return; // Terminar la función si no se puede cargar el PDF principal
+            }
             
             // Intentar obtener el PDF secundario si existe
-            if (currentDocument && currentDocument.file_path_second) {
+            if (documentData && documentData.file_path_second) {
                 try {
-                    const responseSecondary = await axios.get(PdfDocumentApiService.getSecondaryDocumentUrl(documentId), {
-                        responseType: 'blob',
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    });
+                    console.log('Documento tiene PDF secundario, intentando cargarlo:', documentData.file_path_second);
+                    console.log('URL del PDF secundario:', PdfDocumentApiService.getSecondaryDocumentUrl(documentId));
+                    const responseSecondary = await axios.get(
+                        PdfDocumentApiService.getSecondaryDocumentUrl(documentId), 
+                        {
+                            responseType: 'blob',
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                            }
+                        }
+                    );
+                    
+                    console.log('PDF secundario cargado correctamente, tamaño:', responseSecondary.data.size);
                     const blobSecondaryUrl = window.URL.createObjectURL(responseSecondary.data);
                     setPdfSecondaryUrl(blobSecondaryUrl);
-                } catch (err) {
-                    console.error('Error al cargar el PDF secundario:', err);
+                } catch (errSecondary) {
+                    console.error('Error al cargar el PDF secundario:', errSecondary);
                     setPdfSecondaryUrl(null);
+                    // No establecer error general para no interrumpir la visualización del PDF principal
                 }
             } else {
+                console.log('No hay PDF secundario disponible en los datos del documento');
                 setPdfSecondaryUrl(null);
             }
         } catch (err) {
-            console.error('Error al cargar el PDF principal:', err);
-            setError('Error al cargar el PDF');
+            console.error('Error general en fetchPdfBlob:', err);
+            setError('Error al cargar los documentos PDF');
             setPdfUrl(null);
+            setPdfSecondaryUrl(null);
         }
     };
 
@@ -79,15 +101,24 @@ const PdfViewerPage = () => {
         setLoading(true);
         try {
             const response = await PdfDocumentApiService.getLatestDocument();
+            console.log("Documento obtenido:", response.data);
+            
+            // Guardar el documento en el estado
             setCurrentDocument(response.data);
+            
             if (response.data && response.data.id) {
-                await fetchPdfBlob(response.data.id);
+                // Si hay un documento, cargar los PDFs pasando también los datos del documento
+                await fetchPdfBlob(response.data.id, response.data);
             }
+            
             setError(null);
         } catch (err) {
             console.error('Error al cargar el documento:', err);
             if (err.response && err.response.status === 404) {
                 // No hay documentos, es normal
+                setCurrentDocument(null);
+                setPdfUrl(null);
+                setPdfSecondaryUrl(null);
                 setError(null);
             } else {
                 setError('Error al cargar el documento PDF');
@@ -169,8 +200,9 @@ const PdfViewerPage = () => {
 
         try {
             const response = await PdfDocumentApiService.uploadDocument(formData);
-            setCurrentDocument(response.data.document);
-            await fetchPdfBlob(response.data.document.id);
+            const documentData = response.data.document;
+             setCurrentDocument(documentData);
+            await fetchPdfBlob(documentData.id, documentData);
             setUploadSuccess(true);
 
             // Resetear formulario

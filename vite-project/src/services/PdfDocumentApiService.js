@@ -16,6 +16,13 @@ class PdfDocumentApiService {
    * @param {FormData} formData - Contiene title, pdf_file y opcionalmente pdf_file_second
    */
   async uploadDocument(formData) {
+    // Depurar el FormData antes de enviarlo
+    console.log('Enviando FormData con los siguientes campos:');
+    for (const pair of formData.entries()) {
+      console.log(pair[0] + ': ' + (pair[1] instanceof File ? 
+        `Archivo (${pair[1].name}, ${pair[1].size} bytes)` : pair[1]));
+    }
+    
     return await BaseApiService.post(
       `${API_URL}/upload`,
       formData,

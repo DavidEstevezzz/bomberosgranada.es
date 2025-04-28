@@ -187,23 +187,54 @@ class PdfDocumentController extends Controller
      * @param  string  $type
      * @return \Illuminate\Http\Response
      */
-    public function show($id, $type = 'primary')
-    {
-        $document = PdfDocument::findOrFail($id);
-        
-        // Determinar qué archivo mostrar
-        $filePath = ($type === 'secondary' && $document->file_path_second) 
-            ? $document->file_path_second 
-            : $document->file_path;
-
-        // Construir la ruta absoluta del archivo
-        $fullPath = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $filePath;
-        if (!file_exists($fullPath)) {
-            return response()->json(['message' => 'Archivo no encontrado'], 404);
+    public function show(Request $request, $id)
+{
+    // Obtener el tipo desde los valores por defecto de la ruta
+    $type = $request->route()->defaults['type'] ?? 'primary';
+    
+    Log::info('Mostrando documento', [
+        'id' => $id, 
+        'type' => $type,
+        'route_defaults' => $request->route()->defaults,
+        'URI' => $request->getRequestUri()
+    ]);
+    
+    $document = PdfDocument::findOrFail($id);
+    Log::info('Documento encontrado', [
+        'file_path' => $document->file_path,
+        'file_path_second' => $document->file_path_second
+    ]);
+    
+    // Determinar qué archivo mostrar
+    $filePath = null;
+    if ($type === 'secondary') {
+        if ($document->file_path_second) {
+            $filePath = $document->file_path_second;
+            Log::info('Usando archivo secundario');
+        } else {
+            Log::warning('Se solicitó archivo secundario pero no existe');
+            return response()->json(['message' => 'Documento secundario no disponible'], 404);
         }
-
-        return response()->file($fullPath);
+    } else {
+        $filePath = $document->file_path;
+        Log::info('Usando archivo principal');
     }
+    
+    Log::info('Ruta del archivo seleccionada', ['filePath' => $filePath]);
+    
+    // Construir la ruta absoluta del archivo
+    $fullPath = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $filePath;
+    
+    Log::info('Ruta completa', ['fullPath' => $fullPath]);
+    
+    if (!file_exists($fullPath)) {
+        Log::error('Archivo no encontrado', ['fullPath' => $fullPath]);
+        return response()->json(['message' => 'Archivo no encontrado'], 404);
+    }
+
+    Log::info('Enviando archivo', ['size' => filesize($fullPath)]);
+    return response()->file($fullPath);
+}
 
     /**
      * Descargar un documento PDF.

@@ -170,6 +170,7 @@ class UserController extends Controller
             'AP' => 'sometimes|required_if:type,bombero,mando',
             'vacaciones' => 'sometimes|required',
             'modulo' => 'sometimes|required',
+            'SP' => 'sometimes|integer|min:0',
         ];
 
         $validator = Validator::make($request->all(), $rules);

@@ -24,7 +24,6 @@ const CalendarEspecialPage = () => {
     const idParque = 1;
 
     useEffect(() => {
-
         const fetchUserData = async () => {
             try {
                 const response = await UsuariosApiService.getUserByToken();
@@ -41,6 +40,8 @@ const CalendarEspecialPage = () => {
             try {
                 // Cargar todas las guardias
                 const response = await GuardsApiService.getGuards();
+                console.log('Guardias recibidas del API:', response.data);
+                
                 setAllGuards(response.data);
 
                 // Filtrar solo las que tienen especiales no nulo
@@ -50,6 +51,9 @@ const CalendarEspecialPage = () => {
                     guard.especiales !== ""
                 );
 
+                // Loguear las guardias especiales para depuración
+                console.log('Guardias especiales filtradas:', filteredEspecialGuards);
+                
                 setEspecialGuards(filteredEspecialGuards);
             } catch (error) {
                 console.error('Error fetching guards:', error);
@@ -80,6 +84,9 @@ const CalendarEspecialPage = () => {
         const dateString = format(date, 'yyyy-MM-dd');
         const especialGuardsOnThisDay = especialGuards.filter(guard => guard.date === dateString);
 
+        console.log('Fecha seleccionada:', dateString);
+        console.log('Guardias especiales en esta fecha:', especialGuardsOnThisDay);
+
         if (especialGuardsOnThisDay.length > 0) {
             // Se construye la lista de opciones
             const options = [
@@ -93,6 +100,13 @@ const CalendarEspecialPage = () => {
             especialGuardsOnThisDay.forEach((guard) => {
                 // Se obtiene el nombre de la brigada usando brigadeMap
                 const brigadeName = brigadeMap[guard.id_brigada] || 'Sin Brigada';
+                
+                // Verificamos que la guardia tiene un ID válido
+                const guardId = guard.id_guard || guard.id;
+                if (!guardId) {
+                    console.warn('Guardia sin ID detectada:', guard);
+                }
+                
                 options.push({
                     type: 'edit',
                     label: `Editar guardia ${brigadeName}`,
@@ -118,6 +132,16 @@ const CalendarEspecialPage = () => {
             setSelectedDate(option.date);
             setModalOpen(true);
         } else if (option.type === 'edit') {
+            // Loguear la guardia para depuración
+            console.log('Guardia seleccionada para editar:', option.guard);
+            
+            // Verificar si la guardia tiene los IDs necesarios
+            if (!option.guard.id_guard && !option.guard.id) {
+                console.error('La guardia no tiene un ID válido:', option.guard);
+                alert('No se puede editar esta guardia: falta el ID');
+                return;
+            }
+            
             // Abrir el modal de edición para la guardia seleccionada
             setSelectedGuard(option.guard);
             setEditModalOpen(true);
@@ -133,11 +157,20 @@ const CalendarEspecialPage = () => {
                     onEditClick={(guard) => {
                         if (!isMandoEspecial) return;
 
+                        // Loguear la guardia para depuración
+                        console.log('Guardia para editar desde calendario:', guard);
+                        
                         // Verificar que la guardia sea especial antes de editarla
                         if (guard.especiales) {
+                            // Verificar si tiene ID
+                            if (!guard.id_guard && !guard.id) {
+                                console.error('La guardia no tiene un ID válido:', guard);
+                                alert('No se puede editar esta guardia: falta el ID');
+                                return;
+                            }
+                            
                             setSelectedGuard(guard);
                             setEditModalOpen(true);
-                        } else {
                         }
                     }}
                     guards={especialGuards} // Solo mostrar guardias especiales en el calendario
@@ -145,14 +178,15 @@ const CalendarEspecialPage = () => {
                 />
             </div>
 
-
-
             {modalOpen && (
                 <GuardEspecialModal
                     isOpen={modalOpen}
                     onClose={() => setModalOpen(false)}
                     guardDate={selectedDate}
                     setGuards={(newGuards) => {
+                        // Verificar estructura de las nuevas guardias
+                        console.log('Nuevas guardias creadas:', newGuards);
+                        
                         // Actualizar el estado de guardias
                         if (Array.isArray(newGuards)) {
                             setEspecialGuards(prev => [...prev, ...newGuards.filter(g => g.especiales)]);
@@ -182,20 +216,29 @@ const CalendarEspecialPage = () => {
                     onClose={() => setEditModalOpen(false)}
                     guard={selectedGuard}
                     setGuards={(updatedGuards) => {
+                        console.log('Actualización de guardias recibida:', updatedGuards);
+                        
                         // Actualizar el estado de guardias especiales
                         if (Array.isArray(updatedGuards)) {
                             setEspecialGuards(updatedGuards.filter(g => g.especiales));
                         } else {
                             // Si es solo una guardia actualizada
+                            const guardId = selectedGuard.id_guard || selectedGuard.id;
+                            
                             if (updatedGuards.especiales) {
                                 setEspecialGuards(prev => prev.map(g =>
-                                    g.id === selectedGuard.id ? updatedGuards : g
+                                    (g.id_guard === guardId || g.id === guardId) ? updatedGuards : g
                                 ));
                             } else {
                                 // Si la guardia ya no es especial, eliminarla del estado
-                                setEspecialGuards(prev => prev.filter(g => g.id !== selectedGuard.id));
+                                setEspecialGuards(prev => prev.filter(g => 
+                                    g.id_guard !== guardId && g.id !== guardId
+                                ));
                             }
                         }
+                        
+                        // Cerrar el modal después de actualizar
+                        setEditModalOpen(false);
                     }}
                     availableBrigades={brigades}
                 />

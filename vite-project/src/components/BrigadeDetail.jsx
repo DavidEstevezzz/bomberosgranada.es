@@ -223,10 +223,10 @@ const BrigadeDetail = () => {
         brigade?.park?.id_parque || 1,
         selectedDate
       );
-      
+
       if (response && response.data && response.data.success) {
         //alert(`Asignaciones reseteadas correctamente: ${response.data.message}`);
-        
+
         // Recargar datos para actualizar la interfaz
         handleRefreshData();
       } else {
@@ -297,12 +297,74 @@ const BrigadeDetail = () => {
     }
   };
 
+  const [previousGuards, setPreviousGuards] = useState([]);
+  const [previousAssignmentsCache, setPreviousAssignmentsCache] = useState({});
+  const [loadingPreviousAssignments, setLoadingPreviousAssignments] = useState(false);
 
   // Al tener guardDetails, cargar asignaciones actuales y previas
   useEffect(() => {
-    if (guardDetails && guardDetails.id) {
+    const fetchBrigadeDetails = async () => {
+      setFirefighters([]);
+      if (!id_brigada) {
+        setError('No ID provided in URL');
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        const response = await BrigadesApiService.getFirefightersByBrigadeDebouncing(id_brigada, selectedDate);
+        if (response.data.brigade) {
+          setBrigade(response.data.brigade);
+        } else {
+          setError('No brigade data found');
+        }
+        setFirefighters(Object.values(response.data.firefighters));
+  
+        const commentsResponse = await GuardsApiService.getGuard(id_brigada, selectedDate);
+        if (commentsResponse.data.guard) {
+          setGuardDetails(commentsResponse.data.guard);
+          setComentarios(commentsResponse.data.guard.comentarios || '');
+          setIncidenciasPersonal(commentsResponse.data.guard.incidencias_personal || '');
+          
+          // Si tenemos guardDetails, cargar asignaciones actuales inmediatamente
+          const guardId = commentsResponse.data.guard.id;
+          if (guardId) {
+            const assignmentsResponse = await GuardAssignmentApiService.getGuardAssignments();
+            const assignmentsData = assignmentsResponse.data.filter(item => item.id_guard === guardId);
+            const assignmentsByTurn = { Mañana: {}, Tarde: {}, Noche: {} };
+            assignmentsData.forEach(item => {
+              assignmentsByTurn[item.turno][item.id_empleado] = item.asignacion;
+            });
+            setAssignments(assignmentsByTurn);
+          }
+        } else {
+          setGuardDetails(null);
+          setComentarios('');
+          setIncidenciasPersonal('');
+        }
+  
+        // Agregar carga de guardias anteriores
+        setLoadingPreviousAssignments(true);
+        const previousGuardsData = await GuardsApiService.getPreviousGuards(id_brigada, selectedDate);
+        setPreviousGuards(previousGuardsData);
+  
+        setError(null);
+      } catch (error) {
+        console.error('Error en fetchBrigadeDetails:', error);
+        setError('Failed to load brigade details');
+      } finally {
+        setLoading(false);
+        setLoadingPreviousAssignments(false);
+      }
+    };
+  
+    fetchBrigadeDetails();
+  }, [id_brigada, selectedDate]);
 
-      // Asignaciones actuales
+
+  useEffect(() => {
+    if (guardDetails && guardDetails.id) {
+      // Cargar asignaciones actuales
       GuardAssignmentApiService.getGuardAssignments()
         .then(response => {
           const assignmentsData = response.data.filter(item => item.id_guard === guardDetails.id);
@@ -315,22 +377,113 @@ const BrigadeDetail = () => {
         .catch(error => {
           console.error("Error fetching guard assignments:", error);
         });
-      // Asignaciones previas (guard anterior = guardDetails.id - 10)
-      const previousGuardId = guardDetails.id - 10;
-      GuardAssignmentApiService.getGuardAssignments()
-        .then(response => {
-          const prevData = response.data.filter(item => item.id_guard === previousGuardId);
-          const prevByTurn = { Mañana: {}, Tarde: {}, Noche: {} };
-          prevData.forEach(item => {
-            prevByTurn[item.turno][item.id_empleado] = item.asignacion;
-          });
-          setPrevAssignments(prevByTurn);
-        })
-        .catch(error => {
-          console.error("Error fetching previous guard assignments:", error);
-        });
     }
   }, [guardDetails]);
+
+  const getPreviousAssignmentInfo = async (firefighterId) => {
+    if (previousAssignmentsLoading || previousGuards.length === 0) {
+      return '';
+    }
+
+    try {
+      // Obtener todas las asignaciones
+      const allAssignments = await GuardAssignmentApiService.getGuardAssignments();
+
+      // Buscar asignaciones para este bombero en las guardias anteriores
+      for (const guardData of previousGuards) {
+        const matchingAssignments = allAssignments.data.filter(
+          assignment => assignment.id_guard === guardData.guard.id &&
+            assignment.id_empleado === firefighterId
+        );
+
+        if (matchingAssignments.length > 0) {
+          // Formatear la fecha: DD-MM
+          const date = new Date(guardData.date);
+          const formattedDate = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+
+          // Devolver la asignación con la fecha
+          return `${matchingAssignments[0].asignacion} (${formattedDate})`;
+        }
+      }
+
+      // Si no se encontraron asignaciones previas
+      return '';
+
+    } catch (error) {
+      console.error(`Error obteniendo asignación previa para bombero ${firefighterId}:`, error);
+      return '';
+    }
+  };
+
+  useEffect(() => {
+    const loadAllPreviousAssignments = async () => {
+      if (!previousGuards || previousGuards.length === 0) {
+        setLoadingPreviousAssignments(false);
+        return;
+      }
+
+      try {
+        // Obtener todas las asignaciones en una sola petición
+        const response = await GuardAssignmentApiService.getGuardAssignments();
+        const allAssignments = response.data;
+
+        // Crear un caché de asignaciones por bombero
+        const firefighterAssignments = {};
+
+        // Para cada guardia anterior, buscar asignaciones
+        for (const guardData of previousGuards) {
+          const guardId = guardData.guard.id;
+
+          // Filtrar asignaciones para esta guardia
+          const guardAssignments = allAssignments.filter(a => a.id_guard === guardId);
+
+          // Para cada asignación, guardarla en el caché
+          guardAssignments.forEach(assignment => {
+            const firefighterId = assignment.id_empleado;
+
+            // Solo guardar la primera asignación encontrada (la más reciente)
+            if (!firefighterAssignments[firefighterId]) {
+              const date = new Date(guardData.date);
+              const formattedDate = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+
+              firefighterAssignments[firefighterId] = {
+                asignacion: assignment.asignacion,
+                fecha: formattedDate,
+                turno: assignment.turno,
+                diasAtras: guardData.daysBack
+              };
+            }
+          });
+        }
+
+        setPreviousAssignmentsCache(firefighterAssignments);
+      } catch (error) {
+        console.error('Error cargando asignaciones previas:', error);
+      } finally {
+        setLoadingPreviousAssignments(false);
+      }
+    };
+
+    if (previousGuards.length > 0) {
+      loadAllPreviousAssignments();
+    }
+  }, [previousGuards]);
+
+  const PreviousAssignmentDisplay = ({ firefighter }) => {
+    // Obtener asignación del caché
+    const prevAssignmentInfo = previousAssignmentsCache[firefighter.id_empleado];
+
+    return (
+      <div className="flex items-center">
+        {firefighter.nombre} {firefighter.apellido}
+        {prevAssignmentInfo && (
+          <span className="ml-2 text-xs text-gray-300">
+            {prevAssignmentInfo.asignacion} ({prevAssignmentInfo.fecha})
+          </span>
+        )}
+      </div>
+    );
+  };
 
   // Funciones de modal
   const handleOpenModal = () => setIsModalOpen(true);
@@ -370,9 +523,9 @@ const BrigadeDetail = () => {
       const assignment = getMorningAssignment(ff.id_empleado);
       return assignment !== 'No asignado';
     });
-    
+
     if (assignedFirefighters.length === 0) return '';
-    
+
     // Ordenar por tipo de asignación (J, N/S, C, B) y número
     const sortedAssignments = assignedFirefighters
       .map(ff => getMorningAssignment(ff.id_empleado))
@@ -380,21 +533,21 @@ const BrigadeDetail = () => {
         // Extraer tipo y número
         const typeA = a.charAt(0);
         const typeB = b.charAt(0);
-        
+
         // Orden de prioridad: J > N/S > C > B
         const typeOrder = { 'J': 0, 'N': 1, 'S': 1, 'C': 2, 'B': 3 };
-        
+
         if (typeOrder[typeA] !== typeOrder[typeB]) {
           return typeOrder[typeA] - typeOrder[typeB];
         }
-        
+
         // Si son del mismo tipo, ordenar por número
         const numA = parseInt(a.substring(1), 10) || 0;
         const numB = parseInt(b.substring(1), 10) || 0;
-        
+
         return numB - numA; // Orden descendente para obtener el mayor
       });
-    
+
     // Retornar la asignación con el mayor número dentro de su tipo
     return sortedAssignments[0];
   };
@@ -403,38 +556,38 @@ const BrigadeDetail = () => {
   const collectEquipmentData = async () => {
     // Mapa para almacenar la asignación de equipos por bombero
     const equipmentByFirefighter = new Map();
-  
+
     // Encontrar la última asignación entre todos los bomberos
     const maxAssignment = findMaxAssignment(firefighters);
-    
+
     // Conjunto de números ya usados para minimizar conflictos
     const usedEquipmentNumbers = new Set();
-  
+
     // Ordenar primero los bomberos por prioridad de puesto y luego por asignación
     const sortedFirefighters = [...firefighters].sort((a, b) => {
       // Primero ordenar por prioridad de puesto
       const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
       if (puestoDiff !== 0) return puestoDiff;
-  
+
       // Ordenar por la asignación completa
       const assignmentA = getAssignmentValue(a);
       const assignmentB = getAssignmentValue(b);
-  
+
       // Si ambas asignaciones completas son iguales, usar la asignación de la mañana para desempatar
       if (assignmentA === assignmentB) {
         const morningAssignmentA = getMorningAssignment(a.id_empleado);
         const morningAssignmentB = getMorningAssignment(b.id_empleado);
-  
+
         // Manejar el caso de 'No asignado'
         if (morningAssignmentA === 'No asignado' && morningAssignmentB !== 'No asignado') return 1;
         if (morningAssignmentB === 'No asignado' && morningAssignmentA !== 'No asignado') return -1;
         if (morningAssignmentA === 'No asignado' && morningAssignmentB === 'No asignado') return 0;
-  
+
         // Comparar la letra de la asignación de la mañana
         const letterA = morningAssignmentA.charAt(0);
         const letterB = morningAssignmentB.charAt(0);
         if (letterA !== letterB) return letterA.localeCompare(letterB);
-  
+
         // Luego comparar numéricamente
         const numberA = parseInt(morningAssignmentA.slice(1), 10);
         const numberB = parseInt(morningAssignmentB.slice(1), 10);
@@ -443,17 +596,17 @@ const BrigadeDetail = () => {
         }
         return morningAssignmentA.localeCompare(morningAssignmentB);
       }
-  
+
       // Si las asignaciones completas son distintas, comparar teniendo en cuenta 'No asignado'
       if (assignmentA === 'No asignado' && assignmentB !== 'No asignado') return 1;
       if (assignmentB === 'No asignado' && assignmentA !== 'No asignado') return -1;
       if (assignmentA === 'No asignado' && assignmentB === 'No asignado') return 0;
-  
+
       // Extraer la letra para comparar
       const letterA = assignmentA.charAt(0);
       const letterB = assignmentB.charAt(0);
       if (letterA !== letterB) return letterA.localeCompare(letterB);
-  
+
       // Comparar numéricamente
       const numberA = parseInt(assignmentA.slice(1), 10);
       const numberB = parseInt(assignmentB.slice(1), 10);
@@ -462,19 +615,19 @@ const BrigadeDetail = () => {
       }
       return assignmentA.localeCompare(assignmentB);
     });
-  
+
     // Para cada bombero con asignación, obtener sus equipos en el orden correcto
     for (const firefighter of sortedFirefighters) {
       // Omitir operadores solo para la tabla de equipos
-      if (firefighter.puesto === 'Operador' || 
+      if (firefighter.puesto === 'Operador' ||
         getAssignmentValue(firefighter) === 'Telefonista') continue;
-      
+
       const assignmentValue = getAssignmentValue(firefighter);
-  
+
       if (assignmentValue !== 'No asignado') {
         // Tomar la primera asignación (si hay varias separadas por comas)
         const primaryAssignment = assignmentValue.split(',')[0].trim();
-  
+
         try {
           // Obtener equipos usando la API mejorada y pasar la fecha
           const response = await PersonalEquipmentApiService.checkAndAssignEquipment({
@@ -483,7 +636,7 @@ const BrigadeDetail = () => {
             maxAssignment,
             date: selectedDate // Incluir la fecha seleccionada
           });
-  
+
           if (response && response.data && response.data.equipment_details) {
             // Guardar los detalles de equipos para este bombero
             equipmentByFirefighter.set(firefighter.id_empleado, {
@@ -492,7 +645,7 @@ const BrigadeDetail = () => {
               asignacion: primaryAssignment,
               equipos: response.data.equipment_details
             });
-            
+
             // Actualizar el conjunto de números usados para minimizar conflictos
             if (response.data.equipment_assigned) {
               Object.values(response.data.equipment_assigned).forEach(numero => {
@@ -761,6 +914,70 @@ const BrigadeDetail = () => {
     return '-';
   };
 
+  // Función para obtener las guardias y asignaciones anteriores
+  const fetchPreviousAssignments = async (id_brigada, selectedDate) => {
+    try {
+      // Obtener guardias anteriores (5, 10 y 15 días atrás)
+      const previousGuards = await GuardsApiService.getPreviousGuards(id_brigada, selectedDate);
+
+      // Si no hay guardias anteriores, devolver un mapa vacío
+      if (previousGuards.length === 0) {
+        return new Map();
+      }
+
+      // Inicializar un mapa para almacenar las asignaciones previas por bombero
+      const previousAssignmentsByFirefighter = new Map();
+
+      return previousGuards;
+    } catch (error) {
+      console.error('Error obteniendo asignaciones previas:', error);
+      return new Map();
+    }
+  };
+
+  // Función para buscar asignaciones previas para un bombero específico
+  const findPreviousAssignmentForFirefighter = async (employeeId, previousGuards) => {
+    try {
+      // Verificar si hay guardias anteriores
+      if (!previousGuards || previousGuards.length === 0) {
+        return null;
+      }
+
+      // Buscar asignaciones previas para este bombero
+      const previousAssignment = await GuardAssignmentApiService.findPreviousAssignmentsForEmployee(
+        employeeId,
+        previousGuards
+      );
+
+      return previousAssignment;
+    } catch (error) {
+      console.error(`Error buscando asignación previa para bombero ${employeeId}:`, error);
+      return null;
+    }
+  };
+
+  // Función para formatear la fecha a un formato legible
+  const formatPreviousDate = (dateString) => {
+    if (!dateString) return '';
+
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+
+    return `${day}-${month}`;
+  };
+
+  // Función para recuperar y formatear la información de asignación previa para mostrar
+  const getPreviousAssignmentDisplay = async (firefighterId, previousGuards) => {
+    const prevAssignment = await findPreviousAssignmentForFirefighter(firefighterId, previousGuards);
+
+    if (!prevAssignment) return '';
+
+    // Formatear la información para mostrar: "asignación (fecha)"
+    const formattedDate = formatPreviousDate(prevAssignment.date);
+    return `${prevAssignment.assignment.asignacion} (${formattedDate})`;
+  };
+
   const exportToPDF = async () => {
     try {
       // Iniciar el PDF
@@ -788,22 +1005,22 @@ const BrigadeDetail = () => {
       } else {
         headerColor = [150, 154, 133]; // gris verde
       }
-  
+
       // Añadir rectángulo de color en la parte superior
       doc.setFillColor(...headerColor);
       doc.rect(0, 0, pageWidth, 35, 'F');
-  
+
       // Añadir logo con mejor posición
       doc.addImage(logo, 'PNG', 10, 5, 18, 25);
-  
+
       // Línea separadora debajo del encabezado de color
       doc.setDrawColor(100, 100, 100);
       doc.setLineWidth(0.3);
       doc.line(0, 35, pageWidth, 35);
-  
+
       // Configurar textos del encabezado
       doc.setFont('helvetica', 'bold');
-  
+
       // Determinar color de texto basado en el fondo
       let textColor;
       if (brigade?.nombre === 'Brigada B' || brigade?.nombre === 'Brigada E') {
@@ -811,23 +1028,23 @@ const BrigadeDetail = () => {
       } else {
         textColor = [255, 255, 255]; // blanco para fondos oscuros
       }
-  
+
       // Título y subtítulos con mejor posicionamiento
       doc.setTextColor(...textColor);
       doc.setFontSize(16);
       doc.text(brigadeNombre, 40, 15);
-  
+
       doc.setFontSize(14);
       doc.text(parqueNombre, 40, 25);
-  
+
       // Fecha con formato elegante a la derecha
       doc.setFontSize(12);
       doc.setFont('helvetica', 'italic');
       doc.text(fechaCompleta, pageWidth - 10, 20, { align: 'right' });
-  
+
       // Espacio para comenzar la tabla
       const startY = 45;
-  
+
       // Configuración de colores para el PDF
       let pdfHeaderFillColor, pdfHeaderTextColor;
       if (brigade?.nombre === 'Brigada A') {
@@ -852,13 +1069,13 @@ const BrigadeDetail = () => {
         pdfHeaderFillColor = '#969a85';
         pdfHeaderTextColor = '#ffffff';
       }
-  
+
       // ID del parque
       const parkId = brigade?.park?.id_parque || 1;
-  
+
       // Obtener todos los tipos de asignaciones que necesitamos procesar
       const allAssignments = [];
-  
+
       // Extraer todos los tipos de asignación únicos de los bomberos
       firefighters.forEach(ff => {
         const assignmentValue = getAssignmentValue(ff);
@@ -872,51 +1089,51 @@ const BrigadeDetail = () => {
           });
         }
       });
-  
+
       // Ordenar las asignaciones por tipo
       allAssignments.sort((a, b) => {
         const letterA = a.charAt(0);
         const letterB = b.charAt(0);
-  
+
         if (letterA !== letterB) {
           // Ordenar por tipo: J, N, S, C, B
           const order = { 'J': 1, 'N': 2, 'S': 3, 'C': 4, 'B': 5 };
           return (order[letterA] || 99) - (order[letterB] || 99);
         }
-  
+
         const numA = parseInt(a.slice(1), 10);
         const numB = parseInt(b.slice(1), 10);
         return numA - numB;
       });
-  
+
       // Recopilar los datos de equipos para todos los bomberos
       const equipmentData = await collectEquipmentData();
-  
+
       // Construir el cuerpo de la tabla con los números de radio asignados
       const sortedFirefighters = [...firefighters].sort((a, b) => {
         // Primero ordenar por prioridad de puesto
         const puestoDiff = puestoPriority[a.puesto] - puestoPriority[b.puesto];
         if (puestoDiff !== 0) return puestoDiff;
-  
+
         // Ordenar por la asignación completa
         const assignmentA = getAssignmentValue(a);
         const assignmentB = getAssignmentValue(b);
-  
+
         // Si ambas asignaciones completas son iguales, usar la asignación de la mañana para desempatar
         if (assignmentA === assignmentB) {
           const morningAssignmentA = getMorningAssignment(a.id_empleado);
           const morningAssignmentB = getMorningAssignment(b.id_empleado);
-  
+
           // Manejar el caso de 'No asignado'
           if (morningAssignmentA === 'No asignado' && morningAssignmentB !== 'No asignado') return 1;
           if (morningAssignmentB === 'No asignado' && morningAssignmentA !== 'No asignado') return -1;
           if (morningAssignmentA === 'No asignado' && morningAssignmentB === 'No asignado') return 0;
-  
+
           // Comparar la letra de la asignación de la mañana
           const letterA = morningAssignmentA.charAt(0);
           const letterB = morningAssignmentB.charAt(0);
           if (letterA !== letterB) return letterA.localeCompare(letterB);
-  
+
           // Luego comparar numéricamente
           const numberA = parseInt(morningAssignmentA.slice(1), 10);
           const numberB = parseInt(morningAssignmentB.slice(1), 10);
@@ -925,17 +1142,17 @@ const BrigadeDetail = () => {
           }
           return morningAssignmentA.localeCompare(morningAssignmentB);
         }
-  
+
         // Si las asignaciones completas son distintas, comparar teniendo en cuenta 'No asignado'
         if (assignmentA === 'No asignado' && assignmentB !== 'No asignado') return 1;
         if (assignmentB === 'No asignado' && assignmentA !== 'No asignado') return -1;
         if (assignmentA === 'No asignado' && assignmentB === 'No asignado') return 0;
-  
+
         // Extraer la letra para comparar
         const letterA = assignmentA.charAt(0);
         const letterB = assignmentB.charAt(0);
         if (letterA !== letterB) return letterA.localeCompare(letterB);
-  
+
         // Comparar numéricamente
         const numberA = parseInt(assignmentA.slice(1), 10);
         const numberB = parseInt(assignmentB.slice(1), 10);
@@ -944,16 +1161,16 @@ const BrigadeDetail = () => {
         }
         return assignmentA.localeCompare(assignmentB);
       });
-  
+
       const headers = ['Nombre', 'Puesto', 'Turno', 'Asignación', 'Vehículos'];
       const body = sortedFirefighters.map(firefighter => {
         const assignmentValue = getAssignmentValue(firefighter);
         const morningAssignment = getMorningAssignment(firefighter.id_empleado);
-  
+
         // Construir el nombre con el número de radio
         let fullName = `${firefighter.nombre} ${firefighter.apellido}`;
         let radioNumber = '';
-  
+
         if (assignmentValue !== 'No asignado') {
           // Obtener datos de equipos del mapa de equipos
           const equipInfo = equipmentData.get(firefighter.id_empleado);
@@ -965,24 +1182,24 @@ const BrigadeDetail = () => {
             }
           }
         }
-  
+
         fullName += radioNumber;
-  
+
         // Verificar si el bombero está en turno de mañana
         const turnoLower = firefighter.turno.toLowerCase();
         const isInMorningShift = turnoLower === 'mañana' ||
           turnoLower === 'día completo' ||
           turnoLower === 'mañana y tarde' ||
           turnoLower === 'mañana y noche';
-  
+
         // Seleccionar el mapeo adecuado según el nombre del parque
         const mapping = brigade?.park?.nombre.toLowerCase().includes("sur")
           ? vehicleMappingSur
           : vehicleMappingNorte;
-  
+
         // Usar el mapeo para obtener la información del vehículo
         const vehicleInfo = isInMorningShift ? (mapping[morningAssignment] || '') : '';
-  
+
         return [
           fullName,
           firefighter.puesto,
@@ -991,7 +1208,7 @@ const BrigadeDetail = () => {
           vehicleInfo,
         ];
       });
-  
+
       // Función para determinar el color de fondo de una celda
       const getNameCellBgColor = (assignment, puesto) => {
         if (puesto.toLowerCase() === 'operador') return [255, 255, 255];
@@ -1012,25 +1229,25 @@ const BrigadeDetail = () => {
         }
         return [255, 255, 255];
       };
-  
+
       // Calcular espacio disponible en la página
       const pageHeight = doc.internal.pageSize.getHeight();
       const availableSpace = pageHeight - startY - 20; // 20 es margen de seguridad
-  
+
       // Estimar altura necesaria para la tabla principal
       // Aproximadamente 10 puntos por fila (considerando que cada fila tiene aprox. 9pts de alto + pequeño margen)
       const estimatedTableHeight = (body.length * 10) + 15; // 15 para el encabezado
-  
+
       // Ajustar el tamaño de fuente si la tabla es demasiado grande para la página
       let fontSize = 9;
       let cellPadding = 2.5;
-  
+
       if (estimatedTableHeight > availableSpace && body.length > 10) {
         // Reducir tamaño si hay muchas filas y no caben
         fontSize = Math.max(7, fontSize - Math.ceil((estimatedTableHeight - availableSpace) / 100));
         cellPadding = Math.max(1.5, cellPadding - 0.5);
       }
-  
+
       // Generar la tabla con configuración para evitar divisiones entre páginas
       doc.autoTable({
         startY,
@@ -1068,10 +1285,10 @@ const BrigadeDetail = () => {
           return startY;
         }
       });
-      
+
       // Obtener la posición Y final después de generar la tabla principal
       let finalY = doc.previousAutoTable ? doc.previousAutoTable.finalY : startY;
-  
+
       // Añadir comentarios y otros detalles - SECCIÓN MEJORADA
       if (guardDetails) {
         // Título para la sección de datos adicionales
@@ -1081,10 +1298,10 @@ const BrigadeDetail = () => {
         doc.setFontSize(12);
         doc.setTextColor(40, 40, 40);
         doc.text('DATOS ADICIONALES DEL SERVICIO', pageWidth / 2, newStartY, { align: 'center' });
-  
+
         // Preparar los datos de comentarios
         const commentsData = guardDetails.guard || guardDetails;
-  
+
         // Definir los campos y convertir las claves a nombres mostrados
         const allFields = [
           { key: 'revision', name: 'Revisión', group: 1 },
@@ -1094,21 +1311,21 @@ const BrigadeDetail = () => {
           { key: 'incidencias_de_trafico', name: 'Incidencias de Tráfico', group: 2 },
           { key: 'mando', name: 'Mando', group: 2 }
         ];
-  
+
         // Convertir a formato para jsPDF-autoTable
         const group1Fields = allFields.filter(field => field.group === 1);
         const group2Fields = allFields.filter(field => field.group === 2);
-  
+
         // Cabeceras de la primera tabla
         const headersRow1 = group1Fields.map(field => field.name);
         // Valores de la primera tabla
         const valuesRow1 = group1Fields.map(field => commentsData[field.key] || '');
-  
+
         // Cabeceras de la segunda tabla
         const headersRow2 = group2Fields.map(field => field.name);
         // Valores de la segunda tabla
         const valuesRow2 = group2Fields.map(field => commentsData[field.key] || '');
-  
+
         // Estilos de color usando el color de la brigada para mantener consistencia
         const hexToRgb = (hex) => {
           // Convertir color hexadecimal a RGB
@@ -1117,7 +1334,7 @@ const BrigadeDetail = () => {
           const b = parseInt(hex.slice(5, 7), 16);
           return [r, g, b];
         };
-  
+
         // Usar el mismo color que el encabezado principal pero con un tono más oscuro
         const headerFillColor = hexToRgb(pdfHeaderFillColor);
         // Oscurecer el color para los encabezados de las tablas de comentarios
@@ -1128,17 +1345,17 @@ const BrigadeDetail = () => {
             Math.floor(color[2] * factor)
           ];
         };
-  
+
         const commentHeaderFillColor = darkenColor(headerFillColor);
-  
+
         // Color fijo para los encabezados de ambas tablas
         const fixedHeaderColor = [52, 73, 94]; // Azul oscuro/gris
         const fixedHeaderTextColor = [255, 255, 255]; // Blanco
-  
+
         // Verificar espacio disponible para tablas de comentarios en la página actual
         let commentStartY = newStartY + 10; // Ajustar según sea necesario
         let titleWritten = true; // Ya hemos escrito el título
-  
+
         // Primera tabla de comentarios (mejorada)
         doc.autoTable({
           startY: commentStartY,
@@ -1166,10 +1383,10 @@ const BrigadeDetail = () => {
           // Evitar división entre páginas
           rowPageBreak: 'avoid'
         });
-  
+
         // Obtener la posición Y después de la primera tabla
         finalY = doc.previousAutoTable.finalY;
-  
+
         // Segunda tabla de comentarios (mejorada)
         doc.autoTable({
           startY: finalY + 8,
@@ -1197,21 +1414,21 @@ const BrigadeDetail = () => {
           // Evitar división entre páginas
           rowPageBreak: 'avoid'
         });
-        
+
         // Actualizar finalY después de la segunda tabla
         finalY = doc.previousAutoTable.finalY;
       }
-  
+
       // NUEVA SECCIÓN - TABLA DE EQUIPOS ASIGNADOS
       if (doc.previousAutoTable) {
         finalY = doc.previousAutoTable.finalY + 15;
-  
+
         // Encabezado para la sección de equipos
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.setTextColor(40, 40, 40);
         doc.text('ASIGNACIÓN DE EQUIPOS', pageWidth / 2, finalY, { align: 'center' });
-  
+
         // Preparar las columnas de la tabla
         const equipmentColumns = [
           'Nombre',
@@ -1223,24 +1440,24 @@ const BrigadeDetail = () => {
           'Linterna casco',
           'Linterna pecho'
         ];
-  
+
         // Preparar los datos para la tabla de equipos
         const equipmentRows = [];
-  
+
         // Procesar cada bombero en el orden de la tabla principal
         for (const firefighter of sortedFirefighters) {
-          if (firefighter.puesto === 'Operador' || 
+          if (firefighter.puesto === 'Operador' ||
             getAssignmentValue(firefighter) === 'Telefonista') continue;
-  
+
           const assignmentValue = getAssignmentValue(firefighter);
-  
+
           if (assignmentValue !== 'No asignado') {
             // Tomar la primera asignación (si hay varias separadas por comas)
             const primaryAssignment = assignmentValue.split(',')[0].trim();
-            
+
             // Obtener los datos de equipos del mapa
             const equipInfo = equipmentData.get(firefighter.id_empleado);
-  
+
             // Preparar fila con datos básicos
             const row = [
               `${firefighter.nombre} ${firefighter.apellido}`,
@@ -1252,7 +1469,7 @@ const BrigadeDetail = () => {
               '-', // Linterna casco
               '-'  // Linterna pecho
             ];
-  
+
             // Si hay datos de equipos, rellenar con los números asignados
             if (equipInfo && equipInfo.equipos) {
               // Rellenar cada columna con su valor correspondiente
@@ -1263,28 +1480,28 @@ const BrigadeDetail = () => {
                 }
               });
             }
-  
+
             equipmentRows.push(row);
           }
         }
-  
+
         // Verificar espacio disponible
         const remainingHeight = doc.internal.pageSize.getHeight() - finalY - 15;
         const estimatedTableHeight = (equipmentRows.length * 8) + 10; // Altura aproximada
-  
+
         // Si no hay espacio suficiente, crear una nueva página
         let equipmentTableY = finalY + 5;
         if (remainingHeight < estimatedTableHeight) {
           doc.addPage();
           equipmentTableY = 15; // Inicio en nueva página
-  
+
           // Repetir encabezado en la nueva página
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(12);
           doc.setTextColor(40, 40, 40);
           doc.text('ASIGNACIÓN DE EQUIPOS', pageWidth / 2, 10, { align: 'center' });
         }
-  
+
         // Generar tabla de equipos
         doc.autoTable({
           startY: equipmentTableY,
@@ -1315,14 +1532,14 @@ const BrigadeDetail = () => {
           rowPageBreak: 'avoid'
         });
       }
-  
+
       // Añadir pie de página con fecha de generación
       const generationDate = new Date().toLocaleString();
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.text(`Documento generado: ${generationDate}`, pageWidth - 10, pageHeight - 5, { align: 'right' });
-  
+
       // Guardar el PDF con nombre descriptivo
       doc.save(`Bomberos_${brigade?.nombre || ''}_${selectedDate}.pdf`);
     } catch (error) {
@@ -1330,7 +1547,7 @@ const BrigadeDetail = () => {
       alert('Ha ocurrido un error al generar el PDF. Por favor, inténtelo de nuevo.');
     }
   };
-   if (loading) return <div>Loading...</div>;
+  if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!brigade) return <div>No brigade data available.</div>;
 
@@ -1415,7 +1632,13 @@ const BrigadeDetail = () => {
                       return (
                         <tr key={`${firefighter.id_empleado}-${index}`} className="border-b border-gray-700">
                           <td className="py-2 px-2">
-                            {firefighter.nombre} {firefighter.apellido} {prevAssign ? `(${prevAssign})` : ''}
+                            {loadingPreviousAssignments ? (
+                              <div className="flex items-center">
+                                {firefighter.nombre} {firefighter.apellido} <span className="ml-2 text-xs text-gray-400">cargando...</span>
+                              </div>
+                            ) : (
+                              <PreviousAssignmentDisplay firefighter={firefighter} />
+                            )}
                           </td>
                           <td className="py-2 px-2">{firefighter.puesto}</td>
                           <td className="py-2 px-2">{firefighter.turno}</td>
@@ -1486,7 +1709,7 @@ const BrigadeDetail = () => {
             >
               Asignar Baja Sobrevenida
             </button>
-            
+
           </div>
         )}
 

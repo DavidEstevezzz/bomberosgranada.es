@@ -23,7 +23,9 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
     vacaciones: user.vacaciones || '',
     modulo: user.modulo || '',
     compensacion_grupos: user.compensacion_grupos || '',
-    horas_sindicales: user.horas_sindicales || ''
+    horas_sindicales: user.horas_sindicales || '',
+    SP: user.SP || ''
+
   });
 
   // Estado para indicar si se está enviando (loader)
@@ -51,7 +53,9 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
         vacaciones: user.vacaciones || '',
         modulo: user.modulo || '',
         compensacion_grupos: user.compensacion_grupos || '',
-        horas_sindicales: user.horas_sindicales || ''
+        horas_sindicales: user.horas_sindicales || '',
+        SP: user.SP || ''
+
       });
 
       setIsSubmitting(false); // reiniciamos loader
@@ -313,6 +317,21 @@ const EditUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 name="horas_sindicales"
                 id="horas_sindicales"
                 value={formValues.horas_sindicales}
+                onChange={handleChange}
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label htmlFor="SP" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                Salidas Personales (SP)
+              </label>
+              <input
+                type="number"
+                name="SP"
+                id="SP"
+                value={formValues.SP}
                 onChange={handleChange}
                 className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                 required

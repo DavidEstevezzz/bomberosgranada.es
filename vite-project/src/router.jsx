@@ -72,8 +72,8 @@ const router = createBrowserRouter([
       
       // Nueva ruta para el calendario especial (solo para usuarios con mando_especial=true)
       { path: 'calendario-especial', element: <MandoEspecialRoute element={<CalendarEspecialPage />} /> },
-{ path: 'detalle-guardia-calendario', element: <MandoEspecialRoute element={<GuardDetailCalendarPage />} /> },
-{ path: 'guard-detail/:brigadeId/:date', element: <MandoEspecialRoute element={<GuardDetailPage />} /> },
+      { path: 'detalle-guardia-calendario', element: <MandoEspecialRoute element={<GuardDetailCalendarPage />} /> },
+      { path: 'guard-detail/:brigadeId/:date', element: <MandoEspecialRoute element={<GuardDetailPage />} /> },
 
       // Rutas existentes
       { path: 'horas-requerimientos', element: <HorasOfrecidas /> },

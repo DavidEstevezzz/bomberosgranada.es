@@ -78,6 +78,38 @@ async updatePersonalIncidents(idBrigada, date, incidencias_personal) {
     incidencias_personal: incidencias_personal,
   });
 }
+
+async getPreviousGuards(id_brigada, currentDate, daysBack = [5, 10, 15]) {
+  try {
+    const guardPromises = daysBack.map(days => {
+      const date = new Date(currentDate);
+      date.setDate(date.getDate() - days);
+      const formattedDate = date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      return this.getGuard(id_brigada, formattedDate);
+    });
+
+    // Ejecutar todas las peticiones en paralelo
+    const responses = await Promise.allSettled(guardPromises);
+    
+    // Filtrar solo las respuestas exitosas y extraer los datos relevantes
+    const previousGuards = responses
+      .filter(response => response.status === 'fulfilled' && response.value.data.guard)
+      .map((response, index) => ({
+        guard: response.value.data.guard,
+        daysBack: daysBack[index],
+        date: (() => {
+          const date = new Date(currentDate);
+          date.setDate(date.getDate() - daysBack[index]);
+          return date.toISOString().split('T')[0];
+        })()
+      }));
+      
+    return previousGuards;
+  } catch (error) {
+    console.error('Error obteniendo guardias anteriores:', error);
+    return [];
+  }
+}
   
 }
 

@@ -84,7 +84,7 @@ const EditAssignmentModal = ({ assignment, show, onClose, onEdit }) => {
                         <option value="">Seleccione Brigada Origen</option>
                         {brigades.map(brigada => (
                             <option key={brigada.id_brigada} value={brigada.id_brigada}>
-                                {brigada.nombre}
+                                {brigada.nombre} ({brigada.id_parque})
                             </option>
                         ))}
                     </select>

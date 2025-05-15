@@ -11,6 +11,7 @@ const EditGuardEspecialModal = ({ isOpen, onClose, guard, setGuards, availableBr
 
   useEffect(() => {
     if (guard) {
+      console.log('Datos de guardia recibidos:', guard);
       setBrigadeId(guard.id_brigada);
       setType(guard.tipo);
     }
@@ -33,18 +34,27 @@ const EditGuardEspecialModal = ({ isOpen, onClose, guard, setGuards, availableBr
     };
 
     try {
-      const response = await GuardsApiService.updateGuard(guard.id_guard, updatedGuard);
+      // Determinar qué ID usar para la actualización
+      const guardId = guard.id_guard || guard.id;
+      
+      if (!guardId) {
+        throw new Error('No se pudo determinar el ID de la guardia');
+      }
+      
+      console.log('Actualizando guardia con ID:', guardId);
+      const response = await GuardsApiService.updateGuard(guardId, updatedGuard);
       
       // Actualizar el estado de guardias en la página padre
       setGuards(prevGuards => 
         prevGuards.map(g => 
-          g.id_guard === guard.id_guard ? response.data : g
+          (g.id_guard === guardId || g.id === guardId) ? response.data : g
         )
       );
       
       onClose();
     } catch (error) {
       console.error('Error al actualizar la guardia:', error);
+      alert(`Error al actualizar: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -54,20 +64,31 @@ const EditGuardEspecialModal = ({ isOpen, onClose, guard, setGuards, availableBr
     if (!window.confirm('¿Estás seguro de que deseas eliminar esta guardia?')) {
       return;
     }
-
+    
+    // Determinar qué ID usar para la eliminación
+    const guardId = guard.id_guard || guard.id;
+    
+    if (!guardId) {
+      console.error('ID de guardia no disponible. Objeto guard:', guard);
+      alert('No se puede eliminar la guardia: ID no disponible');
+      return;
+    }
+    
+    console.log('Eliminando guardia con ID:', guardId);
     setDeleteLoading(true);
 
     try {
-      await GuardsApiService.deleteGuard(guard.id_guard);
+      await GuardsApiService.deleteGuard(guardId);
       
       // Eliminar la guardia del estado en la página padre
       setGuards(prevGuards => 
-        prevGuards.filter(g => g.id_guard !== guard.id_guard)
+        prevGuards.filter(g => g.id_guard !== guardId && g.id !== guardId)
       );
       
       onClose();
     } catch (error) {
       console.error('Error al eliminar la guardia:', error);
+      alert(`Error al eliminar: ${error.message}`);
     } finally {
       setDeleteLoading(false);
     }

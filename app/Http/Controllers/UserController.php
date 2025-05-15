@@ -236,6 +236,7 @@ class UserController extends Controller
             'compensacion_grupos',
             'horas_sindicales',
             'practicas',
+            'SP'
         ];
 
         if (!in_array($field, $allowedFields)) {
@@ -256,6 +257,7 @@ class UserController extends Controller
             'vacaciones'           => 'required|integer|min:0',
             'modulo'               => 'required|string|max:255',
             'compensacion_grupos'  => 'required|integer|min:0',
+            'SP'                  => 'required|integer|min:0',
         ];
 
         // Validamos solo el campo que se desea actualizar

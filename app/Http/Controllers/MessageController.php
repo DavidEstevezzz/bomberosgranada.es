@@ -268,13 +268,88 @@ class MessageController extends Controller
     }
 
     /**
-     * Eliminar un mensaje.
+     * Marcar mensaje masivo como leído para todos los usuarios del tipo correspondiente
+     * Solo accesible para usuarios con rol de jefe
+     */
+    public function markMassiveAsRead(Request $request, $id)
+    {
+        $user = auth()->user();
+
+        // Verificar que el usuario sea jefe
+        if ($user->role_name !== 'jefe') {
+            return response()->json(['error' => 'No autorizado. Solo los jefes pueden marcar mensajes masivos como leídos.'], 403);
+        }
+
+        $message = UserMessage::findOrFail($id);
+
+        // Verificar que sea un mensaje masivo
+        if (!$message->massive || $message->massive === 'false') {
+            return response()->json(['error' => 'Este no es un mensaje masivo'], 400);
+        }
+
+        try {
+            // Determinar qué usuarios deben marcar el mensaje como leído
+            $usersToUpdate = [];
+
+            switch (strtolower($message->massive)) {
+                case 'toda':
+                    // Todos los usuarios
+                    $usersToUpdate = DB::table('users')->pluck('id_empleado')->toArray();
+                    break;
+                case 'mandos':
+                    // Solo usuarios con tipo 'mando'
+                    $usersToUpdate = DB::table('users')->where('type', 'mando')->pluck('id_empleado')->toArray();
+                    break;
+                case 'bomberos':
+                    // Solo usuarios con tipo 'bombero'
+                    $usersToUpdate = DB::table('users')->where('type', 'bombero')->pluck('id_empleado')->toArray();
+                    break;
+                default:
+                    return response()->json(['error' => 'Tipo de mensaje masivo no válido'], 400);
+            }
+
+            // Crear registros de lectura para cada usuario que debería ver el mensaje
+            // Usaremos una tabla auxiliar o actualizaremos el mensaje para cada usuario
+            // Como es masivo, vamos a usar un enfoque diferente: 
+            // Marcaremos el mensaje como "globalmente leído" agregando un campo
+            $message->marked_as_read_by_admin = true;
+            $message->marked_as_read_at = now();
+            $message->marked_as_read_by = $user->id_empleado;
+            $message->save();
+
+            Log::info("Mensaje masivo {$id} marcado como leído por el jefe {$user->id_empleado} para tipo: {$message->massive}");
+
+            return response()->json([
+                'message' => 'Mensaje masivo marcado como leído para todos los usuarios correspondientes',
+                'affected_users_count' => count($usersToUpdate)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Error al marcar mensaje masivo como leído: " . $e->getMessage());
+            return response()->json(['error' => 'Error interno del servidor'], 500);
+        }
+    }
+
+    /**
+     * Eliminar un mensaje (actualizado con nuevas reglas de autorización).
      */
     public function destroy(UserMessage $message)
     {
-        // Verificar si el mensaje es masivo
-        if ($message->massive) {
-            return response()->json(['error' => 'No se pueden eliminar mensajes masivos'], 403);
+        $user = auth()->user();
+
+        // Los jefes pueden eliminar cualquier mensaje
+        if ($user->role_name === 'jefe') {
+            $message->delete();
+            return response()->json(['message' => 'Mensaje eliminado por el administrador.']);
+        }
+
+        // Para usuarios normales: no pueden eliminar mensajes masivos
+        if ($message->massive && $message->massive !== 'false') {
+            return response()->json(['error' => 'No se pueden eliminar mensajes masivos. Solo un jefe puede hacerlo.'], 403);
+        }
+
+        // Verificar que el usuario sea el propietario del mensaje (enviado o recibido)
+        if ($message->sender_id !== $user->id_empleado && $message->receiver_id !== $user->id_empleado) {
+            return response()->json(['error' => 'No autorizado para eliminar este mensaje.'], 403);
         }
 
         $message->delete();

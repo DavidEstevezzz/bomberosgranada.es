@@ -40,6 +40,11 @@ class MessagesApiService {
         return await BaseApiService.patch(`${API_URL}/${id}/mark-as-read`);
     }
 
+    // NUEVO: Marcar mensaje masivo como leído (solo para jefes)
+    async markMassiveAsRead(id) {
+        return await BaseApiService.patch(`${API_URL}/${id}/mark-massive-as-read`);
+    }
+
     // Eliminar un mensaje (soft delete)
     async deleteMessage(id) {
         return await BaseApiService.delete(`${API_URL}/${id}`);

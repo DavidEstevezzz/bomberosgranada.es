@@ -106,6 +106,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Restaurar un mensaje eliminado
     Route::patch('/messages/{id}/restore', [MessageController::class, 'restore']);
+    Route::patch('/messages/{id}/mark-massive-as-read', [MessageController::class, 'markMassiveAsRead'])->middleware('auth');
+
 
     // Buscar mensajes
     Route::get('/messages/search', [MessageController::class, 'search']);

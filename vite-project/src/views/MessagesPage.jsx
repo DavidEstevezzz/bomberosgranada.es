@@ -5,13 +5,13 @@ import { useDarkMode } from '../contexts/DarkModeContext';
 import CreateMessageModal from '../components/CreateMessageModal';
 import dayjs from 'dayjs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faFilePdf } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faFilePdf, faCheckDouble, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { useStateContext } from '../contexts/ContextProvider';
 
 // Componente recursivo para mostrar el hilo de conversación (estilo chat)
 const MessageThread = ({ message, onReply, users }) => {
-  const { user } = useStateContext(); // Usuario actual
-  const { darkMode } = useDarkMode(); // Soporte para modo oscuro
+  const { user } = useStateContext();
+  const { darkMode } = useDarkMode();
 
   const getUserName = (userId) => {
     const id = Number(userId);
@@ -20,16 +20,12 @@ const MessageThread = ({ message, onReply, users }) => {
   };
 
   const isOwnMessage = Number(message.sender_id) === Number(user.id_empleado);
-  // Si no tiene replies, consideramos que es el último mensaje
   const isLastMessage = !message.replies || message.replies.length === 0;
 
-  // Función para descargar el adjunto (si lo tiene)
-  // En el componente MessageThread
   const handleDownloadAttachment = async () => {
     try {
       const response = await MessagesApiService.downloadAttachment(message.id);
 
-      // Extraer el nombre del archivo de los headers
       let filename = 'attachment';
       const contentDisposition = response.headers['content-disposition'];
       if (contentDisposition) {
@@ -39,7 +35,6 @@ const MessageThread = ({ message, onReply, users }) => {
         }
       }
 
-      // Crear el blob con el tipo de contenido correcto
       const contentType = response.headers['content-type'] || 'application/octet-stream';
       const blob = new Blob([response.data], { type: contentType });
       const url = window.URL.createObjectURL(blob);
@@ -50,7 +45,6 @@ const MessageThread = ({ message, onReply, users }) => {
       document.body.appendChild(link);
       link.click();
 
-      // Limpieza
       setTimeout(() => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
@@ -60,30 +54,27 @@ const MessageThread = ({ message, onReply, users }) => {
       alert("Error al descargar el archivo adjunto. Por favor, inténtelo de nuevo.");
     }
   };
+
   return (
     <div className="flex flex-col w-full">
-      {/* Contenedor del mensaje */}
       <div className={`flex w-full my-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
         <div
-          className={`relative max-w-[75%] p-3 rounded-xl shadow-md text-sm transition-all ${isOwnMessage
+          className={`relative max-w-[75%] p-3 rounded-xl shadow-md text-sm transition-all ${
+            isOwnMessage
               ? `bg-green-500 text-white ${darkMode ? 'dark:bg-green-600' : ''}`
               : `bg-gray-200 text-gray-800 ${darkMode ? 'dark:bg-gray-700 dark:text-white' : ''}`
-            }`}
+          }`}
           style={{ alignSelf: isOwnMessage ? 'flex-end' : 'flex-start' }}
         >
-          {/* Mostrar nombre del remitente solo si NO es tu mensaje */}
           {!isOwnMessage && (
             <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
               {getUserName(message.sender_id)}
             </p>
           )}
-          {/* Cuerpo del mensaje */}
           <p>{message.body}</p>
-          {/* Hora del mensaje */}
           <p className="text-[10px] text-gray-500 dark:text-gray-400 text-right">
             {dayjs(message.created_at).format('HH:mm')}
           </p>
-          {/* Si el mensaje tiene adjunto, mostrar botón para descargarlo */}
           {message.attachment && (
             <button
               onClick={handleDownloadAttachment}
@@ -93,7 +84,6 @@ const MessageThread = ({ message, onReply, users }) => {
               Descargar Adjunto
             </button>
           )}
-          {/* Botón para responder, solo en el último mensaje del hilo */}
           {isLastMessage && (
             <button
               onClick={() => onReply(message)}
@@ -105,7 +95,6 @@ const MessageThread = ({ message, onReply, users }) => {
         </div>
       </div>
 
-      {/* Renderizado recursivo de respuestas */}
       <div className="flex flex-col w-full">
         {message.replies && message.replies.length > 0 && (
           message.replies.map((reply) => (
@@ -122,7 +111,6 @@ const MessageThread = ({ message, onReply, users }) => {
   );
 };
 
-
 const MessagesPage = () => {
   const { darkMode } = useDarkMode();
   const { user } = useStateContext();
@@ -137,7 +125,23 @@ const MessagesPage = () => {
   const [replyMessage, setReplyMessage] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(dayjs());
 
-  // Función para obtener el nombre del usuario
+  // Verificar si el usuario es jefe
+  const isJefe = user?.role_name === 'jefe';
+
+  // Función para verificar si un mensaje es masivo
+  const isMassiveMessage = (message) => {
+    return message.massive && message.massive !== 'false';
+  };
+
+  // Función para verificar si se puede eliminar un mensaje
+  const canDeleteMessage = (message) => {
+    // Los jefes pueden eliminar cualquier mensaje
+    if (isJefe) return true;
+    
+    // Los usuarios normales solo pueden eliminar mensajes no masivos
+    return !isMassiveMessage(message);
+  };
+
   const getUserName = (userId) => {
     const id = Number(userId);
     const found = users.find((u) => Number(u.id_empleado) === id);
@@ -178,24 +182,18 @@ const MessagesPage = () => {
   };
 
   const fetchRootMessage = async (message) => {
-    // Si el mensaje actual no tiene padre, es el raíz
     if (!message.parent_id) return message;
 
-    // Si tiene padre, consultamos el mensaje padre
     const response = await MessagesApiService.getMessageThread(message.parent_id);
     const parentMessage = response.data.message ? response.data.message : response.data;
 
-    // Llamada recursiva hasta llegar al mensaje raíz
     return fetchRootMessage(parentMessage);
   };
 
   const handleOpenMessage = async (message) => {
-
-    // Solo marcar como leído si el mensaje es recibido por el usuario actual
     if (!message.is_read && message.receiver_id === user.id_empleado) {
       try {
         await MessagesApiService.markAsRead(message.id);
-        // Actualizar la UI localmente para reflejar el cambio
         setInbox((prevInbox) =>
           prevInbox.map((msg) =>
             msg.id === message.id ? { ...msg, is_read: true } : msg
@@ -211,11 +209,9 @@ const MessagesPage = () => {
       }
     }
 
-    // Obtener el mensaje raíz si es una respuesta
     try {
       const fullMessage = await fetchRootMessage(message);
 
-      // Validamos que la propiedad replies esté definida
       if (!fullMessage.replies) {
         fullMessage.replies = [];
       }
@@ -226,16 +222,9 @@ const MessagesPage = () => {
     }
   };
 
-
-
-
-
-  // Al hacer clic en "Responder", se cierra el modal de conversación y se prepara la respuesta
   const handleReply = (message) => {
-    // Cierra el modal de conversación para evitar superposición
     setSelectedMessage(null);
 
-    // Verificamos la propiedad subject, comprobando ambos posibles niveles
     const subject = message.subject || (message.message && message.message.subject);
     if (!subject) {
       console.error("El mensaje o su asunto es undefined:", message);
@@ -243,7 +232,6 @@ const MessagesPage = () => {
     }
     const replySubject = subject.startsWith('Re:') ? subject : 'Re: ' + subject;
     const replyData = {
-      // Para responder, el destinatario es el remitente original
       receiver_id: message.sender_id || (message.message && message.message.sender_id),
       subject: replySubject,
       parent_id: message.id || (message.message && message.message.id),
@@ -253,12 +241,41 @@ const MessagesPage = () => {
     setShowModal(true);
   };
 
+  // NUEVA FUNCIÓN: Marcar mensaje masivo como leído
+  const handleMarkMassiveAsRead = async (messageId) => {
+    try {
+      await MessagesApiService.markMassiveAsRead(messageId);
+      
+      // Actualizar la UI localmente
+      setInbox((prevInbox) =>
+        prevInbox.map((msg) =>
+          msg.id === messageId ? { ...msg, is_read: true, read_by_admin: true } : msg
+        )
+      );
+      
+      alert('Mensaje masivo marcado como leído para todos los usuarios correspondientes.');
+    } catch (error) {
+      console.error('Error al marcar mensaje masivo como leído:', error);
+      alert('Error al marcar el mensaje como leído. Verifique que tenga permisos de jefe.');
+    }
+  };
+
   const handleDelete = async (id) => {
+    if (!window.confirm('¿Está seguro de que desea eliminar este mensaje?')) {
+      return;
+    }
+
     try {
       await MessagesApiService.deleteMessage(id);
       fetchMessages();
+      alert('Mensaje eliminado correctamente.');
     } catch (error) {
       console.error('Error deleting message:', error);
+      if (error.response?.status === 403) {
+        alert(error.response.data.error || 'No tiene permisos para eliminar este mensaje.');
+      } else {
+        alert('Error al eliminar el mensaje.');
+      }
     }
   };
 
@@ -343,6 +360,7 @@ const MessagesPage = () => {
               <th className="py-2 px-4">Fecha</th>
               <th className="py-2 px-4">Asunto</th>
               <th className="py-2 px-4">Remitente/Destinatario</th>
+              <th className="py-2 px-4">Tipo</th>
               <th className="py-2 px-4">Estado</th>
               <th className="py-2 px-4">Acciones</th>
             </tr>
@@ -364,27 +382,61 @@ const MessagesPage = () => {
                       : getUserName(message.receiver_id)}
                   </td>
                   <td className="py-2 px-4">
-                    {message.is_read ? 'Leído' : 'No leído'}
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      isMassiveMessage(message) 
+                        ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                    }`}>
+                      {isMassiveMessage(message) ? `Masivo (${message.massive})` : 'Individual'}
+                    </span>
                   </td>
-                  <td className="py-2 px-4 flex space-x-2 justify-center">
-                    <button
-                      onClick={() => handleOpenMessage(message)}
-                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    >
-                      Abrir
-                    </button>
-                    <button
-                      onClick={() => handleDelete(message.id)}
-                      className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                    >
-                      Eliminar
-                    </button>
+                  <td className="py-2 px-4">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      message.is_read 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    }`}>
+                      {message.is_read ? 'Leído' : 'No leído'}
+                      {message.read_by_admin && ' (Admin)'}
+                    </span>
+                  </td>
+                  <td className="py-2 px-4">
+                    <div className="flex space-x-2 justify-center items-center">
+                      <button
+                        onClick={() => handleOpenMessage(message)}
+                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                      >
+                        Abrir
+                      </button>
+                      
+                      {/* Botón para marcar mensaje masivo como leído (solo para jefes y mensajes masivos no leídos) */}
+                      {isJefe && isMassiveMessage(message) && !message.is_read && view === 'inbox' && (
+                        <button
+                          onClick={() => handleMarkMassiveAsRead(message.id)}
+                          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                          title="Marcar como leído para todos"
+                        >
+                          <FontAwesomeIcon icon={faCheckDouble} className="w-4 h-4" />
+                        </button>
+                      )}
+                      
+                      {/* Botón de eliminar con lógica condicional */}
+                      {canDeleteMessage(message) && (
+                        <button
+                          onClick={() => handleDelete(message.id)}
+                          className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                          title={isJefe ? "Eliminar mensaje (Admin)" : "Eliminar mensaje"}
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="5" className="text-center py-4">
+                <td colSpan="6" className="text-center py-4">
                   No hay mensajes en esta bandeja.
                 </td>
               </tr>
@@ -405,16 +457,18 @@ const MessagesPage = () => {
       {selectedMessage && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 transition-opacity">
           <div
-            className={`p-6 w-full max-w-2xl rounded-lg shadow-lg transition-all ${darkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200'
-              }`}
+            className={`p-6 w-full max-w-2xl rounded-lg shadow-lg transition-all ${
+              darkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200'
+            }`}
           >
             {/* Encabezado de la modal */}
             <div className={`flex justify-between items-center pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-300'}`}>
               <h2 className="text-lg font-bold">Chat</h2>
               <button
                 onClick={() => setSelectedMessage(null)}
-                className={`p-2 rounded-full focus:outline-none focus:ring-2 ${darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'
-                  }`}
+                className={`p-2 rounded-full focus:outline-none focus:ring-2 ${
+                  darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'
+                }`}
               >
                 <FontAwesomeIcon icon={faTimes} />
               </button>
@@ -427,8 +481,6 @@ const MessagesPage = () => {
           </div>
         </div>
       )}
-
-
     </div>
   );
 };

@@ -17,83 +17,61 @@ class MessageController extends Controller
      * Muestra mensajes donde receiver_id = usuario logueado O massive = true.
      */
     public function index()
-    {
-        $user = auth()->user();
-        $userId = auth()->id();
-        $userType = $user->type;
+{
+    $user = auth()->user();
+    $userId = auth()->id();
+    $userType = $user->type;
 
-        Log::info("Recuperando mensajes para usuario: ID {$userId}, tipo {$userType}");
+    Log::info("Recuperando mensajes para usuario: ID {$userId}, tipo {$userType}");
 
-        // Definir los valores permitidos para massive
-        $massiveValues = ['toda'];
-        if ($userType === 'mando') {
-            $massiveValues[] = 'mandos';
-        } elseif ($userType === 'bombero') {
-            $massiveValues[] = 'bomberos';
-        }
-        Log::debug("Valores de massive permitidos: " . implode(', ', $massiveValues));
-
-        // Activar el registro de queries y el registro de mensajes
-        DB::enableQueryLog();
-
-        // Primera consulta: buscar mensaje 243 con withTrashed para ver si existe y su estado
-        $message243 = UserMessage::withTrashed()->find(243);
-        Log::debug("Mensaje 243 encontrado: " . ($message243 ? 'SÍ' : 'NO'));
-        if ($message243) {
-            Log::debug("Estado mensaje 243: deleted_at=" . ($message243->deleted_at ? $message243->deleted_at : 'NULL') .
-                ", massive='" . $message243->massive . "', tipo=" . gettype($message243->massive));
-        }
-
-        // Segunda consulta: verificar todos los mensajes masivos, incluso los eliminados
-        $massiveMessages = UserMessage::withTrashed()
-            ->whereIn(DB::raw('LOWER(massive)'), array_map('strtolower', $massiveValues))
-            ->get();
-
-        Log::debug("Mensajes masivos encontrados (incluso eliminados): " . $massiveMessages->count());
-        foreach ($massiveMessages as $msg) {
-            Log::debug("Mensaje masivo ID: {$msg->id}, massive: '{$msg->massive}', deleted_at: " .
-                ($msg->deleted_at ? $msg->deleted_at : 'NULL'));
-        }
-
-        // Consulta principal: múltiples intentos para capturar diferentes posibilidades
-        $messages = UserMessage::where(function ($query) use ($userId, $massiveValues) {
-            // 1. Mensajes específicos para este usuario
-            $query->where('receiver_id', $userId);
-
-            // 2. Mensajes masivos - usando varios métodos
-            foreach ($massiveValues as $value) {
-                $query->orWhereRaw("LOWER(massive) = ?", [strtolower($value)])
-                    ->orWhereRaw("massive LIKE ?", ["%$value%"])
-                    ->orWhere('massive', $value);
-            }
-
-            // 3. Verificar el ID 243 específicamente 
-            $query->orWhere('id', 243);
-        })
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        // Loguear el query ejecutado
-        $queryLog = DB::getQueryLog();
-        Log::debug("Queries ejecutadas: " . json_encode($queryLog));
-
-        // Agregar información detallada sobre los mensajes
-        Log::info("Cantidad de mensajes recuperados: " . $messages->count());
-        foreach ($messages as $message) {
-            $massiveValue = $message->massive;
-            if (is_null($massiveValue)) {
-                $massiveValueStr = 'NULL';
-            } else {
-                // Asegurar que se muestre como string y escapar caracteres especiales
-                $massiveValueStr = "'" . addslashes($massiveValue) . "'";
-            }
-
-            Log::debug("Mensaje ID: {$message->id}, massive: {$massiveValueStr}, tipo: " . gettype($message->massive));
-        }
-
-        return response()->json($messages);
+    // Definir los valores permitidos para massive
+    $massiveValues = ['toda'];
+    if ($userType === 'mando') {
+        $massiveValues[] = 'mandos';
+    } elseif ($userType === 'bombero') {
+        $massiveValues[] = 'bomberos';
     }
+    Log::debug("Valores de massive permitidos: " . implode(', ', $massiveValues));
 
+    // Consulta principal
+    $messages = UserMessage::where(function ($query) use ($userId, $massiveValues) {
+        // Mensajes específicos para este usuario
+        $query->where('receiver_id', $userId);
+        
+        // Mensajes masivos
+        foreach ($massiveValues as $value) {
+            $query->orWhereRaw("LOWER(massive) = ?", [strtolower($value)]);
+        }
+    })
+    ->orderBy('created_at', 'desc')
+    ->get();
+
+    // Procesar mensajes para incluir estado de lectura correcto
+    $messages->transform(function ($message) use ($userId) {
+        // Para mensajes individuales, usar is_read normal
+        if (!$message->massive || $message->massive === 'false') {
+            // Mantener el valor original de is_read
+            return $message;
+        }
+        
+        // Para mensajes masivos: verificar si fue marcado como leído por admin
+        if ($message->marked_as_read_by_admin) {
+            $message->is_read = true;
+            $message->read_by_admin = true;
+            Log::debug("Mensaje masivo {$message->id} marcado como leído por admin");
+        } else {
+            // Si no fue marcado por admin, mantener como no leído
+            $message->is_read = false;
+            $message->read_by_admin = false;
+        }
+        
+        return $message;
+    });
+
+    Log::info("Cantidad de mensajes recuperados: " . $messages->count());
+
+    return response()->json($messages);
+}
 
 
     /**

@@ -19,6 +19,9 @@ class UserMessage extends Model
         'is_read',
         'massive',
         'parent_id',
+        'marked_as_read_by_admin',
+        'marked_as_read_at', 
+        'marked_as_read_by'
     ];
 
     protected $table = 'messages';

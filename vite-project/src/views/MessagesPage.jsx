@@ -404,7 +404,6 @@ const MessagesPage = () => {
                         : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                     }`}>
                       {message.is_read ? 'Leído' : 'No leído'}
-                      {message.read_by_admin && ' (Admin)'}
                     </span>
                   </td>
                   <td className="py-2 px-4">

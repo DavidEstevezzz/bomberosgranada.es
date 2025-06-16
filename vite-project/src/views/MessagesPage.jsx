@@ -126,7 +126,7 @@ const MessagesPage = () => {
   const [currentMonth, setCurrentMonth] = useState(dayjs());
 
   // Verificar si el usuario es jefe
-  const isJefe = user?.role_name === 'jefe';
+  const isJefe = user?.type === 'jefe';
 
   // Función para verificar si un mensaje es masivo
   const isMassiveMessage = (message) => {
@@ -368,6 +368,13 @@ const MessagesPage = () => {
           <tbody>
             {messages.length > 0 ? (
               messages.map((message) => (
+                console.log(`Mensaje ${message.id}:`, {
+                  isJefe: user?.type === 'jefe',
+                  isMassive: isMassiveMessage(message),
+                  isRead: message.is_read,
+                  massive: message.massive,
+                  view: view
+                }),
                 <tr
                   key={message.id}
                   className={`border-b ${message.is_read ? (darkMode ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
@@ -449,7 +456,7 @@ const MessagesPage = () => {
         <CreateMessageModal
           isOpen={showModal}
           onClose={closeModal}
-          currentUserRole={user?.role_name}
+          currentUserRole={user?.type}
           replyMessage={replyMessage}
         />
       )}

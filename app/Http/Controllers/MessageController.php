@@ -276,7 +276,7 @@ class MessageController extends Controller
         $user = auth()->user();
 
         // Verificar que el usuario sea jefe
-        if ($user->role_name !== 'jefe') {
+        if ($user->type !== 'jefe') {
             return response()->json(['error' => 'No autorizado. Solo los jefes pueden marcar mensajes masivos como leídos.'], 403);
         }
 

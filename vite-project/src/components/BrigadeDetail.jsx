@@ -158,47 +158,6 @@ const BrigadeDetail = () => {
 
 
 
-  // Cargar datos de la brigada, bomberos y guardDetails
-  useEffect(() => {
-    const fetchBrigadeDetails = async () => {
-      setFirefighters([]);
-      if (!id_brigada) {
-        setError('No ID provided in URL');
-        setLoading(false);
-        return;
-      }
-      try {
-        const response = await BrigadesApiService.getFirefightersByBrigadeDebouncing(id_brigada, selectedDate);
-        if (response.data.brigade) {
-          setBrigade(response.data.brigade);
-        } else {
-          setError('No brigade data found');
-        }
-        setFirefighters(Object.values(response.data.firefighters));
-
-        const commentsResponse = await GuardsApiService.getGuard(id_brigada, selectedDate);
-        if (commentsResponse.data.guard) {
-          setGuardDetails(commentsResponse.data.guard);
-          setComentarios(commentsResponse.data.guard.comentarios || '');
-          setIncidenciasPersonal(commentsResponse.data.guard.incidencias_personal || '');
-          setIncidenciasGenerales(commentsResponse.data.guard.incidencias_generales || '');
-
-        } else {
-          setGuardDetails(null);
-          setComentarios('');
-          setIncidenciasPersonal('');
-          setIncidenciasGenerales('');
-        }
-        setError(null);
-      } catch (error) {
-        console.error('Error en fetchBrigadeDetails:', error);
-        setError('Failed to load brigade details');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBrigadeDetails();
-  }, [id_brigada, selectedDate]);
 
 
   const handleRefreshData = async () => {
@@ -325,7 +284,6 @@ const BrigadeDetail = () => {
   const [previousAssignmentsCache, setPreviousAssignmentsCache] = useState({});
   const [loadingPreviousAssignments, setLoadingPreviousAssignments] = useState(false);
 
-  // Al tener guardDetails, cargar asignaciones actuales y previas
   useEffect(() => {
     const fetchBrigadeDetails = async () => {
       setFirefighters([]);
@@ -343,13 +301,14 @@ const BrigadeDetail = () => {
           setError('No brigade data found');
         }
         setFirefighters(Object.values(response.data.firefighters));
-
+  
         const commentsResponse = await GuardsApiService.getGuard(id_brigada, selectedDate);
         if (commentsResponse.data.guard) {
           setGuardDetails(commentsResponse.data.guard);
           setComentarios(commentsResponse.data.guard.comentarios || '');
           setIncidenciasPersonal(commentsResponse.data.guard.incidencias_personal || '');
-
+          setIncidenciasGenerales(commentsResponse.data.guard.incidencias_generales || ''); // ← Añadir esta línea
+          
           // Si tenemos guardDetails, cargar asignaciones actuales inmediatamente
           const guardId = commentsResponse.data.guard.id;
           if (guardId) {
@@ -365,13 +324,14 @@ const BrigadeDetail = () => {
           setGuardDetails(null);
           setComentarios('');
           setIncidenciasPersonal('');
+          setIncidenciasGenerales(''); // ← Añadir esta línea
         }
-
+  
         // Agregar carga de guardias anteriores
         setLoadingPreviousAssignments(true);
         const previousGuardsData = await GuardsApiService.getPreviousGuards(id_brigada, selectedDate);
         setPreviousGuards(previousGuardsData);
-
+  
         setError(null);
       } catch (error) {
         console.error('Error en fetchBrigadeDetails:', error);
@@ -381,7 +341,7 @@ const BrigadeDetail = () => {
         setLoadingPreviousAssignments(false);
       }
     };
-
+  
     fetchBrigadeDetails();
   }, [id_brigada, selectedDate]);
 

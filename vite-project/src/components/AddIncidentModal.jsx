@@ -31,7 +31,8 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
     leido: false,
     nivel: '',
     equipo: '',
-    id_vestuario: '' // Nuevo campo para vestuario
+    id_vestuario: '',
+    nombre_equipo: ''
   });
 
   const [errorMessages, setErrorMessages] = useState({});
@@ -45,7 +46,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   const [parks, setParks] = useState([]);
   const [userSearch, setUserSearch] = useState('');
   const [vehicleSearch, setVehicleSearch] = useState('');
-  
+
   // Equipos personales
   const [equipmentCategories, setEquipmentCategories] = useState([]);
   const [allEquipments, setAllEquipments] = useState([]);
@@ -72,7 +73,8 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
         leido: false,
         nivel: '',
         equipo: '',
-        id_vestuario: ''
+        id_vestuario: '',
+        nombre_equipo: ''
       });
       setErrorMessages({});
       setIsSubmitting(false);
@@ -95,7 +97,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
           PersonalEquipmentApiService.getPersonalEquipments(),
           ClothingItemApiService.getClothingItems()
         ]);
-        
+
         setUsers(usersResponse.data);
         setFilteredUsers(usersResponse.data);
         setVehicles(vehiclesResponse.data);
@@ -103,7 +105,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
         setParks(parksResponse.data);
         setEquipmentCategories(categoriesResponse.data);
         setAllEquipments(equipmentsResponse.data);
-        
+
         // Manejar la respuesta de los ítems de vestuario
         if (clothingItemsResponse.data && clothingItemsResponse.data.data) {
           setClothingItems(clothingItemsResponse.data.data);
@@ -147,8 +149,8 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   useEffect(() => {
     if (selectedCategory && equipmentSearch) {
       const filtered = allEquipments.filter(
-        (equipment) => 
-          equipment.categoria === selectedCategory && 
+        (equipment) =>
+          equipment.categoria === selectedCategory &&
           equipment.nombre.toLowerCase().includes(equipmentSearch.toLowerCase())
       );
       setFilteredEquipments(filtered);
@@ -167,7 +169,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Si cambia la categoría, reseteamos el equipo seleccionado
     if (name === 'categoria_equipo') {
       setSelectedCategory(value);
@@ -230,6 +232,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
                 <option value="instalacion">Instalación</option>
                 <option value="equipo">Equipos Personales</option>
                 <option value="vestuario">Vestuario</option>
+                <option value="equipos_comunes">Equipos Comunes</option>
               </select>
               {errorMessages.tipo && <span className="text-red-500 text-sm">{errorMessages.tipo}</span>}
 
@@ -316,7 +319,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
                     ))}
                   </select>
                   {errorMessages.categoria_equipo && <span className="text-red-500 text-sm">{errorMessages.categoria_equipo}</span>}
-                  
+
                   {/* Selector de equipo específico (si hay categoría seleccionada) */}
                   {selectedCategory && (
                     <div className="mt-4">
@@ -378,6 +381,25 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
                     ))}
                   </select>
                   {errorMessages.id_vestuario && <span className="text-red-500 text-sm">{errorMessages.id_vestuario}</span>}
+                </div>
+              )}
+
+              {formValues.tipo === 'equipos_comunes' && (
+                <div className="mt-4">
+                  <label htmlFor="nombre_equipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Nombre del equipo:
+                  </label>
+                  <input
+                    type="text"
+                    name="nombre_equipo"
+                    id="nombre_equipo"
+                    value={formValues.nombre_equipo}
+                    onChange={handleChange}
+                    placeholder="Introduce el nombre del equipo..."
+                    className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+                    required
+                  />
+                  {errorMessages.nombre_equipo && <span className="text-red-500 text-sm">{errorMessages.nombre_equipo}</span>}
                 </div>
               )}
             </div>

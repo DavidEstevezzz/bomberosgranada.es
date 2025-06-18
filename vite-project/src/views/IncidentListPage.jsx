@@ -106,6 +106,8 @@ const IncidentListPage = () => {
       return getEmployee2Name(incident);
     } else if (incident.tipo.toLowerCase() === 'equipo' && incident.equipment) {
       return incident.equipment.nombre;
+    }  else if (incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo) {
+        return incident.nombre_equipo;
     } else if (incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item) {
       return incident.clothing_item.name;
     }
@@ -241,6 +243,8 @@ const IncidentListPage = () => {
         extraInfo = incident.clothing_item.name;
       } else if (incident.tipo.toLowerCase() === 'equipo' && incident.equipment) {
         extraInfo = incident.equipment.nombre;
+      } else if (incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo) {
+        extraInfo = incident.nombre_equipo;
       }
       tableData.push({
         fecha: dayjs(incident.fecha).format('DD/MM/YYYY'),
@@ -441,6 +445,15 @@ const IncidentListPage = () => {
             Equipos
           </button>
           <button
+            onClick={() => setSelectedTypeFilter("equipos_comunes")}
+            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "equipos_comunes"
+              ? "bg-indigo-600 text-white shadow-md"
+              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+              }`}
+          >
+            Equipos Comunes
+          </button>
+          <button
             onClick={() => setSelectedTypeFilter("vestuario")}
             className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "vestuario"
               ? "bg-indigo-600 text-white shadow-md"
@@ -518,7 +531,10 @@ const IncidentListPage = () => {
                         <span>{incident.equipment.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
                         <span>{incident.clothing_item.name}</span>
+                      ) : incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo ? (
+                        <span>{incident.nombre_equipo}</span>
                       ) : null}
+                      
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
                       <button
@@ -664,7 +680,10 @@ const IncidentListPage = () => {
                         <span>{incident.equipment.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
                         <span>{incident.clothing_item.name}</span>
+                      ) : incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo ? (
+                        <span>{incident.nombre_equipo}</span>
                       ) : null}
+                      
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
                       <button
@@ -809,6 +828,8 @@ const IncidentListPage = () => {
                         <span>{incident.equipment.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
                         <span>{incident.clothing_item.name}</span>
+                      ) : incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo ? (
+                        <span>{incident.nombre_equipo}</span>
                       ) : null}
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
@@ -978,6 +999,8 @@ const IncidentListPage = () => {
                         <span>{incident.equipment.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
                         <span>{incident.clothing_item.name}</span>
+                      ) : incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo ? (
+                        <span>{incident.nombre_equipo}</span>
                       ) : null}
                     </td>
                     <td className="py-2 px-2 flex space-x-2">

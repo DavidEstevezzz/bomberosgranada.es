@@ -49,6 +49,8 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
         return faBuilding;
       case 'equipo':
         return faRadio;
+      case 'equipos_comunes':
+        return faTools;
       default:
         return faTools;
     }
@@ -131,6 +133,12 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
                 <div className="flex justify-between">
                   <span className="font-medium">Equipo:</span>
                   <span>{incident.equipment ? incident.equipment.nombre : ''}</span>
+                </div>
+              )}
+              {incident.tipo === 'equipos_comunes' && (
+                <div className="flex justify-between">
+                  <span className="font-medium">Equipo Común:</span>
+                  <span>{incident.nombre_equipo || ''}</span>
                 </div>
               )}
             </div>

@@ -34,7 +34,8 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
     leido: incident.leido || false,
     nivel: incident.nivel || '',
     equipo: incident.equipo || '',
-    id_vestuario: incident.id_vestuario || ''
+    id_vestuario: incident.id_vestuario || '',
+    nombre_equipo: incident.nombre_equipo || ''
   });
 
   const [errorMessages, setErrorMessages] = useState({});
@@ -117,7 +118,8 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
         leido: incident.leido || false,
         nivel: incident.nivel || '',
         equipo: incident.equipo || '',
-        id_vestuario: incident.id_vestuario || ''
+        id_vestuario: incident.id_vestuario || '',
+        nombre_equipo: incident.nombre_equipo || ''
       });
     }
   }, [incident, user]);
@@ -234,6 +236,7 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
                 <option value="instalacion">Instalación</option>
                 <option value="equipo">Equipos Personales</option>
                 <option value="vestuario">Vestuario</option>
+                <option value="equipos_comunes">Equipos Comunes</option>
               </select>
               {errorMessages.tipo && <span className="text-red-500 text-sm">{errorMessages.tipo}</span>}
 
@@ -320,6 +323,24 @@ const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }) => {
                     ))}
                   </select>
                   {errorMessages.id_vestuario && <span className="text-red-500 text-sm">{errorMessages.id_vestuario}</span>}
+                </div>
+              )}
+               {formValues.tipo === 'equipos_comunes' && (
+                <div className="mt-4">
+                  <label htmlFor="nombre_equipo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Nombre del equipo:
+                  </label>
+                  <input
+                    type="text"
+                    name="nombre_equipo"
+                    id="nombre_equipo"
+                    value={formValues.nombre_equipo}
+                    onChange={handleChange}
+                    placeholder="Introduce el nombre del equipo..."
+                    className={`bg-gray-50 border text-sm rounded-lg block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+                    required
+                  />
+                  {errorMessages.nombre_equipo && <span className="text-red-500 text-sm">{errorMessages.nombre_equipo}</span>}
                 </div>
               )}
               {formValues.tipo === 'equipo' && (

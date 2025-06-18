@@ -148,6 +148,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/guards/{id}/daily-activities', [GuardController::class, 'updateDailyActivities']);
     Route::put('/guards/update-comments', [GuardController::class, 'updateComments']);
     Route::put('/guards/update-personal-incidents', [GuardController::class, 'updatePersonalIncidents']);
+    Route::put('/guards/update-general-incidents', [GuardController::class, 'updateGeneralIncidents']);
 
 
     Route::get('/suggestions', [SuggestionController::class, 'index']);

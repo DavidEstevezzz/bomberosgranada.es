@@ -44,6 +44,8 @@ const BrigadeDetail = () => {
   const [showAssignFirefighterModal, setShowAssignFirefighterModal] = useState(false);
   const [isUpdatingPersonal, setIsUpdatingPersonal] = useState(false);
   const [isResettingEquipments, setIsResettingEquipments] = useState(false);
+  const [incidenciasGenerales, setIncidenciasGenerales] = useState('');
+  const [isUpdatingGenerales, setIsUpdatingGenerales] = useState(false);
   const navigate = useNavigate();
   const { darkMode } = useDarkMode();
 
@@ -179,10 +181,13 @@ const BrigadeDetail = () => {
           setGuardDetails(commentsResponse.data.guard);
           setComentarios(commentsResponse.data.guard.comentarios || '');
           setIncidenciasPersonal(commentsResponse.data.guard.incidencias_personal || '');
+          setIncidenciasGenerales(commentsResponse.data.guard.incidencias_generales || '');
+
         } else {
           setGuardDetails(null);
           setComentarios('');
           setIncidenciasPersonal('');
+          setIncidenciasGenerales('');
         }
         setError(null);
       } catch (error) {
@@ -259,6 +264,25 @@ const BrigadeDetail = () => {
     }
   };
 
+  const handleGeneralIncidentsSubmit = async () => {
+    if (!user || !['jefe', 'mando'].includes(user.type)) return;
+    setIsUpdatingGenerales(true);
+    try {
+      const response = await GuardsApiService.updateGeneralIncidents(
+        id_brigada,
+        selectedDate,
+        incidenciasGenerales
+      );
+      setIncidenciasGenerales(response.data.incidencias_generales);
+      // Puedes actualizar guardDetails si lo requieres:
+      setGuardDetails(response.data.guard ? response.data.guard : response.data);
+    } catch (error) {
+      console.error('Error actualizando incidencias generales:', error);
+    } finally {
+      setIsUpdatingGenerales(false);
+    }
+  };
+
   // Estado para asignaciones actuales y asignaciones previas (guard anterior: id_guard - 10)
   const [assignments, setAssignments] = useState({
     Mañana: {},
@@ -319,13 +343,13 @@ const BrigadeDetail = () => {
           setError('No brigade data found');
         }
         setFirefighters(Object.values(response.data.firefighters));
-  
+
         const commentsResponse = await GuardsApiService.getGuard(id_brigada, selectedDate);
         if (commentsResponse.data.guard) {
           setGuardDetails(commentsResponse.data.guard);
           setComentarios(commentsResponse.data.guard.comentarios || '');
           setIncidenciasPersonal(commentsResponse.data.guard.incidencias_personal || '');
-          
+
           // Si tenemos guardDetails, cargar asignaciones actuales inmediatamente
           const guardId = commentsResponse.data.guard.id;
           if (guardId) {
@@ -342,12 +366,12 @@ const BrigadeDetail = () => {
           setComentarios('');
           setIncidenciasPersonal('');
         }
-  
+
         // Agregar carga de guardias anteriores
         setLoadingPreviousAssignments(true);
         const previousGuardsData = await GuardsApiService.getPreviousGuards(id_brigada, selectedDate);
         setPreviousGuards(previousGuardsData);
-  
+
         setError(null);
       } catch (error) {
         console.error('Error en fetchBrigadeDetails:', error);
@@ -357,7 +381,7 @@ const BrigadeDetail = () => {
         setLoadingPreviousAssignments(false);
       }
     };
-  
+
     fetchBrigadeDetails();
   }, [id_brigada, selectedDate]);
 
@@ -1762,6 +1786,36 @@ const BrigadeDetail = () => {
               ) : (
                 <p className="text-white">
                   {incidenciasPersonal || 'No hay incidencias de personal disponibles.'}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Incidencias Generales y Propuestas */}
+          <div className="mt-6 w-full">
+            <h2 className="text-xl font-bold mb-4">Incidencias Generales y Propuestas</h2>
+            <div className="bg-gray-700 p-4 rounded-lg">
+              {['mando', 'jefe'].includes(user.type) ? (
+                <>
+                  <textarea
+                    className="w-full p-2 rounded bg-gray-600 text-white"
+                    rows="4"
+                    placeholder="Añadir incidencias generales y propuestas..."
+                    value={incidenciasGenerales}
+                    onChange={(e) => setIncidenciasGenerales(e.target.value)}
+                  />
+                  <button
+                    onClick={handleGeneralIncidentsSubmit}
+                    className={`mt-2 px-4 py-2 rounded ${isUpdatingGenerales ? 'bg-gray-500' : 'bg-blue-500'
+                      } text-white`}
+                    disabled={isUpdatingGenerales}
+                  >
+                    {isUpdatingGenerales ? 'Guardando...' : 'Guardar Incidencias Generales'}
+                  </button>
+                </>
+              ) : (
+                <p className="text-white">
+                  {incidenciasGenerales || 'No hay incidencias generales disponibles.'}
                 </p>
               )}
             </div>

@@ -17,6 +17,7 @@ const GuardDetailPage = () => {
     const [error, setError] = useState(null);
     const [assignments, setAssignments] = useState({});
     const [processingUser, setProcessingUser] = useState(null);
+    
 
     useEffect(() => {
         const fetchData = async () => {

@@ -20,13 +20,13 @@ const BrigadePracticesPage = () => {
       // Obtener todos los usuarios de brigadas con una sola llamada a la API
       const response = await BrigadeUsersApiService.getBrigadeUsers();
       const allBrigadeUsers = response.data;
-      
+
       // Agrupar por brigada
       const groupedByBrigade = {};
-      
+
       allBrigadeUsers.forEach(brigadeUser => {
         if (!brigadeUser.id_brigada) return;
-        
+
         // Si la brigada no existe en nuestro objeto, la creamos
         if (!groupedByBrigade[brigadeUser.id_brigada]) {
           groupedByBrigade[brigadeUser.id_brigada] = {
@@ -35,7 +35,7 @@ const BrigadePracticesPage = () => {
             users: []
           };
         }
-        
+
         // Agregar el usuario a la brigada
         if (brigadeUser.user) {
           groupedByBrigade[brigadeUser.id_brigada].users.push({
@@ -47,7 +47,7 @@ const BrigadePracticesPage = () => {
           });
         }
       });
-      
+
       // Convertir el objeto a array para facilitar la renderización
       const brigadesArray = Object.values(groupedByBrigade);
       setBrigadeData(brigadesArray);
@@ -63,6 +63,25 @@ const BrigadePracticesPage = () => {
     setSearchTerm(e.target.value);
   };
 
+  const handleDecrementPractice = async (brigadeId, userId) => {
+    try {
+      setUpdating(true);
+      await BrigadeUsersApiService.incrementPracticas({
+        id_brigada: brigadeId,
+        id_usuario: userId,
+        increment: -1  // Restar 1 práctica
+      });
+      
+      // Recargar datos después de actualizar
+      await fetchData();
+      setUpdating(false);
+    } catch (err) {
+      console.error('Error al decrementar prácticas:', err);
+      setError('Error al actualizar prácticas. Inténtalo de nuevo más tarde.');
+      setUpdating(false);
+    }
+  };
+
   const handleIncrementPractice = async (brigadeId, userId) => {
     try {
       setUpdating(true);
@@ -71,7 +90,7 @@ const BrigadePracticesPage = () => {
         id_usuario: userId,
         increment: 1
       });
-      
+
       // Recargar datos después de actualizar
       await fetchData();
       setUpdating(false);
@@ -86,14 +105,14 @@ const BrigadePracticesPage = () => {
     if (!searchTerm) return brigadeData;
 
     const searchTermLower = searchTerm.toLowerCase();
-    
+
     return brigadeData.map(brigade => {
       // Filtrar usuarios de la brigada que coincidan con el término de búsqueda
-      const filteredUsers = brigade.users.filter(user => 
-        user.name.toLowerCase().includes(searchTermLower) || 
+      const filteredUsers = brigade.users.filter(user =>
+        user.name.toLowerCase().includes(searchTermLower) ||
         user.lastname.toLowerCase().includes(searchTermLower)
       );
-      
+
       // Solo devolver las brigadas que tengan usuarios que coincidan
       if (filteredUsers.length > 0) {
         return {
@@ -138,30 +157,29 @@ const BrigadePracticesPage = () => {
               <input
                 type="text"
                 placeholder="Buscar bombero..."
-                className={`w-full px-4 py-2 rounded-lg border ${
-                  darkMode 
-                    ? 'bg-gray-800 text-white border-gray-700 focus:border-blue-500' 
+                className={`w-full px-4 py-2 rounded-lg border ${darkMode
+                    ? 'bg-gray-800 text-white border-gray-700 focus:border-blue-500'
                     : 'bg-white text-gray-900 border-gray-300 focus:border-blue-600'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50`}
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50`}
                 value={searchTerm}
                 onChange={handleSearch}
               />
-              <svg 
+              <svg
                 className={`absolute right-3 top-2.5 h-5 w-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 20 20" 
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
                 fill="currentColor"
               >
-                <path 
-                  fillRule="evenodd" 
-                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" 
-                  clipRule="evenodd" 
+                <path
+                  fillRule="evenodd"
+                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                  clipRule="evenodd"
                 />
               </svg>
             </div>
           </div>
         </header>
-        
+
         {/* Overlay de carga durante actualización */}
         {updating && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -171,17 +189,16 @@ const BrigadePracticesPage = () => {
             </div>
           </div>
         )}
-        
+
         {/* Tablas por brigada */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {processedBrigadeData.map(brigade => (
-            <div 
-              key={brigade.id} 
-              className={`p-6 rounded-xl shadow-md transition-all duration-300 ${
-                darkMode 
-                  ? 'bg-gray-800 hover:bg-gray-750' 
+            <div
+              key={brigade.id}
+              className={`p-6 rounded-xl shadow-md transition-all duration-300 ${darkMode
+                  ? 'bg-gray-800 hover:bg-gray-750'
                   : 'bg-white hover:shadow-lg'
-              }`}
+                }`}
             >
               <h2 className="text-xl font-semibold mb-4 flex items-center">
                 <svg className="h-5 w-5 mr-2 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -211,19 +228,38 @@ const BrigadePracticesPage = () => {
                               </span>
                             </td>
                             <td className="px-6 py-3 text-right whitespace-nowrap">
-                              <button 
-                                onClick={() => handleIncrementPractice(brigade.id, user.id)}
-                                className={`inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm ${
-                                  darkMode 
-                                    ? 'bg-blue-600 hover:bg-blue-700' 
-                                    : 'bg-blue-500 hover:bg-blue-600'
-                                } text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-                                title="Añadir práctica"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                              </button>
+                              <div className="flex items-center justify-end space-x-2">
+                                {/* Botón para restar práctica */}
+                                <button
+                                  onClick={() => handleDecrementPractice(brigade.id, user.id)}
+                                  disabled={user.practices <= 0} // Deshabilitar si no hay prácticas
+                                  className={`inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm ${user.practices <= 0
+                                      ? 'bg-gray-400 cursor-not-allowed'
+                                      : darkMode
+                                        ? 'bg-red-600 hover:bg-red-700'
+                                        : 'bg-red-500 hover:bg-red-600'
+                                    } text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
+                                  title={user.practices <= 0 ? "No se pueden restar más prácticas" : "Restar práctica"}
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
+                                  </svg>
+                                </button>
+
+                                {/* Botón para sumar práctica */}
+                                <button
+                                  onClick={() => handleIncrementPractice(brigade.id, user.id)}
+                                  className={`inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm ${darkMode
+                                      ? 'bg-blue-600 hover:bg-blue-700'
+                                      : 'bg-blue-500 hover:bg-blue-600'
+                                    } text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                                  title="Añadir práctica"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                  </svg>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -248,7 +284,7 @@ const BrigadePracticesPage = () => {
             </svg>
             <h3 className="text-xl font-medium mb-2">No se encontraron registros</h3>
             <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {searchTerm 
+              {searchTerm
                 ? `No se encontraron bomberos que coincidan con "${searchTerm}"`
                 : "No hay registros de prácticas disponibles en este momento."}
             </p>

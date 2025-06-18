@@ -361,7 +361,6 @@ const MessagesPage = () => {
               <th className="py-2 px-4">Asunto</th>
               <th className="py-2 px-4">Remitente/Destinatario</th>
               <th className="py-2 px-4">Tipo</th>
-              <th className="py-2 px-4">Estado</th>
               <th className="py-2 px-4">Acciones</th>
             </tr>
           </thead>
@@ -397,15 +396,7 @@ const MessagesPage = () => {
                       {isMassiveMessage(message) ? `Masivo (${message.massive})` : 'Individual'}
                     </span>
                   </td>
-                  <td className="py-2 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      message.is_read 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {message.is_read ? 'Leído' : 'No leído'}
-                    </span>
-                  </td>
+                  
                   <td className="py-2 px-4">
                     <div className="flex space-x-2 justify-center items-center">
                       <button

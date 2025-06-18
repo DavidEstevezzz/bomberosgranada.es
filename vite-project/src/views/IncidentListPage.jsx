@@ -47,6 +47,18 @@ const IncidentListPage = () => {
   const [pendingMediumPage, setPendingMediumPage] = useState(1);
   const [pendingLowPage, setPendingLowPage] = useState(1);
 
+  // Estados para ordenación por extras
+  const [pendingHighExtrasSortOrder, setPendingHighExtrasSortOrder] = useState('asc');
+  const [pendingMediumExtrasSortOrder, setPendingMediumExtrasSortOrder] = useState('asc');
+  const [pendingLowExtrasSortOrder, setPendingLowExtrasSortOrder] = useState('asc');
+  const [resolvedExtrasSortOrder, setResolvedExtrasSortOrder] = useState('asc');
+
+  // Estados para controlar qué columna está activa para ordenar
+  const [pendingHighSortBy, setPendingHighSortBy] = useState('fecha');
+  const [pendingMediumSortBy, setPendingMediumSortBy] = useState('fecha');
+  const [pendingLowSortBy, setPendingLowSortBy] = useState('fecha');
+  const [resolvedSortBy, setResolvedSortBy] = useState('fecha');
+
   useEffect(() => {
     fetchIncidents();
   }, []);
@@ -81,6 +93,47 @@ const IncidentListPage = () => {
     }
   };
 
+  // Funciones auxiliares para mostrar nombres
+  const getCreatorName = (incident) =>
+    incident.creator ? `${incident.creator.nombre} ${incident.creator.apellido}` : incident.id_empleado;
+  const getEmployee2Name = (incident) =>
+    incident.employee2 ? `${incident.employee2.nombre} ${incident.employee2.apellido}` : '';
+
+  const getExtraValue = (incident) => {
+    if (incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre) {
+      return incident.vehicle.nombre;
+    } else if (incident.tipo.toLowerCase() === 'personal' && incident.employee2) {
+      return getEmployee2Name(incident);
+    } else if (incident.tipo.toLowerCase() === 'equipo' && incident.equipment) {
+      return incident.equipment.nombre;
+    } else if (incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item) {
+      return incident.clothing_item.name;
+    }
+    return '';
+  };
+
+  const sortByExtras = (array, order) => {
+    return [...array].sort((a, b) => {
+      const extraA = getExtraValue(a).toLowerCase();
+      const extraB = getExtraValue(b).toLowerCase();
+
+      if (order === 'asc') {
+        return extraA.localeCompare(extraB);
+      } else {
+        return extraB.localeCompare(extraA);
+      }
+    });
+  };
+
+  const sortIncidents = (array, sortBy, order) => {
+    if (sortBy === 'fecha') {
+      return sortByFecha(array, order);
+    } else if (sortBy === 'extras') {
+      return sortByExtras(array, order);
+    }
+    return array;
+  };
+
   // Filtrar incidencias por parque (si se selecciona alguna; de lo contrario se muestran todas)
   const filteredIncidents = incidents.filter((incident) => {
     const matchesPark =
@@ -110,7 +163,11 @@ const IncidentListPage = () => {
     dayjs(incident.fecha).month() === currentMonth
   );
   // Ordenamos según el estado (ascendente o descendente)
-  const sortedResolvedIncidents = sortByFecha(filteredResolvedIncidents, resolvedSortOrder);
+  const sortedResolvedIncidents = sortIncidents(
+    filteredResolvedIncidents,
+    resolvedSortBy,
+    resolvedSortBy === 'fecha' ? resolvedSortOrder : resolvedExtrasSortOrder
+  );
   const totalResolvedPages = Math.ceil(sortedResolvedIncidents.length / resolvedItemsPerPage);
   const resolvedIndexOfLast = resolvedCurrentPage * resolvedItemsPerPage;
   const resolvedIndexOfFirst = resolvedIndexOfLast - resolvedItemsPerPage;
@@ -135,14 +192,21 @@ const IncidentListPage = () => {
   const totalHighPages = Math.ceil(pendingHigh.length / pendingItemsPerPage);
   const highIndexOfLast = pendingHighPage * pendingItemsPerPage;
   const highIndexOfFirst = highIndexOfLast - pendingItemsPerPage;
-  const sortedPendingHigh = sortByFecha(pendingHigh, pendingHighSortOrder);
-  const currentPendingHigh = sortedPendingHigh.slice(highIndexOfFirst, highIndexOfLast);
+  const sortedPendingHigh = sortIncidents(
+    pendingHigh,
+    pendingHighSortBy,
+    pendingHighSortBy === 'fecha' ? pendingHighSortOrder : pendingHighExtrasSortOrder
+  ); const currentPendingHigh = sortedPendingHigh.slice(highIndexOfFirst, highIndexOfLast);
 
   // Paginación para pendientes de nivel Medio
   const totalMediumPages = Math.ceil(pendingMedium.length / pendingItemsPerPage);
   const mediumIndexOfLast = pendingMediumPage * pendingItemsPerPage;
   const mediumIndexOfFirst = mediumIndexOfLast - pendingItemsPerPage;
-  const sortedPendingMedium = sortByFecha(pendingMedium, pendingMediumSortOrder);
+  const sortedPendingMedium = sortIncidents(
+    pendingMedium,
+    pendingMediumSortBy,
+    pendingMediumSortBy === 'fecha' ? pendingMediumSortOrder : pendingMediumExtrasSortOrder
+  );
   const currentPendingMedium = sortedPendingMedium.slice(mediumIndexOfFirst, mediumIndexOfLast);
 
   // Paginación para pendientes de nivel Bajo
@@ -150,13 +214,13 @@ const IncidentListPage = () => {
   const lowIndexOfLast = pendingLowPage * pendingItemsPerPage;
   const lowIndexOfFirst = lowIndexOfLast - pendingItemsPerPage;
 
-  const sortedPendingLow = sortByFecha(pendingLow, pendingLowSortOrder);
+  const sortedPendingLow = sortIncidents(
+    pendingLow,
+    pendingLowSortBy,
+    pendingLowSortBy === 'fecha' ? pendingLowSortOrder : pendingLowExtrasSortOrder
+  );
   const currentPendingLow = sortedPendingLow.slice(lowIndexOfFirst, lowIndexOfLast);
-  // Funciones auxiliares para mostrar nombres
-  const getCreatorName = (incident) =>
-    incident.creator ? `${incident.creator.nombre} ${incident.creator.apellido}` : incident.id_empleado;
-  const getEmployee2Name = (incident) =>
-    incident.employee2 ? `${incident.employee2.nombre} ${incident.employee2.apellido}` : '';
+  
 
   // Función para exportar a PDF (usa todos los pendientes sin paginar)
   const exportPDF = () => {
@@ -401,12 +465,32 @@ const IncidentListPage = () => {
                 <th className="py-2 px-2">Tipo</th>
                 <th
                   className="py-2 px-2 cursor-pointer"
-                  onClick={() => setPendingHighSortOrder(pendingHighSortOrder === 'asc' ? 'desc' : 'asc')}
+                  onClick={() => {
+                    if (pendingHighSortBy === 'fecha') {
+                      setPendingHighSortOrder(pendingHighSortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setPendingHighSortBy('fecha');
+                      setPendingHighSortOrder('asc');
+                    }
+                  }}
                 >
-                  Fecha {pendingHighSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
-                </th>                <th className="py-2 px-2">Resolviendo</th>
+                  Fecha {pendingHighSortBy === 'fecha' && (pendingHighSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                </th>
+                <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
-                <th className="py-2 px-2">Extras</th>
+                <th
+                  className="py-2 px-2 cursor-pointer"
+                  onClick={() => {
+                    if (pendingHighSortBy === 'extras') {
+                      setPendingHighExtrasSortOrder(pendingHighExtrasSortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setPendingHighSortBy('extras');
+                      setPendingHighExtrasSortOrder('asc');
+                    }
+                  }}
+                >
+                  Extras {pendingHighSortBy === 'extras' && (pendingHighExtrasSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                </th>
                 <th className="py-2 px-2">Acciones</th>
               </tr>
             </thead>
@@ -527,12 +611,32 @@ const IncidentListPage = () => {
                 <th className="py-2 px-2">Tipo</th>
                 <th
                   className="py-2 px-2 cursor-pointer"
-                  onClick={() => setPendingMediumSortOrder(pendingMediumSortOrder === 'asc' ? 'desc' : 'asc')}
+                  onClick={() => {
+                    if (pendingMediumSortBy === 'fecha') {
+                      setPendingMediumSortOrder(pendingMediumSortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setPendingMediumSortBy('fecha');
+                      setPendingMediumSortOrder('asc');
+                    }
+                  }}
                 >
-                  Fecha {pendingMediumSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
-                </th>                <th className="py-2 px-2">Resolviendo</th>
+                  Fecha {pendingMediumSortBy === 'fecha' && (pendingMediumSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                </th>
+                <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
-                <th className="py-2 px-2">Extras</th>
+                <th
+                  className="py-2 px-2 cursor-pointer"
+                  onClick={() => {
+                    if (pendingMediumSortBy === 'extras') {
+                      setPendingMediumExtrasSortOrder(pendingMediumExtrasSortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setPendingMediumSortBy('extras');
+                      setPendingMediumExtrasSortOrder('asc');
+                    }
+                  }}
+                >
+                  Extras {pendingMediumSortBy === 'extras' && (pendingMediumExtrasSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                </th>
                 <th className="py-2 px-2">Acciones</th>
               </tr>
             </thead>
@@ -652,12 +756,32 @@ const IncidentListPage = () => {
                 <th className="py-2 px-2">Tipo</th>
                 <th
                   className="py-2 px-2 cursor-pointer"
-                  onClick={() => setPendingLowSortOrder(pendingLowSortOrder === 'asc' ? 'desc' : 'asc')}
+                  onClick={() => {
+                    if (pendingLowSortBy === 'fecha') {
+                      setPendingLowSortOrder(pendingLowSortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setPendingLowSortBy('fecha');
+                      setPendingLowSortOrder('asc');
+                    }
+                  }}
                 >
-                  Fecha {pendingLowSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
-                </th>                <th className="py-2 px-2">Resolviendo</th>
+                  Fecha {pendingLowSortBy === 'fecha' && (pendingLowSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                </th>
+                <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
-                <th className="py-2 px-2">Extras</th>
+                <th
+                  className="py-2 px-2 cursor-pointer"
+                  onClick={() => {
+                    if (pendingLowSortBy === 'extras') {
+                      setPendingLowExtrasSortOrder(pendingLowExtrasSortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setPendingLowSortBy('extras');
+                      setPendingLowExtrasSortOrder('asc');
+                    }
+                  }}
+                >
+                  Extras {pendingLowSortBy === 'extras' && (pendingLowExtrasSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                </th>
                 <th className="py-2 px-2">Acciones</th>
               </tr>
             </thead>
@@ -801,13 +925,32 @@ const IncidentListPage = () => {
                 <th className="py-2 px-2">Tipo</th>
                 <th
                   className="py-2 px-2 cursor-pointer"
-                  onClick={() => setResolvedSortOrder(resolvedSortOrder === 'asc' ? 'desc' : 'asc')}
+                  onClick={() => {
+                    if (resolvedSortBy === 'fecha') {
+                      setResolvedSortOrder(resolvedSortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setResolvedSortBy('fecha');
+                      setResolvedSortOrder('asc');
+                    }
+                  }}
                 >
-                  Fecha {resolvedSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />}
+                  Fecha {resolvedSortBy === 'fecha' && (resolvedSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
                 </th>
                 <th className="py-2 px-2">Resolviendo</th>
                 <th className="py-2 px-2">Parque</th>
-                <th className="py-2 px-2">Extras</th>
+                <th
+                  className="py-2 px-2 cursor-pointer"
+                  onClick={() => {
+                    if (resolvedSortBy === 'extras') {
+                      setResolvedExtrasSortOrder(resolvedExtrasSortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setResolvedSortBy('extras');
+                      setResolvedExtrasSortOrder('asc');
+                    }
+                  }}
+                >
+                  Extras {resolvedSortBy === 'extras' && (resolvedExtrasSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                </th>
                 <th className="py-2 px-2">Acciones</th>
               </tr>
             </thead>

@@ -96,8 +96,8 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
               <div className="flex justify-between">
                 <span className="font-medium">Nivel:</span>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${incident.nivel?.toLowerCase() === 'alto' ? 'bg-red-500 text-white' :
-                    incident.nivel?.toLowerCase() === 'medio' ? 'bg-orange-500 text-white' :
-                      'bg-yellow-500 text-white'}`}>
+                  incident.nivel?.toLowerCase() === 'medio' ? 'bg-orange-500 text-white' :
+                    'bg-yellow-500 text-white'}`}>
                   {incident.nivel?.toUpperCase()}
                 </span>
               </div>
@@ -152,12 +152,24 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
         {incident.resolver && (
           <div className={`p-4 mt-6 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
             <h4 className="text-sm uppercase tracking-wider font-semibold mb-3 text-gray-500 dark:text-gray-400">Resolución</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
+            <div className="space-y-4">
+              {/* Información del resolvedor */}
+              <div className="flex justify-between items-center">
                 <span className="font-medium">Resuelto por:</span>
-                <span>{incident.resolver ? `${incident.resolver.nombre} ${incident.resolver.apellido}` : 'No resuelto'}</span>
+                <span className="text-right">{incident.resolver ? `${incident.resolver.nombre} ${incident.resolver.apellido}` : 'No resuelto'}</span>
               </div>
-              
+
+              {/* Descripción de la resolución */}
+              {incident.resolucion && (
+                <div>
+                  <span className="font-medium block mb-2">Descripción de la resolución:</span>
+                  <div className={`p-3 rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                    <p className="whitespace-pre-line text-sm leading-relaxed">
+                      {incident.resolucion}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

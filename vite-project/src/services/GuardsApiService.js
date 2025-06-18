@@ -79,6 +79,15 @@ async updatePersonalIncidents(idBrigada, date, incidencias_personal) {
   });
 }
 
+async updateGeneralIncidents(idBrigada, date, incidencias_generales) {
+  const url = `${API_URL}/update-general-incidents`;
+  return await BaseApiService.put(url, {
+    id_brigada: idBrigada,
+    date: date,
+    incidencias_generales: incidencias_generales,
+  });
+}
+
 async getPreviousGuards(id_brigada, currentDate, daysBack = [5, 10, 15]) {
   try {
     const guardPromises = daysBack.map(days => {

@@ -572,30 +572,47 @@ ufw allow https
 
 ## 📄 Licencia
 
-Este proyecto está licenciado bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
+Este proyecto está licenciado bajo la Licencia Propietaria - ver el archivo [LICENSE](LICENSE) para más detalles.
 
 ```
-MIT License
+LICENCIA PROPIETARIA - SISTEMA DE GESTIÓN DE BOMBEROS DE GRANADA
 
-Copyright (c) 2024 Cuerpo de Bomberos de Granada
+Copyright (c) 2024 Cuerpo de Bomberos de Granada. Todos los derechos reservados.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+TÉRMINOS Y CONDICIONES:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. DERECHOS DE AUTOR
+   Este software y toda la documentación asociada son propiedad exclusiva del 
+   Cuerpo de Bomberos de Granada y están protegidos por las leyes de derechos 
+   de autor y tratados internacionales.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. PROHIBICIONES
+   Queda ESTRICTAMENTE PROHIBIDO:
+   - Usar, copiar, modificar o distribuir este software sin autorización escrita
+   - Realizar ingeniería inversa, descompilar o desensamblar el software
+   - Crear obras derivadas basadas en este software
+   - Sublicenciar, vender, alquilar o transferir el software a terceros
+   - Usar el software con fines comerciales sin licencia específica
+
+3. USO AUTORIZADO
+   Este software está destinado ÚNICAMENTE para uso interno del Cuerpo de 
+   Bomberos de Granada y entidades expresamente autorizadas por escrito.
+
+4. VIOLACIONES
+   Cualquier uso no autorizado constituye una violación de derechos de autor 
+   y puede resultar en acciones legales, incluyendo pero no limitado a:
+   - Acciones civiles por daños y perjuicios
+   - Medidas cautelares
+   - Acciones penales según la legislación aplicable
+
+5. DISCLAIMER
+   EL SOFTWARE SE PROPORCIONA "TAL COMO ESTÁ" SIN GARANTÍAS DE NINGÚN TIPO.
+
+Para solicitar autorizaciones o licencias especiales, contactar:
+legal@bomberosgranada.es
+
+Fecha de vigencia: [FECHA]
+Jurisdicción: Granada, España
 ```
 
 

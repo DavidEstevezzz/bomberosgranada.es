@@ -2,7 +2,6 @@
 
 [![Laravel](https://img.shields.io/badge/Laravel-10.x-red.svg)](https://laravel.com)
 [![React](https://img.shields.io/badge/React-18.x-blue.svg)](https://reactjs.org)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Production-brightgreen.svg)]()
 
 Sistema integral de gestión para el Cuerpo de Bomberos de Granada desarrollado con Laravel (Backend) y React (Frontend). Esta aplicación de administración completa permite gestionar recursos humanos, equipos, guardias, vehículos e incidencias del cuerpo de bomberos, proporcionando una solución tecnológica moderna y eficiente para la gestión operativa diaria.

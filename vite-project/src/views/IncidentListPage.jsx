@@ -99,6 +99,25 @@ const IncidentListPage = () => {
   const getEmployee2Name = (incident) =>
     incident.employee2 ? `${incident.employee2.nombre} ${incident.employee2.apellido}` : '';
 
+  const normalizeTypeName = (tipo) => {
+    switch (tipo?.toLowerCase()) {
+      case 'vehiculo':
+        return 'Vehículo';
+      case 'personal':
+        return 'Personal';
+      case 'instalacion':
+        return 'Instalación';
+      case 'equipo':
+        return 'Equipos Personales';
+      case 'vestuario':
+        return 'Vestuario';
+      case 'equipos_comunes':
+        return 'Equipos Comunes';
+      default:
+        return tipo?.charAt(0).toUpperCase() + tipo?.slice(1) || '';
+    }
+  };
+
   const getExtraValue = (incident) => {
     if (incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre) {
       return incident.vehicle.nombre;
@@ -106,8 +125,8 @@ const IncidentListPage = () => {
       return getEmployee2Name(incident);
     } else if (incident.tipo.toLowerCase() === 'equipo' && incident.equipment) {
       return incident.equipment.nombre;
-    }  else if (incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo) {
-        return incident.nombre_equipo;
+    } else if (incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo) {
+      return incident.nombre_equipo;
     } else if (incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item) {
       return incident.clothing_item.name;
     }
@@ -222,7 +241,7 @@ const IncidentListPage = () => {
     pendingLowSortBy === 'fecha' ? pendingLowSortOrder : pendingLowExtrasSortOrder
   );
   const currentPendingLow = sortedPendingLow.slice(lowIndexOfFirst, lowIndexOfLast);
-  
+
 
   // Función para exportar a PDF (usa todos los pendientes sin paginar)
   const exportPDF = () => {
@@ -249,7 +268,7 @@ const IncidentListPage = () => {
       tableData.push({
         fecha: dayjs(incident.fecha).format('DD/MM/YYYY'),
         descripcion: incident.descripcion,
-        tipo: incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1),
+        tipo: normalizeTypeName(incident.tipo),
         extra: extraInfo,
         nivel: incident.nivel ? incident.nivel.toLowerCase() : ''
       });
@@ -512,7 +531,7 @@ const IncidentListPage = () => {
                 currentPendingHigh.map((incident) => (
                   <tr key={incident.id_incidencia} className="border-b border-gray-700">
                     <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
+                    <td className="py-2 px-2">{normalizeTypeName(incident.tipo)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
                       {incident.leido ? (
@@ -534,7 +553,7 @@ const IncidentListPage = () => {
                       ) : incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo ? (
                         <span>{incident.nombre_equipo}</span>
                       ) : null}
-                      
+
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
                       <button
@@ -661,7 +680,7 @@ const IncidentListPage = () => {
                 currentPendingMedium.map((incident) => (
                   <tr key={incident.id_incidencia} className="border-b border-gray-700">
                     <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
+                    <td className="py-2 px-2">{normalizeTypeName(incident.tipo)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
                       {incident.leido ? (
@@ -683,7 +702,7 @@ const IncidentListPage = () => {
                       ) : incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo ? (
                         <span>{incident.nombre_equipo}</span>
                       ) : null}
-                      
+
                     </td>
                     <td className="py-2 px-2 flex space-x-2">
                       <button
@@ -809,7 +828,7 @@ const IncidentListPage = () => {
                 currentPendingLow.map((incident) => (
                   <tr key={incident.id_incidencia} className="border-b border-gray-700">
                     <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
+                    <td className="py-2 px-2">{normalizeTypeName(incident.tipo)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
                       {incident.leido ? (
@@ -980,7 +999,7 @@ const IncidentListPage = () => {
                 currentResolvedIncidents.map((incident) => (
                   <tr key={incident.id_incidencia} className="border-b border-gray-700">
                     <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">{incident.tipo.charAt(0).toUpperCase() + incident.tipo.slice(1)}</td>
+                    <td className="py-2 px-2">{normalizeTypeName(incident.tipo)}</td>
                     <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
                     <td className="py-2 px-2">
                       {incident.leido ? (

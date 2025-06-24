@@ -24,6 +24,25 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
   // Clase condicional para forzar scroll vertical y altura completa en móvil
   const modalContentClass = isMobile ? 'overflow-y-auto h-screen' : '';
 
+  const normalizeTypeName = (tipo) => {
+    switch (tipo?.toLowerCase()) {
+      case 'vehiculo':
+        return 'Vehículo';
+      case 'personal':
+        return 'Personal';
+      case 'instalacion':
+        return 'Instalación';
+      case 'equipo':
+        return 'Equipos Personales';
+      case 'vestuario':
+        return 'Vestuario';
+      case 'equipos_comunes':
+        return 'Equipos Comunes';
+      default:
+        return tipo?.charAt(0).toUpperCase() + tipo?.slice(1) || '';
+    }
+  };
+  
   // Determinar el ícono y color basado en el nivel de incidencia
   const getLevelColorClass = () => {
     switch (incident.nivel?.toLowerCase()) {
@@ -111,7 +130,7 @@ const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="font-medium">Tipo:</span>
-                <span className="capitalize">{incident.tipo}</span>
+                <span>{normalizeTypeName(incident.tipo)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Parque:</span>

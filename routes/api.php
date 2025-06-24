@@ -240,10 +240,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::put('/brigades/{id}', [BrigadeController::class, 'update']);
     Route::delete('/brigades/{id}', [BrigadeController::class, 'destroy']);
 
-    // CRUD de Guardias
-    Route::post('/guards', [GuardController::class, 'store']);
-    Route::put('/guards/{id}', [GuardController::class, 'update']);
-    Route::delete('/guards/{id}', [GuardController::class, 'destroy']);
+
 
 
     // CRUD de Horas Extra
@@ -282,4 +279,10 @@ Route::post('/firefighters-assignments/delete-rt', [FirefighterAssignmentControl
 
 
     Route::delete('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'destroy']);
+});
+
+Route::middleware(['auth:sanctum', 'guard.access'])->group(function () {
+    Route::post('/guards', [GuardController::class, 'store']);
+    Route::put('/guards/{id}', [GuardController::class, 'update']);
+    Route::delete('/guards/{id}', [GuardController::class, 'destroy']);
 });

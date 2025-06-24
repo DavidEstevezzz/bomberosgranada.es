@@ -25,6 +25,7 @@ class Guard extends Model
         'incidencias_personal',
         'limpieza_vehiculos',
         'limpieza_dependencias',
+        'incidencias_generales',
         'callejero',
         'ejercicios',
         'repostaje',

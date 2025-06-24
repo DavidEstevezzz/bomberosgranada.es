@@ -6,6 +6,8 @@ use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use App\Http\Middleware\CheckSpecialCommandMiddleware;
+use App\Http\Middleware\AuthSpecialCommand;
+use App\Http\Middleware\GuardAccess;
 
 
 class Kernel extends HttpKernel

@@ -281,7 +281,7 @@ Route::post('/firefighters-assignments/delete-rt', [FirefighterAssignmentControl
     Route::delete('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'destroy']);
 });
 
-Route::middleware(['auth:sanctum', 'guard.access'])->group(function () {
+Route::middleware(['auth:sanctum', 'auth.special.command'])->group(function () {
     Route::post('/guards', [GuardController::class, 'store']);
     Route::put('/guards/{id}', [GuardController::class, 'update']);
     Route::delete('/guards/{id}', [GuardController::class, 'destroy']);

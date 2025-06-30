@@ -200,6 +200,17 @@ class FirefighterAssignmentController extends Controller
         $previousDay = date('Y-m-d', strtotime("$date -1 day"));
         $nextDay     = date('Y-m-d', strtotime("$date +1 day"));
 
+        $absoluteExclusions = [
+            'Bajas',
+            'Vacaciones',
+            'Asuntos Propios',
+            'Modulo',
+            'Licencias por Jornadas',
+            'Licencias por Días',
+            'Compensacion grupos especiales',
+            'Brigada J'
+        ];
+
         // Obtener las brigadas en guardia para ayer y mañana
         $guardYesterday = Guard::with('brigade')
             ->where('date', $previousDay)
@@ -268,8 +279,15 @@ class FirefighterAssignmentController extends Controller
                 $guardsToday = Guard::with('brigade')->where('date', $date)->get();
                 $guardBrigadesToday = $guardsToday->pluck('brigade.nombre')->unique()->toArray();
 
+                // EXCLUSIÓN ABSOLUTA: Si está en brigada de exclusión absoluta, excluir siempre
+                if (in_array($brigadeNameToday, $absoluteExclusions)) {
+                    $unavailableFirefighterIds[] = $firefighterId;
+                    Log::info("Bombero {$firefighterId} EXCLUIDO ABSOLUTAMENTE por estar en brigada '{$brigadeNameToday}' HOY.");
+                    continue;
+                }
+
+                // Si está asignado a una brigada en guardia HOY, excluir sin importar protección
                 if (in_array($brigadeNameToday, $guardBrigadesToday)) {
-                    // Si está asignado a una brigada en guardia HOY, excluir sin importar protección
                     $unavailableFirefighterIds[] = $firefighterId;
                     Log::info("Bombero {$firefighterId} EXCLUIDO por estar en brigada '{$brigadeNameToday}' con guardia HOY (sin considerar protección).");
                     continue;
@@ -764,7 +782,8 @@ class FirefighterAssignmentController extends Controller
             'Modulo',
             'Licencias por Jornadas',
             'Licencias por Días',
-            'Compensacion grupos especiales', 'Brigada J'
+            'Compensacion grupos especiales',
+            'Brigada J'
         ];
 
         // Brigadas que tienen guardia HOY
@@ -1128,39 +1147,39 @@ class FirefighterAssignmentController extends Controller
     }
 
     public function checkEspecialAssignment(Request $request)
-{
-    // Validar los campos recibidos
-    $validator = Validator::make($request->all(), [
-        'id_brigada' => 'required|exists:brigades,id_brigada',
-        'fecha' => 'required|date',
-        'id_usuario' => 'required|exists:users,id_empleado',
-    ]);
+    {
+        // Validar los campos recibidos
+        $validator = Validator::make($request->all(), [
+            'id_brigada' => 'required|exists:brigades,id_brigada',
+            'fecha' => 'required|date',
+            'id_usuario' => 'required|exists:users,id_empleado',
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json($validator->errors(), 400);
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idBrigada = $request->input('id_brigada');
+        $fecha = $request->input('fecha');
+        $idUsuario = $request->input('id_usuario');
+
+        // Buscar si existe alguna asignación específica para ese usuario en la brigada y fecha especificadas
+        // Ahora verificamos explícitamente que sea para este usuario
+        $existeAsignacion = Firefighters_assignment::where('id_brigada_destino', $idBrigada)
+            ->where('fecha_ini', $fecha)
+            ->where('id_empleado', $idUsuario)
+            ->exists();
+
+        Log::info("checkEspecialAssignment - Verificando asignación para usuario {$idUsuario} en brigada {$idBrigada} en fecha {$fecha}: " .
+            ($existeAsignacion ? 'Existe' : 'No existe'));
+
+        return response()->json([
+            'id_brigada' => $idBrigada,
+            'fecha' => $fecha,
+            'id_usuario' => $idUsuario,
+            'has_assignments' => $existeAsignacion
+        ]);
     }
-
-    $idBrigada = $request->input('id_brigada');
-    $fecha = $request->input('fecha');
-    $idUsuario = $request->input('id_usuario');
-
-    // Buscar si existe alguna asignación específica para ese usuario en la brigada y fecha especificadas
-    // Ahora verificamos explícitamente que sea para este usuario
-    $existeAsignacion = Firefighters_assignment::where('id_brigada_destino', $idBrigada)
-        ->where('fecha_ini', $fecha)
-        ->where('id_empleado', $idUsuario)
-        ->exists();
-
-    Log::info("checkEspecialAssignment - Verificando asignación para usuario {$idUsuario} en brigada {$idBrigada} en fecha {$fecha}: " .
-        ($existeAsignacion ? 'Existe' : 'No existe'));
-
-    return response()->json([
-        'id_brigada' => $idBrigada,
-        'fecha' => $fecha,
-        'id_usuario' => $idUsuario,
-        'has_assignments' => $existeAsignacion
-    ]);
-}
 
 
     /**

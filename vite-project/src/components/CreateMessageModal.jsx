@@ -153,7 +153,7 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
         </div>
 
         {/* Opciones de mensaje masivo para Jefe */}
-        {currentUserRole === 'Jefe' && (
+        {currentUserRole?.toLowerCase() === 'jefe' && (
           <div className="mb-4">
             <label className="block mb-2 text-sm font-medium">
               Tipo de Mensaje
@@ -289,11 +289,10 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
             <button
               type="button"
               onClick={onClose}
-              className={`px-5 py-2.5 text-sm font-medium rounded-lg focus:outline-none focus:ring-4 ${
-                darkMode
+              className={`px-5 py-2.5 text-sm font-medium rounded-lg focus:outline-none focus:ring-4 ${darkMode
                   ? 'text-red-500 border border-red-500 hover:text-white hover:bg-red-600'
                   : 'text-red-600 border border-red-600 hover:text-white hover:bg-red-600'
-              }`}
+                }`}
               disabled={isSubmitting}
             >
               Cancelar
@@ -301,9 +300,8 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-5 py-2.5 text-sm font-medium rounded-lg focus:outline-none focus:ring-4 ${
-                darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-700 hover:bg-blue-800 text-white'
-              }`}
+              className={`px-5 py-2.5 text-sm font-medium rounded-lg focus:outline-none focus:ring-4 ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-700 hover:bg-blue-800 text-white'
+                }`}
             >
               {isSubmitting ? 'Enviando...' : 'Enviar Mensaje'}
             </button>

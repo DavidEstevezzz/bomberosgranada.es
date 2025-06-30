@@ -13,7 +13,8 @@ const EditGuardEspecialModal = ({ isOpen, onClose, guard, setGuards, availableBr
     if (guard) {
       console.log('Datos de guardia recibidos:', guard);
       setBrigadeId(guard.id_brigada);
-      setType(guard.tipo);
+      // ✅ CAMBIO: Usar 'especiales' en lugar de 'tipo'
+      setType(guard.especiales || '');
     }
   }, [guard]);
 
@@ -27,10 +28,11 @@ const EditGuardEspecialModal = ({ isOpen, onClose, guard, setGuards, availableBr
       return;
     }
 
+    // ✅ CAMBIO PRINCIPAL: Enviar a 'especiales' en lugar de 'tipo'
     const updatedGuard = {
       ...guard,
       id_brigada: brigadeId,
-      tipo: type
+      especiales: type  // 🎯 CORREGIDO: usar 'especiales' en lugar de 'tipo'
     };
 
     try {
@@ -42,6 +44,8 @@ const EditGuardEspecialModal = ({ isOpen, onClose, guard, setGuards, availableBr
       }
       
       console.log('Actualizando guardia con ID:', guardId);
+      console.log('Datos a enviar:', updatedGuard); // 🔍 Para debuggear
+      
       const response = await GuardsApiService.updateGuard(guardId, updatedGuard);
       
       // Actualizar el estado de guardias en la página padre
@@ -134,6 +138,7 @@ const EditGuardEspecialModal = ({ isOpen, onClose, guard, setGuards, availableBr
                   onChange={e => setType(e.target.value)}
                   required
                 >
+                  <option value="">Selecciona tipo</option>
                   <option value="Guardia localizada">Guardia localizada</option>
                   <option value="Prácticas">Prácticas</option>
                 </select>

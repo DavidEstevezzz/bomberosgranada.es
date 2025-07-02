@@ -19,7 +19,8 @@ class Firefighters_assignment extends Model
         'turno',
         'id_request',
         'id_change_request',
-        'requerimiento'
+        'requerimiento',
+        'tipo_asignacion',
     ];
 
     public function firefighter()

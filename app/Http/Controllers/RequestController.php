@@ -334,6 +334,7 @@ class RequestController extends Controller
             'id_brigada_destino' => $brigadeId,
             'fecha_ini' => $miRequest->fecha_ini,
             'turno' => $turnoAsignacion,
+            'tipo_asignacion' => 'ida',
         ]);
 
         Log::info("Asignación inicial - Empleado: {$miRequest->id_empleado}, Brigada Destino: {$brigadeId}, Fecha: {$miRequest->fecha_ini}, Turno: {$turnoAsignacion}");
@@ -356,6 +357,7 @@ class RequestController extends Controller
             'id_brigada_destino' => $brigadeOriginal,
             'fecha_ini' => $fechaDevolucion,
             'turno' => $turnoDevolucion,
+            'tipo_asignacion' => 'vuelta',
         ]);
     }
 
@@ -414,8 +416,11 @@ class RequestController extends Controller
         $assignments = Firefighters_assignment::where('id_empleado', $idEmpleado)
             ->where('fecha_ini', '<=', $fechaInicio)
             ->orderBy('fecha_ini', 'desc')
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")  // ← AGREGAR
+            ->orderBy('created_at', 'desc')                          // ← AGREGAR
             ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get();
+            
 
         if ($assignments->isEmpty()) {
             Log::info("No se encontraron asignaciones anteriores para el empleado {$idEmpleado} antes de la fecha {$fechaInicio}.");

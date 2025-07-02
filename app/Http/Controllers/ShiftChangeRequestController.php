@@ -157,7 +157,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
-                'turno' => 'Mañana'
+                'turno' => 'Mañana',
+                'tipo_asignacion' => 'ida',
             ]);
 
             Firefighters_assignment::create([
@@ -166,7 +167,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
-                'turno' => 'Mañana'
+                'turno' => 'Mañana',
+                'tipo_asignacion' => 'vuelta',
             ]);
 
             // Crear asignaciones para Bombero 2
@@ -176,7 +178,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
-                'turno' => 'Mañana'
+                'turno' => 'Mañana',
+                'tipo_asignacion' => 'ida',
             ]);
 
             Firefighters_assignment::create([
@@ -185,7 +188,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
-                'turno' => 'Mañana'
+                'turno' => 'Mañana',
+                'tipo_asignacion' => 'vuelta',
             ]);
 
             Log::info('Asignaciones creadas para cambio espejo');
@@ -215,7 +219,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
-                'turno' => $turnoAsignacion
+                'turno' => $turnoAsignacion,
+                'tipo_asignacion' => 'ida',
             ]);
 
             // Crear asignación inicial para Bombero 2
@@ -225,7 +230,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
-                'turno' => $turnoAsignacion
+                'turno' => $turnoAsignacion,
+                'tipo_asignacion' => 'ida',
             ]);
 
             // Crear asignación de devolución para Bombero 1
@@ -235,7 +241,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
-                'turno' => $turnoDevolucion
+                'turno' => $turnoDevolucion,
+                'tipo_asignacion' => 'vuelta',
             ]);
 
             // Crear asignación de devolución para Bombero 2
@@ -245,7 +252,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
-                'turno' => $turnoDevolucion
+                'turno' => $turnoDevolucion,
+                'tipo_asignacion' => 'vuelta',
             ]);
 
             Log::info('Asignaciones creadas para cambio de guardia Día Completo');
@@ -272,7 +280,9 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
-                'turno' => $turnoAsignacion
+                'turno' => $turnoAsignacion,
+                'tipo_asignacion' => 'ida',
+
             ]);
 
             // Crear asignación inicial para Bombero 2
@@ -282,7 +292,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
-                'turno' => $turnoAsignacion
+                'turno' => $turnoAsignacion,
+                'tipo_asignacion' => 'ida',
             ]);
 
             // Crear asignación de devolución para Bombero 1
@@ -292,7 +303,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada2,
                 'id_brigada_destino' => $shiftChangeRequest->brigada1,
-                'turno' => $turnoDevolucion
+                'turno' => $turnoDevolucion,
+                'tipo_asignacion' => 'vuelta',
             ]);
 
             // Crear asignación de devolución para Bombero 2
@@ -302,7 +314,8 @@ private function createAssignments($shiftChangeRequest)
                 'id_change_request' => $shiftChangeRequest->id,
                 'id_brigada_origen' => $shiftChangeRequest->brigada1,
                 'id_brigada_destino' => $shiftChangeRequest->brigada2,
-                'turno' => $turnoDevolucion
+                'turno' => $turnoDevolucion,
+                'tipo_asignacion' => 'vuelta',
             ]);
 
             Log::info('Asignaciones creadas para cambio de guardia (otros turnos)');
@@ -420,11 +433,13 @@ private function determinarTurnoInicial($turnoOriginal)
 public function getLatestBrigadeAssignments($date)
 {
     $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
-        ->orderByRaw("CASE WHEN fecha_ini = '$date' THEN 0 ELSE 1 END") // Priorizar asignaciones del día actual
-        ->orderBy('fecha_ini', 'desc') // Luego ordenar descendentemente por fecha
-        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')") // Priorizar turnos
+        ->orderByRaw("CASE WHEN fecha_ini = '$date' THEN 0 ELSE 1 END")
+        ->orderBy('fecha_ini', 'desc')
+        ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")  // ← AGREGAR
+        ->orderBy('created_at', 'desc')                          // ← AGREGAR
+        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
         ->get()
-        ->unique('id_empleado'); // Eliminar duplicados por empleado
+        ->unique('id_empleado');
     
     return $assignments;
 }

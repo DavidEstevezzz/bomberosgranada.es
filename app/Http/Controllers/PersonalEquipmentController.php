@@ -286,199 +286,108 @@ class PersonalEquipmentController extends Controller
         return $numeros;
     }
     /**
-     * Verificar disponibilidad y asignar equipos individualmente para un puesto específico
-     * 
-     * @param Request $request Contiene los parámetros: 
-     *                         - parkId (1: Norte, 2: Sur)
-     *                         - assignment (ej: B1, C3, N2, etc)
-     *                         - maxAssignment (ej: B7 si es el último bombero asignado)
-     *                         - date (opcional, fecha para la asignación, formato: YYYY-MM-DD)
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function checkAndAssignEquipment(Request $request)
-    {
-        Log::info("=== INICIO checkAndAssignEquipment ===");
-        Log::info("Request completo: " . json_encode($request->all()));
+ * Verificar disponibilidad y asignar equipos individualmente para un puesto específico
+ * 
+ * @param Request $request Contiene los parámetros: 
+ *                         - parkId (1: Norte, 2: Sur)
+ *                         - assignment (ej: B1, C3, N2, etc)
+ *                         - maxAssignment (ej: B7 si es el último bombero asignado)
+ *                         - date (opcional, fecha para la asignación, formato: YYYY-MM-DD)
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function checkAndAssignEquipment(Request $request)
+{
+    Log::info("=== INICIO checkAndAssignEquipment ===");
+    Log::info("Request completo: " . json_encode($request->all()));
 
-        $request->validate([
-            'parkId' => 'required|integer|in:1,2',
-            'assignment' => 'required|string',
-            'maxAssignment' => 'required|string',
-            'date' => 'date'
-        ]);
+    $request->validate([
+        'parkId' => 'required|integer|in:1,2',
+        'assignment' => 'required|string',
+        'maxAssignment' => 'required|string',
+        'date' => 'nullable|date' // Fecha opcional
+    ]);
 
-        $parkId = $request->parkId;
-        $assignment = strtoupper($request->assignment);
-        $maxAssignment = strtoupper($request->maxAssignment);
-        $date = $request->date ;
+    $parkId = $request->parkId;
+    $assignment = strtoupper($request->assignment);
+    $maxAssignment = strtoupper($request->maxAssignment);
+    $date = $request->date ?? now()->toDateString();
 
-        Log::info("Parámetros procesados:");
-        Log::info("- parkId: $parkId");
-        Log::info("- assignment: $assignment");
-        Log::info("- maxAssignment: $maxAssignment");
-        Log::info("- date: $date");
+    Log::info("Parámetros procesados:");
+    Log::info("- parkId: $parkId");
+    Log::info("- assignment: $assignment");
+    Log::info("- maxAssignment: $maxAssignment");
+    Log::info("- date: $date");
 
-        // PASO 1: VERIFICAR SI EXISTE LA CLASE GuardAssignment
-        Log::info("=== VERIFICANDO CLASE GuardAssignment ===");
-        if (!class_exists('\App\Models\GuardAssignment')) {
-            Log::error("ERROR: La clase GuardAssignment no existe");
-            return response()->json(['error' => 'GuardAssignment class not found'], 500);
-        }
-        Log::info("✓ Clase GuardAssignment existe");
-
-        // PASO 2: VERIFICAR SI EXISTE EL MÉTODO
-        Log::info("=== VERIFICANDO MÉTODO getAssignmentsByDateAndParque ===");
-        if (!method_exists('\App\Models\GuardAssignment', 'getAssignmentsByDateAndParque')) {
-            Log::error("ERROR: El método getAssignmentsByDateAndParque no existe");
-            return response()->json(['error' => 'Method getAssignmentsByDateAndParque not found'], 500);
-        }
-        Log::info("✓ Método getAssignmentsByDateAndParque existe");
-
-        // PASO 3: VERIFICAR BASE DE DATOS ANTES DE LA LLAMADA
-        Log::info("=== VERIFICANDO DATOS EN BD ANTES DE LA LLAMADA ===");
-        try {
-            // Verificar si existe la tabla guards
-            $guardsCount = DB::table('guards')->count();
-            Log::info("Total de registros en tabla guards: $guardsCount");
-
-            // Verificar si existe alguna guardia para esta fecha
-            $guardsForDate = DB::table('guards')->where('date', $date)->count();
-            Log::info("Guardias para la fecha $date: $guardsForDate");
-
-            // Verificar si existe alguna guardia para este parque
-            $guardsForPark = DB::table('guards')->where('id_parque', $parkId)->count();
-            Log::info("Guardias para el parque $parkId: $guardsForPark");
-
-            // Verificar si existe la combinación exacta
-            $exactMatch = DB::table('guards')
-                             ->where('date', $date)
-                             ->where('id_parque', $parkId)
-                             ->count();
-            Log::info("Guardias para fecha $date Y parque $parkId: $exactMatch");
-
-            // Si no hay coincidencia exacta, buscar fechas cercanas
-            if ($exactMatch === 0) {
-                Log::warning("No hay coincidencia exacta. Buscando fechas cercanas...");
-                $nearDates = DB::table('guards')
-                                ->select('date', 'id_parque', 'id_brigada')
-                                ->whereBetween('date', [
-                                    \Carbon\Carbon::parse($date)->subDays(3)->format('Y-m-d'),
-                                    \Carbon\Carbon::parse($date)->addDays(3)->format('Y-m-d')
-                                ])
-                                ->limit(10)
-                                ->get();
-                Log::info("Fechas cercanas encontradas: " . json_encode($nearDates));
-            }
-
-        } catch (\Exception $e) {
-            Log::error("Error verificando BD: " . $e->getMessage());
-        }
-
-        // PASO 4: LLAMAR AL MÉTODO Y CAPTURAR RESULTADO DETALLADAMENTE
-        Log::info("=== LLAMANDO A getAssignmentsByDateAndParque ===");
-        $currentAssignments = null;
+    // MANEJO SEGURO DE CURRENTASSIGNMENTS CON LOGS
+    Log::info("=== OBTENIENDO ASIGNACIONES ACTUALES ===");
+    $currentAssignments = null;
+    $currentAssignmentsArray = [];
+    
+    try {
+        Log::info("Llamando a getAssignmentsByDateAndParque con fecha: $date, parque: $parkId");
+        $currentAssignments = \App\Models\GuardAssignment::getAssignmentsByDateAndParque($date, $parkId);
         
-        try {
-            Log::info("Ejecutando: GuardAssignment::getAssignmentsByDateAndParque('$date', $parkId)");
-            
-            $currentAssignments = \App\Models\GuardAssignment::getAssignmentsByDateAndParque($date, $parkId);
-            
-            Log::info("=== RESULTADO DE LA LLAMADA ===");
-            Log::info("Tipo de resultado: " . gettype($currentAssignments));
-            
-            if ($currentAssignments === null) {
-                Log::error("ERROR ENCONTRADO: El método devolvió NULL");
-                Log::error("Esta es la causa del error 'Call to a member function toArray() on null'");
-            } elseif (is_object($currentAssignments)) {
-                Log::info("Es un objeto de clase: " . get_class($currentAssignments));
-                
-                if ($currentAssignments instanceof \Illuminate\Support\Collection) {
-                    Log::info("✓ Es una Collection válida");
-                    Log::info("Cantidad de elementos: " . $currentAssignments->count());
-                    Log::info("Contenido: " . json_encode($currentAssignments->toArray()));
-                } else {
-                    Log::warning("Es un objeto pero NO es una Collection");
-                    
-                    if (method_exists($currentAssignments, 'toArray')) {
-                        Log::info("El objeto tiene método toArray()");
-                    } else {
-                        Log::error("ERROR: El objeto NO tiene método toArray()");
-                    }
-                }
-            } else {
-                Log::info("El resultado es de tipo: " . gettype($currentAssignments));
-                Log::info("Valor: " . json_encode($currentAssignments));
-            }
-
-        } catch (\Exception $e) {
-            Log::error("EXCEPCIÓN en getAssignmentsByDateAndParque:");
-            Log::error("Mensaje: " . $e->getMessage());
-            Log::error("Archivo: " . $e->getFile() . " línea " . $e->getLine());
-            Log::error("Stack trace: " . $e->getTraceAsString());
-            
-            $currentAssignments = collect(); // Fallback
-        }
-
-        // PASO 5: INTENTAR CONVERTIR A ARRAY DE FORMA SEGURA
-        Log::info("=== CONVIRTIENDO A ARRAY ===");
-        $currentAssignmentsArray = [];
+        Log::info("Tipo de resultado: " . gettype($currentAssignments));
         
-        try {
-            if ($currentAssignments === null) {
-                Log::warning("currentAssignments es null, usando array vacío");
-                $currentAssignmentsArray = [];
-            } elseif (is_array($currentAssignments)) {
-                Log::info("currentAssignments ya es un array");
-                $currentAssignmentsArray = $currentAssignments;
-            } elseif (method_exists($currentAssignments, 'toArray')) {
-                Log::info("Convirtiendo a array usando toArray()");
-                $currentAssignmentsArray = $currentAssignments->toArray();
-                Log::info("Conversión exitosa. Array resultante: " . json_encode($currentAssignmentsArray));
-            } else {
-                Log::error("No se puede convertir a array - no tiene método toArray()");
-                $currentAssignmentsArray = [];
-            }
-        } catch (\Exception $e) {
-            Log::error("Error convirtiendo a array: " . $e->getMessage());
+        if ($currentAssignments === null) {
+            Log::warning("getAssignmentsByDateAndParque devolvió NULL - no hay guardia para esta fecha/parque");
+            $currentAssignmentsArray = [];
+        } elseif ($currentAssignments instanceof \Illuminate\Support\Collection) {
+            $currentAssignmentsArray = $currentAssignments->toArray();
+            Log::info("✓ Collection convertida a array exitosamente");
+            Log::info("Cantidad de asignaciones: " . count($currentAssignmentsArray));
+        } else {
+            Log::warning("Resultado inesperado, usando array vacío");
             $currentAssignmentsArray = [];
         }
-
-        Log::info("Array final de asignaciones: " . json_encode($currentAssignmentsArray));
-
-        // CONTINUAR CON EL RESTO DEL MÉTODO...
-        Log::info("=== CONTINUANDO CON PROCESAMIENTO NORMAL ===");
         
-        // Determinar el rol basado en la primera letra de la asignación
-        $role = substr($assignment, 0, 1);
-        Log::info("Rol determinado: $role");
+        Log::info("Array final de asignaciones: " . json_encode($currentAssignmentsArray));
+        
+    } catch (\Exception $e) {
+        Log::error("ERROR en getAssignmentsByDateAndParque:");
+        Log::error("Mensaje: " . $e->getMessage());
+        Log::error("Stack trace: " . $e->getTraceAsString());
+        $currentAssignmentsArray = [];
+    }
 
-        // Si es operador, devolver respuesta vacía porque no necesitan equipos
-        if ($role == 'O' || strpos($assignment, 'OPERADOR') !== false || $assignment === 'TELEFONISTA') {
-            Log::info("Asignación de Operador o Telefonista detectada, no se asignan equipos");
-            return response()->json([
-                'assignment' => $assignment,
-                'initial_number' => 0,
-                'equipment_assigned' => [],
-                'equipment_details' => [],
-                'unavailable_equipment' => [],
-                'nonexistent_equipment' => []
-            ]);
-        }
+    // Agregar logs para depuración
+    Log::info("=== PROCESANDO ASIGNACIÓN ===");
+    Log::info("Procesando asignación: $assignment, maxAssignment: $maxAssignment, parque: $parkId, fecha: $date");
 
-        // Determinar las categorías a verificar según el rol
-        $categoriasAVerificar = $this->getCategoriasForRole($role);
-        Log::info("Categorías a verificar: " . implode(", ", $categoriasAVerificar));
+    // Determinar el rol basado en la primera letra de la asignación
+    $role = substr($assignment, 0, 1);
+    Log::info("Rol determinado: $role");
 
-        // Asignar equipos individualmente
-        $equipoAsignado = [];
-        $equiposNoDisponibles = [];
-        $equiposNoExistentes = [];
+    // Si es operador, devolver respuesta vacía porque no necesitan equipos
+    if ($role == 'O' || strpos($assignment, 'OPERADOR') !== false || $assignment === 'TELEFONISTA') {
+        Log::info("Asignación de Operador o Telefonista detectada, no se asignan equipos");
+        return response()->json([
+            'assignment' => $assignment,
+            'initial_number' => 0,
+            'equipment_assigned' => [],
+            'equipment_details' => [],
+            'unavailable_equipment' => [],
+            'nonexistent_equipment' => []
+        ]);
+    }
 
-        // El resto del procesamiento continúa igual...
-        foreach ($categoriasAVerificar as $categoria) {
-            Log::info("Verificando categoría: $categoria para asignación $assignment");
+    // Determinar las categorías a verificar según el rol
+    $categoriasAVerificar = $this->getCategoriasForRole($role);
+    Log::info("Categorías a verificar: " . implode(", ", $categoriasAVerificar));
 
+    // Asignar equipos individualmente
+    $equipoAsignado = [];
+    $equiposNoDisponibles = [];
+    $equiposNoExistentes = [];
+
+    Log::info("=== INICIANDO ASIGNACIÓN POR CATEGORÍAS ===");
+
+    foreach ($categoriasAVerificar as $categoria) {
+        Log::info("--- Procesando categoría: $categoria ---");
+
+        try {
             $numerosYaAsignados = $this->getAssignedNumbersByDateAndCategory($parkId, $date, $categoria);
+            Log::info("Números ya asignados para $categoria: " . json_encode($numerosYaAsignados));
 
             // Obtener el número reservado para esta asignación y categoría
             $numeroReservado = $this->getReservedNumber($assignment, $categoria, $parkId);
@@ -486,17 +395,21 @@ class PersonalEquipmentController extends Controller
 
             // PASO 1: Intentar asignar primero el número reservado según la tabla
             $asignacionCompletada = false;
+            Log::info("PASO 1: Verificando número reservado $numeroReservado");
 
             // Comprobar si el equipo con el número reservado existe
             $equipoExiste = $this->checkEquipmentExists($categoria, $numeroReservado);
+            Log::info("¿Existe equipo $categoria $numeroReservado? " . ($equipoExiste ? "SÍ" : "NO"));
 
             if ($equipoExiste) {
                 // Verificar si el número ya ha sido asignado para esta categoría en esta fecha
                 $yaAsignado = $this->isEquipmentAlreadyAssigned($categoria, $numeroReservado, $parkId, $date);
+                Log::info("¿Ya está asignado $categoria $numeroReservado? " . ($yaAsignado ? "SÍ" : "NO"));
 
                 if (!$yaAsignado) {
                     // Comprobar si el equipo está disponible en general
                     $disponible = $this->isEquipmentAvailable($categoria, $numeroReservado);
+                    Log::info("¿Está disponible $categoria $numeroReservado? " . ($disponible ? "SÍ" : "NO"));
 
                     if ($disponible) {
                         $equipoAsignado[$categoria] = $numeroReservado;
@@ -510,58 +423,152 @@ class PersonalEquipmentController extends Controller
                             $date
                         );
 
-                        Log::info("Asignado número reservado para $categoria: $numeroReservado");
+                        // Añadir al conjunto de números asignados
+                        $numerosYaAsignados[] = $numeroReservado;
+
+                        Log::info("✓ ÉXITO: Asignado número reservado para $categoria: $numeroReservado");
                         $asignacionCompletada = true;
                     } else {
-                        Log::info("Equipo $categoria $numeroReservado existe pero no está disponible");
+                        Log::info("❌ Equipo $categoria $numeroReservado existe pero no está disponible");
                         $equiposNoDisponibles[] = "$categoria $numeroReservado";
                     }
                 } else {
-                    Log::info("Equipo $categoria $numeroReservado ya asignado a otro en esta fecha");
+                    Log::info("❌ Equipo $categoria $numeroReservado ya asignado a otro en esta fecha");
                     $equiposNoDisponibles[] = "$categoria $numeroReservado (ya asignado)";
                 }
             } else {
-                Log::info("Equipo $categoria $numeroReservado no existe en el sistema");
+                Log::info("❌ Equipo $categoria $numeroReservado no existe en el sistema");
                 $equiposNoExistentes[] = "$categoria $numeroReservado";
             }
 
-            // Si no se completó la asignación, buscar alternativas
+            // PASO 2: Si no se pudo asignar el número reservado, buscar alternativas
             if (!$asignacionCompletada) {
-                Log::info("Buscando alternativa para $categoria");
-                // Aquí iría la lógica de búsqueda de alternativas...
-                // Por simplicidad, asigno el número reservado + 1 como ejemplo
-                $numeroAlternativo = $numeroReservado + 1;
-                $equipoAsignado[$categoria] = $numeroAlternativo;
-                Log::info("Asignado número alternativo para $categoria: $numeroAlternativo");
+                Log::info("PASO 2: Buscando alternativas para $categoria (número reservado $numeroReservado no disponible)");
+
+                try {
+                    // Obtener un rango para buscar alternativas
+                    $rangoBusqueda = $this->calcularRangoBusqueda($role, $parkId);
+                    Log::info("Rango de búsqueda calculado: min={$rangoBusqueda['min']}, max={$rangoBusqueda['max']}");
+
+                    // Buscar el número más cercano disponible
+                    Log::info("Llamando a findAvailableInRange...");
+                    $numeroAlternativo = $this->findAvailableInRange(
+                        $categoria,
+                        $numeroReservado,
+                        $rangoBusqueda['min'],
+                        $rangoBusqueda['max'],
+                        $parkId,
+                        $date,
+                        $numerosYaAsignados,
+                        $assignment,
+                        $currentAssignmentsArray
+                    );
+
+                    if ($numeroAlternativo !== null) {
+                        $equipoAsignado[$categoria] = $numeroAlternativo;
+
+                        // Marcar este equipo como asignado en la base de datos
+                        $this->markEquipmentAsAssigned(
+                            $categoria,
+                            $numeroAlternativo,
+                            $parkId,
+                            $assignment,
+                            $date
+                        );
+
+                        // Añadir al conjunto de números asignados
+                        $numerosYaAsignados[] = $numeroAlternativo;
+
+                        Log::info("✓ ÉXITO: Asignado número alternativo para $categoria: $numeroAlternativo");
+                        $asignacionCompletada = true;
+                    } else {
+                        Log::warning("❌ No se encontró alternativa en rango para $categoria");
+
+                        // PASO 3: Intentar cualquier número como último recurso
+                        Log::info("PASO 3: Buscando cualquier número disponible (último recurso)");
+                        
+                        try {
+                            $numeroFueraDeRango = $this->findAnyAvailableNumber(
+                                $categoria,
+                                $parkId,
+                                $date,
+                                $numerosYaAsignados
+                            );
+
+                            if ($numeroFueraDeRango !== null) {
+                                $equipoAsignado[$categoria] = $numeroFueraDeRango;
+
+                                $this->markEquipmentAsAssigned(
+                                    $categoria,
+                                    $numeroFueraDeRango,
+                                    $parkId,
+                                    $assignment,
+                                    $date
+                                );
+
+                                $numerosYaAsignados[] = $numeroFueraDeRango;
+
+                                Log::info("✓ ÉXITO: Asignado número (último recurso) para $categoria: $numeroFueraDeRango");
+                            } else {
+                                Log::error("❌ FALLO TOTAL: No se encontró NINGÚN número disponible para $categoria");
+                            }
+                        } catch (\Exception $e) {
+                            Log::error("ERROR en findAnyAvailableNumber para $categoria:");
+                            Log::error("Mensaje: " . $e->getMessage());
+                            Log::error("Stack trace: " . $e->getTraceAsString());
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error("ERROR en búsqueda de alternativas para $categoria:");
+                    Log::error("Mensaje: " . $e->getMessage());
+                    Log::error("Stack trace: " . $e->getTraceAsString());
+                }
             }
+
+        } catch (\Exception $e) {
+            Log::error("ERROR GENERAL procesando categoría $categoria:");
+            Log::error("Mensaje: " . $e->getMessage());
+            Log::error("Stack trace: " . $e->getTraceAsString());
         }
 
-        // Generar respuesta final
-        $equiposCompletos = [];
-        foreach ($equipoAsignado as $categoria => $numero) {
-            $nombreCompleto = ($categoria === 'Micro') ? "Micro $numero" : "$categoria $numero";
-            $equiposCompletos[] = [
-                'categoria' => $categoria,
-                'numero' => $numero,
-                'nombre_completo' => $nombreCompleto
-            ];
-        }
-
-        $response = [
-            'assignment' => $assignment,
-            'initial_number' => isset($numeroReservado) ? $numeroReservado : 0,
-            'equipment_assigned' => $equipoAsignado,
-            'equipment_details' => $equiposCompletos,
-            'unavailable_equipment' => $equiposNoDisponibles,
-            'nonexistent_equipment' => $equiposNoExistentes
-        ];
-
-        Log::info("=== RESPUESTA FINAL ===");
-        Log::info("Respuesta: " . json_encode($response));
-        Log::info("=== FIN checkAndAssignEquipment ===");
-
-        return response()->json($response);
+        Log::info("--- Fin procesamiento categoría: $categoria ---");
     }
+
+    Log::info("=== GENERANDO RESPUESTA FINAL ===");
+
+    // Generar nombres completos de equipos para facilitar la visualización
+    $equiposCompletos = [];
+    foreach ($equipoAsignado as $categoria => $numero) {
+        // Determinar el nombre completo según la categoría
+        $nombreCompleto = ($categoria === 'Micro') ? "Micro $numero" : "$categoria $numero";
+
+        $equiposCompletos[] = [
+            'categoria' => $categoria,
+            'numero' => $numero,
+            'nombre_completo' => $nombreCompleto
+        ];
+        
+        Log::info("Equipo asignado: $nombreCompleto");
+    }
+
+    $response = [
+        'assignment' => $assignment,
+        'initial_number' => isset($numeroReservado) ? $numeroReservado : 0,
+        'equipment_assigned' => $equipoAsignado,
+        'equipment_details' => $equiposCompletos,
+        'unavailable_equipment' => $equiposNoDisponibles,
+        'nonexistent_equipment' => $equiposNoExistentes
+    ];
+
+    Log::info("=== RESPUESTA FINAL ===");
+    Log::info("Equipos asignados: " . count($equipoAsignado));
+    Log::info("Equipos no disponibles: " . count($equiposNoDisponibles));
+    Log::info("Equipos no existentes: " . count($equiposNoExistentes));
+    Log::info("Respuesta completa: " . json_encode($response));
+    Log::info("=== FIN checkAndAssignEquipment ===");
+
+    return response()->json($response);
+}
 
     private function getReservedNumbersForCategory($categoria, $parque, array $currentAssignments)
     {

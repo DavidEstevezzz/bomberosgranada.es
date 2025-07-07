@@ -304,13 +304,13 @@ class PersonalEquipmentController extends Controller
             'parkId' => 'required|integer|in:1,2',
             'assignment' => 'required|string',
             'maxAssignment' => 'required|string',
-            'date' => 'nullable|date'
+            'date' => 'date'
         ]);
 
         $parkId = $request->parkId;
         $assignment = strtoupper($request->assignment);
         $maxAssignment = strtoupper($request->maxAssignment);
-        $date = $request->date ? $request->date : now()->toDateString();
+        $date = $request->date ;
 
         Log::info("Parámetros procesados:");
         Log::info("- parkId: $parkId");

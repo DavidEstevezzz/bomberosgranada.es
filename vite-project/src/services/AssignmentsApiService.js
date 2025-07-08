@@ -13,6 +13,7 @@ const API_URL_CHECK_ESPECIAL_USER = `${API_BASE_URL}/firefighters-assignments/ch
 const API_URL_CHECK_ESPECIAL_BRIGADE = `${API_BASE_URL}/firefighters-assignments/check-especial-brigade`;
 const API_URL_DELETE_PRACTICES = `${API_BASE_URL}/firefighters-assignments/delete-practices`;
 const API_URL_DELETE_RT = `${API_BASE_URL}/firefighters-assignments/delete-rt`;
+const API_URL_EXTEND_WORKING_DAY = `${API_BASE_URL}/firefighters-assignments/extend-working-day`;
 
 import BaseApiService from './BaseApiService';
 
@@ -120,6 +121,11 @@ async checkEspecialBrigade(brigadeId, date) {
       id_usuario: userId  // Nuevo parámetro
     });
   }
+
+  async extendWorkingDay(payload) {
+    return await BaseApiService.post(API_URL_EXTEND_WORKING_DAY, payload);
+  }
 }
+
 
 export default new AssignmentsApiService();

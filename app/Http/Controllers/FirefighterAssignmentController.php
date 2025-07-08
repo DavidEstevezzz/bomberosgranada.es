@@ -1360,4 +1360,286 @@ class FirefighterAssignmentController extends Controller
             'deleted_ids' => $idsEliminados
         ]);
     }
+
+    /**
+     * Ampliar/prolongar la jornada de un bombero hacia adelante o hacia atrás
+     * Modifica la asignación de vuelta (prolongar hacia adelante) o la de ida (prolongar hacia atrás)
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function extendWorkingDay(Request $request)
+    {
+        Log::info("extendWorkingDay - Datos recibidos:", $request->all());
+
+        // Validar los campos recibidos
+        $validator = Validator::make($request->all(), [
+            'id_empleado' => 'required|exists:users,id_empleado',
+            'fecha_actual' => 'required|date', // Fecha donde tiene asignaciones actuales
+            'nueva_fecha' => 'required|date', // Nueva fecha hasta donde se quiere prolongar
+            'nuevo_turno' => 'required|in:Mañana,Tarde,Noche', // Nuevo turno
+            'direccion' => 'required|in:adelante,atras', // Dirección de la prolongación
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idEmpleado = $request->input('id_empleado');
+        $fechaActual = $request->input('fecha_actual');
+        $nuevaFecha = $request->input('nueva_fecha');
+        $nuevoTurno = $request->input('nuevo_turno');
+        $direccion = $request->input('direccion');
+
+        if ($direccion === 'adelante') {
+            return $this->extendForward($idEmpleado, $fechaActual, $nuevaFecha, $nuevoTurno);
+        } else {
+            return $this->extendBackward($idEmpleado, $fechaActual, $nuevaFecha, $nuevoTurno);
+        }
+    }
+
+    /**
+     * Prolongar jornada hacia adelante (modificando asignación de vuelta)
+     */
+    private function extendForward($idEmpleado, $fechaActual, $nuevaFecha, $nuevoTurno)
+    {
+        // CASO ESPECIAL: Detectar si estamos prolongando desde noche hasta mañana siguiente
+        $diaSiguiente = date('Y-m-d', strtotime($fechaActual . ' +1 day'));
+        $esCasoNocheMañana = ($nuevaFecha === $diaSiguiente && in_array($nuevoTurno, ['Mañana', 'Tarde']));
+
+        if ($esCasoNocheMañana) {
+            Log::info("Detectado caso especial: prolongación de noche a mañana siguiente");
+            return $this->handleNightToMorningExtension($idEmpleado, $fechaActual, $nuevaFecha, $nuevoTurno);
+        }
+
+        // CASO NORMAL: Buscar asignación de vuelta en la fecha actual
+        $asignacionVuelta = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', $fechaActual)
+            ->where('tipo_asignacion', 'vuelta')
+            ->first();
+
+        if (!$asignacionVuelta) {
+            Log::warning("No se encontró asignación de vuelta para el bombero {$idEmpleado} en la fecha {$fechaActual}");
+            return response()->json([
+                'message' => 'No se encontró una asignación de vuelta para este bombero en la fecha especificada'
+            ], 404);
+        }
+
+        // Validar que la nueva fecha no sea anterior a la fecha actual
+        if ($nuevaFecha < $fechaActual) {
+            return response()->json([
+                'message' => 'Para prolongar hacia adelante, la nueva fecha no puede ser anterior a la fecha actual'
+            ], 400);
+        }
+
+        // Guardar los valores originales para el log
+        $fechaOriginal = $asignacionVuelta->fecha_ini;
+        $turnoOriginal = $asignacionVuelta->turno;
+
+        // Actualizar la asignación de vuelta con la nueva fecha y turno
+        $asignacionVuelta->fecha_ini = $nuevaFecha;
+        $asignacionVuelta->turno = $nuevoTurno;
+        $asignacionVuelta->save();
+
+        Log::info("Jornada prolongada hacia adelante (caso normal):", [
+            'id_empleado' => $idEmpleado,
+            'id_asignacion' => $asignacionVuelta->id_asignacion,
+            'tipo_asignacion' => 'vuelta',
+            'fecha_original' => $fechaOriginal,
+            'turno_original' => $turnoOriginal,
+            'nueva_fecha' => $nuevaFecha,
+            'nuevo_turno' => $nuevoTurno
+        ]);
+
+        // Cargar las relaciones para la respuesta
+        $asignacionVuelta->load(['firefighter:id_empleado,nombre,apellido', 'brigadeOrigin:id_brigada,nombre', 'brigadeDestination:id_brigada,nombre']);
+
+        return response()->json([
+            'message' => 'Jornada prolongada hacia adelante exitosamente',
+            'tipo_modificacion' => 'vuelta',
+            'caso_especial' => 'normal',
+            'asignacion_modificada' => $asignacionVuelta,
+            'cambios' => [
+                'fecha_anterior' => $fechaOriginal,
+                'turno_anterior' => $turnoOriginal,
+                'nueva_fecha' => $nuevaFecha,
+                'nuevo_turno' => $nuevoTurno
+            ]
+        ], 200);
+    }
+
+    /**
+     * Manejar el caso especial de prolongar desde turno noche hasta mañana siguiente
+     */
+    private function handleNightToMorningExtension($idEmpleado, $fechaActual, $nuevaFecha, $nuevoTurno)
+    {
+        // Verificar que efectivamente tiene turno de noche en la fecha actual
+        $asignacionNoche = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', $fechaActual)
+            ->where('tipo_asignacion', 'ida')
+            ->where('turno', 'Noche')
+            ->first();
+
+        if (!$asignacionNoche) {
+            Log::warning("No se encontró asignación de ida con turno Noche para el bombero {$idEmpleado} en la fecha {$fechaActual}");
+            return response()->json([
+                'message' => 'No se encontró una asignación de turno noche para este bombero en la fecha especificada. El caso especial noche-mañana requiere un turno noche previo.'
+            ], 404);
+        }
+
+        // Buscar la asignación de vuelta específicamente programada para la mañana del día siguiente
+        // que debería estar relacionada con el turno de noche
+        $asignacionVueltaMañana = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', $nuevaFecha)
+            ->where('tipo_asignacion', 'vuelta')
+            ->where('turno', 'Mañana')
+            ->where('id_brigada_origen', $asignacionNoche->id_brigada_destino) // Debe venir de la misma brigada donde fue de noche
+            ->first();
+
+        if (!$asignacionVueltaMañana) {
+            Log::warning("No se encontró la asignación de vuelta por la mañana del día siguiente para el caso noche-mañana");
+            return response()->json([
+                'message' => 'No se encontró la asignación de vuelta programada para la mañana del día siguiente. Verifique que el turno de noche tenga su correspondiente vuelta programada.'
+            ], 404);
+        }
+
+        // Guardar los valores originales para el log
+        $fechaOriginal = $asignacionVueltaMañana->fecha_ini;
+        $turnoOriginal = $asignacionVueltaMañana->turno;
+
+        // Actualizar la asignación de vuelta: mantener la misma fecha pero cambiar el turno
+        $asignacionVueltaMañana->turno = $nuevoTurno;
+        $asignacionVueltaMañana->save();
+
+        Log::info("Jornada prolongada hacia adelante (caso especial noche-mañana):", [
+            'id_empleado' => $idEmpleado,
+            'id_asignacion_noche' => $asignacionNoche->id_asignacion,
+            'id_asignacion_vuelta' => $asignacionVueltaMañana->id_asignacion,
+            'fecha_original' => $fechaOriginal,
+            'turno_original' => $turnoOriginal,
+            'nueva_fecha' => $nuevaFecha,
+            'nuevo_turno' => $nuevoTurno,
+            'brigada_trabajo' => $asignacionNoche->id_brigada_destino
+        ]);
+
+        // Cargar las relaciones para la respuesta
+        $asignacionVueltaMañana->load(['firefighter:id_empleado,nombre,apellido', 'brigadeOrigin:id_brigada,nombre', 'brigadeDestination:id_brigada,nombre']);
+
+        return response()->json([
+            'message' => 'Jornada prolongada hacia adelante exitosamente (caso especial noche-mañana)',
+            'tipo_modificacion' => 'vuelta',
+            'caso_especial' => 'noche_mañana',
+            'asignacion_modificada' => $asignacionVueltaMañana,
+            'asignacion_noche_original' => [
+                'id_asignacion' => $asignacionNoche->id_asignacion,
+                'fecha' => $asignacionNoche->fecha_ini,
+                'turno' => $asignacionNoche->turno
+            ],
+            'cambios' => [
+                'fecha_anterior' => $fechaOriginal,
+                'turno_anterior' => $turnoOriginal,
+                'nueva_fecha' => $nuevaFecha,
+                'nuevo_turno' => $nuevoTurno
+            ]
+        ], 200);
+    }
+
+    /**
+     * Prolongar jornada hacia atrás (modificando asignación de ida)
+     */
+    private function extendBackward($idEmpleado, $fechaActual, $nuevaFecha, $nuevoTurno)
+    {
+        // Buscar la asignación de ida del bombero en la fecha actual
+        $asignacionIda = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', $fechaActual)
+            ->where('tipo_asignacion', 'ida')
+            ->first();
+
+        if (!$asignacionIda) {
+            Log::warning("No se encontró asignación de ida para el bombero {$idEmpleado} en la fecha {$fechaActual}");
+            return response()->json([
+                'message' => 'No se encontró una asignación de ida para este bombero en la fecha especificada'
+            ], 404);
+        }
+
+        // Validar que la nueva fecha no sea posterior a la fecha actual
+        if ($nuevaFecha > $fechaActual) {
+            return response()->json([
+                'message' => 'Para prolongar hacia atrás, la nueva fecha no puede ser posterior a la fecha actual'
+            ], 400);
+        }
+
+        // Guardar los valores originales para el log
+        $fechaOriginal = $asignacionIda->fecha_ini;
+        $turnoOriginal = $asignacionIda->turno;
+
+        // Actualizar la asignación de ida con la nueva fecha y turno
+        $asignacionIda->fecha_ini = $nuevaFecha;
+        $asignacionIda->turno = $nuevoTurno;
+        $asignacionIda->save();
+
+        Log::info("Jornada prolongada hacia atrás:", [
+            'id_empleado' => $idEmpleado,
+            'id_asignacion' => $asignacionIda->id_asignacion,
+            'tipo_asignacion' => 'ida',
+            'fecha_original' => $fechaOriginal,
+            'turno_original' => $turnoOriginal,
+            'nueva_fecha' => $nuevaFecha,
+            'nuevo_turno' => $nuevoTurno
+        ]);
+
+        // Cargar las relaciones para la respuesta
+        $asignacionIda->load(['firefighter:id_empleado,nombre,apellido', 'brigadeOrigin:id_brigada,nombre', 'brigadeDestination:id_brigada,nombre']);
+
+        return response()->json([
+            'message' => 'Jornada prolongada hacia atrás exitosamente',
+            'tipo_modificacion' => 'ida',
+            'asignacion_modificada' => $asignacionIda,
+            'cambios' => [
+                'fecha_anterior' => $fechaOriginal,
+                'turno_anterior' => $turnoOriginal,
+                'nueva_fecha' => $nuevaFecha,
+                'nuevo_turno' => $nuevoTurno
+            ]
+        ], 200);
+    }
+
+    /**
+     * Obtener las asignaciones de vuelta de un bombero para una fecha específica
+     * Método auxiliar para verificar qué asignaciones de vuelta tiene un bombero
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function getReturnAssignments(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id_empleado' => 'required|exists:users,id_empleado',
+            'fecha' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idEmpleado = $request->input('id_empleado');
+        $fecha = $request->input('fecha');
+
+        // Buscar todas las asignaciones de vuelta del bombero en la fecha especificada
+        $asignacionesVuelta = Firefighters_assignment::with([
+            'firefighter:id_empleado,nombre,apellido',
+            'brigadeOrigin:id_brigada,nombre',
+            'brigadeDestination:id_brigada,nombre'
+        ])
+            ->where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', $fecha)
+            ->where('tipo_asignacion', 'vuelta')
+            ->get();
+
+        return response()->json([
+            'id_empleado' => $idEmpleado,
+            'fecha' => $fecha,
+            'asignaciones_vuelta' => $asignacionesVuelta
+        ]);
+    }
 }

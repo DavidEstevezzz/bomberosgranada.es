@@ -273,7 +273,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('/firefighters-assignments/delete-practices', [FirefighterAssignmentController::class, 'deletePracticesAssignments']);
 Route::post('/firefighters-assignments/delete-rt', [FirefighterAssignmentController::class, 'deleteRTAssignments']);
     Route::get('/firefighters-assignments/check-especial-brigade', [FirefighterAssignmentController::class, 'getEspecialAssigment']);
-
+    Route::post('/firefighters-assignments/extend-working-day', [FirefighterAssignmentController::class, 'extendWorkingDay']);
 
 
 

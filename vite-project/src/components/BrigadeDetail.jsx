@@ -11,6 +11,7 @@ import AddInterventionModal from './AddInterventionModal';
 import EditInterventionModal from './EditInterventionModal';
 import InterventionApiService from '../services/InterventionApiService';
 import AssignFirefighterModal from './AssignFirefighterModal';
+import ExtendWorkingDayModal from './ExtendWorkingDayModal';
 import AssignFirefighterToBajasModal from './AssignFirefighterToBajasModal.jsx';
 import RequireFirefighterModal from './RequireFirefighterModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -44,6 +45,7 @@ const BrigadeDetail = () => {
   const [showAssignFirefighterModal, setShowAssignFirefighterModal] = useState(false);
   const [isUpdatingPersonal, setIsUpdatingPersonal] = useState(false);
   const [isResettingEquipments, setIsResettingEquipments] = useState(false);
+  const [showExtendWorkingDayModal, setShowExtendWorkingDayModal] = useState(false);
   const [incidenciasGenerales, setIncidenciasGenerales] = useState('');
   const [isUpdatingGenerales, setIsUpdatingGenerales] = useState(false);
   const navigate = useNavigate();
@@ -301,14 +303,14 @@ const BrigadeDetail = () => {
           setError('No brigade data found');
         }
         setFirefighters(Object.values(response.data.firefighters));
-  
+
         const commentsResponse = await GuardsApiService.getGuard(id_brigada, selectedDate);
         if (commentsResponse.data.guard) {
           setGuardDetails(commentsResponse.data.guard);
           setComentarios(commentsResponse.data.guard.comentarios || '');
           setIncidenciasPersonal(commentsResponse.data.guard.incidencias_personal || '');
           setIncidenciasGenerales(commentsResponse.data.guard.incidencias_generales || ''); // ← Añadir esta línea
-          
+
           // Si tenemos guardDetails, cargar asignaciones actuales inmediatamente
           const guardId = commentsResponse.data.guard.id;
           if (guardId) {
@@ -326,12 +328,12 @@ const BrigadeDetail = () => {
           setIncidenciasPersonal('');
           setIncidenciasGenerales(''); // ← Añadir esta línea
         }
-  
+
         // Agregar carga de guardias anteriores
         setLoadingPreviousAssignments(true);
         const previousGuardsData = await GuardsApiService.getPreviousGuards(id_brigada, selectedDate);
         setPreviousGuards(previousGuardsData);
-  
+
         setError(null);
       } catch (error) {
         console.error('Error en fetchBrigadeDetails:', error);
@@ -341,7 +343,7 @@ const BrigadeDetail = () => {
         setLoadingPreviousAssignments(false);
       }
     };
-  
+
     fetchBrigadeDetails();
   }, [id_brigada, selectedDate]);
 
@@ -1693,6 +1695,12 @@ const BrigadeDetail = () => {
             >
               Asignar Baja Sobrevenida
             </button>
+            <button
+              onClick={() => setShowExtendWorkingDayModal(true)}
+              className="px-4 py-2 bg-indigo-500 text-white rounded"
+            >
+              Prolongar Jornada
+            </button>
 
           </div>
         )}
@@ -1859,6 +1867,14 @@ const BrigadeDetail = () => {
             firefighters={firefighters}
             currentBrigade={brigade}
             guardDate={selectedDate}
+          />
+
+          <ExtendWorkingDayModal
+            isOpen={showExtendWorkingDayModal}
+            onClose={() => setShowExtendWorkingDayModal(false)}
+            firefighters={firefighters}
+            guardDate={selectedDate}
+            onSuccess={handleRefreshData} // Para refrescar datos después de la operación
           />
         </div>
       </div>

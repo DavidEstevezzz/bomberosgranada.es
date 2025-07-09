@@ -43,7 +43,9 @@ class FirefighterAssignmentController extends Controller
             'id_brigada_origen' => 'nullable|exists:brigades,id_brigada',
             'id_brigada_destino' => 'required|exists:brigades,id_brigada',
             'turno' => 'in:Mañana,Tarde,Noche',  // Validación del turno
-            'requerimiento' => 'boolean'
+            'requerimiento' => 'boolean',
+            'tipo_asignacion' => 'required|in:ida,vuelta', // Aseguramos que el tipo de asignación sea válido
+
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -83,7 +85,8 @@ class FirefighterAssignmentController extends Controller
             'id_brigada_origen' => 'nullable|exists:brigades,id_brigada',
             'id_brigada_destino' => 'required|exists:brigades,id_brigada',
             'turno' => 'required|in:Mañana,Tarde,Noche',  // Validación del turno
-            'requerimiento' => 'boolean' // Nuevo: para update también
+            'requerimiento' => 'boolean' ,// Nuevo: para update también
+            'tipo_asignacion' => 'required|in:ida,vuelta', // Aseguramos que el tipo de asignación sea válido
         ];
 
         $validator = Validator::make($request->all(), $rules);

@@ -85,7 +85,7 @@ class FirefighterAssignmentController extends Controller
             'id_brigada_origen' => 'nullable|exists:brigades,id_brigada',
             'id_brigada_destino' => 'required|exists:brigades,id_brigada',
             'turno' => 'required|in:Mañana,Tarde,Noche',  // Validación del turno
-            'requerimiento' => 'boolean' ,// Nuevo: para update también
+            'requerimiento' => 'boolean', // Nuevo: para update también
             'tipo_asignacion' => 'required|in:ida,vuelta', // Aseguramos que el tipo de asignación sea válido
         ];
 
@@ -139,10 +139,10 @@ class FirefighterAssignmentController extends Controller
 
         // Agrupamos las asignaciones de bomberos hasta $date
         $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
-            ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente primero
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno (dentro de la misma fecha)
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Ida antes que vuelta (SOLO si fecha y turno son iguales)
+            ->orderBy('created_at', 'desc')                                   // 4. Creación más reciente
             ->get()
             ->groupBy('id_empleado');
 
@@ -246,26 +246,26 @@ class FirefighterAssignmentController extends Controller
 
         // Cargar asignaciones vigentes
         $assignmentsToday = Firefighters_assignment::where('fecha_ini', '<=', $date)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (solo si fecha+turno iguales)
             ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get()
             ->groupBy('id_empleado');
 
         $assignmentsYesterday = Firefighters_assignment::where('fecha_ini', '<=', $previousDay)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (solo si fecha+turno iguales)
             ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get()
             ->groupBy('id_empleado');
 
         $assignmentsTomorrow = Firefighters_assignment::where('fecha_ini', '<=', $nextDay)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (solo si fecha+turno iguales)
             ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get()
             ->groupBy('id_empleado');
 
@@ -350,10 +350,10 @@ class FirefighterAssignmentController extends Controller
     {
         $lastAssignment = Firefighters_assignment::where('id_empleado', $firefighterId)
             ->where('fecha_ini', '<=', $date)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (solo si fecha+turno iguales)
             ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->first();
 
         if (!$lastAssignment || !$lastAssignment->brigadeDestination) {
@@ -498,10 +498,10 @@ class FirefighterAssignmentController extends Controller
         // 1. Determinar la brigada original (última antes de $fecha)
         $assignmentAnterior = Firefighters_assignment::where('id_empleado', $idEmpleado)
             ->where('fecha_ini', '<=', $fecha)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (solo si fecha+turno iguales)
             ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->first();
 
         $brigadaOrigen = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
@@ -610,10 +610,10 @@ class FirefighterAssignmentController extends Controller
 
         // Traemos todas las asignaciones vigentes a la fecha actual (como hacías antes)
         $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
-            ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente primero
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno (dentro de la misma fecha)
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Ida antes que vuelta (SOLO si fecha y turno son iguales)
+            ->orderBy('created_at', 'desc')                                   // 4. Creación más reciente
             ->get()
             ->groupBy('id_empleado');
 
@@ -710,19 +710,19 @@ class FirefighterAssignmentController extends Controller
 
         // Asignaciones vigentes para HOY
         $assignmentsToday = Firefighters_assignment::where('fecha_ini', '<=', $date)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (solo si fecha+turno iguales)
             ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get()
             ->groupBy('id_empleado');
 
         // Asignaciones vigentes para MAÑANA
         $assignmentsTomorrow = Firefighters_assignment::where('fecha_ini', '<=', $tomorrow)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (solo si fecha+turno iguales)
             ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get()
             ->groupBy('id_empleado');
 
@@ -858,19 +858,19 @@ class FirefighterAssignmentController extends Controller
 
         // Asignaciones para HOY
         $assignmentsToday = Firefighters_assignment::where('fecha_ini', '<=', $date)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (solo si fecha+turno iguales)
             ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get()
             ->groupBy('id_empleado');
 
         // Asignaciones para AYER
         $assignmentsYesterday = Firefighters_assignment::where('fecha_ini', '<=', $yesterday)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (solo si fecha+turno iguales)
             ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get()
             ->groupBy('id_empleado');
 
@@ -994,10 +994,10 @@ class FirefighterAssignmentController extends Controller
         // Se obtienen las asignaciones de bomberos cuya fecha es menor o igual a la fecha consultada,
         // ordenadas de forma que la primera asignación de cada bombero es la más reciente.
         $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
-            ->orderBy('created_at', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente primero
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno (dentro de la misma fecha)
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Ida antes que vuelta (SOLO si fecha y turno son iguales)
+            ->orderBy('created_at', 'desc')                                   // 4. Creación más reciente
             ->get()
             ->groupBy('id_empleado');
 
@@ -1408,7 +1408,7 @@ class FirefighterAssignmentController extends Controller
     private function extendForward($idEmpleado, $fechaActual, $nuevaFecha, $turnoAProlongar)
     {
         // Función auxiliar para calcular el nuevo turno de vuelta según el turno a prolongar
-        $calcularNuevoTurnoVuelta = function($turnoAProlongar, $fechaActual, $nuevaFecha) {
+        $calcularNuevoTurnoVuelta = function ($turnoAProlongar, $fechaActual, $nuevaFecha) {
             switch ($turnoAProlongar) {
                 case 'Mañana':
                     // Si prolongamos la mañana, la vuelta debe ser por la tarde del mismo día
@@ -1416,14 +1416,14 @@ class FirefighterAssignmentController extends Controller
                         'turno' => 'Tarde',
                         'fecha' => $nuevaFecha
                     ];
-                    
+
                 case 'Tarde':
                     // Si prolongamos la tarde, la vuelta debe ser por la noche del mismo día
                     return [
                         'turno' => 'Noche',
                         'fecha' => $nuevaFecha
                     ];
-                    
+
                 case 'Noche':
                     // Si prolongamos la noche, la vuelta debe ser por la mañana del día siguiente
                     $diaSiguiente = date('Y-m-d', strtotime($nuevaFecha . ' +1 day'));
@@ -1431,7 +1431,7 @@ class FirefighterAssignmentController extends Controller
                         'turno' => 'Mañana',
                         'fecha' => $diaSiguiente
                     ];
-                    
+
                 default:
                     return [
                         'turno' => 'Tarde',
@@ -1439,48 +1439,48 @@ class FirefighterAssignmentController extends Controller
                     ];
             }
         };
-    
+
         // CASO ESPECIAL: Detectar si estamos prolongando desde noche hasta mañana siguiente
         $diaSiguiente = date('Y-m-d', strtotime($fechaActual . ' +1 day'));
         $esCasoNocheMañana = ($nuevaFecha === $diaSiguiente && $turnoAProlongar === 'Mañana');
-        
+
         if ($esCasoNocheMañana) {
             Log::info("Detectado caso especial: prolongación de noche a mañana siguiente");
             return $this->handleNightToMorningExtension($idEmpleado, $fechaActual, $nuevaFecha, $turnoAProlongar);
         }
-    
+
         // CASO NORMAL: Buscar asignación de vuelta en la fecha actual
         $asignacionVuelta = Firefighters_assignment::where('id_empleado', $idEmpleado)
             ->where('fecha_ini', $fechaActual)
             ->where('tipo_asignacion', 'vuelta')
             ->first();
-    
+
         if (!$asignacionVuelta) {
             Log::warning("No se encontró asignación de vuelta para el bombero {$idEmpleado} en la fecha {$fechaActual}");
             return response()->json([
                 'message' => 'No se encontró una asignación de vuelta para este bombero en la fecha especificada'
             ], 404);
         }
-    
+
         // Calcular el nuevo turno y fecha de vuelta
         $nuevoTurnoVuelta = $calcularNuevoTurnoVuelta($turnoAProlongar, $fechaActual, $nuevaFecha);
-    
+
         // Validar que la nueva fecha no sea anterior a la fecha actual
         if ($nuevoTurnoVuelta['fecha'] < $fechaActual) {
             return response()->json([
                 'message' => 'Para prolongar hacia adelante, la nueva fecha no puede ser anterior a la fecha actual'
             ], 400);
         }
-    
+
         // Guardar los valores originales para el log
         $fechaOriginal = $asignacionVuelta->fecha_ini;
         $turnoOriginal = $asignacionVuelta->turno;
-    
+
         // Actualizar la asignación de vuelta con la nueva fecha y turno calculado
         $asignacionVuelta->fecha_ini = $nuevoTurnoVuelta['fecha'];
         $asignacionVuelta->turno = $nuevoTurnoVuelta['turno'];
         $asignacionVuelta->save();
-    
+
         Log::info("Jornada prolongada hacia adelante:", [
             'id_empleado' => $idEmpleado,
             'id_asignacion' => $asignacionVuelta->id_asignacion,
@@ -1491,10 +1491,10 @@ class FirefighterAssignmentController extends Controller
             'nueva_fecha' => $nuevoTurnoVuelta['fecha'],
             'nuevo_turno' => $nuevoTurnoVuelta['turno']
         ]);
-    
+
         // Cargar las relaciones para la respuesta
         $asignacionVuelta->load(['firefighter:id_empleado,nombre,apellido', 'brigadeOrigin:id_brigada,nombre', 'brigadeDestination:id_brigada,nombre']);
-    
+
         return response()->json([
             'message' => "Jornada prolongada exitosamente. Ahora trabajará también el turno de {$turnoAProlongar}",
             'tipo_modificacion' => 'vuelta',
@@ -1509,14 +1509,14 @@ class FirefighterAssignmentController extends Controller
             ]
         ], 200);
     }
-    
+
     /**
      * Prolongar jornada hacia atrás (modificando asignación de ida)
      */
     private function extendBackward($idEmpleado, $fechaActual, $nuevaFecha, $turnoAProlongar)
     {
         // Función auxiliar para calcular el nuevo turno de ida según el turno a prolongar
-        $calcularNuevoTurnoIda = function($turnoAProlongar, $fechaActual, $nuevaFecha) {
+        $calcularNuevoTurnoIda = function ($turnoAProlongar, $fechaActual, $nuevaFecha) {
             switch ($turnoAProlongar) {
                 case 'Mañana':
                     // Si prolongamos para incluir la mañana, la ida debe ser por la mañana
@@ -1524,21 +1524,21 @@ class FirefighterAssignmentController extends Controller
                         'turno' => 'Mañana',
                         'fecha' => $nuevaFecha
                     ];
-                    
+
                 case 'Tarde':
                     // Si prolongamos para incluir la tarde, la ida debe ser por la tarde
                     return [
                         'turno' => 'Tarde',
                         'fecha' => $nuevaFecha
                     ];
-                    
+
                 case 'Noche':
                     // Si prolongamos para incluir la noche, la ida debe ser por la noche
                     return [
                         'turno' => 'Noche',
                         'fecha' => $nuevaFecha
                     ];
-                    
+
                 default:
                     return [
                         'turno' => 'Mañana',
@@ -1546,39 +1546,39 @@ class FirefighterAssignmentController extends Controller
                     ];
             }
         };
-    
+
         // Buscar la asignación de ida del bombero en la fecha actual
         $asignacionIda = Firefighters_assignment::where('id_empleado', $idEmpleado)
             ->where('fecha_ini', $fechaActual)
             ->where('tipo_asignacion', 'ida')
             ->first();
-    
+
         if (!$asignacionIda) {
             Log::warning("No se encontró asignación de ida para el bombero {$idEmpleado} en la fecha {$fechaActual}");
             return response()->json([
                 'message' => 'No se encontró una asignación de ida para este bombero en la fecha especificada'
             ], 404);
         }
-    
+
         // Calcular el nuevo turno y fecha de ida
         $nuevoTurnoIda = $calcularNuevoTurnoIda($turnoAProlongar, $fechaActual, $nuevaFecha);
-    
+
         // Validar que la nueva fecha no sea posterior a la fecha actual
         if ($nuevoTurnoIda['fecha'] > $fechaActual) {
             return response()->json([
                 'message' => 'Para prolongar hacia atrás, la nueva fecha no puede ser posterior a la fecha actual'
             ], 400);
         }
-    
+
         // Guardar los valores originales para el log
         $fechaOriginal = $asignacionIda->fecha_ini;
         $turnoOriginal = $asignacionIda->turno;
-    
+
         // Actualizar la asignación de ida con la nueva fecha y turno calculado
         $asignacionIda->fecha_ini = $nuevoTurnoIda['fecha'];
         $asignacionIda->turno = $nuevoTurnoIda['turno'];
         $asignacionIda->save();
-    
+
         Log::info("Jornada prolongada hacia atrás:", [
             'id_empleado' => $idEmpleado,
             'id_asignacion' => $asignacionIda->id_asignacion,
@@ -1589,10 +1589,10 @@ class FirefighterAssignmentController extends Controller
             'nueva_fecha' => $nuevoTurnoIda['fecha'],
             'nuevo_turno' => $nuevoTurnoIda['turno']
         ]);
-    
+
         // Cargar las relaciones para la respuesta
         $asignacionIda->load(['firefighter:id_empleado,nombre,apellido', 'brigadeOrigin:id_brigada,nombre', 'brigadeDestination:id_brigada,nombre']);
-    
+
         return response()->json([
             'message' => "Jornada prolongada exitosamente. Ahora trabajará también el turno de {$turnoAProlongar}",
             'tipo_modificacion' => 'ida',
@@ -1606,7 +1606,7 @@ class FirefighterAssignmentController extends Controller
             ]
         ], 200);
     }
-    
+
     /**
      * Manejar el caso especial de prolongar desde turno noche hasta mañana siguiente
      */
@@ -1618,14 +1618,14 @@ class FirefighterAssignmentController extends Controller
             ->where('tipo_asignacion', 'ida')
             ->where('turno', 'Noche')
             ->first();
-    
+
         if (!$asignacionNoche) {
             Log::warning("No se encontró asignación de ida con turno Noche para el bombero {$idEmpleado} en la fecha {$fechaActual}");
             return response()->json([
                 'message' => 'No se encontró una asignación de turno noche para este bombero en la fecha especificada. El caso especial noche-mañana requiere un turno noche previo.'
             ], 404);
         }
-    
+
         // Buscar la asignación de vuelta específicamente programada para la mañana del día siguiente
         $asignacionVueltaMañana = Firefighters_assignment::where('id_empleado', $idEmpleado)
             ->where('fecha_ini', $nuevaFecha)
@@ -1633,22 +1633,22 @@ class FirefighterAssignmentController extends Controller
             ->where('turno', 'Mañana')
             ->where('id_brigada_origen', $asignacionNoche->id_brigada_destino)
             ->first();
-    
+
         if (!$asignacionVueltaMañana) {
             Log::warning("No se encontró la asignación de vuelta por la mañana del día siguiente para el caso noche-mañana");
             return response()->json([
                 'message' => 'No se encontró la asignación de vuelta programada para la mañana del día siguiente. Verifique que el turno de noche tenga su correspondiente vuelta programada.'
             ], 404);
         }
-    
+
         // Guardar los valores originales para el log
         $fechaOriginal = $asignacionVueltaMañana->fecha_ini;
         $turnoOriginal = $asignacionVueltaMañana->turno;
-    
+
         // Para prolongar la mañana del día siguiente, la vuelta debe ser por la tarde de ese día
         $asignacionVueltaMañana->turno = 'Tarde';
         $asignacionVueltaMañana->save();
-    
+
         Log::info("Jornada prolongada hacia adelante (caso especial noche-mañana):", [
             'id_empleado' => $idEmpleado,
             'id_asignacion_noche' => $asignacionNoche->id_asignacion,
@@ -1659,10 +1659,10 @@ class FirefighterAssignmentController extends Controller
             'nueva_fecha' => $nuevaFecha,
             'nuevo_turno' => 'Tarde'
         ]);
-    
+
         // Cargar las relaciones para la respuesta
         $asignacionVueltaMañana->load(['firefighter:id_empleado,nombre,apellido', 'brigadeOrigin:id_brigada,nombre', 'brigadeDestination:id_brigada,nombre']);
-    
+
         return response()->json([
             'message' => "Jornada prolongada exitosamente. Ahora trabajará también el turno de {$turnoAProlongar} del día siguiente",
             'tipo_modificacion' => 'vuelta',

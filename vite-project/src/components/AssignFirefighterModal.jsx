@@ -170,6 +170,7 @@ const AssignFirefighterModal = ({
             id_brigada_destino: destinationBrigade,
             fecha_ini: fecha_ida,
             turno: assignmentDetails.ida,
+            tipo_asignacion: 'ida',
         };
 
         // Payload para asignación de vuelta: de la brigada destino de vuelta a la actual
@@ -179,6 +180,7 @@ const AssignFirefighterModal = ({
             id_brigada_destino: currentBrigade.id_brigada,
             fecha_ini: fecha_vuelta,
             turno: assignmentDetails.vuelta,
+            tipo_asignacion: 'ida',
         };
 
         try {

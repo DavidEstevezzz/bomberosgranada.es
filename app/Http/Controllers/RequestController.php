@@ -299,51 +299,97 @@ class RequestController extends Controller
 
         try {
             Log::info("🚀 Iniciando envío de correo...");
-
+            
+            // Verificar conectividad básica antes del envío
+            Log::info("🔌 Verificando conectividad SMTP...");
+            
+            $host = config('mail.mailers.smtp.host');
+            $port = config('mail.mailers.smtp.port');
+            
+            // Test de conectividad básica
+            $fp = @fsockopen($host, $port, $errno, $errstr, 10); // 10 segundos timeout
+            if (!$fp) {
+                Log::error("❌ No se puede conectar a {$host}:{$port}");
+                Log::error("Error número: {$errno}");
+                Log::error("Error mensaje: {$errstr}");
+                throw new \Exception("No se puede conectar al servidor SMTP: {$errstr}");
+            } else {
+                Log::info("✅ Conexión TCP a {$host}:{$port} exitosa");
+                fclose($fp);
+            }
+            
             // Medir tiempo de envío
             $startTime = microtime(true);
-
-            Mail::to($user->email)->send(new RequestStatusUpdatedMail($miRequest, $newEstado));
-
+            
+            Log::info("📧 Creando instancia del Mailable...");
+            $mailable = new RequestStatusUpdatedMail($miRequest, $newEstado);
+            Log::info("✅ Mailable creado exitosamente");
+            
+            Log::info("📤 Enviando correo a través de Mail::send()...");
+            
+            // Configurar timeout más bajo para evitar que se cuelgue
+            ini_set('default_socket_timeout', 30);
+            
+            Mail::to($user->email)->send($mailable);
+            
             $endTime = microtime(true);
             $executionTime = round(($endTime - $startTime) * 1000, 2); // en milisegundos
-
+            
             Log::info("✅ Correo enviado exitosamente!");
             Log::info("⏱️ Tiempo de envío: {$executionTime}ms");
             Log::info("📧 Correo enviado a: {$user->email}");
-        } catch (\Symfony\Component\Mailer\Exception\TransportExceptionInterface $e) {
+            
+        } catch (\Symfony\Component\Mailer\Exception\TransportException $e) {
             Log::error("❌ ERROR DE TRANSPORTE SMTP:");
             Log::error("Tipo: Swift_TransportException");
             Log::error("Mensaje: " . $e->getMessage());
             Log::error("Código: " . $e->getCode());
-            Log::error("Archivo: " . $e->getFile() . ":" . $e->getLine());
+            
+            // Información específica de Swift Transport
+            if (method_exists($e, 'getLog')) {
+                Log::error("Detalles adicionales del error de transporte no disponibles.");
+            }
+            
         } catch (\Symfony\Component\Mime\Exception\RfcComplianceException $e) {
             Log::error("❌ ERROR DE FORMATO DE EMAIL:");
             Log::error("Tipo: Swift_RfcComplianceException");
             Log::error("Mensaje: " . $e->getMessage());
             Log::error("Email destinatario: {$user->email}");
+            
         } catch (\Symfony\Component\Mailer\Exception\TransportException $e) {
             Log::error("❌ ERROR DE TRANSPORTE (Symfony):");
             Log::error("Tipo: TransportException");
             Log::error("Mensaje: " . $e->getMessage());
             Log::error("Código: " . $e->getCode());
+            
         } catch (\Exception $e) {
             Log::error("❌ ERROR GENERAL AL ENVIAR CORREO:");
             Log::error("Tipo de excepción: " . get_class($e));
             Log::error("Mensaje: " . $e->getMessage());
             Log::error("Código: " . $e->getCode());
             Log::error("Archivo: " . $e->getFile() . ":" . $e->getLine());
-            Log::error("Stack trace: " . $e->getTraceAsString());
-
+            
+            // Solo mostrar stack trace en desarrollo
+            if (config('app.debug')) {
+                Log::error("Stack trace: " . $e->getTraceAsString());
+            }
+            
             // Información adicional de debug
             Log::error("🔍 Información adicional:");
             Log::error("PHP Version: " . PHP_VERSION);
             Log::error("Laravel Version: " . app()->version());
             Log::error("Environment: " . config('app.env'));
+            
+            // Información de red
+            $dnsCheck = dns_get_record($host, DNS_A);
+            Log::error("DNS resolution para {$host}: " . json_encode($dnsCheck));
+            
         } finally {
+            // Restaurar timeout por defecto
+            ini_set('default_socket_timeout', 60);
             Log::info("=== FIN PROCESO ENVÍO CORREO ===");
         }
-
+        
         return response()->json($miRequest, 200);
     }
 

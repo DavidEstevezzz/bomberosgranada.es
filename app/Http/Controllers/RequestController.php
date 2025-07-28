@@ -256,6 +256,7 @@ class RequestController extends Controller
         }
 
         // Enviar correo de notificación
+
         $user = $miRequest->EnviadaPor;
 
         Log::info("=== INICIO PROCESO ENVÍO CORREO ===");
@@ -280,16 +281,26 @@ class RequestController extends Controller
         }
 
         // Verificar configuración de correo
+        $mailMailer = config('mail.default');
         Log::info("📧 Configuración de correo actual:", [
-            'MAIL_MAILER' => config('mail.default'),
-            'MAIL_HOST' => config('mail.mailers.smtp.host'),
-            'MAIL_PORT' => config('mail.mailers.smtp.port'),
-            'MAIL_USERNAME' => config('mail.mailers.smtp.username'),
-            'MAIL_ENCRYPTION' => config('mail.mailers.smtp.encryption'),
+            'MAIL_MAILER' => $mailMailer,
             'MAIL_FROM_ADDRESS' => config('mail.from.address'),
             'MAIL_FROM_NAME' => config('mail.from.name'),
-            'PASSWORD_SET' => config('mail.mailers.smtp.password') ? 'SÍ' : 'NO'
         ]);
+
+        // Configuración específica según el mailer
+        if ($mailMailer === 'sendgrid') {
+            Log::info("🎯 Usando SendGrid API");
+            Log::info("API KEY configurada: " . (config('services.sendgrid.key') ? 'SÍ' : 'NO'));
+        } else {
+            Log::info("📧 Configuración SMTP:", [
+                'MAIL_HOST' => config('mail.mailers.smtp.host'),
+                'MAIL_PORT' => config('mail.mailers.smtp.port'),
+                'MAIL_USERNAME' => config('mail.mailers.smtp.username'),
+                'MAIL_ENCRYPTION' => config('mail.mailers.smtp.encryption'),
+                'PASSWORD_SET' => config('mail.mailers.smtp.password') ? 'SÍ' : 'NO'
+            ]);
+        }
 
         Log::info("📨 Preparando envío de correo:");
         Log::info("Destinatario: {$user->email}");
@@ -299,97 +310,63 @@ class RequestController extends Controller
 
         try {
             Log::info("🚀 Iniciando envío de correo...");
-            
-            // Verificar conectividad básica antes del envío
-            Log::info("🔌 Verificando conectividad SMTP...");
-            
-            $host = config('mail.mailers.smtp.host');
-            $port = config('mail.mailers.smtp.port');
-            
-            // Test de conectividad básica
-            $fp = @fsockopen($host, $port, $errno, $errstr, 10); // 10 segundos timeout
-            if (!$fp) {
-                Log::error("❌ No se puede conectar a {$host}:{$port}");
-                Log::error("Error número: {$errno}");
-                Log::error("Error mensaje: {$errstr}");
-                throw new \Exception("No se puede conectar al servidor SMTP: {$errstr}");
+
+            // Solo verificar conectividad SMTP si no es SendGrid API
+            if ($mailMailer !== 'sendgrid') {
+                Log::info("🔌 Verificando conectividad SMTP...");
+
+                $host = config('mail.mailers.smtp.host');
+                $port = config('mail.mailers.smtp.port');
+
+                // Test de conectividad básica
+                $fp = @fsockopen($host, $port, $errno, $errstr, 10);
+                if (!$fp) {
+                    Log::error("❌ No se puede conectar a {$host}:{$port}");
+                    Log::error("Error número: {$errno}");
+                    Log::error("Error mensaje: {$errstr}");
+                    throw new \Exception("No se puede conectar al servidor SMTP: {$errstr}");
+                } else {
+                    Log::info("✅ Conexión TCP a {$host}:{$port} exitosa");
+                    fclose($fp);
+                }
             } else {
-                Log::info("✅ Conexión TCP a {$host}:{$port} exitosa");
-                fclose($fp);
+                Log::info("⚡ Usando SendGrid API (no requiere conexión SMTP)");
             }
-            
+
             // Medir tiempo de envío
             $startTime = microtime(true);
-            
+
             Log::info("📧 Creando instancia del Mailable...");
             $mailable = new RequestStatusUpdatedMail($miRequest, $newEstado);
             Log::info("✅ Mailable creado exitosamente");
-            
-            Log::info("📤 Enviando correo a través de Mail::send()...");
-            
-            // Configurar timeout más bajo para evitar que se cuelgue
-            ini_set('default_socket_timeout', 30);
-            
+
+            Log::info("📤 Enviando correo...");
+
             Mail::to($user->email)->send($mailable);
-            
+
             $endTime = microtime(true);
-            $executionTime = round(($endTime - $startTime) * 1000, 2); // en milisegundos
-            
+            $executionTime = round(($endTime - $startTime) * 1000, 2);
+
             Log::info("✅ Correo enviado exitosamente!");
             Log::info("⏱️ Tiempo de envío: {$executionTime}ms");
             Log::info("📧 Correo enviado a: {$user->email}");
-            
-        } catch (\Symfony\Component\Mailer\Exception\TransportException $e) {
-            Log::error("❌ ERROR DE TRANSPORTE SMTP:");
-            Log::error("Tipo: Swift_TransportException");
-            Log::error("Mensaje: " . $e->getMessage());
-            Log::error("Código: " . $e->getCode());
-            
-            // Información específica de Swift Transport
-            if (method_exists($e, 'getLog')) {
-                Log::error("Detalles adicionales del error de transporte no disponibles.");
-            }
-            
-        } catch (\Symfony\Component\Mime\Exception\RfcComplianceException $e) {
-            Log::error("❌ ERROR DE FORMATO DE EMAIL:");
-            Log::error("Tipo: Swift_RfcComplianceException");
-            Log::error("Mensaje: " . $e->getMessage());
-            Log::error("Email destinatario: {$user->email}");
-            
-        } catch (\Symfony\Component\Mailer\Exception\TransportException $e) {
-            Log::error("❌ ERROR DE TRANSPORTE (Symfony):");
-            Log::error("Tipo: TransportException");
-            Log::error("Mensaje: " . $e->getMessage());
-            Log::error("Código: " . $e->getCode());
-            
         } catch (\Exception $e) {
-            Log::error("❌ ERROR GENERAL AL ENVIAR CORREO:");
+            Log::error("❌ ERROR AL ENVIAR CORREO:");
             Log::error("Tipo de excepción: " . get_class($e));
             Log::error("Mensaje: " . $e->getMessage());
             Log::error("Código: " . $e->getCode());
             Log::error("Archivo: " . $e->getFile() . ":" . $e->getLine());
-            
-            // Solo mostrar stack trace en desarrollo
-            if (config('app.debug')) {
-                Log::error("Stack trace: " . $e->getTraceAsString());
-            }
-            
+
             // Información adicional de debug
             Log::error("🔍 Información adicional:");
             Log::error("PHP Version: " . PHP_VERSION);
             Log::error("Laravel Version: " . app()->version());
             Log::error("Environment: " . config('app.env'));
-            
-            // Información de red
-            $dnsCheck = dns_get_record($host, DNS_A);
-            Log::error("DNS resolution para {$host}: " . json_encode($dnsCheck));
-            
+            Log::error("Mailer usado: " . $mailMailer);
         } finally {
-            // Restaurar timeout por defecto
-            ini_set('default_socket_timeout', 60);
             Log::info("=== FIN PROCESO ENVÍO CORREO ===");
         }
-        
+
         return response()->json($miRequest, 200);
     }
 

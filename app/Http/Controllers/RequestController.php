@@ -257,12 +257,91 @@ class RequestController extends Controller
 
         // Enviar correo de notificación
         $user = $miRequest->EnviadaPor;
-        if ($user && $user->email) {
-            try {
-                Mail::to($user->email)->send(new RequestStatusUpdatedMail($miRequest, $newEstado));
-            } catch (\Exception $e) {
-                Log::error("Error enviando correo: " . $e->getMessage());
-            }
+
+        Log::info("=== INICIO PROCESO ENVÍO CORREO ===");
+        Log::info("Solicitud ID: {$miRequest->id}");
+        Log::info("Estado anterior: {$oldEstado}");
+        Log::info("Estado nuevo: {$newEstado}");
+
+        if (!$user) {
+            Log::error("❌ Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+            return response()->json($miRequest, 200);
+        }
+
+        Log::info("✅ Usuario encontrado:", [
+            'id_empleado' => $user->id_empleado,
+            'nombre' => $user->nombre,
+            'email' => $user->email
+        ]);
+
+        if (!$user->email) {
+            Log::warning("⚠️ Usuario no tiene email configurado - ID: {$user->id_empleado}");
+            return response()->json($miRequest, 200);
+        }
+
+        // Verificar configuración de correo
+        Log::info("📧 Configuración de correo actual:", [
+            'MAIL_MAILER' => config('mail.default'),
+            'MAIL_HOST' => config('mail.mailers.smtp.host'),
+            'MAIL_PORT' => config('mail.mailers.smtp.port'),
+            'MAIL_USERNAME' => config('mail.mailers.smtp.username'),
+            'MAIL_ENCRYPTION' => config('mail.mailers.smtp.encryption'),
+            'MAIL_FROM_ADDRESS' => config('mail.from.address'),
+            'MAIL_FROM_NAME' => config('mail.from.name'),
+            'PASSWORD_SET' => config('mail.mailers.smtp.password') ? 'SÍ' : 'NO'
+        ]);
+
+        Log::info("📨 Preparando envío de correo:");
+        Log::info("Destinatario: {$user->email}");
+        Log::info("Tipo de solicitud: {$miRequest->tipo}");
+        Log::info("Fecha inicio: {$miRequest->fecha_ini}");
+        Log::info("Fecha fin: {$miRequest->fecha_fin}");
+
+        try {
+            Log::info("🚀 Iniciando envío de correo...");
+
+            // Medir tiempo de envío
+            $startTime = microtime(true);
+
+            Mail::to($user->email)->send(new RequestStatusUpdatedMail($miRequest, $newEstado));
+
+            $endTime = microtime(true);
+            $executionTime = round(($endTime - $startTime) * 1000, 2); // en milisegundos
+
+            Log::info("✅ Correo enviado exitosamente!");
+            Log::info("⏱️ Tiempo de envío: {$executionTime}ms");
+            Log::info("📧 Correo enviado a: {$user->email}");
+        } catch (\Symfony\Component\Mailer\Exception\TransportExceptionInterface $e) {
+            Log::error("❌ ERROR DE TRANSPORTE SMTP:");
+            Log::error("Tipo: Swift_TransportException");
+            Log::error("Mensaje: " . $e->getMessage());
+            Log::error("Código: " . $e->getCode());
+            Log::error("Archivo: " . $e->getFile() . ":" . $e->getLine());
+        } catch (\Symfony\Component\Mime\Exception\RfcComplianceException $e) {
+            Log::error("❌ ERROR DE FORMATO DE EMAIL:");
+            Log::error("Tipo: Swift_RfcComplianceException");
+            Log::error("Mensaje: " . $e->getMessage());
+            Log::error("Email destinatario: {$user->email}");
+        } catch (\Symfony\Component\Mailer\Exception\TransportException $e) {
+            Log::error("❌ ERROR DE TRANSPORTE (Symfony):");
+            Log::error("Tipo: TransportException");
+            Log::error("Mensaje: " . $e->getMessage());
+            Log::error("Código: " . $e->getCode());
+        } catch (\Exception $e) {
+            Log::error("❌ ERROR GENERAL AL ENVIAR CORREO:");
+            Log::error("Tipo de excepción: " . get_class($e));
+            Log::error("Mensaje: " . $e->getMessage());
+            Log::error("Código: " . $e->getCode());
+            Log::error("Archivo: " . $e->getFile() . ":" . $e->getLine());
+            Log::error("Stack trace: " . $e->getTraceAsString());
+
+            // Información adicional de debug
+            Log::error("🔍 Información adicional:");
+            Log::error("PHP Version: " . PHP_VERSION);
+            Log::error("Laravel Version: " . app()->version());
+            Log::error("Environment: " . config('app.env'));
+        } finally {
+            Log::info("=== FIN PROCESO ENVÍO CORREO ===");
         }
 
         return response()->json($miRequest, 200);
@@ -420,7 +499,7 @@ class RequestController extends Controller
             ->orderBy('created_at', 'desc')                          // ← AGREGAR
             ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
             ->get();
-            
+
 
         if ($assignments->isEmpty()) {
             Log::info("No se encontraron asignaciones anteriores para el empleado {$idEmpleado} antes de la fecha {$fechaInicio}.");

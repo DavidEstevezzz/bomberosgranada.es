@@ -213,9 +213,20 @@ class BrigadeController extends Controller
             $idChangeRequest = $assignmentToday?->id_change_request;
             $changeRequestName = null;
             if ($idChangeRequest) {
-                $cr = ShiftChangeRequest::with('empleado1')->find($idChangeRequest);
-                if ($cr && $cr->empleado1) {
-                    $changeRequestName = $cr->empleado1->nombre . ' ' . $cr->empleado1->apellido;
+                $cr = ShiftChangeRequest::with(['empleado1', 'empleado2'])->find($idChangeRequest);
+                if ($cr) {
+                    // Verificar cuál de los dos empleados es el que aparece disponible en esta brigada
+                    if ($cr->id_empleado2 == $user->id_empleado) {
+                        // Este usuario es quien acude (id_empleado2), mostrar quien solicita (id_empleado1)
+                        if ($cr->empleado1) {
+                            $changeRequestName = $cr->empleado1->nombre . ' ' . $cr->empleado1->apellido;
+                        }
+                    } elseif ($cr->id_empleado1 == $user->id_empleado) {
+                        // Este usuario es quien solicita (id_empleado1), mostrar quien acude (id_empleado2)
+                        if ($cr->empleado2) {
+                            $changeRequestName = $cr->empleado2->nombre . ' ' . $cr->empleado2->apellido;
+                        }
+                    }
                 }
             }
 
@@ -400,15 +411,15 @@ class BrigadeController extends Controller
     }
 
     /**
- * Obtiene todas las brigadas que son especiales.
- *
- * @return \Illuminate\Http\JsonResponse
- */
-public function getEspecialBrigades()
-{
-    $especialBrigades = Brigade::where('especial', true)
-                              ->where('id_parque', 1)
-                              ->get();
-    return response()->json($especialBrigades);
-}
+     * Obtiene todas las brigadas que son especiales.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getEspecialBrigades()
+    {
+        $especialBrigades = Brigade::where('especial', true)
+            ->where('id_parque', 1)
+            ->get();
+        return response()->json($especialBrigades);
+    }
 }

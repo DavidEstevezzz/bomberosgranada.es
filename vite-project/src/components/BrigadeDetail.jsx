@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import BrigadesApiService from '../services/BrigadesApiService';
 import GuardsApiService from '../services/GuardsApiService';
 import GuardAssignmentApiService from '../services/GuardAssignmentApiService';
+import ShiftChangeRequestApiService from '../services/ShiftChangeRequestApiService';
 import PersonalEquipmentApiService from '../services/PersonalEquipmentApiService';
 import AddGuardCommentsModal from './AddGuardCommentsModal';
 import AddDailyActivitiesModal from './AddDailyActivitiesModal';
@@ -71,6 +72,8 @@ const BrigadeDetail = () => {
   const [selectedIntervention, setSelectedIntervention] = useState(null);
   const [refreshInterventions, setRefreshInterventions] = useState(false);
   const [assignedRadioNumbers, setAssignedRadioNumbers] = useState(new Set());
+  const [changeRequestsInfo, setChangeRequestsInfo] = useState({});
+
 
 
   const handleEditIntervention = (intervention) => {
@@ -169,7 +172,28 @@ const BrigadeDetail = () => {
       if (response.data.brigade) {
         setBrigade(response.data.brigade);
       }
-      setFirefighters(Object.values(response.data.firefighters));
+      const dataFF = Object.values(response.data.firefighters);
+      setFirefighters(dataFF);
+      const ids = [...new Set(dataFF.map(ff => ff.id_change_request).filter(id => id))];
+      if (ids.length > 0) {
+        try {
+          const crRes = await ShiftChangeRequestApiService.getRequests();
+          const map = {};
+          crRes.data.forEach(req => {
+            if (ids.includes(req.id)) {
+              map[req.id] = {
+                nombre: req.empleado1?.nombre,
+                apellido: req.empleado1?.apellido,
+              };
+            }
+          });
+          setChangeRequestsInfo(map);
+        } catch (err) {
+          console.error('Error fetching change requests info:', err);
+        }
+      } else {
+        setChangeRequestsInfo({});
+      }
     } catch (error) {
       console.error('Error recargando datos:', error);
     }
@@ -302,7 +326,28 @@ const BrigadeDetail = () => {
         } else {
           setError('No brigade data found');
         }
-        setFirefighters(Object.values(response.data.firefighters));
+        const dataFF = Object.values(response.data.firefighters);
+        setFirefighters(dataFF);
+        const ids = [...new Set(dataFF.map(ff => ff.id_change_request).filter(id => id))];
+        if (ids.length > 0) {
+          try {
+            const crRes = await ShiftChangeRequestApiService.getRequests();
+            const map = {};
+            crRes.data.forEach(req => {
+              if (ids.includes(req.id)) {
+                map[req.id] = {
+                  nombre: req.empleado1?.nombre,
+                  apellido: req.empleado1?.apellido,
+                };
+              }
+            });
+            setChangeRequestsInfo(map);
+          } catch (err) {
+            console.error('Error fetching change requests info:', err);
+          }
+        } else {
+          setChangeRequestsInfo({});
+        }
 
         const commentsResponse = await GuardsApiService.getGuard(id_brigada, selectedDate);
         if (commentsResponse.data.guard) {
@@ -459,9 +504,21 @@ const BrigadeDetail = () => {
     // Obtener asignación del caché
     const prevAssignmentInfo = previousAssignmentsCache[firefighter.id_empleado];
 
+    let extra = '';
+    if (firefighter.requerimiento) {
+      extra = ' (R)';
+    } else if (firefighter.id_change_request) {
+      const info = changeRequestsInfo[firefighter.id_change_request];
+      if (info) {
+        extra = ` (CG ${info.nombre} ${info.apellido})`;
+      } else {
+        extra = ' (CG)';
+      }
+    }
+
     return (
       <div className="flex items-center">
-        {firefighter.nombre} {firefighter.apellido}
+        {firefighter.nombre} {firefighter.apellido}{extra}
         {prevAssignmentInfo && (
           <span className="ml-2 text-xs text-gray-300">
             {prevAssignmentInfo.asignacion} ({prevAssignmentInfo.fecha})

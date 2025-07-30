@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Models\Firefighters_assignment;
+use App\Models\ShiftChangeRequest;
 
 class BrigadeController extends Controller
 {
@@ -201,6 +202,35 @@ class BrigadeController extends Controller
                 Log::info("No se encontró última asignación para el empleado {$user->id_empleado} con fecha <= {$fecha}");
             }
 
+            $assignmentToday = Firefighters_assignment::where('id_empleado', $user->id_empleado)
+                ->whereDate('fecha_ini', $fecha)
+                ->where('id_brigada_destino', $id_brigada)
+                ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+                ->orderByRaw("FIELD(turno, 'Mañana','Tarde','Noche')")
+                ->first();
+
+            $requerimiento = $assignmentToday?->requerimiento ?? false;
+            $idChangeRequest = $assignmentToday?->id_change_request;
+            $changeRequestName = null;
+            if ($idChangeRequest) {
+                $cr = ShiftChangeRequest::with('empleado1')->find($idChangeRequest);
+                if ($cr && $cr->empleado1) {
+                    $changeRequestName = $cr->empleado1->nombre . ' ' . $cr->empleado1->apellido;
+                }
+            }
+
+            $baseInfo = [
+                'id_empleado' => $user->id_empleado,
+                'nombre' => $user->nombre,
+                'apellido' => $user->apellido,
+                'puesto' => $user->puesto,
+                'telefono' => $user->telefono,
+                'dni' => $user->dni,
+                'requerimiento' => $requerimiento,
+                'id_change_request' => $idChangeRequest,
+                'cambio_con' => $changeRequestName
+            ];
+
             $firefighters = [];
 
             if (isset($assignmentsByTurno['Tarde'])) {
@@ -218,41 +248,23 @@ class BrigadeController extends Controller
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 1 - Turno Mañana y noche");
 
-                    $firefighters[] = [
-                        'id_empleado' => $user->id_empleado,
-                        'nombre' => $user->nombre,
-                        'apellido' => $user->apellido,
-                        'puesto' => $user->puesto,
-                        'telefono' => $user->telefono,
-                        'turno' => 'Mañana y noche',
-                        'dni' => $user->dni
-                    ];
+                    $firefighters[] = array_merge($baseInfo, [
+                        'turno' => 'Mañana y noche'
+                    ]);
                 } else if ($assignmentsByTurno['Tarde']->id_brigada_destino == $id_brigada && !isset($assignmentsByTurno['Noche'])) {
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 2 - Turno Tarde y noche");
 
-                    $firefighters[] = [
-                        'id_empleado' => $user->id_empleado,
-                        'nombre' => $user->nombre,
-                        'apellido' => $user->apellido,
-                        'puesto' => $user->puesto,
-                        'telefono' => $user->telefono,
-                        'turno' => 'Tarde y noche',
-                        'dni' => $user->dni
-                    ];
+                    $firefighters[] = array_merge($baseInfo, [
+                        'turno' => 'Tarde y noche'
+                    ]);
                 } else if ($assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada && isset($assignmentsByTurno['Mañana']) && $assignmentsByTurno['Mañana']->id_brigada_destino == $id_brigada) {
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 3 - Turno Mañana a la brigada con id {$id_brigada} que debe de ser igual que id_brigada_destino: {$assignmentsByTurno['Mañana']->id_brigada_destino}");
 
-                    $firefighters[] = [
-                        'id_empleado' => $user->id_empleado,
-                        'nombre' => $user->nombre,
-                        'apellido' => $user->apellido,
-                        'puesto' => $user->puesto,
-                        'telefono' => $user->telefono,
-                        'turno' => 'Mañana',
-                        'dni' => $user->dni
-                    ];
+                    $firefighters[] = array_merge($baseInfo, [
+                        'turno' => 'Mañana'
+                    ]);
                 } else if (
                     $assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada
                     && !isset($assignmentsByTurno['Noche'])
@@ -263,27 +275,15 @@ class BrigadeController extends Controller
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 4 - Turno Mañana");
 
-                    $firefighters[] = [
-                        'id_empleado' => $user->id_empleado,
-                        'nombre' => $user->nombre,
-                        'apellido' => $user->apellido,
-                        'puesto' => $user->puesto,
-                        'telefono' => $user->telefono,
-                        'turno' => 'Mañana',
-                        'dni' => $user->dni
-                    ];
+                    $firefighters[] = array_merge($baseInfo, [
+                        'turno' => 'Mañana'
+                    ]);
                 } else if ($assignmentsByTurno['Tarde']->id_brigada_destino == $id_brigada && isset($assignmentsByTurno['Noche']) && $assignmentsByTurno['Noche']->id_brigada_destino != $id_brigada) {
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el ELSE 1 - Turno Tarde");
 
-                    $firefighters[] = [
-                        'id_empleado' => $user->id_empleado,
-                        'nombre' => $user->nombre,
-                        'apellido' => $user->apellido,
-                        'puesto' => $user->puesto,
-                        'telefono' => $user->telefono,
-                        'turno' => 'Tarde',
-                        'dni' => $user->dni
-                    ];
+                    $firefighters[] = array_merge($baseInfo, [
+                        'turno' => 'Tarde'
+                    ]);
                 } else if (
                     isset($assignmentsByTurno['Tarde']) &&
                     $assignmentsByTurno['Tarde']->id_brigada_destino != $id_brigada &&
@@ -294,30 +294,18 @@ class BrigadeController extends Controller
                 ) {
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el ELSE 2 - Turno Tarde");
 
-                    $firefighters[] = [
-                        'id_empleado' => $user->id_empleado,
-                        'nombre' => $user->nombre,
-                        'apellido' => $user->apellido,
-                        'puesto' => $user->puesto,
-                        'telefono' => $user->telefono,
-                        'turno' => 'Mañana',
-                        'dni' => $user->dni
-                    ];
+                    $firefighters[] = array_merge($baseInfo, [
+                        'turno' => 'Mañana'
+                    ]);
                 }
             } else if (isset($assignmentsByTurno['Noche'])) {
                 if ($assignmentsByTurno['Noche']->id_brigada_destino == $id_brigada) {
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 4 - Turno Noche");
 
-                    $firefighters[] = [
-                        'id_empleado' => $user->id_empleado,
-                        'nombre'     => $user->nombre,
-                        'apellido'   => $user->apellido,
-                        'puesto'     => $user->puesto,
-                        'telefono'   => $user->telefono,
-                        'turno'      => 'Noche',
-                        'dni' => $user->dni
-                    ];
+                    $firefighters[] = array_merge($baseInfo, [
+                        'turno' => 'Noche'
+                    ]);
                 } else {
                     // Verificar si hay asignación para 'Mañana'
                     $mananaEstaBrigada = false;
@@ -341,15 +329,9 @@ class BrigadeController extends Controller
 
                     if ($mananaEstaBrigada) {
                         Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en ELSE 2 - Turno Mañana y tarde, validado correctamente");
-                        $firefighters[] = [
-                            'id_empleado' => $user->id_empleado,
-                            'nombre'     => $user->nombre,
-                            'apellido'   => $user->apellido,
-                            'puesto'     => $user->puesto,
-                            'telefono'   => $user->telefono,
-                            'turno'      => 'Mañana y tarde',
-                            'dni' => $user->dni
-                        ];
+                        $firefighters[] = array_merge($baseInfo, [
+                            'turno' => 'Mañana y tarde'
+                        ]);
                     }
                 }
             } elseif (isset($assignmentsByTurno['Mañana'])) {
@@ -357,30 +339,18 @@ class BrigadeController extends Controller
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 5 - Turno Día completo");
 
-                    $firefighters[] = [
-                        'id_empleado' => $user->id_empleado,
-                        'nombre' => $user->nombre,
-                        'apellido' => $user->apellido,
-                        'puesto' => $user->puesto,
-                        'telefono' => $user->telefono,
-                        'turno' => 'Día completo',
-                        'dni' => $user->dni
-                    ];
+                    $firefighters[] = array_merge($baseInfo, [
+                        'turno' => 'Día completo'
+                    ]);
                 }
             } else if (empty($assignmentsByTurno)) {
                 if ($lastAssignment && $lastAssignment->id_brigada_destino == $id_brigada) {
 
                     Log::info("El usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado}) ha entrado en el IF 6 - Última asignación previa, Día completo");
 
-                    $firefighters[] = [
-                        'id_empleado' => $user->id_empleado,
-                        'nombre' => $user->nombre,
-                        'apellido' => $user->apellido,
-                        'puesto' => $user->puesto,
-                        'telefono' => $user->telefono,
-                        'turno' => 'Día completo',
-                        'dni' => $user->dni
-                    ];
+                    $firefighters[] = array_merge($baseInfo, [
+                        'turno' => 'Día completo'
+                    ]);
                 }
             } else {
                 // Validar si no tiene asignaciones en otro turno en otra brigada el mismo día
@@ -391,15 +361,9 @@ class BrigadeController extends Controller
 
                 // Si no hay asignaciones el mismo día en otra brigada, mostrar "Día completo"
                 if (!$sameDayOtherBrigade && $lastAssignment && $lastAssignment->id_brigada_destino == $id_brigada) {
-                    $firefighters[] = [
-                        'id_empleado' => $user->id_empleado,
-                        'nombre' => $user->nombre,
-                        'apellido' => $user->apellido,
-                        'puesto' => $user->puesto,
-                        'telefono' => $user->telefono,
-                        'turno' => 'Día completo',
-                        'dni' => $user->dni
-                    ];
+                    $firefighters[] = array_merge($baseInfo, [
+                        'turno' => 'Día completo'
+                    ]);
                 }
             }
             Log::info("Bomberos procesados para el usuario {$user->nombre} {$user->apellido} (ID: {$user->id_empleado})", [

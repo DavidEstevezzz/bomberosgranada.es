@@ -131,7 +131,8 @@ class BrigadeController extends Controller
             // Buscar las asignaciones del usuario el mismo día
             $sameDayAssignments = Firefighters_assignment::where('id_empleado', $user->id_empleado)
                 ->whereDate('fecha_ini', '=', $fecha)
-                ->orderByRaw("FIELD(turno, 'Mañana', 'Tarde', 'Noche')")
+                ->orderByRaw("FIELD(turno, 'Mañana', 'Tarde', 'Noche')") // 1º: Turno
+                ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')") // 2º: Tipo
                 ->get();
 
             // Lista de brigadas que consideras "excluidas" (tienen prioridad si chocan con otra)
@@ -190,8 +191,9 @@ class BrigadeController extends Controller
 
             $lastAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)
                 ->whereDate('fecha_ini', '<', $fecha)
-                ->orderBy('fecha_ini', 'desc')
-                ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+                ->orderBy('fecha_ini', 'desc') // 1º: Fecha más reciente
+                ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')") // 2º: Turno (orden inverso para última)
+                ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')") // 3º: Tipo
                 ->first();
 
             if ($lastAssignment) {
@@ -205,8 +207,8 @@ class BrigadeController extends Controller
             $assignmentSameDay = Firefighters_assignment::where('id_empleado', $user->id_empleado)
                 ->whereDate('fecha_ini', $fecha)
                 ->where('id_brigada_destino', $id_brigada)
-                ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
-                ->orderByRaw("FIELD(turno, 'Mañana','Tarde','Noche')")
+                ->orderByRaw("FIELD(turno, 'Mañana','Tarde','Noche')") // 1º: Turno
+                ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')") // 2º: Tipo
                 ->first();
 
             $requerimiento = $assignmentSameDay?->requerimiento ?? false;
@@ -217,8 +219,8 @@ class BrigadeController extends Controller
                     ->whereDate('fecha_ini', $prevDate)
                     ->where('id_brigada_destino', $id_brigada)
                     ->whereNotNull('id_change_request')
-                    ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
-                    ->orderByRaw("FIELD(turno, 'Mañana','Tarde','Noche')")
+                    ->orderByRaw("FIELD(turno, 'Mañana','Tarde','Noche')") // 1º: Turno
+                    ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')") // 2º: Tipo
                     ->first();
                 $idChangeRequest = $prevAssignment?->id_change_request;
             }

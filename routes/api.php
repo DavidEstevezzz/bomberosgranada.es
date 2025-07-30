@@ -53,12 +53,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::get('/intervenciones', [InterventionController::class, 'index']);
-    Route::get('/intervenciones/by-guard/{id_guard}', [InterventionController::class, 'getInterventionsByGuard']);
-    Route::get('/intervenciones/{parte}', [InterventionController::class, 'show']);
-    Route::post('/intervenciones', [InterventionController::class, 'store']);
-    Route::put('/intervenciones/{parte}', [InterventionController::class, 'update']);
-    Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy'])
-        ->where('parte', '.*');
+Route::get('/intervenciones/by-guard/{id_guard}', [InterventionController::class, 'getInterventionsByGuard']);
+Route::get('/intervenciones/{parte}', [InterventionController::class, 'show'])
+    ->where('parte', '.*'); // ✅ Añadir aquí
+Route::post('/intervenciones', [InterventionController::class, 'store']);
+Route::put('/intervenciones/{parte}', [InterventionController::class, 'update'])
+    ->where('parte', '.*'); // ✅ Añadir aquí
+Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy'])
+    ->where('parte', '.*');
 
     // Rutas para equipos personales
     Route::prefix('equipos-personales')->group(function () {

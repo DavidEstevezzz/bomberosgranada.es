@@ -1852,8 +1852,15 @@ const BrigadeDetail = () => {
               <h2 className="text-xl font-bold mb-4">Intervenciones</h2>
               <div className="flex justify-end mb-4">
                 <button
-                  onClick={() => setShowAddInterventionModal(true)}
+                  onClick={() => {
+                    if (!guardDetails?.id) {
+                      alert('No se ha creado una guardia para esta fecha. Primero complete el cuadrante.');
+                      return;
+                    }
+                    setShowAddInterventionModal(true);
+                  }}
                   className="bg-green-500 text-white px-4 py-2 rounded"
+                  disabled={!guardDetails?.id}
                 >
                   Añadir Intervención
                 </button>

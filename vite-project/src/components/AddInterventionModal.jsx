@@ -22,12 +22,17 @@ const AddInterventionModal = ({ show, onClose, onAdded, idGuard, firefighters })
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    console.log('FormData antes de enviar:', formData); // 🔍 Debug
+    console.log('idGuard prop:', idGuard); // 🔍 Debug
+    
     try {
       await InterventionApiService.createIntervention(formData);
-      onAdded(); // Llama a callback para refrescar la lista
+      onAdded();
       onClose();
     } catch (error) {
       console.error('Error creando intervención:', error);
+      console.error('Response data:', error.response?.data); // 🔍 Más detalles del error
       alert('Error al crear la intervención');
     }
   };

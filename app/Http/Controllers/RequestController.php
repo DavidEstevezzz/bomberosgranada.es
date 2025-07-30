@@ -247,9 +247,10 @@ class RequestController extends Controller
         // Manejar las asignaciones para todos los tipos que lo requieran
         $tiposSinAsignaciones = ['vestuario', 'salidas personales']; // Tipos que no requieren asignaciones
         if (!in_array($miRequest->tipo, $tiposSinAsignaciones)) {
-            if ($newEstado === 'Confirmada') {
-                $this->createAssignments($miRequest);
-            }
+            if ($newEstado === 'Confirmada' && $oldEstado !== 'Confirmada') {
+                if (!Firefighters_assignment::where('id_request', $miRequest->id)->exists()) {
+                    $this->createAssignments($miRequest);
+                }
             if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
                 $this->deleteAssignments($miRequest);
             }
@@ -369,12 +370,18 @@ class RequestController extends Controller
 
         return response()->json($miRequest, 200);
     }
-
-
+    }
 
 
     private function createAssignments($miRequest)
     {
+
+        // Evitar duplicados si ya existen asignaciones para esta solicitud
+        if (Firefighters_assignment::where('id_request', $miRequest->id)->exists()) {
+            Log::info("Asignaciones ya existentes para la solicitud", ['id' => $miRequest->id]);
+            return;
+        }
+        
         $brigadeId = null;
 
         Log::info("Creando asignaciones para la solicitud de tipo: {$miRequest->tipo}");

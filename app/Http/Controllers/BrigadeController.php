@@ -202,27 +202,38 @@ class BrigadeController extends Controller
                 Log::info("No se encontró última asignación para el empleado {$user->id_empleado} con fecha <= {$fecha}");
             }
 
-            $assignmentToday = Firefighters_assignment::where('id_empleado', $user->id_empleado)
+            $assignmentSameDay = Firefighters_assignment::where('id_empleado', $user->id_empleado)
                 ->whereDate('fecha_ini', $fecha)
                 ->where('id_brigada_destino', $id_brigada)
                 ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
                 ->orderByRaw("FIELD(turno, 'Mañana','Tarde','Noche')")
                 ->first();
 
-            $requerimiento = $assignmentToday?->requerimiento ?? false;
-            $idChangeRequest = $assignmentToday?->id_change_request;
+            $requerimiento = $assignmentSameDay?->requerimiento ?? false;
+            $idChangeRequest = $assignmentSameDay?->id_change_request;
+            if (!$idChangeRequest) {
+                $prevDate = date('Y-m-d', strtotime($fecha . ' -1 day'));
+                $prevAssignment = Firefighters_assignment::where('id_empleado', $user->id_empleado)
+                    ->whereDate('fecha_ini', $prevDate)
+                    ->where('id_brigada_destino', $id_brigada)
+                    ->whereNotNull('id_change_request')
+                    ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+                    ->orderByRaw("FIELD(turno, 'Mañana','Tarde','Noche')")
+                    ->first();
+                $idChangeRequest = $prevAssignment?->id_change_request;
+            }
             $changeRequestName = null;
             if ($idChangeRequest) {
                 $cr = ShiftChangeRequest::with(['empleado1', 'empleado2'])->find($idChangeRequest);
                 if ($cr) {
-                    // Verificar cuál de los dos empleados es el que aparece disponible en esta brigada
+                    // Verificar cuál de los dos empleados es el que aparece disponible
                     if ($cr->id_empleado2 == $user->id_empleado) {
-                        // Este usuario es quien acude (id_empleado2), mostrar quien solicita (id_empleado1)
+                        // Este usuario acude al turno (id_empleado2), mostrar quien lo cedió (id_empleado1)
                         if ($cr->empleado1) {
                             $changeRequestName = $cr->empleado1->nombre . ' ' . $cr->empleado1->apellido;
                         }
                     } elseif ($cr->id_empleado1 == $user->id_empleado) {
-                        // Este usuario es quien solicita (id_empleado1), mostrar quien acude (id_empleado2)
+                        // Este usuario cedió el turno (id_empleado1), mostrar quien lo recibe (id_empleado2)
                         if ($cr->empleado2) {
                             $changeRequestName = $cr->empleado2->nombre . ' ' . $cr->empleado2->apellido;
                         }
@@ -241,6 +252,7 @@ class BrigadeController extends Controller
                 'id_change_request' => $idChangeRequest,
                 'cambio_con' => $changeRequestName
             ];
+
 
             $firefighters = [];
 

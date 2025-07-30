@@ -68,11 +68,8 @@ class ShiftChangeRequestController extends Controller
     
         return response()->json($shiftChangeRequest, 201);
     }
-    
 
-    
-
-public function update(Request $request, $id)
+    public function update(Request $request, $id)
 {
     Log::info('Valor de turno recibido:', ['turno' => $request->turno]);
 
@@ -98,9 +95,11 @@ public function update(Request $request, $id)
     $shiftChangeRequest->estado = $request->estado;
     $shiftChangeRequest->save();
 
-    // Si el estado es "aceptado", crear asignaciones
-    if ($shiftChangeRequest->estado === 'aceptado') {
-        $this->createAssignments($shiftChangeRequest);
+    // Si el estado es "aceptado" y antes no lo estaba, crear asignaciones
+    if ($shiftChangeRequest->estado === 'aceptado' && $oldEstado !== 'aceptado') {
+        if (!Firefighters_assignment::where('id_change_request', $shiftChangeRequest->id)->exists()) {
+            $this->createAssignments($shiftChangeRequest);
+        }
     }
 
     // Si el estado ha cambiado de "aceptado" a "rechazado", eliminar asignaciones
@@ -125,6 +124,13 @@ public function update(Request $request, $id)
 
 private function createAssignments($shiftChangeRequest)
 {
+
+    // Evitar duplicados si ya existen asignaciones para esta solicitud
+    if (Firefighters_assignment::where('id_change_request', $shiftChangeRequest->id)->exists()) {
+        Log::info('Asignaciones ya existentes para el cambio de turno', ['id' => $shiftChangeRequest->id]);
+        return;
+    }
+    
     Log::info('Iniciando la creación de asignaciones para cambio de turno', [
         'shiftChangeRequest' => $shiftChangeRequest
     ]);

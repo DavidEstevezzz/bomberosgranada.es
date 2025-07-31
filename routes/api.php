@@ -53,14 +53,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::get('/intervenciones', [InterventionController::class, 'index']);
-Route::get('/intervenciones/by-guard/{id_guard}', [InterventionController::class, 'getInterventionsByGuard']);
-Route::get('/intervenciones/{parte}', [InterventionController::class, 'show'])
-    ->where('parte', '.*'); // ✅ Añadir aquí
-Route::post('/intervenciones', [InterventionController::class, 'store']);
-Route::put('/intervenciones/{parte}', [InterventionController::class, 'update'])
-    ->where('parte', '.*'); // ✅ Añadir aquí
-Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy'])
-    ->where('parte', '.*');
+    Route::get('/intervenciones/by-guard/{id_guard}', [InterventionController::class, 'getInterventionsByGuard']);
+    Route::get('/intervenciones/{parte}', [InterventionController::class, 'show'])
+        ->where('parte', '.*'); 
+    Route::post('/intervenciones', [InterventionController::class, 'store']);
+    Route::put('/intervenciones/{parte}', [InterventionController::class, 'update'])
+        ->where('parte', '.*');  
+    Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy'])
+        ->where('parte', '.*');
 
     // Rutas para equipos personales
     Route::prefix('equipos-personales')->group(function () {
@@ -128,7 +128,7 @@ Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destro
         Route::get('/user/{employeeId}/practicas', [BrigadeUserController::class, 'getUserPracticas']);
         Route::post('/update-practicas', [BrigadeUserController::class, 'updatePracticas']);
         Route::post('/increment-practicas', [BrigadeUserController::class, 'incrementPracticas']);
-    
+
         // Luego las rutas CRUD genéricas
         Route::get('/', [BrigadeUserController::class, 'index']);
         Route::post('/', [BrigadeUserController::class, 'store']);
@@ -224,12 +224,12 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
 
     Route::prefix('pdf-documents')->group(function () {
         Route::get('/latest', [PdfDocumentController::class, 'getLatest']);
-    Route::post('/upload', [PdfDocumentController::class, 'upload']);
-    Route::get('/{id}', [PdfDocumentController::class, 'show']);
-    Route::get('/{id}/secondary', [PdfDocumentController::class, 'show'])->defaults('type', 'secondary');
-    Route::get('/{id}/download', [PdfDocumentController::class, 'download']);
-    Route::get('/{id}/download/secondary', [PdfDocumentController::class, 'download'])->defaults('type', 'secondary');
-    Route::delete('/{id}', [PdfDocumentController::class, 'destroy']);
+        Route::post('/upload', [PdfDocumentController::class, 'upload']);
+        Route::get('/{id}', [PdfDocumentController::class, 'show']);
+        Route::get('/{id}/secondary', [PdfDocumentController::class, 'show'])->defaults('type', 'secondary');
+        Route::get('/{id}/download', [PdfDocumentController::class, 'download']);
+        Route::get('/{id}/download/secondary', [PdfDocumentController::class, 'download'])->defaults('type', 'secondary');
+        Route::delete('/{id}', [PdfDocumentController::class, 'destroy']);
     });
 
     // CRUD de Parques
@@ -273,7 +273,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('/firefighters-assignments/create-practices', [FirefighterAssignmentController::class, 'createPracticesAssigments']);
     Route::post('/firefighters-assignments/create-rt', [FirefighterAssignmentController::class, 'createRTAssigments']);
     Route::post('/firefighters-assignments/delete-practices', [FirefighterAssignmentController::class, 'deletePracticesAssignments']);
-Route::post('/firefighters-assignments/delete-rt', [FirefighterAssignmentController::class, 'deleteRTAssignments']);
+    Route::post('/firefighters-assignments/delete-rt', [FirefighterAssignmentController::class, 'deleteRTAssignments']);
     Route::get('/firefighters-assignments/check-especial-brigade', [FirefighterAssignmentController::class, 'getEspecialAssigment']);
     Route::post('/firefighters-assignments/extend-working-day', [FirefighterAssignmentController::class, 'extendWorkingDay']);
 

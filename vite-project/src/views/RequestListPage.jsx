@@ -15,6 +15,7 @@ const RequestListPage = () => {
     Pendiente: 1,
     Confirmada: 1,
     Cancelada: 1,
+    Denegada: 1,
   });
   // Añadir estados para el ordenamiento
   const [sortField, setSortField] = useState('fecha_ini');
@@ -216,7 +217,7 @@ const RequestListPage = () => {
         </div>
       </div>
 
-      {['Pendiente', 'Confirmada', 'Cancelada'].map((status) => {
+      {['Pendiente', 'Confirmada', 'Cancelada', 'Denegada'].map((status) => {
         const filteredByStatus = filteredRequests.filter((request) => request.estado === status);
         const sortedRequests = sortData(filteredByStatus);
         const paginatedRequests = paginate(sortedRequests, status);
@@ -296,10 +297,9 @@ const RequestListPage = () => {
                           >
                             Aceptar
                           </button>
-                          {request.estado !== 'Cancelada' && (
+                          {request.estado !== 'Cancelada' && request.estado !== 'Denegada' && (
                             <button
-                              onClick={() => handleUpdateRequestStatus(request.id, 'Cancelada', request.tipo, request.id_empleado, request.turno)}
-                              className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1"
+                            onClick={() => handleUpdateRequestStatus(request.id, 'Denegada', request.tipo, request.id_empleado, request.turno)}                              className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1"
                             >
                               Rechazar
                             </button>

@@ -50,7 +50,7 @@ class RequestController extends Controller
             'tipo' => 'required|in:vacaciones,asuntos propios,horas sindicales,salidas personales,vestuario,licencias por jornadas,licencias por dias,modulo,compensacion grupos especiales',
             'fecha_ini' => 'required|date',
             'fecha_fin' => 'required|date',
-            'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
+            'estado' => 'required|in:Pendiente,Confirmada,Cancelada,Denegada',
             'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048', // Validación del archivo
         ];
 
@@ -153,7 +153,7 @@ class RequestController extends Controller
         $miRequest = MiRequest::findOrFail($id);
 
         $rules = [
-            'estado' => 'required|in:Pendiente,Confirmada,Cancelada',
+            'estado' => 'required|in:Pendiente,Confirmada,Cancelada,Denegada',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -251,8 +251,8 @@ class RequestController extends Controller
                 if (!Firefighters_assignment::where('id_request', $miRequest->id)->exists()) {
                     $this->createAssignments($miRequest);
                 }
-            if ($oldEstado === 'Confirmada' && $newEstado === 'Cancelada') {
-                $this->deleteAssignments($miRequest);
+                if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Denegada')) {
+                    $this->deleteAssignments($miRequest);
             }
         }
 
@@ -569,7 +569,7 @@ class RequestController extends Controller
         $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
 
         // Restar días de vacaciones cuando se confirma la solicitud
-        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada' || $oldEstado === 'Denegada') && $newEstado === 'Confirmada') {
             Log::info("Días solicitados: {$diasSolicitados}");
             Log::info("Vacaciones disponibles antes de la resta: {$user->vacaciones}");
             $user->vacaciones = max(0, $user->vacaciones - $diasSolicitados);
@@ -600,13 +600,13 @@ class RequestController extends Controller
         $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
 
         // Restar días de módulo cuando se confirma la solicitud
-        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada' || $oldEstado === 'Denegada') && $newEstado === 'Confirmada') {
             $user->modulo = max(0, $user->modulo - $diasSolicitados);
             Log::info("Restando {$diasSolicitados} días de módulo al usuario ID: {$user->id_empleado}");
         }
 
         // Sumar días de módulo cuando se cancela la solicitud
-        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Denegada' || $newEstado === 'Pendiente')) {
             $user->modulo += $diasSolicitados;
             Log::info("Sumando {$diasSolicitados} días de módulo al usuario ID: {$user->id_empleado}");
         }
@@ -642,13 +642,13 @@ class RequestController extends Controller
         Log::info("AP disponibles antes de operación: {$user->AP}");
 
         // Restar jornadas de AP cuando se confirma la solicitud
-        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada' || $oldEstado === 'Denegada') && $newEstado === 'Confirmada') {
             $user->AP = max(0, $user->AP - $jornadasSolicitadas);
             Log::info("Restando {$jornadasSolicitadas} jornadas de asuntos propios al usuario ID: {$user->id_empleado}");
         }
 
         // Sumar jornadas de AP cuando se cancela la solicitud
-        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Denegada' || $newEstado === 'Pendiente')) {
             $user->AP += $jornadasSolicitadas;
             Log::info("Sumando {$jornadasSolicitadas} jornadas de asuntos propios al usuario ID: {$user->id_empleado}");
         }
@@ -669,13 +669,13 @@ class RequestController extends Controller
         $jornadasSolicitadas = $this->calcularJornadasPorTurno($miRequest->turno);
 
         // Restar jornadas de compensacion_grupos cuando se confirma la solicitud
-        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada' || $oldEstado === 'Denegada') && $newEstado === 'Confirmada') {
             $user->compensacion_grupos = max(0, $user->compensacion_grupos - $jornadasSolicitadas);
             Log::info("Restando {$jornadasSolicitadas} jornadas de compensación grupos al usuario ID: {$user->id_empleado}");
         }
 
         // Sumar jornadas de compensacion_grupos cuando se cancela la solicitud
-        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Denegada' || $newEstado === 'Pendiente')) {
             $user->compensacion_grupos += $jornadasSolicitadas;
             Log::info("Sumando {$jornadasSolicitadas} jornadas de compensación grupos al usuario ID: {$user->id_empleado}");
         }
@@ -694,13 +694,13 @@ class RequestController extends Controller
         $hours = $miRequest->horas;
 
         // Restar horas sindicales cuando se confirma la solicitud
-        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada' || $oldEstado === 'Denegada') && $newEstado === 'Confirmada') {
             $user->horas_sindicales = max(0, $user->horas_sindicales - $hours);
             Log::info("Restando {$hours} horas sindicales al usuario ID: {$user->id_empleado}");
         }
 
         // Sumar horas sindicales cuando se cancela la solicitud
-        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Denegada' || $newEstado === 'Pendiente')) {
             $user->horas_sindicales += $hours;
             Log::info("Sumando {$hours} horas sindicales al usuario ID: {$user->id_empleado}");
         }
@@ -719,13 +719,13 @@ class RequestController extends Controller
         $hours = $miRequest->horas;
 
         // Restar horas de SP cuando se confirma la solicitud
-        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada') && $newEstado === 'Confirmada') {
+        if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada' || $oldEstado === 'Denegada') && $newEstado === 'Confirmada') {
             $user->SP = max(0, $user->SP - $hours);
             Log::info("Restando {$hours} horas de salidas personales al usuario ID: {$user->id_empleado}");
         }
 
         // Sumar horas de SP cuando se cancela la solicitud
-        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Denegada' || $newEstado === 'Pendiente')) {
             $user->SP += $hours;
             Log::info("Sumando {$hours} horas de salidas personales al usuario ID: {$user->id_empleado}");
         }

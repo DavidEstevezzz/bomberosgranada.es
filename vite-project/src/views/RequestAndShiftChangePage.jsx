@@ -25,6 +25,7 @@ const RequestAndShiftChangePage = () => {
       aceptado_por_empleados: 'Aceptado por empleados',
       aceptado: 'Aceptado',
       Cancelada: 'Cancelada',
+      Denegada: 'Denegada',
       Confirmada: 'Confirmada',
     };
     return stateMap[state] || state;

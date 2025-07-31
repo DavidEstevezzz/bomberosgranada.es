@@ -235,10 +235,10 @@ class FirefighterAssignmentController extends Controller
 
         // Para la comprobación de hoy usaremos: exclusiones estáticas + brigadas de ayer y de mañana (más las del día actual que ya vienen en $excludedBrigades)
         $excludedForToday = array_merge($excludedBrigades, $guardYesterday, $guardTomorrow);
-        // Para ayer, ignoramos las brigadas de mañana
-        $excludedForYesterday = array_merge($excludedBrigades, $guardYesterday);
-        // Para mañana, ignoramos las brigadas de ayer
-        $excludedForTomorrow = array_merge($excludedBrigades, $guardTomorrow);
+        // Para ayer, ignoramos las brigadas de mañana y las del día actual
+        $excludedForYesterday = array_merge($absoluteExclusions, $guardYesterday);
+        // Para mañana, ignoramos las brigadas de ayer y las del día actual
+        $excludedForTomorrow = array_merge($absoluteExclusions, $guardTomorrow);
 
         Log::info("Lista de exclusión para hoy:", ['excludedForToday' => $excludedForToday]);
         Log::info("Lista de exclusión para ayer:", ['excludedForYesterday' => $excludedForYesterday]);

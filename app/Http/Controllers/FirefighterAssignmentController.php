@@ -235,10 +235,10 @@ class FirefighterAssignmentController extends Controller
 
         // Para la comprobación de hoy usaremos: exclusiones estáticas + brigadas de ayer y de mañana (más las del día actual que ya vienen en $excludedBrigades)
         $excludedForToday = array_merge($excludedBrigades, $guardYesterday, $guardTomorrow);
-        // Para ayer, ignoramos las brigadas de mañana y las del día actual
-        $excludedForYesterday = array_merge($absoluteExclusions, $guardYesterday);
-        // Para mañana, ignoramos las brigadas de ayer y las del día actual
-        $excludedForTomorrow = array_merge($absoluteExclusions, $guardTomorrow);
+        // Para ayer, ignoramos las brigadas de mañana
+        $excludedForYesterday = array_merge($excludedBrigades, $guardYesterday);
+        // Para mañana, ignoramos las brigadas de ayer
+        $excludedForTomorrow = array_merge($excludedBrigades, $guardTomorrow);
 
         Log::info("Lista de exclusión para hoy:", ['excludedForToday' => $excludedForToday]);
         Log::info("Lista de exclusión para ayer:", ['excludedForYesterday' => $excludedForYesterday]);
@@ -268,15 +268,12 @@ class FirefighterAssignmentController extends Controller
             $isProtected = $this->isProtectedByRequests($firefighterId, $previousDay, $date, $nextDay);
             Log::info("Bombero {$firefighterId} => isProtected: " . ($isProtected ? 'SÍ' : 'NO'));
 
-            // Obtener las últimas asignaciones para hoy, ayer y mañana
-            $lastToday = $assignmentsToday->has($firefighterId) ? $assignmentsToday[$firefighterId]->first() : null;
-            $lastYesterday = $assignmentsYesterday->has($firefighterId) ? $assignmentsYesterday[$firefighterId]->first() : null;
-            $lastTomorrow = $assignmentsTomorrow->has($firefighterId) ? $assignmentsTomorrow[$firefighterId]->first() : null;
-
             // 1) Revisar asignación HOY
-            if ($lastToday) {
-                if ($lastToday->brigadeDestination) {
-                    $brigadeNameToday = $lastToday->brigadeDestination->nombre;
+            if ($assignmentsToday->has($firefighterId)) {
+                $lastAssignmentToday = $assignmentsToday[$firefighterId]->first();
+
+                if ($lastAssignmentToday && $lastAssignmentToday->brigadeDestination) {
+                    $brigadeNameToday = $lastAssignmentToday->brigadeDestination->nombre;
                     Log::info("Bombero {$firefighterId} - Asignación HOY => brigada '{$brigadeNameToday}'.");
 
                     // Si la asignación es de un tipo sin turno, se excluye automáticamente
@@ -303,8 +300,10 @@ class FirefighterAssignmentController extends Controller
             }
 
             // 2) Revisar asignación AYER (solo si no se excluyó por hoy)
-            if ($lastYesterday) {
-                if ($lastYesterday->brigadeDestination) {
+            if ($assignmentsYesterday->has($firefighterId)) {
+                $lastYesterday = $assignmentsYesterday[$firefighterId]->first();
+
+                if ($lastYesterday && $lastYesterday->brigadeDestination) {
                     $brigadeNameYesterday = $lastYesterday->brigadeDestination->nombre;
                     Log::info("Brigada de ayer para bombero {$firefighterId}: {$brigadeNameYesterday}");
 
@@ -317,8 +316,10 @@ class FirefighterAssignmentController extends Controller
             }
 
             // 3) Revisar asignación MAÑANA (solo si no se excluyó por hoy o ayer)
-            if ($lastTomorrow) {
-                if ($lastTomorrow->brigadeDestination) {
+            if ($assignmentsTomorrow->has($firefighterId)) {
+                $lastTomorrow = $assignmentsTomorrow[$firefighterId]->first();
+
+                if ($lastTomorrow && $lastTomorrow->brigadeDestination) {
                     $brigadeNameTomorrow = $lastTomorrow->brigadeDestination->nombre;
                     Log::info("Brigada de mañana para bombero {$firefighterId}: {$brigadeNameTomorrow}");
 
@@ -383,7 +384,6 @@ class FirefighterAssignmentController extends Controller
 
         return $finalAssignments;
     }
-
     private function isFirefighterInGuardBrigade($firefighterId, $date)
     {
         $lastAssignment = Firefighters_assignment::where('id_empleado', $firefighterId)

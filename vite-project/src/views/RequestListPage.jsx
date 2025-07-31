@@ -4,6 +4,7 @@ import dayjs from 'dayjs'; // Manejo de fechas
 import RequestApiService from '../services/RequestApiService';
 import UsuariosApiService from '../services/UsuariosApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
+import { useStateContext } from '../contexts/ContextProvider';
 
 const RequestListPage = () => {
   const [requests, setRequests] = useState([]);
@@ -20,9 +21,10 @@ const RequestListPage = () => {
   // Añadir estados para el ordenamiento
   const [sortField, setSortField] = useState('fecha_ini');
   const [sortDirection, setSortDirection] = useState('asc');
-  
+
   const itemsPerPage = 10; // Filas por página
   const { darkMode } = useDarkMode();
+  const { user } = useStateContext();
 
   useEffect(() => {
     fetchRequests();
@@ -75,17 +77,17 @@ const RequestListPage = () => {
     const user = users.find((user) => user.id_empleado === id_empleado);
     return user ? `${user.nombre} ${user.apellido}` : 'N/A';
   };
-  
+
   const handleUpdateRequestStatus = async (id, newStatus, tipo, idEmpleado, turno = 'Mañana') => {
     try {
       const request = requests.find((req) => req.id === id);
       const currentStatus = request?.estado;
-  
+
       // Validación inicial para tipos específicos
       if (tipo === 'asuntos propios') {
         let jornadasSolicitadas = calcularJornadasPorTurno(turno);
         const remainingAPDays = getAPDaysRemaining(idEmpleado);
-  
+
         if (newStatus === 'Confirmada' && currentStatus !== 'Confirmada') {
           if (jornadasSolicitadas > remainingAPDays) {
             alert('No te quedan suficientes jornadas de asuntos propios (AP) para aceptar esta solicitud.');
@@ -95,7 +97,7 @@ const RequestListPage = () => {
       } else if (tipo === 'compensacion grupos especiales') {
         let jornadasSolicitadas = calcularJornadasPorTurno(turno);
         const remainingCompensacionDays = getCompensacionDaysRemaining(idEmpleado);
-  
+
         if (newStatus === 'Confirmada' && currentStatus !== 'Confirmada') {
           if (jornadasSolicitadas > remainingCompensacionDays) {
             alert('No te quedan suficientes jornadas de compensación de grupos especiales para aceptar esta solicitud.');
@@ -103,15 +105,15 @@ const RequestListPage = () => {
           }
         }
       }
-  
+
       const payload = { estado: newStatus };
       if (tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales') {
         payload.turno = turno;
       }
-  
+
       // Enviar al backend para procesar - el backend manejará todo lo demás
       await RequestApiService.updateRequest(id, payload);
-      
+
       // Actualizar la lista de solicitudes después de la actualización
       fetchRequests();
       // Actualizar la lista de usuarios para reflejar los cambios en días disponibles
@@ -121,7 +123,7 @@ const RequestListPage = () => {
     }
   };
 
-  
+
   const calcularJornadasPorTurno = (turno) => {
     if (turno === 'Día Completo') {
       return 3;
@@ -131,7 +133,7 @@ const RequestListPage = () => {
       return 1;
     }
   };
-  
+
   // Función para manejar el ordenamiento
   const handleSort = (field) => {
     if (field === sortField) {
@@ -147,12 +149,12 @@ const RequestListPage = () => {
   // Función para ordenar los datos
   const sortData = (data) => {
     if (!sortField) return data;
-    
+
     return [...data].sort((a, b) => {
       if (sortField === 'fecha_ini') {
         const dateA = dayjs(a.fecha_ini);
         const dateB = dayjs(b.fecha_ini);
-        
+
         if (sortDirection === 'asc') {
           return dateA.isBefore(dateB) ? -1 : dateA.isAfter(dateB) ? 1 : 0;
         } else {
@@ -172,10 +174,36 @@ const RequestListPage = () => {
   };
 
   const filterRequestsByMonth = () => {
-    return requests.filter((request) =>
+    const baseFilter = requests.filter((request) =>
       dayjs(request.fecha_ini).isSame(currentMonth, 'month')
     );
+
+    // Si no es jefe, filtrar solo solicitudes pendientes del día actual
+    if (user?.type !== 'jefe') {
+      const today = dayjs().format('YYYY-MM-DD');
+      return baseFilter.filter((request) =>
+        request.estado === 'Pendiente' &&
+        dayjs(request.fecha_ini).format('YYYY-MM-DD') === today
+      );
+    }
+
+    return baseFilter;
   };
+
+  const canActOnRequest = (request) => {
+    // Los jefes pueden actuar sobre cualquier solicitud
+    if (user?.type === 'jefe') {
+      return true;
+    }
+
+    // Los mandos solo pueden actuar sobre solicitudes del día actual
+    const today = dayjs().format('YYYY-MM-DD');
+    return dayjs(request.fecha_ini).format('YYYY-MM-DD') === today;
+  };
+
+  const statusesToShow = user?.type === 'jefe'
+    ? ['Pendiente', 'Confirmada', 'Cancelada', 'Denegada']
+    : ['Pendiente'];
 
   const paginate = (data, status) => {
     const startIndex = (pagination[status] - 1) * itemsPerPage;
@@ -207,7 +235,7 @@ const RequestListPage = () => {
           >
             Mes Anterior
           </button>
-            <span className="text-xl font-semibold">{currentMonth.format('MMMM YYYY').charAt(0).toUpperCase() + currentMonth.format('MMMM YYYY').slice(1)}</span>
+          <span className="text-xl font-semibold">{currentMonth.format('MMMM YYYY').charAt(0).toUpperCase() + currentMonth.format('MMMM YYYY').slice(1)}</span>
           <button
             onClick={handleNextMonth}
             className="bg-blue-500 text-white px-4 py-2 rounded"
@@ -217,7 +245,7 @@ const RequestListPage = () => {
         </div>
       </div>
 
-      {['Pendiente', 'Confirmada', 'Cancelada', 'Denegada'].map((status) => {
+      {statusesToShow.map((status) => {
         const filteredByStatus = filteredRequests.filter((request) => request.estado === status);
         const sortedRequests = sortData(filteredByStatus);
         const paginatedRequests = paginate(sortedRequests, status);
@@ -233,7 +261,7 @@ const RequestListPage = () => {
                     <th className="py-2 px-2">Empleado</th>
                     <th className="py-2 px-2">Tipo</th>
                     <th className="py-2 px-2">Motivo</th>
-                    <th 
+                    <th
                       className="py-2 px-2 cursor-pointer select-none flex items-center"
                       onClick={() => handleSort('fecha_ini')}
                     >
@@ -291,18 +319,25 @@ const RequestListPage = () => {
                           )}
                         </td>
                         <td className="py-2 px-2 flex space-x-2">
-                          <button
-                            onClick={() => handleUpdateRequestStatus(request.id, 'Confirmada', request.tipo, request.id_empleado, request.turno)}
-                            className="bg-green-600 text-white px-4 py-1 rounded flex items-center space-x-1"
-                          >
-                            Aceptar
-                          </button>
-                          {request.estado !== 'Cancelada' && request.estado !== 'Denegada' && (
-                            <button
-                            onClick={() => handleUpdateRequestStatus(request.id, 'Denegada', request.tipo, request.id_empleado, request.turno)}                              className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1"
-                            >
-                              Rechazar
-                            </button>
+                          {canActOnRequest(request) ? (
+                            <>
+                              <button
+                                onClick={() => handleUpdateRequestStatus(request.id, 'Confirmada', request.tipo, request.id_empleado, request.turno)}
+                                className="bg-green-600 text-white px-4 py-1 rounded flex items-center space-x-1"
+                              >
+                                Aceptar
+                              </button>
+                              {request.estado !== 'Cancelada' && request.estado !== 'Denegada' && (
+                                <button
+                                  onClick={() => handleUpdateRequestStatus(request.id, 'Denegada', request.tipo, request.id_empleado, request.turno)}
+                                  className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1"
+                                >
+                                  Rechazar
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-gray-500 text-sm">Sin permisos</span>
                           )}
                         </td>
                       </tr>

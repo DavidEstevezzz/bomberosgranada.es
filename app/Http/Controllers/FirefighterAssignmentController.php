@@ -234,8 +234,11 @@ class FirefighterAssignmentController extends Controller
         Log::info("Brigadas en guardia mañana:", ['guardTomorrow' => $guardTomorrow]);
 
         // Para la comprobación de hoy usaremos: exclusiones estáticas + brigadas de ayer y de mañana (más las del día actual que ya vienen en $excludedBrigades)
-        $excludedForToday = array_merge($excludedBrigades, $guardYesterday, $guardTomorrow);
-        // Para ayer, ignoramos las brigadas de mañana
+        // Para el día actual sólo consideramos las exclusiones estáticas y las
+        // brigadas de guardia de AYER. Las brigadas que estarán de guardia
+        // MAÑANA se revisarán de forma individual por bombero para tener en
+        // cuenta su asignación real del día siguiente.
+        $excludedForToday = array_merge($excludedBrigades, $guardYesterday);        // Para ayer, ignoramos las brigadas de mañana
         $excludedForYesterday = array_merge($excludedBrigades, $guardYesterday);
         // Para mañana, ignoramos las brigadas de ayer
         $excludedForTomorrow = array_merge($excludedBrigades, $guardTomorrow);
@@ -305,6 +308,7 @@ class FirefighterAssignmentController extends Controller
                     continue;
                 }
 
+                
                 // Si está en otra brigada excluida (no de guardia hoy) y no está protegido, excluir
                 if (in_array($brigadeNameToday, $excludedForToday) && !$isProtected) {
                     $unavailableFirefighterIds[] = $firefighterId;
@@ -325,6 +329,8 @@ class FirefighterAssignmentController extends Controller
                 }
             }
 
+            
+
             // 3) Revisar asignación MAÑANA
             // CORRECCIÓN: Verificar si existe la clave antes de acceder
             $lastTomorrow = $assignmentsTomorrow->has($firefighterId) ? $assignmentsTomorrow[$firefighterId]->first() : null;
@@ -336,6 +342,20 @@ class FirefighterAssignmentController extends Controller
                     continue;
                 }
             }
+
+            // Comprobar si la brigada de HOY estará en guardia MAÑANA. En
+                // ese caso sólo excluimos si el bombero continúa asignado a la
+                // misma brigada al día siguiente (cambio espejo).
+                $isSameBrigadeTomorrow = false;
+                if ($lastTomorrow && $lastTomorrow->brigadeDestination) {
+                    $isSameBrigadeTomorrow = $lastToday->brigadeDestination->id_brigada ===
+                        $lastTomorrow->brigadeDestination->id_brigada;
+                }
+
+                if (in_array($brigadeNameToday, $guardTomorrow) && $isSameBrigadeTomorrow && !$isProtected) {
+                    $unavailableFirefighterIds[] = $firefighterId;
+                    continue;
+                }
         }
 
         $unavailableFirefighterIds = array_unique($unavailableFirefighterIds);

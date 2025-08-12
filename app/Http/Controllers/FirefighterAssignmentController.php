@@ -213,7 +213,8 @@ class FirefighterAssignmentController extends Controller
             'Licencias por Jornadas',
             'Licencias por Días',
             'Compensacion grupos especiales',
-            'Horas Sindicales'
+            'Horas Sindicales',
+            'Brigada J'
         ];
 
         // Obtener las brigadas en guardia para ayer y mañana
@@ -268,12 +269,91 @@ class FirefighterAssignmentController extends Controller
             $isProtected = $this->isProtectedByRequests($firefighterId, $previousDay, $date, $nextDay);
             Log::info("Bombero {$firefighterId} => isProtected: " . ($isProtected ? 'SÍ' : 'NO'));
 
-            // Obtener las últimas asignaciones
+            // Obtener las últimas asignaciones (ESTAS SON LAS QUE FALTABAN)
             $lastToday = $assignmentsToday->has($firefighterId) ? $assignmentsToday[$firefighterId]->first() : null;
             $lastYesterday = $assignmentsYesterday->has($firefighterId) ? $assignmentsYesterday[$firefighterId]->first() : null;
             $lastTomorrow = $assignmentsTomorrow->has($firefighterId) ? $assignmentsTomorrow[$firefighterId]->first() : null;
 
-            // 1) Revisar asignación HOY
+            // NUEVO: Obtener TODAS las asignaciones del día actual para este bombero
+            $allAssignmentsToday = Firefighters_assignment::where('id_empleado', $firefighterId)
+                ->where('fecha_ini', $date)
+                ->get();
+
+            // Variable para rastrear si debe ser excluido por trabajar en guardia
+            $shouldExcludeForGuard = false;
+            $guardBrigadeName = '';
+
+            // Verificar CADA asignación del día
+            // Verificar CADA asignación del día
+            foreach ($allAssignmentsToday as $assignment) {
+                $worksBrigadeWithGuard = false;
+                $brigadeName = '';
+
+                // Si es una IDA, verificar si TRABAJÓ antes de irse
+                if ($assignment->tipo_asignacion == 'ida' && $assignment->brigadeOrigin) {
+                    // IMPORTANTE: Si la IDA es por la mañana, NO trabajó (se fue antes de empezar)
+                    if ($assignment->turno != 'Mañana') {
+                        // Verificar si la brigada origen tiene guardia
+                        if (in_array($assignment->brigadeOrigin->nombre, $excludedForToday)) {
+                            $worksBrigadeWithGuard = true;
+                            $brigadeName = $assignment->brigadeOrigin->nombre;
+                            Log::info("Bombero {$firefighterId} trabajó en {$brigadeName} antes de irse (ida turno {$assignment->turno})");
+                        }
+
+                        // NUEVO: También excluir si va a una brigada especial pero trabajó antes
+                        // Esto cubre el caso donde alguien trabaja y luego se va a Horas Sindicales
+                        $specialBrigades = [
+                            'Bajas',
+                            'Vacaciones',
+                            'Asuntos Propios',
+                            'Modulo',
+                            'Licencias por Jornadas',
+                            'Licencias por Días',
+                            'Compensacion grupos especiales',
+                            'Horas Sindicales',
+                            'Brigada J'
+                        ];
+
+                        if (
+                            !in_array($assignment->brigadeOrigin->nombre, $specialBrigades) &&
+                            in_array($assignment->brigadeDestination->nombre, $specialBrigades)
+                        ) {
+                            // Trabajó en brigada operativa y se fue a permiso/especial
+                            $worksBrigadeWithGuard = true;
+                            $brigadeName = $assignment->brigadeOrigin->nombre;
+                            Log::info("Bombero {$firefighterId} trabajó en {$brigadeName} antes de irse a {$assignment->brigadeDestination->nombre}");
+                        }
+                    }
+                }
+
+                // Si es una VUELTA, verificar si EMPIEZA a trabajar
+                if ($assignment->tipo_asignacion == 'vuelta' && $assignment->brigadeDestination) {
+                    // Verificar que NO viene de una brigada especial sin turno
+                    if (!in_array(strtolower($assignment->brigadeDestination->nombre), $typesWithoutTurno)) {
+                        // En una vuelta a brigada operativa, si tiene guardia, SÍ trabaja
+                        if (in_array($assignment->brigadeDestination->nombre, $excludedForToday)) {
+                            $worksBrigadeWithGuard = true;
+                            $brigadeName = $assignment->brigadeDestination->nombre;
+                            Log::info("Bombero {$firefighterId} vuelve a trabajar en {$brigadeName} (vuelta turno {$assignment->turno})");
+                        }
+                    }
+                }
+
+                if ($worksBrigadeWithGuard) {
+                    $shouldExcludeForGuard = true;
+                    $guardBrigadeName = $brigadeName;
+                    break;
+                }
+            }
+
+            // Si trabaja en brigada con guardia y NO está protegido, excluir
+            if ($shouldExcludeForGuard && !$isProtected) {
+                Log::info("EXCLUYENDO a Bombero {$firefighterId} por trabajar en brigada '{$guardBrigadeName}' con guardia HOY y NO está protegido.");
+                $unavailableFirefighterIds[] = $firefighterId;
+                continue;
+            }
+
+            // 1) Revisar asignación HOY (usando la última asignación)
             if ($lastToday) {
                 if ($lastToday->brigadeDestination) {
                     $brigadeNameToday = $lastToday->brigadeDestination->nombre;
@@ -286,8 +366,8 @@ class FirefighterAssignmentController extends Controller
                         continue;
                     }
 
-                    // Si la brigada está en las excluidas y no está protegido, evaluamos exclusión
-                    if (in_array($brigadeNameToday, $excludedForToday) && !$isProtected) {
+                    // Si la brigada está en las excluidas y no está protegido (y no fue excluido ya)
+                    if (in_array($brigadeNameToday, $excludedForToday) && !$isProtected && !$shouldExcludeForGuard) {
                         $shouldExclude = true;
                         // Excluimos por guardia mañana solo si sigue en la misma brigada mañana
                         if (in_array($brigadeNameToday, $guardTomorrow)) {
@@ -303,7 +383,7 @@ class FirefighterAssignmentController extends Controller
                         if ($shouldExclude) {
                             Log::info("EXCLUYENDO a Bombero {$firefighterId} por brigada '{$brigadeNameToday}' HOY y NO está protegido.");
                             $unavailableFirefighterIds[] = $firefighterId;
-                            continue; // Ya excluido por hoy
+                            continue;
                         } else {
                             Log::info("Bombero {$firefighterId} - brigada '{$brigadeNameToday}' HOY, pero NO se excluye (cambia de brigada mañana).");
                         }
@@ -355,7 +435,7 @@ class FirefighterAssignmentController extends Controller
         return $unavailableFirefighterIds;
     }
 
-    
+
     /**
      * Obtiene las asignaciones efectivas para una fecha específica
      * Prioriza asignaciones del día exacto sobre asignaciones vigentes anteriores
@@ -369,7 +449,7 @@ class FirefighterAssignmentController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->groupBy('id_empleado');
-    
+
         // Luego, obtener asignaciones vigentes (para bomberos sin asignación exacta)
         $allAssignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
             ->orderBy('fecha_ini', 'desc')
@@ -378,9 +458,9 @@ class FirefighterAssignmentController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->groupBy('id_empleado');
-    
+
         $finalAssignments = collect();
-    
+
         // Para cada bombero, priorizar asignación del día exacto
         foreach ($allAssignments as $firefighterId => $assignments) {
             if ($exactDateAssignments->has($firefighterId)) {
@@ -388,16 +468,16 @@ class FirefighterAssignmentController extends Controller
                 $finalAssignments[$firefighterId] = $exactDateAssignments[$firefighterId];
                 Log::info("Bombero {$firefighterId} - Usando asignación EXACTA para {$date}: brigada " .
                     ($exactDateAssignments[$firefighterId]->first()->brigadeDestination ?
-                    $exactDateAssignments[$firefighterId]->first()->brigadeDestination->nombre : 'N/A'));
+                        $exactDateAssignments[$firefighterId]->first()->brigadeDestination->nombre : 'N/A'));
             } else {
                 // Si no, usar la asignación vigente más reciente
                 $finalAssignments[$firefighterId] = collect([$assignments->first()]);
                 Log::info("Bombero {$firefighterId} - Usando asignación VIGENTE para {$date}: brigada " .
                     ($assignments->first()->brigadeDestination ?
-                    $assignments->first()->brigadeDestination->nombre : 'N/A'));
+                        $assignments->first()->brigadeDestination->nombre : 'N/A'));
             }
         }
-    
+
         return $finalAssignments;
     }
 

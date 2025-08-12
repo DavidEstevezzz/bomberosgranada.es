@@ -346,9 +346,9 @@ class FirefighterAssignmentController extends Controller
                 }
             }
 
-            // Si trabaja en brigada con guardia y NO está protegido, excluir
-            if ($shouldExcludeForGuard && !$isProtected) {
-                Log::info("EXCLUYENDO a Bombero {$firefighterId} por trabajar en brigada '{$guardBrigadeName}' con guardia HOY y NO está protegido.");
+            // Si trabaja en brigada con guardia, SIEMPRE excluir (sin importar protección)
+            if ($shouldExcludeForGuard) {
+                Log::info("EXCLUYENDO a Bombero {$firefighterId} por trabajar en brigada '{$guardBrigadeName}' con guardia HOY.");
                 $unavailableFirefighterIds[] = $firefighterId;
                 continue;
             }

@@ -108,7 +108,7 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
 
     const data = new FormData();
     // Si es un mensaje individual, se requiere el receptor seleccionado
-    if (!(currentUserRole === 'Jefe' && messageScope !== 'individual')) {
+    if (!(currentUserRole?.toLowerCase() === 'jefe' && messageScope !== 'individual')) {
       data.append('receiver_id', formData.receiver_id);
     }
     data.append('subject', formData.subject);
@@ -120,7 +120,7 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
       data.append('attachment', formData.attachment);
     }
     // Si el mensaje es masivo (no es individual), enviamos el scope en el campo massive
-    if (currentUserRole === 'Jefe' && messageScope !== 'individual') {
+    if (currentUserRole?.toLowerCase() === 'jefe' && messageScope !== 'individual') {
       data.append('massive', messageScope);
     } else {
       data.append('massive', 'false');

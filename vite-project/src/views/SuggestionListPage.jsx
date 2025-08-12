@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faThumbsUp, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useDarkMode } from "../contexts/DarkModeContext";
 import { useStateContext } from "../contexts/ContextProvider";
 import SuggestionApiService from "../services/SuggestionApiService";
@@ -61,6 +61,17 @@ const SuggestionListPage = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Eliminar sugerencia?")) return;
+    try {
+      await SuggestionApiService.deleteSuggestion(id);
+      setSuggestions((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      console.error("Error al eliminar la sugerencia:", err);
+    }
+  };
+
+
   return (
     <div className={`p-6 rounded-xl ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"}`}>
       {/* Encabezado */}
@@ -103,15 +114,26 @@ const SuggestionListPage = () => {
                     <td className="py-4 px-4 max-w-xs line-clamp-2 hover:line-clamp-none">{sugg.descripcion}</td>
                     <td className="py-4 px-4 text-center font-bold">{sugg.conteo_votos}</td>
                     <td className="py-4 px-4 text-center">
-                      <button
-                        onClick={() => handleToggleVote(sugg)}
-                        className={`${
-                          sugg.userVoted ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
-                        } transition-all duration-200 text-white px-4 py-2 rounded-lg flex items-center space-x-1 shadow-md`}
-                      >
-                        <FontAwesomeIcon icon={faThumbsUp} />
-                        <span>{sugg.userVoted ? "Quitar Voto" : "Votar"}</span>
-                      </button>
+                    <div className="flex justify-center space-x-2">
+                        <button
+                          onClick={() => handleToggleVote(sugg)}
+                          className={`${
+                            sugg.userVoted ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
+                          } transition-all duration-200 text-white px-4 py-2 rounded-lg flex items-center space-x-1 shadow-md`}
+                        >
+                          <FontAwesomeIcon icon={faThumbsUp} />
+                          <span>{sugg.userVoted ? "Quitar Voto" : "Votar"}</span>
+                        </button>
+                        {user?.type?.includes("jefe") && (
+                          <button
+                            onClick={() => handleDelete(sugg.id)}
+                            className="bg-red-600 hover:bg-red-700 transition-all duration-200 text-white px-4 py-2 rounded-lg flex items-center space-x-1 shadow-md"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                            <span>Borrar</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

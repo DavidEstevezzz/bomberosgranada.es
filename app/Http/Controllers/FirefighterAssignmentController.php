@@ -643,14 +643,25 @@ class FirefighterAssignmentController extends Controller
         // Brigada en la que se encuentra actualmente el bombero
         $brigadaActual = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
 
-        // Brigada original del bombero. Si la asignación anterior fue un
-        // requerimiento, conservamos la brigada de origen almacenada en esa
-        // asignación; de lo contrario, tomamos la brigada destino como origen.
-        if ($assignmentAnterior && $assignmentAnterior->requerimiento && $assignmentAnterior->id_brigada_origen) {
+        // Buscamos la última asignación de vuelta para conocer la brigada de origen real
+        $ultimoRetorno = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('tipo_asignacion', 'vuelta')
+            ->orderBy('fecha_ini', 'desc')
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($ultimoRetorno) {
+            // Si existe una asignación de vuelta, su destino es la brigada original
+            $brigadaOrigen = $ultimoRetorno->id_brigada_destino;
+        } elseif ($assignmentAnterior && $assignmentAnterior->requerimiento && $assignmentAnterior->id_brigada_origen) {
+            // Si la última asignación fue un requerimiento, usamos su brigada de origen
             $brigadaOrigen = $assignmentAnterior->id_brigada_origen;
         } else {
+            // En cualquier otro caso tomamos como origen la brigada donde estaba asignado
             $brigadaOrigen = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
         }
+        
         // 2. Calcular el turno de ida
         $turnoIda = match ($turnoRequest) {
             'Mañana', 'Día Completo', 'Mañana y tarde' => 'Mañana',

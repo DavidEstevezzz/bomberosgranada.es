@@ -633,10 +633,10 @@ class FirefighterAssignmentController extends Controller
 
         // 1. Determinar la brigada actual y la brigada original
         $assignmentAnterior = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('tipo_asignacion', 'ida')
             ->where('fecha_ini', '<=', $fecha)
             ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Turno
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (solo si fecha+turno iguales)
+            ->orderByRaw("FIELD(turno, 'Mañana', 'Tarde', 'Noche') DESC")   // 2. Turno
             ->orderBy('created_at', 'desc')
             ->first();
 
@@ -651,6 +651,7 @@ class FirefighterAssignmentController extends Controller
             ->where('requerimiento', true)
             ->where('fecha_ini', '<=', $fecha)
             ->orderBy('fecha_ini', 'asc')
+            ->orderBy('created_at', 'asc')
             ->first();
 
         if ($primerRequerimiento && $primerRequerimiento->id_brigada_origen) {

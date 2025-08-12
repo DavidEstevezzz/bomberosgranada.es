@@ -180,8 +180,23 @@ class BrigadeController extends Controller
                         // no cambiamos nada
                     } else {
                         // 3) Si ambas son del mismo tipo (o ambas excluidas, o ambas no excluidas)
-                        //    => guardamos la última (la que llega ahora)
-                        $assignmentsByTurno[$assignment->turno] = $assignment;
+                        //    verificamos prioridad entre 'ida' y 'vuelta'
+                        if (
+                            $previousAssignment->tipo_asignacion === 'vuelta' &&
+                            $assignment->tipo_asignacion === 'ida'
+                        ) {
+                            // La nueva asignación es 'ida' y tiene prioridad sobre la 'vuelta' previa
+                            $assignmentsByTurno[$assignment->turno] = $assignment;
+                        } elseif (
+                            $previousAssignment->tipo_asignacion === 'ida' &&
+                            $assignment->tipo_asignacion === 'vuelta'
+                        ) {
+                            // La asignación previa es 'ida' y mantiene la prioridad
+                            // no cambiamos nada
+                        } else {
+                            // Si ambas tienen el mismo tipo, conservamos la última
+                            $assignmentsByTurno[$assignment->turno] = $assignment;
+                        }
                     }
                 }
             }

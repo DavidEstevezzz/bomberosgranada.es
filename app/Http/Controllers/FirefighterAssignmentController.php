@@ -631,7 +631,7 @@ class FirefighterAssignmentController extends Controller
         $fecha = $request->input('fecha');
         $turnoRequest = $request->input('turno');
 
-        // 1. Determinar la brigada original (última antes de $fecha)
+        // 1. Determinar la brigada actual y la brigada original
         $assignmentAnterior = Firefighters_assignment::where('id_empleado', $idEmpleado)
             ->where('fecha_ini', '<=', $fecha)
             ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
@@ -640,8 +640,17 @@ class FirefighterAssignmentController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        $brigadaOrigen = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
+        // Brigada en la que se encuentra actualmente el bombero
+        $brigadaActual = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
 
+        // Brigada original del bombero. Si la asignación anterior fue un
+        // requerimiento, conservamos la brigada de origen almacenada en esa
+        // asignación; de lo contrario, tomamos la brigada destino como origen.
+        if ($assignmentAnterior && $assignmentAnterior->requerimiento && $assignmentAnterior->id_brigada_origen) {
+            $brigadaOrigen = $assignmentAnterior->id_brigada_origen;
+        } else {
+            $brigadaOrigen = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
+        }
         // 2. Calcular el turno de ida
         $turnoIda = match ($turnoRequest) {
             'Mañana', 'Día Completo', 'Mañana y tarde' => 'Mañana',
@@ -653,7 +662,8 @@ class FirefighterAssignmentController extends Controller
         // 3. Crear la asignación de ida (requerimiento = true)
         $asignacionIda = Firefighters_assignment::create([
             'id_empleado' => $idEmpleado,
-            'id_brigada_origen' => $brigadaOrigen,
+            // El origen de la asignación de ida es la brigada en la que se encuentra actualmente
+            'id_brigada_origen' => $brigadaActual,
             'id_brigada_destino' => $idBrigadaDestino,
             'fecha_ini' => $fecha,
             'turno' => $turnoIda,
@@ -687,7 +697,14 @@ class FirefighterAssignmentController extends Controller
                 break;
         }
 
-        // 5. Crear la asignación de vuelta (requerimiento = false)
+        // 5. Eliminar posibles asignaciones de vuelta previas para esta fecha
+        Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', $fechaVuelta)
+            ->where('tipo_asignacion', 'vuelta')
+            ->where('requerimiento', false)
+            ->delete();
+
+        // 6. Crear la asignación de vuelta (requerimiento = false)        
         $asignacionVuelta = Firefighters_assignment::create([
             'id_empleado' => $idEmpleado,
             'id_brigada_origen' => $idBrigadaDestino,

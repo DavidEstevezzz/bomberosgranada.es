@@ -19,7 +19,7 @@ const EditAssignmentModal = ({ assignment, show, onClose, onEdit }) => {
             const fetchUsuarios = async () => {
                 try {
                     const response = await UsuariosApiService.getUsuarios();
-                    const bomberos = response.data.filter(usuario => usuario.type === 'bombero');
+                    const bomberos = response.data.filter(usuario => usuario.type === 'bombero' || usuario.type === 'mando');
                     setUsuarios(bomberos);
                 } catch (error) {
                     console.error('Failed to fetch users:', error);

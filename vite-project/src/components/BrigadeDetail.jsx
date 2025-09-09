@@ -336,8 +336,8 @@ const BrigadeDetail = () => {
             crRes.data.forEach(req => {
               if (ids.includes(req.id)) {
                 map[req.id] = {
-                  nombre: req.empleado1?.nombre,
-                  apellido: req.empleado1?.apellido,
+                  empleado1: req.empleado1,
+                  empleado2: req.empleado2,
                 };
               }
             });
@@ -501,20 +501,22 @@ const BrigadeDetail = () => {
   }, [previousGuards]);
 
   const PreviousAssignmentDisplay = ({ firefighter }) => {
-    // Obtener asignación del caché
-    const prevAssignmentInfo = previousAssignmentsCache[firefighter.id_empleado];
+  // Obtener asignación del caché
+  const prevAssignmentInfo = previousAssignmentsCache[firefighter.id_empleado];
 
-    let extra = '';
-    if (firefighter.requerimiento) {
-      extra = ' (R)';
-    } else if (firefighter.id_change_request) {
+  let extra = '';
+  if (firefighter.requerimiento) {
+    extra = ' (R)';
+  } else if (firefighter.id_change_request) {
+    // NUEVA LÓGICA: Solo mostrar CG si tipo_asignacion es 'ida'
+    // Las asignaciones de tipo 'vuelta' no deben mostrar el indicador CG
+    if (firefighter.tipo_asignacion === 'ida') {
       const info = changeRequestsInfo[firefighter.id_change_request];
       if (info) {
-        const other =
-          info.empleado1?.id === firefighter.id_empleado
-            ? info.empleado2
-            : info.empleado1;
-        if (other && other.id !== firefighter.id_empleado) {
+        const other = info.empleado1?.id_empleado === firefighter.id_empleado
+          ? info.empleado2
+          : info.empleado1;
+        if (other && other.id_empleado !== firefighter.id_empleado) {
           extra = ` (CG ${other.nombre} ${other.apellido})`;
         } else {
           extra = ' (CG)';
@@ -523,19 +525,20 @@ const BrigadeDetail = () => {
         extra = ' (CG)';
       }
     }
+    // Si tipo_asignacion es 'vuelta' o null, no se muestra nada (extra permanece '')
+  }
 
-    return (
-      <div className="flex items-center">
-        {firefighter.nombre} {firefighter.apellido}{extra}
-        {prevAssignmentInfo && (
-          <span className="ml-2 text-xs text-gray-300">
-            {prevAssignmentInfo.asignacion} ({prevAssignmentInfo.fecha})
-          </span>
-        )}
-      </div>
-    );
-  };
-
+  return (
+    <div className="flex items-center">
+      {firefighter.nombre} {firefighter.apellido}{extra}
+      {prevAssignmentInfo && (
+        <span className="ml-2 text-xs text-gray-300">
+          {prevAssignmentInfo.asignacion} ({prevAssignmentInfo.fecha})
+        </span>
+      )}
+    </div>
+  );
+};
   // Funciones de modal
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);

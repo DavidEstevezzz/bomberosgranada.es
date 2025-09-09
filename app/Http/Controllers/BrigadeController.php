@@ -258,6 +258,32 @@ class BrigadeController extends Controller
                 }
             }
 
+            $tipoAsignacionActiva = null;
+
+            // Determinar qué asignación está definiendo realmente dónde está el bombero
+            if ($assignmentSameDay && $assignmentSameDay->id_brigada_destino == $id_brigada) {
+                // Si hay asignación del mismo día hacia esta brigada, usar su tipo
+                $tipoAsignacionActiva = $assignmentSameDay->tipo_asignacion;
+            } elseif ($lastAssignment && $lastAssignment->id_brigada_destino == $id_brigada && empty($assignmentsByTurno)) {
+                // Si no hay asignaciones del mismo día, pero la última asignación lo coloca aquí
+                $tipoAsignacionActiva = $lastAssignment->tipo_asignacion;
+            } else {
+                // Para casos más complejos, buscar en los turnos específicos
+
+                // Verificar si alguna asignación del día lo coloca en esta brigada
+                foreach ($assignmentsByTurno as $turno => $assignment) {
+                    if ($assignment->id_brigada_destino == $id_brigada) {
+                        $tipoAsignacionActiva = $assignment->tipo_asignacion;
+                        break; // Tomar el primer turno que lo coloque en esta brigada
+                    }
+                }
+
+                // Si no se encontró en asignaciones del día, usar la última asignación
+                if ($tipoAsignacionActiva === null && $lastAssignment && $lastAssignment->id_brigada_destino == $id_brigada) {
+                    $tipoAsignacionActiva = $lastAssignment->tipo_asignacion;
+                }
+            }
+
             $baseInfo = [
                 'id_empleado' => $user->id_empleado,
                 'nombre' => $user->nombre,
@@ -267,7 +293,8 @@ class BrigadeController extends Controller
                 'dni' => $user->dni,
                 'requerimiento' => $requerimiento,
                 'id_change_request' => $idChangeRequest,
-                'cambio_con' => $changeRequestName
+                'cambio_con' => $changeRequestName,
+                'tipo_asignacion' => $tipoAsignacionActiva // AÑADIR ESTA LÍNEA
             ];
 
 

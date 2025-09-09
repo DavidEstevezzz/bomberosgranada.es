@@ -182,8 +182,8 @@ const BrigadeDetail = () => {
           crRes.data.forEach(req => {
             if (ids.includes(req.id)) {
               map[req.id] = {
-                nombre: req.empleado1?.nombre,
-                apellido: req.empleado1?.apellido,
+                empleado1: req.empleado1,
+                empleado2: req.empleado2,
               };
             }
           });
@@ -510,7 +510,15 @@ const BrigadeDetail = () => {
     } else if (firefighter.id_change_request) {
       const info = changeRequestsInfo[firefighter.id_change_request];
       if (info) {
-        extra = ` (CG ${info.nombre} ${info.apellido})`;
+        const other =
+          info.empleado1?.id === firefighter.id_empleado
+            ? info.empleado2
+            : info.empleado1;
+        if (other && other.id !== firefighter.id_empleado) {
+          extra = ` (CG ${other.nombre} ${other.apellido})`;
+        } else {
+          extra = ' (CG)';
+        }
       } else {
         extra = ' (CG)';
       }

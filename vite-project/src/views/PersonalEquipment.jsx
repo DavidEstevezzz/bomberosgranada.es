@@ -16,6 +16,7 @@ const PersonalEquipment = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
+  const [sortConfig, setSortConfig] = useState(null);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -82,70 +83,93 @@ const PersonalEquipment = () => {
   };
 
   // Función para extraer el número del nombre
-const extractNumber = (name) => {
-  // Busca patrones como "Batería 10", "Portátil 5", etc.
-  const match = name.match(/(\d+)$/);
-  if (match) {
-    // Si hay un número al final, devuélvelo como entero
-    return parseInt(match[0], 10);
-  }
-  
-  // Si no hay número (como "Batería Norte-1"), retorna el texto original
-  return name;
-};
+  const extractNumber = (name) => {
+    // Busca patrones como "Batería 10", "Portátil 5", etc.
+    const match = name.match(/(\d+)$/);
+    if (match) {
+      // Si hay un número al final, devuélvelo como entero
+      return parseInt(match[0], 10);
+    }
 
-// Modificación de la función filteredEquipments
-const filteredEquipments = equipments
-  .filter((equipment) => {
+    // Si no hay número (como "Batería Norte-1"), retorna el texto original
+    return name;
+  };
+
+  const getParkName = (parkId) => {
+    if (!parkId) return "No asignado";
+    const park = parks.find(p => p.id_parque === parkId);
+    return park ? park.nombre : `Parque ${parkId}`;
+  };
+
+  const handleSort = (column) => {
+    setSortConfig((prev) => {
+      if (prev && prev.key === column) {
+        return { key: column, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+
+      }
+      return { key: column, direction: 'asc' };
+    });
+  };
+  const filteredEquipments = equipments.filter((equipment) => {
     const normalizedSearch = normalizeString(searchTerm);
     return (
       normalizeString(equipment.nombre).includes(normalizedSearch) ||
       normalizeString(equipment.categoria).includes(normalizedSearch)
     );
-  })
-  // Ordenar teniendo en cuenta el patrón "Nombre + Número"
-  .sort((a, b) => {
-    // Primero comparamos por categoría
-    const categoriasComparadas = normalizeString(a.categoria).localeCompare(normalizeString(b.categoria));
-    
-    if (categoriasComparadas !== 0) {
-      return categoriasComparadas;
-    }
-    
-    // Obtener la parte base del nombre (sin números)
-    const baseNameA = a.nombre.replace(/\d+$/, '').trim();
-    const baseNameB = b.nombre.replace(/\d+$/, '').trim();
-    
-    // Si las bases son diferentes, ordenar alfabéticamente
-    if (baseNameA !== baseNameB) {
-      return baseNameA.localeCompare(baseNameB);
-    }
-    
-    // Si las bases son iguales, ordenar por número
-    const numA = extractNumber(a.nombre);
-    const numB = extractNumber(b.nombre);
-    
-    // Si ambos son números, comparar numéricamente
-    if (typeof numA === 'number' && typeof numB === 'number') {
-      return numA - numB;
-    }
-    
-    // Caso especial para "Norte" y "Sur"
-    if (a.nombre.includes('Norte') && b.nombre.includes('Sur')) {
-      return -1; // Norte antes que Sur
-    }
-    if (a.nombre.includes('Sur') && b.nombre.includes('Norte')) {
-      return 1; // Sur después que Norte
-    }
-    
-    // Si llegamos aquí, ordenar alfabéticamente
-    return a.nombre.localeCompare(b.nombre);
   });
+
+  const sortedEquipments = React.useMemo(() => {
+    const items = [...filteredEquipments];
+    if (!sortConfig) {
+      return items.sort((a, b) => {
+        const categoriasComparadas = normalizeString(a.categoria).localeCompare(normalizeString(b.categoria));
+        if (categoriasComparadas !== 0) {
+          return categoriasComparadas;
+        }
+        const baseNameA = a.nombre.replace(/\d+$/, '').trim();
+        const baseNameB = b.nombre.replace(/\d+$/, '').trim();
+        if (baseNameA !== baseNameB) {
+          return baseNameA.localeCompare(baseNameB);
+        }
+        const numA = extractNumber(a.nombre);
+        const numB = extractNumber(b.nombre);
+        if (typeof numA === 'number' && typeof numB === 'number') {
+          return numA - numB;
+        }
+        if (a.nombre.includes('Norte') && b.nombre.includes('Sur')) {
+          return -1;
+        }
+        if (a.nombre.includes('Sur') && b.nombre.includes('Norte')) {
+          return 1;
+        }
+        return a.nombre.localeCompare(b.nombre);
+      });
+    }
+    items.sort((a, b) => {
+      const order = sortConfig.direction === 'asc' ? 1 : -1;
+      switch (sortConfig.key) {
+        case 'nombre':
+          return order * a.nombre.localeCompare(b.nombre);
+        case 'categoria':
+          return order * a.categoria.localeCompare(b.categoria);
+        case 'parque':
+          return order * getParkName(a.parque).localeCompare(getParkName(b.parque));
+        case 'disponible':
+          return order * ((a.disponible === b.disponible) ? 0 : a.disponible ? -1 : 1);
+        default:
+          return 0;
+      }
+
+
+    });
+
+    return items;
+  }, [filteredEquipments, sortConfig]);
 
   // Función para exportar a PDF los equipos no disponibles
   const exportToPDF = () => {
     // Filtrar solo los equipos no disponibles
-    const unavailableEquipments = filteredEquipments.filter(
+    const unavailableEquipments = sortedEquipments.filter(
       (equipment) => !equipment.disponible
     );
 
@@ -300,12 +324,7 @@ const filteredEquipments = equipments
     }
   };
 
-  // Función para obtener el nombre del parque según el ID
-  const getParkName = (parkId) => {
-    if (!parkId) return "No asignado";
-    const park = parks.find(p => p.id_parque === parkId);
-    return park ? park.nombre : `Parque ${parkId}`;
-  };
+
 
   if (loading) return <div>Cargando equipos...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -377,15 +396,15 @@ const filteredEquipments = equipments
           <table className="w-full">
             <thead>
               <tr>
-                <th className="py-2 px-2 text-center">Nombre</th>
-                <th className="py-2 px-2 text-center">Categoría</th>
-                <th className="py-2 px-2 text-center">Parque</th>
-                <th className="py-2 px-2 text-center">Disponible</th>
+                <th onClick={() => handleSort('nombre')} className="py-2 px-2 text-center cursor-pointer">Nombre</th>
+                <th onClick={() => handleSort('categoria')} className="py-2 px-2 text-center cursor-pointer">Categoría</th>
+                <th onClick={() => handleSort('parque')} className="py-2 px-2 text-center cursor-pointer">Parque</th>
+                <th onClick={() => handleSort('disponible')} className="py-2 px-2 text-center cursor-pointer">Disponible</th>
                 <th className="py-2 px-2 text-center" style={{ width: '300px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredEquipments.map((equipment) => (
+              {sortedEquipments.map((equipment) => (
                 <tr
                   key={equipment.id}
                   className={`border-b border-gray-700`}
@@ -411,8 +430,8 @@ const filteredEquipments = equipments
                     <button
                       onClick={() => handleToggleDisponibilidad(equipment)}
                       className={`${equipment.disponible
-                          ? 'bg-red-600'
-                          : 'bg-green-600'
+                        ? 'bg-red-600'
+                        : 'bg-green-600'
                         } text-white px-3 py-1 rounded flex items-center space-x-1`}
                     >
                       {equipment.disponible ? 'Inhabilitar' : 'Habilitar'}
@@ -427,7 +446,7 @@ const filteredEquipments = equipments
                   </td>
                 </tr>
               ))}
-              {filteredEquipments.length === 0 && (
+              {sortedEquipments.length === 0 && (
                 <tr>
                   <td colSpan="5" className="py-4 text-center">
                     No se encontraron equipos.

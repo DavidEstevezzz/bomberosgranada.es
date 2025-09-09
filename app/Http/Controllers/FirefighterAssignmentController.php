@@ -550,6 +550,12 @@ class FirefighterAssignmentController extends Controller
         $idBrigadaDestino = $request->input('id_brigada_destino');
         $fecha = $request->input('fecha');
         $turnoRequest = $request->input('turno');
+        
+         $usuario = User::with('brigades')->find($idEmpleado);
+        $brigadaUsuario = $usuario && $usuario->brigades()->exists()
+            ? $usuario->brigades()->first()
+            : null;
+
 
         // 1. Determinar la brigada actual y la brigada original
         $assignmentAnterior = Firefighters_assignment::where('id_empleado', $idEmpleado)
@@ -561,7 +567,7 @@ class FirefighterAssignmentController extends Controller
             ->first();
 
         // Brigada en la que se encuentra actualmente el bombero
-        $brigadaActual = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
+        $brigadaActual = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : optional($brigadaUsuario)->id_brigada;
 
         $brigadaOrigen = null;
 
@@ -577,7 +583,7 @@ class FirefighterAssignmentController extends Controller
             $brigadaOrigen = $primerRequerimiento->id_brigada_origen;
         } else {
             // Fallback a la lógica anterior
-            $brigadaOrigen = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : null;
+            $brigadaOrigen = $assignmentAnterior ? $assignmentAnterior->id_brigada_destino : optional($brigadaUsuario)->id_brigada;
         }
 
         // 2. Calcular el turno de ida

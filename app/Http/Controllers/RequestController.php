@@ -518,34 +518,45 @@ class RequestController extends Controller
 
 
     private function getOriginalBrigade($idEmpleado, $fechaInicio)
-    {
-        Log::info("Buscando brigada original para empleado: {$idEmpleado} antes de la fecha: {$fechaInicio}");
+{
+    Log::info("Buscando brigada original para empleado: {$idEmpleado} antes de la fecha: {$fechaInicio}");
 
-        // Ordenar por fecha en descendente y luego según la prioridad de turno
-        $assignments = Firefighters_assignment::where('id_empleado', $idEmpleado)
-            ->where('fecha_ini', '<=', $fechaInicio)
-            ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
-            ->orderBy('created_at', 'desc')
-            ->get();
+    $assignment = Firefighters_assignment::where('id_empleado', $idEmpleado)
+        ->where('fecha_ini', '<=', $fechaInicio)
+        ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Prioridad de turno
+        ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo de asignación
+        ->orderBy('created_at', 'desc')                                   // 4. Más reciente en caso de empate
+        ->first();  //  ESTO ES LO CRÍTICO: first() en la query, no en la colección
 
-
-        if ($assignments->isEmpty()) {
-            Log::info("No se encontraron asignaciones anteriores para el empleado {$idEmpleado} antes de la fecha {$fechaInicio}.");
-            return null;
+    if (!$assignment) {
+        Log::info("No se encontraron asignaciones anteriores para el empleado {$idEmpleado} antes de la fecha {$fechaInicio}.");
+        
+        // Fallback: buscar la brigada base del usuario
+        $user = \App\Models\User::find($idEmpleado);
+        $brigadeUsuario = $user ? $user->brigades()->first() : null;
+        
+        if ($brigadeUsuario) {
+            Log::info("Usando brigada base del usuario: {$brigadeUsuario->id_brigada} - {$brigadeUsuario->nombre}");
+            return $brigadeUsuario->id_brigada;
         }
-
-        $assignment = $assignments->first();
-        Log::info("Asignación seleccionada como original:", [
-            'id_empleado' => $assignment->id_empleado,
-            'id_brigada_destino' => $assignment->id_brigada_destino,
-            'fecha_ini' => $assignment->fecha_ini,
-            'turno' => $assignment->turno
-        ]);
-
-        return $assignment->id_brigada_destino;
+        
+        Log::warning("No se encontró brigada base para el usuario {$idEmpleado}");
+        return null;
     }
+
+    // ✅ Logging detallado para debugging
+    Log::info("Asignación seleccionada como brigada original:", [
+        'id_empleado' => $assignment->id_empleado,
+        'fecha_ini' => $assignment->fecha_ini,
+        'turno' => $assignment->turno,
+        'brigada_destino' => $assignment->id_brigada_destino,
+        'tipo_asignacion' => $assignment->tipo_asignacion,
+        'brigada_nombre' => $assignment->brigadeDestination ? $assignment->brigadeDestination->nombre : 'N/A'
+    ]);
+
+    return $assignment->id_brigada_destino;
+}
 
 
     public function destroy(MiRequest $miRequest)

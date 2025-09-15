@@ -438,16 +438,26 @@ private function determinarTurnoInicial($turnoOriginal)
 
 public function getLatestBrigadeAssignments($date)
 {
-    $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
-        ->orderByRaw("CASE WHEN fecha_ini = '$date' THEN 0 ELSE 1 END")
-        ->orderBy('fecha_ini', 'desc')
-        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
-        ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
-        ->orderBy('created_at', 'desc')
-        ->get()
-        ->unique('id_empleado');
-    
-    return $assignments;
+    // 1. Obtener TODAS las asignaciones con el ordenamiento correcto
+    $allAssignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
+        ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Prioridad de turno
+        ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo (ida > vuelta)
+        ->orderBy('created_at', 'desc')                                   // 4. Más reciente
+        ->get();
+
+    // 2. Agrupar MANUALMENTE por empleado para respetar el orden
+    $latestAssignments = collect();
+    $processedEmployees = [];
+
+    foreach ($allAssignments as $assignment) {
+        if (!in_array($assignment->id_empleado, $processedEmployees)) {
+            $latestAssignments->push($assignment);  // Tomar la PRIMERA de cada empleado
+            $processedEmployees[] = $assignment->id_empleado;
+        }
+    }
+
+    return $latestAssignments;
 }
 
 }

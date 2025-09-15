@@ -248,140 +248,138 @@ class RequestController extends Controller
         $tiposSinAsignaciones = ['vestuario', 'salidas personales']; // Tipos que no requieren asignaciones
         if (!in_array($miRequest->tipo, $tiposSinAsignaciones)) {
             if ($newEstado === 'Confirmada' && $oldEstado !== 'Confirmada') {
-                if (!Firefighters_assignment::where('id_request', $miRequest->id)->exists()) {
-                    $this->createAssignments($miRequest);
-                }
-                if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Denegada')) {
-                    $this->deleteAssignments($miRequest);
+                $this->deleteAssignments($miRequest);  // Eliminar cualquier asignación existente
+                $this->createAssignments($miRequest);   // Crear nuevas asignaciones
+
+                Log::info("Asignaciones recreadas para solicitud ID: {$miRequest->id}");
             }
-        }
+            if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Denegada')) {
+                $this->deleteAssignments($miRequest);
+                Log::info("Asignaciones eliminadas para solicitud ID: {$miRequest->id}");
+            }
 
-        // Enviar correo de notificación
+            // Enviar correo de notificación
 
-        $user = $miRequest->EnviadaPor;
+            $user = $miRequest->EnviadaPor;
 
-        Log::info("=== INICIO PROCESO ENVÍO CORREO ===");
-        Log::info("Solicitud ID: {$miRequest->id}");
-        Log::info("Estado anterior: {$oldEstado}");
-        Log::info("Estado nuevo: {$newEstado}");
+            Log::info("=== INICIO PROCESO ENVÍO CORREO ===");
+            Log::info("Solicitud ID: {$miRequest->id}");
+            Log::info("Estado anterior: {$oldEstado}");
+            Log::info("Estado nuevo: {$newEstado}");
 
-        if (!$user) {
-            Log::error("❌ Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-            return response()->json($miRequest, 200);
-        }
+            if (!$user) {
+                Log::error("❌ Usuario no encontrado para la solicitud ID: {$miRequest->id}");
+                return response()->json($miRequest, 200);
+            }
 
-        Log::info("✅ Usuario encontrado:", [
-            'id_empleado' => $user->id_empleado,
-            'nombre' => $user->nombre,
-            'email' => $user->email
-        ]);
-
-        if (!$user->email) {
-            Log::warning("⚠️ Usuario no tiene email configurado - ID: {$user->id_empleado}");
-            return response()->json($miRequest, 200);
-        }
-
-        // Verificar configuración de correo
-        $mailMailer = config('mail.default');
-        Log::info("📧 Configuración de correo actual:", [
-            'MAIL_MAILER' => $mailMailer,
-            'MAIL_FROM_ADDRESS' => config('mail.from.address'),
-            'MAIL_FROM_NAME' => config('mail.from.name'),
-        ]);
-
-        // Configuración específica según el mailer
-        if ($mailMailer === 'sendgrid') {
-            Log::info("🎯 Usando SendGrid API");
-            Log::info("API KEY configurada: " . (config('services.sendgrid.key') ? 'SÍ' : 'NO'));
-        } else {
-            Log::info("📧 Configuración SMTP:", [
-                'MAIL_HOST' => config('mail.mailers.smtp.host'),
-                'MAIL_PORT' => config('mail.mailers.smtp.port'),
-                'MAIL_USERNAME' => config('mail.mailers.smtp.username'),
-                'MAIL_ENCRYPTION' => config('mail.mailers.smtp.encryption'),
-                'PASSWORD_SET' => config('mail.mailers.smtp.password') ? 'SÍ' : 'NO'
+            Log::info("✅ Usuario encontrado:", [
+                'id_empleado' => $user->id_empleado,
+                'nombre' => $user->nombre,
+                'email' => $user->email
             ]);
-        }
 
-        Log::info("📨 Preparando envío de correo:");
-        Log::info("Destinatario: {$user->email}");
-        Log::info("Tipo de solicitud: {$miRequest->tipo}");
-        Log::info("Fecha inicio: {$miRequest->fecha_ini}");
-        Log::info("Fecha fin: {$miRequest->fecha_fin}");
-
-        try {
-            Log::info("🚀 Iniciando envío de correo...");
-
-            // Solo verificar conectividad SMTP si no es SendGrid API
-            if ($mailMailer !== 'sendgrid') {
-                Log::info("🔌 Verificando conectividad SMTP...");
-
-                $host = config('mail.mailers.smtp.host');
-                $port = config('mail.mailers.smtp.port');
-
-                // Test de conectividad básica
-                $fp = @fsockopen($host, $port, $errno, $errstr, 10);
-                if (!$fp) {
-                    Log::error("❌ No se puede conectar a {$host}:{$port}");
-                    Log::error("Error número: {$errno}");
-                    Log::error("Error mensaje: {$errstr}");
-                    throw new \Exception("No se puede conectar al servidor SMTP: {$errstr}");
-                } else {
-                    Log::info("✅ Conexión TCP a {$host}:{$port} exitosa");
-                    fclose($fp);
-                }
-            } else {
-                Log::info("⚡ Usando SendGrid API (no requiere conexión SMTP)");
+            if (!$user->email) {
+                Log::warning("⚠️ Usuario no tiene email configurado - ID: {$user->id_empleado}");
+                return response()->json($miRequest, 200);
             }
 
-            // Medir tiempo de envío
-            $startTime = microtime(true);
+            // Verificar configuración de correo
+            $mailMailer = config('mail.default');
+            Log::info("📧 Configuración de correo actual:", [
+                'MAIL_MAILER' => $mailMailer,
+                'MAIL_FROM_ADDRESS' => config('mail.from.address'),
+                'MAIL_FROM_NAME' => config('mail.from.name'),
+            ]);
 
-            Log::info("📧 Creando instancia del Mailable...");
-            $mailable = new RequestStatusUpdatedMail($miRequest, $newEstado);
-            Log::info("✅ Mailable creado exitosamente");
+            // Configuración específica según el mailer
+            if ($mailMailer === 'sendgrid') {
+                Log::info("🎯 Usando SendGrid API");
+                Log::info("API KEY configurada: " . (config('services.sendgrid.key') ? 'SÍ' : 'NO'));
+            } else {
+                Log::info("📧 Configuración SMTP:", [
+                    'MAIL_HOST' => config('mail.mailers.smtp.host'),
+                    'MAIL_PORT' => config('mail.mailers.smtp.port'),
+                    'MAIL_USERNAME' => config('mail.mailers.smtp.username'),
+                    'MAIL_ENCRYPTION' => config('mail.mailers.smtp.encryption'),
+                    'PASSWORD_SET' => config('mail.mailers.smtp.password') ? 'SÍ' : 'NO'
+                ]);
+            }
 
-            Log::info("📤 Enviando correo...");
+            Log::info("📨 Preparando envío de correo:");
+            Log::info("Destinatario: {$user->email}");
+            Log::info("Tipo de solicitud: {$miRequest->tipo}");
+            Log::info("Fecha inicio: {$miRequest->fecha_ini}");
+            Log::info("Fecha fin: {$miRequest->fecha_fin}");
 
-            Mail::to($user->email)->send($mailable);
+            try {
+                Log::info("🚀 Iniciando envío de correo...");
 
-            $endTime = microtime(true);
-            $executionTime = round(($endTime - $startTime) * 1000, 2);
+                // Solo verificar conectividad SMTP si no es SendGrid API
+                if ($mailMailer !== 'sendgrid') {
+                    Log::info("🔌 Verificando conectividad SMTP...");
 
-            Log::info("✅ Correo enviado exitosamente!");
-            Log::info("⏱️ Tiempo de envío: {$executionTime}ms");
-            Log::info("📧 Correo enviado a: {$user->email}");
-        } catch (\Exception $e) {
-            Log::error("❌ ERROR AL ENVIAR CORREO:");
-            Log::error("Tipo de excepción: " . get_class($e));
-            Log::error("Mensaje: " . $e->getMessage());
-            Log::error("Código: " . $e->getCode());
-            Log::error("Archivo: " . $e->getFile() . ":" . $e->getLine());
+                    $host = config('mail.mailers.smtp.host');
+                    $port = config('mail.mailers.smtp.port');
 
-            // Información adicional de debug
-            Log::error("🔍 Información adicional:");
-            Log::error("PHP Version: " . PHP_VERSION);
-            Log::error("Laravel Version: " . app()->version());
-            Log::error("Environment: " . config('app.env'));
-            Log::error("Mailer usado: " . $mailMailer);
-        } finally {
-            Log::info("=== FIN PROCESO ENVÍO CORREO ===");
+                    // Test de conectividad básica
+                    $fp = @fsockopen($host, $port, $errno, $errstr, 10);
+                    if (!$fp) {
+                        Log::error("❌ No se puede conectar a {$host}:{$port}");
+                        Log::error("Error número: {$errno}");
+                        Log::error("Error mensaje: {$errstr}");
+                        throw new \Exception("No se puede conectar al servidor SMTP: {$errstr}");
+                    } else {
+                        Log::info("✅ Conexión TCP a {$host}:{$port} exitosa");
+                        fclose($fp);
+                    }
+                } else {
+                    Log::info("⚡ Usando SendGrid API (no requiere conexión SMTP)");
+                }
+
+                // Medir tiempo de envío
+                $startTime = microtime(true);
+
+                Log::info("📧 Creando instancia del Mailable...");
+                $mailable = new RequestStatusUpdatedMail($miRequest, $newEstado);
+                Log::info("✅ Mailable creado exitosamente");
+
+                Log::info("📤 Enviando correo...");
+
+                Mail::to($user->email)->send($mailable);
+
+                $endTime = microtime(true);
+                $executionTime = round(($endTime - $startTime) * 1000, 2);
+
+                Log::info("✅ Correo enviado exitosamente!");
+                Log::info("⏱️ Tiempo de envío: {$executionTime}ms");
+                Log::info("📧 Correo enviado a: {$user->email}");
+            } catch (\Exception $e) {
+                Log::error("❌ ERROR AL ENVIAR CORREO:");
+                Log::error("Tipo de excepción: " . get_class($e));
+                Log::error("Mensaje: " . $e->getMessage());
+                Log::error("Código: " . $e->getCode());
+                Log::error("Archivo: " . $e->getFile() . ":" . $e->getLine());
+
+                // Información adicional de debug
+                Log::error("🔍 Información adicional:");
+                Log::error("PHP Version: " . PHP_VERSION);
+                Log::error("Laravel Version: " . app()->version());
+                Log::error("Environment: " . config('app.env'));
+                Log::error("Mailer usado: " . $mailMailer);
+            } finally {
+                Log::info("=== FIN PROCESO ENVÍO CORREO ===");
+            }
+
+            return response()->json($miRequest, 200);
         }
-
-        return response()->json($miRequest, 200);
-    }
     }
 
 
     private function createAssignments($miRequest)
     {
 
-        // Evitar duplicados si ya existen asignaciones para esta solicitud
-        if (Firefighters_assignment::where('id_request', $miRequest->id)->exists()) {
-            Log::info("Asignaciones ya existentes para la solicitud", ['id' => $miRequest->id]);
-            return;
-        }
         
+
         $brigadeId = null;
 
         Log::info("Creando asignaciones para la solicitud de tipo: {$miRequest->tipo}");
@@ -518,45 +516,45 @@ class RequestController extends Controller
 
 
     private function getOriginalBrigade($idEmpleado, $fechaInicio)
-{
-    Log::info("Buscando brigada original para empleado: {$idEmpleado} antes de la fecha: {$fechaInicio}");
+    {
+        Log::info("Buscando brigada original para empleado: {$idEmpleado} antes de la fecha: {$fechaInicio}");
 
-    $assignment = Firefighters_assignment::where('id_empleado', $idEmpleado)
-        ->where('fecha_ini', '<=', $fechaInicio)
-        ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
-        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Prioridad de turno
-        ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo de asignación
-        ->orderBy('created_at', 'desc')                                   // 4. Más reciente en caso de empate
-        ->first();  //  ESTO ES LO CRÍTICO: first() en la query, no en la colección
+        $assignment = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', '<=', $fechaInicio)
+            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Prioridad de turno
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo de asignación
+            ->orderBy('created_at', 'desc')                                   // 4. Más reciente en caso de empate
+            ->first();  //  ESTO ES LO CRÍTICO: first() en la query, no en la colección
 
-    if (!$assignment) {
-        Log::info("No se encontraron asignaciones anteriores para el empleado {$idEmpleado} antes de la fecha {$fechaInicio}.");
-        
-        // Fallback: buscar la brigada base del usuario
-        $user = \App\Models\User::find($idEmpleado);
-        $brigadeUsuario = $user ? $user->brigades()->first() : null;
-        
-        if ($brigadeUsuario) {
-            Log::info("Usando brigada base del usuario: {$brigadeUsuario->id_brigada} - {$brigadeUsuario->nombre}");
-            return $brigadeUsuario->id_brigada;
+        if (!$assignment) {
+            Log::info("No se encontraron asignaciones anteriores para el empleado {$idEmpleado} antes de la fecha {$fechaInicio}.");
+
+            // Fallback: buscar la brigada base del usuario
+            $user = \App\Models\User::find($idEmpleado);
+            $brigadeUsuario = $user ? $user->brigades()->first() : null;
+
+            if ($brigadeUsuario) {
+                Log::info("Usando brigada base del usuario: {$brigadeUsuario->id_brigada} - {$brigadeUsuario->nombre}");
+                return $brigadeUsuario->id_brigada;
+            }
+
+            Log::warning("No se encontró brigada base para el usuario {$idEmpleado}");
+            return null;
         }
-        
-        Log::warning("No se encontró brigada base para el usuario {$idEmpleado}");
-        return null;
+
+        // ✅ Logging detallado para debugging
+        Log::info("Asignación seleccionada como brigada original:", [
+            'id_empleado' => $assignment->id_empleado,
+            'fecha_ini' => $assignment->fecha_ini,
+            'turno' => $assignment->turno,
+            'brigada_destino' => $assignment->id_brigada_destino,
+            'tipo_asignacion' => $assignment->tipo_asignacion,
+            'brigada_nombre' => $assignment->brigadeDestination ? $assignment->brigadeDestination->nombre : 'N/A'
+        ]);
+
+        return $assignment->id_brigada_destino;
     }
-
-    // ✅ Logging detallado para debugging
-    Log::info("Asignación seleccionada como brigada original:", [
-        'id_empleado' => $assignment->id_empleado,
-        'fecha_ini' => $assignment->fecha_ini,
-        'turno' => $assignment->turno,
-        'brigada_destino' => $assignment->id_brigada_destino,
-        'tipo_asignacion' => $assignment->tipo_asignacion,
-        'brigada_nombre' => $assignment->brigadeDestination ? $assignment->brigadeDestination->nombre : 'N/A'
-    ]);
-
-    return $assignment->id_brigada_destino;
-}
 
 
     public function destroy(MiRequest $miRequest)

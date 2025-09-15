@@ -525,9 +525,9 @@ class RequestController extends Controller
         $assignments = Firefighters_assignment::where('id_empleado', $idEmpleado)
             ->where('fecha_ini', '<=', $fechaInicio)
             ->orderBy('fecha_ini', 'desc')
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")  // ← AGREGAR
-            ->orderBy('created_at', 'desc')                          // ← AGREGAR
             ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('created_at', 'desc')
             ->get();
 
 

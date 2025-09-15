@@ -131,7 +131,7 @@ class BrigadeController extends Controller
             // Buscar las asignaciones del usuario el mismo día
             $sameDayAssignments = Firefighters_assignment::where('id_empleado', $user->id_empleado)
                 ->whereDate('fecha_ini', '=', $fecha)
-                ->orderByRaw("FIELD(turno, 'Mañana', 'Tarde', 'Noche')") // 1º: Turno
+                ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')") // 1º: Turno
                 ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')") // 2º: Tipo
                 ->get();
 

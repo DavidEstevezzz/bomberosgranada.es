@@ -441,9 +441,9 @@ public function getLatestBrigadeAssignments($date)
     $assignments = Firefighters_assignment::where('fecha_ini', '<=', $date)
         ->orderByRaw("CASE WHEN fecha_ini = '$date' THEN 0 ELSE 1 END")
         ->orderBy('fecha_ini', 'desc')
-        ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")  // ← AGREGAR
-        ->orderBy('created_at', 'desc')                          // ← AGREGAR
         ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+        ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+        ->orderBy('created_at', 'desc')
         ->get()
         ->unique('id_empleado');
     

@@ -504,28 +504,78 @@ const BrigadeDetail = () => {
   // Obtener asignación del caché
   const prevAssignmentInfo = previousAssignmentsCache[firefighter.id_empleado];
 
+  // 🔍 LOG GENERAL PARA TODOS LOS CAMBIOS DE GUARDIA
+  if (firefighter.id_change_request) {
+    console.log(`🔄 FRONTEND CG ${firefighter.id_change_request} - ${firefighter.nombre} ${firefighter.apellido}:`, {
+      id_empleado: firefighter.id_empleado,
+      id_change_request: firefighter.id_change_request,
+      tipo_asignacion: firefighter.tipo_asignacion,
+      tipo_asignacion_type: typeof firefighter.tipo_asignacion,
+      requerimiento: firefighter.requerimiento,
+      changeRequestsInfo_disponible: !!changeRequestsInfo[firefighter.id_change_request],
+      changeRequestsInfo_data: changeRequestsInfo[firefighter.id_change_request],
+      todas_las_props: Object.keys(firefighter)
+    });
+  }
+
   let extra = '';
   if (firefighter.requerimiento) {
     extra = ' (R)';
+    
+    // Log para requerimientos
+    if (firefighter.id_change_request) {
+      console.log(`🔄 CG ${firefighter.id_change_request} - Marcado como requerimiento, usando (R)`);
+    }
   } else if (firefighter.id_change_request) {
+    console.log(`🔄 CG ${firefighter.id_change_request} - Entrando en lógica CG:`, {
+      tipo_asignacion: firefighter.tipo_asignacion,
+      es_ida: firefighter.tipo_asignacion === 'ida',
+      es_string: typeof firefighter.tipo_asignacion === 'string'
+    });
+
     // NUEVA LÓGICA: Solo mostrar CG si tipo_asignacion es 'ida'
-    // Las asignaciones de tipo 'vuelta' no deben mostrar el indicador CG
     if (firefighter.tipo_asignacion === 'ida') {
+      console.log(`🔄 CG ${firefighter.id_change_request} - Es tipo "ida", procesando...`);
+      
       const info = changeRequestsInfo[firefighter.id_change_request];
+      
       if (info) {
+        console.log(`🔄 CG ${firefighter.id_change_request} - Info encontrada:`, {
+          empleado1: info.empleado1,
+          empleado2: info.empleado2
+        });
+        
         const other = info.empleado1?.id_empleado === firefighter.id_empleado
           ? info.empleado2
           : info.empleado1;
+        
+        console.log(`🔄 CG ${firefighter.id_change_request} - Other determinado:`, {
+          empleado1_id: info.empleado1?.id_empleado,
+          empleado2_id: info.empleado2?.id_empleado,
+          firefighter_id: firefighter.id_empleado,
+          other: other,
+          other_valid: other && other.id_empleado !== firefighter.id_empleado
+        });
+        
         if (other && other.id_empleado !== firefighter.id_empleado) {
           extra = ` (CG ${other.nombre} ${other.apellido})`;
+          console.log(`🔄 CG ${firefighter.id_change_request} - Extra final con nombre:`, extra);
         } else {
           extra = ' (CG)';
+          console.log(`🔄 CG ${firefighter.id_change_request} - Extra final sin nombre:`, extra);
         }
       } else {
         extra = ' (CG)';
+        console.log(`🔄 CG ${firefighter.id_change_request} - No info disponible, usando (CG)`);
       }
+    } else {
+      console.log(`🔄 CG ${firefighter.id_change_request} - NO es "ida" (es "${firefighter.tipo_asignacion}"), no mostrando CG`);
     }
-    // Si tipo_asignacion es 'vuelta' o null, no se muestra nada (extra permanece '')
+  }
+
+  // Log final del resultado
+  if (firefighter.id_change_request) {
+    console.log(`🔄 CG ${firefighter.id_change_request} - RESULTADO FINAL: "${firefighter.nombre} ${firefighter.apellido}${extra}"`);
   }
 
   return (

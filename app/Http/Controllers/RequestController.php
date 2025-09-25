@@ -391,7 +391,7 @@ public function getEmployees()
     $employees = User::select(
         'id_empleado', 
         'nombre', 
-        'apellidos', 
+        'apellido', 
         'vacaciones', 
         'AP', 
         'SP', 

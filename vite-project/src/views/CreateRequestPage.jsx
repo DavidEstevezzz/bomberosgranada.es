@@ -64,7 +64,10 @@ const CreateRequestPage = () => {
 
   // Obtener el usuario objetivo (empleado seleccionado o usuario actual)
   const getTargetUser = () => {
-    return selectedEmployee || user;
+    if (selectedEmployee) {
+      return selectedEmployee;
+    }
+    return user || {};
   };
 
   // Sincronizar fechaFin con fechaIni para ciertos tipos de solicitud
@@ -83,7 +86,12 @@ const CreateRequestPage = () => {
     try {
       const assignments = await AssignmentsApiService.getAssignments();
       const formattedDate = dayjs(date).format('YYYY-MM-DD');
-      const userId = targetUserId || user.id_empleado;
+      const userId = targetUserId || user?.id_empleado;
+      
+      if (!userId) {
+        console.error('No se pudo obtener el ID del usuario');
+        return null;
+      }
       
       const userAssignments = assignments.data.filter(
         (assign) =>
@@ -278,7 +286,15 @@ const CreateRequestPage = () => {
 
     const formData = new FormData();
     // CAMBIO PRINCIPAL: Usar el ID del empleado seleccionado o del usuario actual
-    formData.append('id_empleado', targetUser.id_empleado);
+    const targetId = targetUser?.id_empleado || user?.id_empleado;
+    
+    if (!targetId) {
+      setError('Error: No se pudo identificar el usuario para la solicitud');
+      setIsLoading(false);
+      return;
+    }
+
+    formData.append('id_empleado', targetId);
     formData.append('tipo', tipo);
     formData.append('motivo', motivo);
     formData.append('fecha_ini', fechaIni);
@@ -346,6 +362,17 @@ const CreateRequestPage = () => {
     }
   };
 
+  // Validación de seguridad: Si no hay usuario, mostrar cargando
+  if (!user) {
+    return (
+      <div className={`max-w-4xl mx-auto p-6 rounded-lg ${
+        darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'
+      }`}>
+        <div className="text-center">Cargando usuario...</div>
+      </div>
+    );
+  }
+
   const targetUser = getTargetUser();
 
   return (
@@ -377,7 +404,7 @@ const CreateRequestPage = () => {
               <option value="">Para mí mismo</option>
               {employees.map(emp => (
                 <option key={emp.id_empleado} value={emp.id_empleado}>
-                  {emp.nombre} {emp.apellidos} - {emp.id_empleado} ({emp.type})
+                  {emp?.nombre || ''} {emp?.apellidos || ''} - {emp.id_empleado} ({emp?.type || ''})
                 </option>
               ))}
             </select>
@@ -390,14 +417,16 @@ const CreateRequestPage = () => {
         {/* NUEVO: Información del usuario objetivo */}
         <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
           <h3 className="font-medium text-sm mb-2">
-            Solicitud para: {selectedEmployee ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` : `${user.nombre} ${user.apellidos}`}
+            Solicitud para: {selectedEmployee 
+              ? `${selectedEmployee?.nombre || ''} ${selectedEmployee?.apellidos || ''}` 
+              : `${user?.nombre || ''} ${user?.apellidos || ''}`}
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-            <span>Vacaciones: {targetUser.vacaciones || 0}</span>
-            <span>AP: {targetUser.AP || 0}</span>
-            <span>SP: {targetUser.SP || 0}h</span>
-            <span>H. Sindicales: {targetUser.horas_sindicales || 0}h</span>
-            <span>Módulo: {targetUser.modulo || 0}</span>
+            <span>Vacaciones: {targetUser?.vacaciones || 0}</span>
+            <span>AP: {targetUser?.AP || 0}</span>
+            <span>SP: {targetUser?.SP || 0}h</span>
+            <span>H. Sindicales: {targetUser?.horas_sindicales || 0}h</span>
+            <span>Módulo: {targetUser?.modulo || 0}</span>
           </div>
         </div>
 

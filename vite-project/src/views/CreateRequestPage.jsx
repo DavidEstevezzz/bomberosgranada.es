@@ -9,7 +9,7 @@ import { useDarkMode } from '../contexts/DarkModeContext';
 const CreateRequestPage = () => {
   const { user } = useStateContext();
   const { darkMode } = useDarkMode();
-  
+
   // Estados existentes
   const [tipo, setTipo] = useState('vacaciones');
   const [motivo, setMotivo] = useState('');
@@ -57,7 +57,9 @@ const CreateRequestPage = () => {
     if (employeeId === '') {
       setSelectedEmployee(null);
     } else {
-      const employee = employees.find(emp => emp.id_empleado === employeeId);
+      const employee = employees.find(
+        (emp) => String(emp.id_empleado) === String(employeeId)
+      );
       setSelectedEmployee(employee);
     }
   };
@@ -87,12 +89,12 @@ const CreateRequestPage = () => {
       const assignments = await AssignmentsApiService.getAssignments();
       const formattedDate = dayjs(date).format('YYYY-MM-DD');
       const userId = targetUserId || user?.id_empleado;
-      
+
       if (!userId) {
         console.error('No se pudo obtener el ID del usuario');
         return null;
       }
-      
+
       const userAssignments = assignments.data.filter(
         (assign) =>
           assign.id_empleado === userId &&
@@ -120,7 +122,7 @@ const CreateRequestPage = () => {
     const targetUser = getTargetUser();
     const startDate = dayjs(fechaIni);
     const endDate = dayjs(fechaFin);
-    
+
     if (startDate.isAfter(endDate)) {
       setError('La fecha de inicio no puede ser posterior a la fecha de fin.');
       return false;
@@ -130,10 +132,12 @@ const CreateRequestPage = () => {
     const availableDays = targetUser.vacaciones || 0;
 
     if (requestedDays > availableDays) {
-      const userName = selectedEmployee 
-        ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+      const userName = selectedEmployee
+        ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
         : 'el usuario';
-      setError(`${userName} no tiene suficientes días de vacaciones. Disponibles: ${availableDays}, solicitados: ${requestedDays}`);
+      setError(
+        `${userName} no tiene suficientes días de vacaciones. Disponibles: ${availableDays}, solicitados: ${requestedDays}`
+      );
       return false;
     }
     return true;
@@ -145,10 +149,12 @@ const CreateRequestPage = () => {
     const availableDays = targetUser[field] || 0;
 
     if (availableDays <= 0) {
-      const userName = selectedEmployee 
-        ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+      const userName = selectedEmployee
+        ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
         : 'El usuario';
-      setError(`${userName} no tiene días disponibles de ${type}. Disponibles: ${availableDays}`);
+      setError(
+        `${userName} no tiene días disponibles de ${type}. Disponibles: ${availableDays}`
+      );
       return false;
     }
     return true;
@@ -159,10 +165,12 @@ const CreateRequestPage = () => {
     const availableDays = targetUser.modulo || 0;
 
     if (availableDays <= 0) {
-      const userName = selectedEmployee 
-        ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+      const userName = selectedEmployee
+        ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
         : 'El usuario';
-      setError(`${userName} no tiene días de módulo disponibles. Disponibles: ${availableDays}`);
+      setError(
+        `${userName} no tiene días de módulo disponibles. Disponibles: ${availableDays}`
+      );
       return false;
     }
     return true;
@@ -171,7 +179,9 @@ const CreateRequestPage = () => {
   const validateSPHours = () => {
     const targetUser = getTargetUser();
     if (!horaIni || !horaFin) {
-      setError('Debe especificar hora de inicio y fin para salidas personales.');
+      setError(
+        'Debe especificar hora de inicio y fin para salidas personales.'
+      );
       return null;
     }
 
@@ -186,10 +196,14 @@ const CreateRequestPage = () => {
 
     const availableHours = targetUser.SP || 0;
     if (hoursDifference > availableHours) {
-      const userName = selectedEmployee 
-        ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+      const userName = selectedEmployee
+        ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
         : 'El usuario';
-      setError(`${userName} no tiene suficientes horas de salidas personales. Disponibles: ${availableHours}, solicitadas: ${hoursDifference.toFixed(1)}`);
+      setError(
+        `${userName} no tiene suficientes horas de salidas personales. Disponibles: ${availableHours}, solicitadas: ${hoursDifference.toFixed(
+          1
+        )}`
+      );
       return null;
     }
 
@@ -204,28 +218,36 @@ const CreateRequestPage = () => {
       const currentDate = startDate.clone();
 
       while (currentDate.isSameOrBefore(endDate)) {
-        const brigadeId = await fetchUserBrigadeForDate(currentDate.format('YYYY-MM-DD'), targetUserId);
-        
+        const brigadeId = await fetchUserBrigadeForDate(
+          currentDate.format('YYYY-MM-DD'),
+          targetUserId
+        );
+
         if (brigadeId) {
           try {
             const guardsResponse = await GuardsApiService.getGuards();
-            const hasGuard = guardsResponse.data.some(guard =>
-              guard.id_brigada === brigadeId &&
-              dayjs(guard.fecha).isSame(currentDate, 'day')
+            const hasGuard = guardsResponse.data.some(
+              (guard) =>
+                guard.id_brigada === brigadeId &&
+                dayjs(guard.fecha).isSame(currentDate, 'day')
             );
 
             if (hasGuard) {
-              const userName = selectedEmployee 
-                ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+              const userName = selectedEmployee
+                ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
                 : 'el usuario';
-              setError(`${userName} tiene una guardia asignada el ${currentDate.format('DD/MM/YYYY')}. No se puede solicitar vacaciones en esa fecha.`);
+              setError(
+                `${userName} tiene una guardia asignada el ${currentDate.format(
+                  'DD/MM/YYYY'
+                )}. No se puede solicitar vacaciones en esa fecha.`
+              );
               return false;
             }
           } catch (guardError) {
             console.error('Error al validar guardias:', guardError);
           }
         }
-        
+
         currentDate.add(1, 'day');
       }
       return true;
@@ -287,7 +309,7 @@ const CreateRequestPage = () => {
     const formData = new FormData();
     // CAMBIO PRINCIPAL: Usar el ID del empleado seleccionado o del usuario actual
     const targetId = targetUser?.id_empleado || user?.id_empleado;
-    
+
     if (!targetId) {
       setError('Error: No se pudo identificar el usuario para la solicitud');
       setIsLoading(false);
@@ -300,26 +322,26 @@ const CreateRequestPage = () => {
     formData.append('fecha_ini', fechaIni);
     formData.append(
       'fecha_fin',
-      (tipo === 'salidas personales' ||
+      tipo === 'salidas personales' ||
         tipo === 'horas sindicales' ||
         tipo === 'licencias por jornadas' ||
         tipo === 'modulo' ||
-        tipo === 'vestuario')
+        tipo === 'vestuario'
         ? fechaIni
         : fechaFin
     );
     formData.append(
       'turno',
-      (tipo === 'asuntos propios' ||
+      tipo === 'asuntos propios' ||
         tipo === 'licencias por jornadas' ||
         tipo === 'compensacion grupos especiales' ||
-        tipo === 'horas sindicales')
+        tipo === 'horas sindicales'
         ? turno
         : ''
     );
     formData.append(
       'horas',
-      (tipo === 'salidas personales' || tipo === 'horas sindicales') ? horas : ''
+      tipo === 'salidas personales' || tipo === 'horas sindicales' ? horas : ''
     );
     formData.append('estado', 'Pendiente');
 
@@ -333,14 +355,14 @@ const CreateRequestPage = () => {
     }
 
     try {
-      const response = await RequestApiService.createRequest(formData, {
+      await RequestApiService.createRequest(formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      const targetName = selectedEmployee 
-        ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+      const targetName = selectedEmployee
+        ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
         : 'ti';
       setSuccess(`Solicitud enviada con éxito para ${targetName}.`);
 
@@ -362,233 +384,326 @@ const CreateRequestPage = () => {
     }
   };
 
+  const pageWrapperClass = `min-h-[calc(100vh-6rem)] w-full px-4 py-10 transition-colors duration-300 ${
+    darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
+  }`;
+  const cardContainerClass = `mx-auto max-w-5xl overflow-hidden rounded-3xl border shadow-xl backdrop-blur ${
+    darkMode ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-white/90'
+  }`;
+  const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
+  const inputBaseClass = `w-full rounded-2xl border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${
+    darkMode
+      ? 'border-slate-700 bg-slate-900/60 text-slate-100 placeholder-slate-400'
+      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+  }`;
+  const labelBaseClass =
+    'block text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200';
+
   // Validación de seguridad: Si no hay usuario, mostrar cargando
   if (!user) {
     return (
-      <div className={`max-w-4xl mx-auto p-6 rounded-lg ${
-        darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'
-      }`}>
-        <div className="text-center">Cargando usuario...</div>
+      <div className={pageWrapperClass}>
+        <div className={`${cardContainerClass} flex items-center justify-center py-16`}>
+          <p className="text-sm font-medium">Cargando usuario...</p>
+        </div>
       </div>
     );
   }
 
   const targetUser = getTargetUser();
+  const availabilityStats = [
+    { label: 'Vacaciones', value: `${targetUser?.vacaciones || 0} días` },
+    { label: 'Asuntos propios', value: `${targetUser?.AP || 0} días` },
+    { label: 'Salidas personales', value: `${targetUser?.SP || 0} h` },
+    { label: 'Horas sindicales', value: `${targetUser?.horas_sindicales || 0} h` },
+    { label: 'Módulo', value: `${targetUser?.modulo || 0} días` },
+  ];
 
   return (
-    <div
-      className={`max-w-4xl mx-auto p-6 rounded-lg ${
-        darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'
-      }`}
-    >
-      <h1 className="text-xl font-bold mb-4">Solicitar Permiso</h1>
-      
-      {error && <div className="mb-4 text-red-500">{error}</div>}
-      {success && <div className="mb-4 text-green-500">{success}</div>}
-      
-      <div onSubmit={handleSubmit} style={{display: 'contents'}}>
-        {/* NUEVO: Selector de empleado - Solo para jefes */}
-        {user?.type === 'jefe' && (
-          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
-            <label className="block text-sm font-medium mb-2">
-              Crear solicitud para:
-            </label>
-            <select
-              value={selectedEmployee?.id_empleado || ''}
-              onChange={handleEmployeeChange}
-              className={`w-full p-2 border rounded ${
-                darkMode ? 'bg-gray-700 text-white' : 'bg-white text-black'
-              }`}
-              disabled={isLoadingEmployees}
-            >
-              <option value="">Para mí mismo</option>
-              {employees.map(emp => (
-                <option key={emp.id_empleado} value={emp.id_empleado}>
-                  {emp?.nombre || ''} {emp?.apellidos || ''} - {emp.id_empleado} ({emp?.type || ''})
-                </option>
-              ))}
-            </select>
-            {isLoadingEmployees && (
-              <p className="text-sm text-gray-500 mt-1">Cargando empleados...</p>
-            )}
-          </div>
-        )}
-
-        {/* NUEVO: Información del usuario objetivo */}
-        <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
-          <h3 className="font-medium text-sm mb-2">
-            Solicitud para: {selectedEmployee 
-              ? `${selectedEmployee?.nombre || ''} ${selectedEmployee?.apellidos || ''}` 
-              : `${user?.nombre || ''} ${user?.apellidos || ''}`}
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-            <span>Vacaciones: {targetUser?.vacaciones || 0}</span>
-            <span>AP: {targetUser?.AP || 0}</span>
-            <span>SP: {targetUser?.SP || 0}h</span>
-            <span>H. Sindicales: {targetUser?.horas_sindicales || 0}h</span>
-            <span>Módulo: {targetUser?.modulo || 0}</span>
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2" htmlFor="tipo">
-            Tipo de Solicitud
-          </label>
-          <select
-            id="tipo"
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value)}
-            className={`w-full p-2 border rounded ${
-              darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-            }`}
-            required
-          >
-            <option value="vacaciones">Vacaciones</option>
-            <option value="asuntos propios">Asuntos Propios</option>
-            <option value="salidas personales">Salidas Personales</option>
-            <option value="licencias por jornadas">Licencias por Jornadas</option>
-            <option value="licencias por dias">Licencias por Días</option>
-            <option value="modulo">Módulo</option>
-            <option value="compensacion grupos especiales">Compensación Grupos Especiales</option>
-            <option value="horas sindicales">Horas Sindicales</option>
-            <option value="vestuario">Vestuario</option>
-          </select>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2" htmlFor="fechaIni">
-            Fecha de Inicio
-          </label>
-          <input
-            type="date"
-            id="fechaIni"
-            value={fechaIni}
-            onChange={(e) => setFechaIni(e.target.value)}
-            className={`w-full p-2 border rounded ${
-              darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-            }`}
-            required
-          />
-        </div>
-
-        {!['asuntos propios', 'licencias por jornadas', 'horas sindicales', 'vestuario', 'salidas personales', 'modulo'].includes(tipo) && (
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2" htmlFor="fechaFin">
-              Fecha de Fin
-            </label>
-            <input
-              type="date"
-              id="fechaFin"
-              value={fechaFin}
-              onChange={(e) => setFechaFin(e.target.value)}
-              className={`w-full p-2 border rounded ${
-                darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-              }`}
-              required
-            />
-          </div>
-        )}
-
-        {(tipo === 'salidas personales' || tipo === 'horas sindicales') && (
-          <>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2" htmlFor="horaIni">
-                Hora de Inicio
-              </label>
-              <input
-                type="time"
-                id="horaIni"
-                value={horaIni}
-                onChange={(e) => setHoraIni(e.target.value)}
-                className={`w-full p-2 border rounded ${
-                  darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-                }`}
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2" htmlFor="horaFin">
-                Hora de Fin
-              </label>
-              <input
-                type="time"
-                id="horaFin"
-                value={horaFin}
-                onChange={(e) => setHoraFin(e.target.value)}
-                className={`w-full p-2 border rounded ${
-                  darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-                }`}
-                required
-              />
-            </div>
-          </>
-        )}
-
-        {['asuntos propios', 'licencias por jornadas', 'compensacion grupos especiales', 'horas sindicales'].includes(tipo) && (
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2" htmlFor="turno">
-              Turno
-            </label>
-            <select
-              id="turno"
-              value={turno}
-              onChange={(e) => setTurno(e.target.value)}
-              className={`w-full p-2 border rounded ${
-                darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-              }`}
-              required
-            >
-              <option value="">Selecciona un turno</option>
-              <option value="Mañana">Mañana</option>
-              <option value="Tarde">Tarde</option>
-              <option value="Noche">Noche</option>
-              <option value="Mañana y tarde">Mañana y Tarde</option>
-              <option value="Tarde y noche">Tarde y Noche</option>
-              <option value="Día Completo">Día Completo</option>
-            </select>
-          </div>
-        )}
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2" htmlFor="motivo">
-            Observaciones
-          </label>
-          <textarea
-            id="motivo"
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            className={`w-full p-2 border rounded ${
-              darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-            }`}
-            rows="4"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2" htmlFor="file">
-            Adjuntar Archivo (opcional)
-          </label>
-          <input
-            type="file"
-            id="file"
-            onChange={handleFileChange}
-            className={`w-full p-3 border rounded ${
-              darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-            }`}
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className={`w-full p-2 rounded ${
-            isLoading ? 'bg-blue-300' : 'bg-blue-500'
-          } text-white hover:bg-blue-600`}
-          disabled={isLoading}
+    <div className={pageWrapperClass}>
+      <div className={cardContainerClass}>
+        <div
+          className={`bg-gradient-to-r px-8 py-10 text-white transition-colors duration-300 ${
+            darkMode
+              ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80'
+              : 'from-primary-200 via-primary-300 to-primary-400'
+          }`}
         >
-          {isLoading ? 'Realizando comprobaciones...' : 'Enviar Solicitud'}
-        </button>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
+            Gestión de permisos
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold">Crear nueva solicitud</h1>
+          <p className="mt-3 max-w-3xl text-sm text-white/90">
+            Completa la información necesaria para solicitar un permiso y realiza el seguimiento de la disponibilidad de la persona seleccionada.
+          </p>
+        </div>
+
+        <div className="space-y-8 px-6 py-8 sm:px-10">
+          {error && (
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
+                darkMode
+                  ? 'border-red-500/40 bg-red-500/10 text-red-200'
+                  : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
+                darkMode
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              }`}
+            >
+              {success}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {user?.type === 'jefe' && (
+              <section
+                className={`rounded-2xl border px-5 py-6 transition-colors ${
+                  darkMode
+                    ? 'border-slate-800 bg-slate-900/60'
+                    : 'border-slate-200 bg-slate-50/70'
+                }`}
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-primary-600 dark:text-primary-200">
+                      Crear solicitud para
+                    </p>
+                    <p className={`mt-1 text-xs ${subtleTextClass}`}>
+                      Selecciona a la persona a la que deseas gestionar el permiso.
+                    </p>
+                  </div>
+                  {isLoadingEmployees && (
+                    <span
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
+                        darkMode
+                          ? 'border-slate-700 bg-slate-900 text-slate-200'
+                          : 'border-slate-200 bg-white text-slate-600'
+                      }`}
+                    >
+                      Cargando empleados...
+                    </span>
+                  )}
+                </div>
+                <select
+                  value={selectedEmployee?.id_empleado ?? ''}
+                  onChange={handleEmployeeChange}
+                  className={`${inputBaseClass} mt-4`}
+                  disabled={isLoadingEmployees}
+                >
+                  <option value="">
+                    Para mí ({`${user?.nombre || ''} ${user?.apellido || ''}`.trim()})
+                  </option>
+                  {employees.map((emp) => (
+                    <option key={emp.id_empleado} value={emp.id_empleado}>
+                      {`${emp?.nombre || ''} ${emp?.apellido || ''}`.trim()} · DNI {emp?.dni || 'Sin DNI'}
+                    </option>
+                  ))}
+                </select>
+              </section>
+            )}
+
+            <section
+              className={`rounded-2xl border px-5 py-6 transition-colors ${
+                darkMode
+                  ? 'border-slate-800 bg-slate-900/60'
+                  : 'border-slate-200 bg-slate-50/60'
+              }`}
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-primary-600 dark:text-primary-200">
+                    Solicitud para
+                  </p>
+                  <p className="text-base font-semibold">
+                    {selectedEmployee
+                      ? `${selectedEmployee?.nombre || ''} ${selectedEmployee?.apellido || ''}`.trim()
+                      : `${user?.nombre || ''} ${user?.apellido || ''}`.trim()}
+                  </p>
+                </div>
+                <div className={`text-xs font-medium ${subtleTextClass}`}>
+                  DNI {targetUser?.dni || 'No disponible'}
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                {availabilityStats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className={`rounded-2xl border px-3 py-3 text-sm font-semibold ${
+                      darkMode
+                        ? 'border-slate-800 bg-slate-950/40 text-slate-200'
+                        : 'border-slate-200 bg-white text-slate-700'
+                    }`}
+                  >
+                    <p className={`text-xs font-medium uppercase tracking-wide ${subtleTextClass}`}>
+                      {stat.label}
+                    </p>
+                    <p className="mt-1 text-base font-semibold">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className={labelBaseClass} htmlFor="tipo">
+                    Tipo de solicitud
+                  </label>
+                  <select
+                    id="tipo"
+                    value={tipo}
+                    onChange={(e) => setTipo(e.target.value)}
+                    className={inputBaseClass}
+                    required
+                  >
+                    <option value="vacaciones">Vacaciones</option>
+                    <option value="asuntos propios">Asuntos Propios</option>
+                    <option value="salidas personales">Salidas Personales</option>
+                    <option value="licencias por jornadas">Licencias por Jornadas</option>
+                    <option value="licencias por dias">Licencias por Días</option>
+                    <option value="modulo">Módulo</option>
+                    <option value="compensacion grupos especiales">Compensación Grupos Especiales</option>
+                    <option value="horas sindicales">Horas Sindicales</option>
+                    <option value="vestuario">Vestuario</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className={labelBaseClass} htmlFor="fechaIni">
+                    Fecha de inicio
+                  </label>
+                  <input
+                    type="date"
+                    id="fechaIni"
+                    value={fechaIni}
+                    onChange={(e) => setFechaIni(e.target.value)}
+                    className={inputBaseClass}
+                    required
+                  />
+                </div>
+              </div>
+
+              {!['asuntos propios', 'licencias por jornadas', 'horas sindicales', 'vestuario', 'salidas personales', 'modulo'].includes(tipo) && (
+                <div className="space-y-2">
+                  <label className={labelBaseClass} htmlFor="fechaFin">
+                    Fecha de fin
+                  </label>
+                  <input
+                    type="date"
+                    id="fechaFin"
+                    value={fechaFin}
+                    onChange={(e) => setFechaFin(e.target.value)}
+                    className={inputBaseClass}
+                    required
+                  />
+                </div>
+              )}
+
+              {(tipo === 'salidas personales' || tipo === 'horas sindicales') && (
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className={labelBaseClass} htmlFor="horaIni">
+                      Hora de inicio
+                    </label>
+                    <input
+                      type="time"
+                      id="horaIni"
+                      value={horaIni}
+                      onChange={(e) => setHoraIni(e.target.value)}
+                      className={inputBaseClass}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className={labelBaseClass} htmlFor="horaFin">
+                      Hora de fin
+                    </label>
+                    <input
+                      type="time"
+                      id="horaFin"
+                      value={horaFin}
+                      onChange={(e) => setHoraFin(e.target.value)}
+                      className={inputBaseClass}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {['asuntos propios', 'licencias por jornadas', 'compensacion grupos especiales', 'horas sindicales'].includes(tipo) && (
+                <div className="space-y-2">
+                  <label className={labelBaseClass} htmlFor="turno">
+                    Turno
+                  </label>
+                  <select
+                    id="turno"
+                    value={turno}
+                    onChange={(e) => setTurno(e.target.value)}
+                    className={inputBaseClass}
+                    required
+                  >
+                    <option value="">Selecciona un turno</option>
+                    <option value="Mañana">Mañana</option>
+                    <option value="Tarde">Tarde</option>
+                    <option value="Noche">Noche</option>
+                    <option value="Mañana y tarde">Mañana y Tarde</option>
+                    <option value="Tarde y noche">Tarde y Noche</option>
+                    <option value="Día Completo">Día Completo</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className={labelBaseClass} htmlFor="motivo">
+                  Observaciones
+                </label>
+                <textarea
+                  id="motivo"
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  className={`${inputBaseClass} min-h-[140px] resize-none`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className={labelBaseClass} htmlFor="file">
+                  Adjuntar archivo (opcional)
+                </label>
+                <input
+                  type="file"
+                  id="file"
+                  onChange={handleFileChange}
+                  className={`${inputBaseClass} cursor-pointer file:mr-4 file:rounded-xl file:border-0 file:bg-primary-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white file:transition hover:file:bg-primary-600`}
+                />
+              </div>
+            </section>
+
+            <div className="pt-4">
+              <button
+                type="submit"
+                className={`w-full rounded-2xl px-5 py-3 text-base font-semibold shadow-lg transition-all duration-300 ${
+                  isLoading
+                    ? 'cursor-wait bg-primary-300 text-primary-950 dark:bg-primary-700/40 dark:text-primary-100'
+                    : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 text-white hover:shadow-xl'
+                } disabled:opacity-70 disabled:cursor-not-allowed`}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Realizando comprobaciones...' : 'Enviar solicitud'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

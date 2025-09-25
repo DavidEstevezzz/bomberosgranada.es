@@ -376,7 +376,7 @@ class RequestController extends Controller
         }
     }
 
-    /**
+/**
  * Obtener lista de empleados para jefes
  */
 public function getEmployees()
@@ -391,7 +391,8 @@ public function getEmployees()
     $employees = User::select(
         'id_empleado', 
         'nombre', 
-        'apellido', 
+        'apellido',  
+        'dni',       
         'vacaciones', 
         'AP', 
         'SP', 
@@ -406,7 +407,6 @@ public function getEmployees()
     
     return response()->json($employees);
 }
-
 
     private function createAssignments($miRequest)
     {

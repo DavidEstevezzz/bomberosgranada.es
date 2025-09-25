@@ -195,174 +195,202 @@ class FirefighterAssignmentController extends Controller
 
 
     private function getFirefightersAssignedToExcludedBrigades($date, $excludedBrigades, $guards)
-{
-    Log::info("Fecha y brigadas excluidas iniciales:", [
-        'date' => $date,
-        'excludedBrigades' => $excludedBrigades
-    ]);
+    {
+        Log::info("Fecha y brigadas excluidas iniciales:", [
+            'date' => $date,
+            'excludedBrigades' => $excludedBrigades
+        ]);
 
-    // Definir días anterior y siguiente
-    $previousDay = date('Y-m-d', strtotime("$date -1 day"));
-    $nextDay = date('Y-m-d', strtotime("$date +1 day"));
+        // Definir días anterior y siguiente
+        $previousDay = date('Y-m-d', strtotime("$date -1 day"));
+        $nextDay = date('Y-m-d', strtotime("$date +1 day"));
 
-    $absoluteExclusions = [
-        'Bajas',
-        'Vacaciones',
-        'Asuntos Propios',
-        'Modulo',
-        'Licencias por Jornadas',
-        'Licencias por Días',
-        'Compensacion grupos especiales',
-        'Brigada J'
-    ];
+        $absoluteExclusions = [
+            'Bajas',
+            'Vacaciones',
+            'Asuntos Propios',
+            'Modulo',
+            'Licencias por Jornadas',
+            'Licencias por Días',
+            'Compensacion grupos especiales',
+            'Brigada J'
+        ];
 
-    // Obtener las brigadas en guardia para cada día específico
-    $guardYesterday = Guard::with('brigade')
-        ->where('date', $previousDay)
-        ->get()
-        ->pluck('brigade.nombre')
-        ->unique()
-        ->toArray();
-        
-    $guardToday = Guard::with('brigade')
-        ->where('date', $date)
-        ->get()
-        ->pluck('brigade.nombre')
-        ->unique()
-        ->toArray();
-        
-    $guardTomorrow = Guard::with('brigade')
-        ->where('date', $nextDay)
-        ->get()
-        ->pluck('brigade.nombre')
-        ->unique()
-        ->toArray();
+        // Obtener las brigadas en guardia para cada día específico
+        $guardYesterday = Guard::with('brigade')
+            ->where('date', $previousDay)
+            ->get()
+            ->pluck('brigade.nombre')
+            ->unique()
+            ->toArray();
 
-    Log::info("Brigadas en guardia ayer ({$previousDay}):", ['guardYesterday' => $guardYesterday]);
-    Log::info("Brigadas en guardia hoy ({$date}):", ['guardToday' => $guardToday]);
-    Log::info("Brigadas en guardia mañana ({$nextDay}):", ['guardTomorrow' => $guardTomorrow]);
+        $guardToday = Guard::with('brigade')
+            ->where('date', $date)
+            ->get()
+            ->pluck('brigade.nombre')
+            ->unique()
+            ->toArray();
 
-    // Cargar asignaciones vigentes para cada día
-    $assignmentsToday = Firefighters_assignment::where('fecha_ini', '<=', $date)
-        ->orderBy('fecha_ini', 'desc')
-        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
-        ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
-        ->orderBy('created_at', 'desc')
-        ->get()
-        ->groupBy('id_empleado');
+        $guardTomorrow = Guard::with('brigade')
+            ->where('date', $nextDay)
+            ->get()
+            ->pluck('brigade.nombre')
+            ->unique()
+            ->toArray();
 
-    $assignmentsYesterday = Firefighters_assignment::where('fecha_ini', '<=', $previousDay)
-        ->orderBy('fecha_ini', 'desc')
-        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
-        ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
-        ->orderBy('created_at', 'desc')
-        ->get()
-        ->groupBy('id_empleado');
+        Log::info("Brigadas en guardia ayer ({$previousDay}):", ['guardYesterday' => $guardYesterday]);
+        Log::info("Brigadas en guardia hoy ({$date}):", ['guardToday' => $guardToday]);
+        Log::info("Brigadas en guardia mañana ({$nextDay}):", ['guardTomorrow' => $guardTomorrow]);
 
-    $assignmentsTomorrow = Firefighters_assignment::where('fecha_ini', '<=', $nextDay)
-        ->orderBy('fecha_ini', 'desc')
-        ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
-        ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
-        ->orderBy('created_at', 'desc')
-        ->get()
-        ->groupBy('id_empleado');
+        // Cargar asignaciones vigentes para cada día
+        $assignmentsToday = Firefighters_assignment::where('fecha_ini', '<=', $date)
+            ->orderBy('fecha_ini', 'desc')
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->groupBy('id_empleado');
 
-    $unavailableFirefighterIds = [];
-    $allFirefighterIds = $assignmentsToday->keys()
-        ->merge($assignmentsYesterday->keys())
-        ->merge($assignmentsTomorrow->keys())
-        ->unique();
+        $assignmentsYesterday = Firefighters_assignment::where('fecha_ini', '<=', $previousDay)
+            ->orderBy('fecha_ini', 'desc')
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->groupBy('id_empleado');
 
-    Log::info("Total de bomberos a evaluar:", ['count' => $allFirefighterIds->count()]);
+        $assignmentsTomorrow = Firefighters_assignment::where('fecha_ini', '<=', $nextDay)
+            ->orderBy('fecha_ini', 'desc')
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->groupBy('id_empleado');
 
-    foreach ($allFirefighterIds as $firefighterId) {
-        // Comprobar si está protegido por Requests
-        $isProtected = $this->isProtectedByRequests($firefighterId, $previousDay, $date, $nextDay);
-        Log::info("Bombero {$firefighterId} => isProtected: " . ($isProtected ? 'SÍ' : 'NO'));
+        $unavailableFirefighterIds = [];
+        $allFirefighterIds = $assignmentsToday->keys()
+            ->merge($assignmentsYesterday->keys())
+            ->merge($assignmentsTomorrow->keys())
+            ->unique();
 
-        // 1) Revisar asignación HOY
-        $lastToday = $assignmentsToday->has($firefighterId) ? $assignmentsToday[$firefighterId]->first() : null;
+        Log::info("Total de bomberos a evaluar:", ['count' => $allFirefighterIds->count()]);
 
-        // 1) Revisar TODAS las asignaciones HOY
-        if ($assignmentsToday->has($firefighterId)) {
-            $allAssignmentsToday = $assignmentsToday[$firefighterId]
-                ->where('fecha_ini', $date); // Solo asignaciones del día exacto
-            
-            foreach ($allAssignmentsToday as $assignment) {
-                if ($assignment && $assignment->brigadeDestination) {
-                    $brigadeNameToday = $assignment->brigadeDestination->nombre;
-                    Log::info("Bombero {$firefighterId} - Turno {$assignment->turno} HOY en: {$brigadeNameToday}");
+        foreach ($allFirefighterIds as $firefighterId) {
+            // Comprobar si está protegido por Requests
+            $isProtected = $this->isProtectedByRequests($firefighterId, $previousDay, $date, $nextDay);
+            Log::info("Bombero {$firefighterId} => isProtected: " . ($isProtected ? 'SÍ' : 'NO'));
 
-                    // EXCLUSIÓN ABSOLUTA: Brigadas estáticas
-                    if (in_array($brigadeNameToday, $absoluteExclusions)) {
-                        $unavailableFirefighterIds[] = $firefighterId;
-                        Log::info("EXCLUIDO - Bombero {$firefighterId} en brigada estática '{$brigadeNameToday}' turno {$assignment->turno} HOY.");
-                        continue 2; // Salir de ambos loops
+            // 1) Revisar asignación HOY
+            $lastToday = $assignmentsToday->has($firefighterId) ? $assignmentsToday[$firefighterId]->first() : null;
+
+            // 1) Revisar asignaciones HOY - Lógica híbrida
+            if ($assignmentsToday->has($firefighterId)) {
+                // Primero intentar asignaciones del día exacto (para múltiples turnos)
+                $exactDateAssignments = $assignmentsToday[$firefighterId]->where('fecha_ini', $date);
+
+                if ($exactDateAssignments->isNotEmpty()) {
+                    // CASO: Bombero con asignaciones específicas del día (múltiples turnos)
+                    foreach ($exactDateAssignments as $assignment) {
+                        if ($assignment && $assignment->brigadeDestination) {
+                            $brigadeNameToday = $assignment->brigadeDestination->nombre;
+                            Log::info("Bombero {$firefighterId} - Turno {$assignment->turno} HOY (día exacto) en: {$brigadeNameToday}");
+
+                            // EXCLUSIÓN ABSOLUTA: Brigadas estáticas
+                            if (in_array($brigadeNameToday, $absoluteExclusions)) {
+                                $unavailableFirefighterIds[] = $firefighterId;
+                                Log::info("EXCLUIDO - Bombero {$firefighterId} en brigada estática '{$brigadeNameToday}' turno {$assignment->turno} HOY.");
+                                continue 2; // Salir del foreach principal
+                            }
+
+                            // VERIFICAR SI EL BOMBERO TIENE TURNO EN BRIGADA DE GUARDIA HOY
+                            if (in_array($brigadeNameToday, $guardToday) && !$isProtected) {
+                                $unavailableFirefighterIds[] = $firefighterId;
+                                Log::info("EXCLUIDO - Bombero {$firefighterId} tiene turno {$assignment->turno} en brigada de guardia '{$brigadeNameToday}' HOY y NO está protegido.");
+                                continue 2; // Salir del foreach principal
+                            }
+
+                            if (in_array($brigadeNameToday, $guardToday) && $isProtected) {
+                                Log::info("NO EXCLUIDO - Bombero {$firefighterId} tiene turno {$assignment->turno} en brigada de guardia '{$brigadeNameToday}' HOY pero SÍ está protegido.");
+                            }
+                        }
                     }
+                } else {
+                    // CASO: Bombero sin asignaciones del día exacto - usar asignación vigente más reciente
+                    $lastToday = $assignmentsToday[$firefighterId]->first();
+                    if ($lastToday && $lastToday->brigadeDestination) {
+                        $brigadeNameToday = $lastToday->brigadeDestination->nombre;
+                        Log::info("Bombero {$firefighterId} - Asignación vigente HOY en: {$brigadeNameToday} (desde {$lastToday->fecha_ini})");
 
-                    // VERIFICAR SI EL BOMBERO TIENE TURNO EN BRIGADA DE GUARDIA HOY
-                    if (in_array($brigadeNameToday, $guardToday) && !$isProtected) {
-                        $unavailableFirefighterIds[] = $firefighterId;
-                        Log::info("EXCLUIDO - Bombero {$firefighterId} tiene turno {$assignment->turno} en brigada de guardia '{$brigadeNameToday}' HOY y NO está protegido.");
-                        continue 2; // Salir de ambos loops
-                    }
+                        // EXCLUSIÓN ABSOLUTA: Brigadas estáticas
+                        if (in_array($brigadeNameToday, $absoluteExclusions)) {
+                            $unavailableFirefighterIds[] = $firefighterId;
+                            Log::info("EXCLUIDO - Bombero {$firefighterId} en brigada estática '{$brigadeNameToday}' (asignación vigente desde {$lastToday->fecha_ini}).");
+                            continue;
+                        }
 
-                    if (in_array($brigadeNameToday, $guardToday) && $isProtected) {
-                        Log::info("NO EXCLUIDO - Bombero {$firefighterId} tiene turno {$assignment->turno} en brigada de guardia '{$brigadeNameToday}' HOY pero SÍ está protegido.");
+                        // VERIFICAR SI EL BOMBERO TIENE TURNO EN BRIGADA DE GUARDIA HOY
+                        if (in_array($brigadeNameToday, $guardToday) && !$isProtected) {
+                            $unavailableFirefighterIds[] = $firefighterId;
+                            Log::info("EXCLUIDO - Bombero {$firefighterId} tiene asignación vigente en brigada de guardia '{$brigadeNameToday}' HOY y NO está protegido.");
+                            continue;
+                        }
+
+                        if (in_array($brigadeNameToday, $guardToday) && $isProtected) {
+                            Log::info("NO EXCLUIDO - Bombero {$firefighterId} tiene asignación vigente en brigada de guardia '{$brigadeNameToday}' HOY pero SÍ está protegido.");
+                        }
                     }
                 }
             }
+
+            // 2) Revisar asignación AYER - CLAVE: verificar dónde estaba EL BOMBERO ayer
+            $lastYesterday = $assignmentsYesterday->has($firefighterId) ? $assignmentsYesterday[$firefighterId]->first() : null;
+
+            if ($lastYesterday && $lastYesterday->brigadeDestination) {
+                $brigadeNameYesterday = $lastYesterday->brigadeDestination->nombre;
+                Log::info("Bombero {$firefighterId} - Asignado AYER a: {$brigadeNameYesterday}");
+
+                // VERIFICAR SI EL BOMBERO PERSONALMENTE ESTUVO EN BRIGADA DE GUARDIA AYER
+                if (in_array($brigadeNameYesterday, $guardYesterday) && !$isProtected) {
+                    $unavailableFirefighterIds[] = $firefighterId;
+                    Log::info("EXCLUIDO - Bombero {$firefighterId} estuvo PERSONALMENTE en brigada de guardia '{$brigadeNameYesterday}' AYER y NO está protegido.");
+                    continue;
+                }
+
+                if (in_array($brigadeNameYesterday, $guardYesterday) && $isProtected) {
+                    Log::info("NO EXCLUIDO - Bombero {$firefighterId} estuvo en brigada de guardia '{$brigadeNameYesterday}' AYER pero SÍ está protegido.");
+                }
+            }
+
+            // 3) Revisar asignación MAÑANA - verificar dónde estará EL BOMBERO mañana
+            $lastTomorrow = $assignmentsTomorrow->has($firefighterId) ? $assignmentsTomorrow[$firefighterId]->first() : null;
+
+            if ($lastTomorrow && $lastTomorrow->brigadeDestination) {
+                $brigadeNameTomorrow = $lastTomorrow->brigadeDestination->nombre;
+                Log::info("Bombero {$firefighterId} - Asignado MAÑANA a: {$brigadeNameTomorrow}");
+
+                // VERIFICAR SI EL BOMBERO PERSONALMENTE ESTARÁ EN BRIGADA DE GUARDIA MAÑANA
+                if (in_array($brigadeNameTomorrow, $guardTomorrow) && !$isProtected) {
+                    $unavailableFirefighterIds[] = $firefighterId;
+                    Log::info("EXCLUIDO - Bombero {$firefighterId} estará PERSONALMENTE en brigada de guardia '{$brigadeNameTomorrow}' MAÑANA y NO está protegido.");
+                    continue;
+                }
+
+                if (in_array($brigadeNameTomorrow, $guardTomorrow) && $isProtected) {
+                    Log::info("NO EXCLUIDO - Bombero {$firefighterId} estará en brigada de guardia '{$brigadeNameTomorrow}' MAÑANA pero SÍ está protegido.");
+                }
+            }
+
+            Log::info("DISPONIBLE - Bombero {$firefighterId} está disponible para requerimientos.");
         }
 
-        // 2) Revisar asignación AYER - CLAVE: verificar dónde estaba EL BOMBERO ayer
-        $lastYesterday = $assignmentsYesterday->has($firefighterId) ? $assignmentsYesterday[$firefighterId]->first() : null;
+        $unavailableFirefighterIds = array_unique($unavailableFirefighterIds);
+        Log::info("IDs de bomberos no disponibles (verificación personal):", [
+            'count' => count($unavailableFirefighterIds),
+            'unavailableFirefighterIds' => $unavailableFirefighterIds
+        ]);
 
-        if ($lastYesterday && $lastYesterday->brigadeDestination) {
-            $brigadeNameYesterday = $lastYesterday->brigadeDestination->nombre;
-            Log::info("Bombero {$firefighterId} - Asignado AYER a: {$brigadeNameYesterday}");
-
-            // VERIFICAR SI EL BOMBERO PERSONALMENTE ESTUVO EN BRIGADA DE GUARDIA AYER
-            if (in_array($brigadeNameYesterday, $guardYesterday) && !$isProtected) {
-                $unavailableFirefighterIds[] = $firefighterId;
-                Log::info("EXCLUIDO - Bombero {$firefighterId} estuvo PERSONALMENTE en brigada de guardia '{$brigadeNameYesterday}' AYER y NO está protegido.");
-                continue;
-            }
-
-            if (in_array($brigadeNameYesterday, $guardYesterday) && $isProtected) {
-                Log::info("NO EXCLUIDO - Bombero {$firefighterId} estuvo en brigada de guardia '{$brigadeNameYesterday}' AYER pero SÍ está protegido.");
-            }
-        }
-
-        // 3) Revisar asignación MAÑANA - verificar dónde estará EL BOMBERO mañana
-        $lastTomorrow = $assignmentsTomorrow->has($firefighterId) ? $assignmentsTomorrow[$firefighterId]->first() : null;
-
-        if ($lastTomorrow && $lastTomorrow->brigadeDestination) {
-            $brigadeNameTomorrow = $lastTomorrow->brigadeDestination->nombre;
-            Log::info("Bombero {$firefighterId} - Asignado MAÑANA a: {$brigadeNameTomorrow}");
-
-            // VERIFICAR SI EL BOMBERO PERSONALMENTE ESTARÁ EN BRIGADA DE GUARDIA MAÑANA
-            if (in_array($brigadeNameTomorrow, $guardTomorrow) && !$isProtected) {
-                $unavailableFirefighterIds[] = $firefighterId;
-                Log::info("EXCLUIDO - Bombero {$firefighterId} estará PERSONALMENTE en brigada de guardia '{$brigadeNameTomorrow}' MAÑANA y NO está protegido.");
-                continue;
-            }
-
-            if (in_array($brigadeNameTomorrow, $guardTomorrow) && $isProtected) {
-                Log::info("NO EXCLUIDO - Bombero {$firefighterId} estará en brigada de guardia '{$brigadeNameTomorrow}' MAÑANA pero SÍ está protegido.");
-            }
-        }
-
-        Log::info("DISPONIBLE - Bombero {$firefighterId} está disponible para requerimientos.");
+        return $unavailableFirefighterIds;
     }
-
-    $unavailableFirefighterIds = array_unique($unavailableFirefighterIds);
-    Log::info("IDs de bomberos no disponibles (verificación personal):", [
-        'count' => count($unavailableFirefighterIds),
-        'unavailableFirefighterIds' => $unavailableFirefighterIds
-    ]);
-
-    return $unavailableFirefighterIds;
-}
 
     /**
      * Obtiene las asignaciones efectivas para una fecha específica
@@ -558,8 +586,8 @@ class FirefighterAssignmentController extends Controller
         $idBrigadaDestino = $request->input('id_brigada_destino');
         $fecha = $request->input('fecha');
         $turnoRequest = $request->input('turno');
-        
-         $usuario = User::with('brigades')->find($idEmpleado);
+
+        $usuario = User::with('brigades')->find($idEmpleado);
         $brigadaUsuario = $usuario && $usuario->brigades()->exists()
             ? $usuario->brigades()->first()
             : null;

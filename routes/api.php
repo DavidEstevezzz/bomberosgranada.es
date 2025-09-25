@@ -55,10 +55,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/intervenciones', [InterventionController::class, 'index']);
     Route::get('/intervenciones/by-guard/{id_guard}', [InterventionController::class, 'getInterventionsByGuard']);
     Route::get('/intervenciones/{parte}', [InterventionController::class, 'show'])
-        ->where('parte', '.*'); 
+        ->where('parte', '.*');
     Route::post('/intervenciones', [InterventionController::class, 'store']);
     Route::put('/intervenciones/{parte}', [InterventionController::class, 'update'])
-        ->where('parte', '.*');  
+        ->where('parte', '.*');
     Route::delete('/intervenciones/{parte}', [InterventionController::class, 'destroy'])
         ->where('parte', '.*');
 
@@ -191,6 +191,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/requests/{id}', [RequestController::class, 'update']);
     Route::post('/requests', [RequestController::class, 'store']);
     Route::get('/requests/{id}/file', [RequestController::class, 'downloadFile']);
+    Route::get('/employees', [RequestController::class, 'getEmployees']);
+
 
 
     Route::get('/shift-change-requests', [ShiftChangeRequestController::class, 'index']);

@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Firefighters_assignment;
 use App\Mail\RequestStatusUpdatedMail;
 use Illuminate\Support\Facades\Mail;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 
 class RequestController extends Controller
@@ -373,6 +375,37 @@ class RequestController extends Controller
             return response()->json($miRequest, 200);
         }
     }
+
+    /**
+ * Obtener lista de empleados para jefes
+ */
+public function getEmployees()
+{
+    $user = Auth::user();
+    
+    // Solo los jefes pueden acceder a esta función
+    if ($user->type !== 'jefe') {
+        return response()->json(['message' => 'No autorizado'], 403);
+    }
+    
+    $employees = User::select(
+        'id_empleado', 
+        'nombre', 
+        'apellidos', 
+        'vacaciones', 
+        'AP', 
+        'SP', 
+        'horas_sindicales',
+        'modulo',
+        'type'
+    )
+    ->whereIn('type', ['bombero', 'mando', 'empleado'])
+    ->orderBy('nombre')
+    ->orderBy('apellidos')
+    ->get();
+    
+    return response()->json($employees);
+}
 
 
     private function createAssignments($miRequest)
@@ -741,4 +774,7 @@ class RequestController extends Controller
 
         $user->save();
     }
+    
 }
+
+

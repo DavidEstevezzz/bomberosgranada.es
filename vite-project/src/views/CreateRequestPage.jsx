@@ -9,6 +9,8 @@ import { useDarkMode } from '../contexts/DarkModeContext';
 const CreateRequestPage = () => {
   const { user } = useStateContext();
   const { darkMode } = useDarkMode();
+  
+  // Estados existentes
   const [tipo, setTipo] = useState('vacaciones');
   const [motivo, setMotivo] = useState('');
   const [fechaIni, setFechaIni] = useState('');
@@ -19,13 +21,53 @@ const CreateRequestPage = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [file, setFile] = useState(null); // Estado para almacenar el archivo
+  const [file, setFile] = useState(null);
+
+  // NUEVOS ESTADOS para la funcionalidad de jefe
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+
+  // Cargar empleados si es jefe
+  useEffect(() => {
+    const loadEmployees = async () => {
+      if (user?.type === 'jefe') {
+        setIsLoadingEmployees(true);
+        try {
+          const response = await RequestApiService.getEmployees();
+          setEmployees(response.data);
+        } catch (error) {
+          console.error('Error cargando empleados:', error);
+          setError('Error al cargar la lista de empleados');
+        } finally {
+          setIsLoadingEmployees(false);
+        }
+      }
+    };
+
+    loadEmployees();
+  }, [user]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  // Sincronizar fechaFin con fechaIni para ciertos tipos de solicitud:
+  const handleEmployeeChange = (e) => {
+    const employeeId = e.target.value;
+    if (employeeId === '') {
+      setSelectedEmployee(null);
+    } else {
+      const employee = employees.find(emp => emp.id_empleado === employeeId);
+      setSelectedEmployee(employee);
+    }
+  };
+
+  // Obtener el usuario objetivo (empleado seleccionado o usuario actual)
+  const getTargetUser = () => {
+    return selectedEmployee || user;
+  };
+
+  // Sincronizar fechaFin con fechaIni para ciertos tipos de solicitud
   useEffect(() => {
     if (
       tipo === 'asuntos propios' ||
@@ -37,13 +79,15 @@ const CreateRequestPage = () => {
     }
   }, [tipo, fechaIni]);
 
-  const fetchUserBrigadeForDate = async (date) => {
+  const fetchUserBrigadeForDate = async (date, targetUserId = null) => {
     try {
       const assignments = await AssignmentsApiService.getAssignments();
       const formattedDate = dayjs(date).format('YYYY-MM-DD');
+      const userId = targetUserId || user.id_empleado;
+      
       const userAssignments = assignments.data.filter(
         (assign) =>
-          assign.id_empleado === user.id_empleado &&
+          assign.id_empleado === userId &&
           dayjs(assign.fecha_ini).isSameOrBefore(formattedDate)
       );
 
@@ -64,101 +108,117 @@ const CreateRequestPage = () => {
     }
   };
 
-  const validateDaysAvailable = (tipo) => {
-    const requiredDays = calculateRequiredDays(turno);
-    let availableDays;
-
-    if (tipo === 'asuntos propios') {
-      availableDays = user.AP || 0;
-    } else if (tipo === 'compensacion grupos especiales') {
-      availableDays = user.compensacion_grupos || 0;
+  const validateVacationDays = () => {
+    const targetUser = getTargetUser();
+    const startDate = dayjs(fechaIni);
+    const endDate = dayjs(fechaFin);
+    
+    if (startDate.isAfter(endDate)) {
+      setError('La fecha de inicio no puede ser posterior a la fecha de fin.');
+      return false;
     }
 
-    console.log(`Días disponibles (${tipo}):`, availableDays);
-    console.log(`Días requeridos (${tipo}):`, requiredDays);
+    const requestedDays = endDate.diff(startDate, 'day') + 1;
+    const availableDays = targetUser.vacaciones || 0;
 
-    if (requiredDays > availableDays) {
-      setError(`No tienes suficientes días disponibles para esta solicitud de ${tipo}.`);
+    if (requestedDays > availableDays) {
+      const userName = selectedEmployee 
+        ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+        : 'el usuario';
+      setError(`${userName} no tiene suficientes días de vacaciones. Disponibles: ${availableDays}, solicitados: ${requestedDays}`);
       return false;
     }
     return true;
   };
 
-  const calculateRequiredDays = (turno) => {
-    if (turno === 'Día Completo') {
-      return 3;
-    } else if (turno === 'Mañana y tarde' || turno === 'Tarde y noche') {
-      return 2;
-    } else {
-      return 1;
+  const validateDaysAvailable = (type) => {
+    const targetUser = getTargetUser();
+    const field = type === 'asuntos propios' ? 'AP' : 'otros';
+    const availableDays = targetUser[field] || 0;
+
+    if (availableDays <= 0) {
+      const userName = selectedEmployee 
+        ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+        : 'El usuario';
+      setError(`${userName} no tiene días disponibles de ${type}. Disponibles: ${availableDays}`);
+      return false;
     }
+    return true;
   };
 
-  const validateVacationDays = () => {
-    const availableVacationDays = user.vacaciones || 0;
-    const startDate = dayjs(fechaIni);
-    const endDate = dayjs(fechaFin);
-    const requestedDays = endDate.diff(startDate, 'day') + 1;
-    console.log('Días de vacaciones disponibles:', availableVacationDays);
-    console.log('Días solicitados:', requestedDays);
-    if (requestedDays > availableVacationDays) {
-      setError('No tienes suficientes días de vacaciones disponibles.');
+  const validateModuloDays = () => {
+    const targetUser = getTargetUser();
+    const availableDays = targetUser.modulo || 0;
+
+    if (availableDays <= 0) {
+      const userName = selectedEmployee 
+        ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+        : 'El usuario';
+      setError(`${userName} no tiene días de módulo disponibles. Disponibles: ${availableDays}`);
       return false;
     }
     return true;
   };
 
   const validateSPHours = () => {
-    const [horaInicio, minutoInicio] = horaIni.split(':').map(Number);
-    const [horaFinal, minutoFinal] = horaFin.split(':').map(Number);
-    const inicio = dayjs().hour(horaInicio).minute(minutoInicio);
-    const fin = dayjs().hour(horaFinal).minute(minutoFinal);
-    const diff = fin.diff(inicio, 'hour', true);
-    if (diff <= 0) {
+    const targetUser = getTargetUser();
+    if (!horaIni || !horaFin) {
+      setError('Debe especificar hora de inicio y fin para salidas personales.');
+      return null;
+    }
+
+    const startTime = dayjs(`2000-01-01 ${horaIni}`);
+    const endTime = dayjs(`2000-01-01 ${horaFin}`);
+    const hoursDifference = endTime.diff(startTime, 'hour', true);
+
+    if (hoursDifference <= 0) {
       setError('La hora de fin debe ser posterior a la hora de inicio.');
       return null;
     }
-    if (user.SP < diff) {
-      setError('No quedan suficientes horas de Salidas Personales.');
+
+    const availableHours = targetUser.SP || 0;
+    if (hoursDifference > availableHours) {
+      const userName = selectedEmployee 
+        ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+        : 'El usuario';
+      setError(`${userName} no tiene suficientes horas de salidas personales. Disponibles: ${availableHours}, solicitadas: ${hoursDifference.toFixed(1)}`);
       return null;
     }
-    return diff;
-  };
 
-  const validateModuloDays = () => {
-    const availableModuloDays = user.modulo || 0;
-    const startDate = dayjs(fechaIni);
-    const endDate = dayjs(fechaFin);
-    const requestedDays = endDate.diff(startDate, 'day') + 1;
-    console.log('Días de módulo disponibles:', availableModuloDays);
-    console.log('Días solicitados:', requestedDays);
-    if (requestedDays > availableModuloDays) {
-      setError('No tienes suficientes días en tu módulo disponibles.');
-      return false;
-    }
-    return true;
+    return hoursDifference;
   };
 
   const validateDates = async () => {
     try {
-      const startBrigade = await fetchUserBrigadeForDate(fechaIni);
-      const endBrigade = await fetchUserBrigadeForDate(
-        dayjs(fechaFin).add(1, 'day').format('YYYY-MM-DD')
-      );
-      const startDateGuards = await GuardsApiService.getGuardsByDate(fechaIni);
-      const endDateGuards = await GuardsApiService.getGuardsByDate(
-        dayjs(fechaFin).add(1, 'day').format('YYYY-MM-DD')
-      );
-      const isStartDateValid = startDateGuards.data.some(
-        (guard) => guard.id_brigada === startBrigade
-      );
-      const isEndDateValid = endDateGuards.data.some(
-        (guard) => guard.id_brigada === endBrigade
-      );
-      if (!isStartDateValid || !isEndDateValid) {
-        console.error('Restricciones de fechas no cumplidas');
-        setError('No se cumplen las condiciones para solicitar vacaciones en estas fechas.');
-        return false;
+      const targetUserId = selectedEmployee?.id_empleado || user.id_empleado;
+      const startDate = dayjs(fechaIni);
+      const endDate = dayjs(fechaFin);
+      const currentDate = startDate.clone();
+
+      while (currentDate.isSameOrBefore(endDate)) {
+        const brigadeId = await fetchUserBrigadeForDate(currentDate.format('YYYY-MM-DD'), targetUserId);
+        
+        if (brigadeId) {
+          try {
+            const guardsResponse = await GuardsApiService.getGuards();
+            const hasGuard = guardsResponse.data.some(guard =>
+              guard.id_brigada === brigadeId &&
+              dayjs(guard.fecha).isSame(currentDate, 'day')
+            );
+
+            if (hasGuard) {
+              const userName = selectedEmployee 
+                ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+                : 'el usuario';
+              setError(`${userName} tiene una guardia asignada el ${currentDate.format('DD/MM/YYYY')}. No se puede solicitar vacaciones en esa fecha.`);
+              return false;
+            }
+          } catch (guardError) {
+            console.error('Error al validar guardias:', guardError);
+          }
+        }
+        
+        currentDate.add(1, 'day');
       }
       return true;
     } catch (error) {
@@ -174,8 +234,10 @@ const CreateRequestPage = () => {
     setSuccess(null);
     setIsLoading(true);
 
+    const targetUser = getTargetUser();
     let horas = null;
 
+    // Validaciones según el tipo
     if (tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales') {
       const hasEnoughDays = validateDaysAvailable(tipo);
       if (!hasEnoughDays) {
@@ -205,7 +267,7 @@ const CreateRequestPage = () => {
       }
     }
 
-    // Tanto para "salidas personales" como para "horas sindicales" se calcula el número de horas
+    // Para "salidas personales" y "horas sindicales" se calcula el número de horas
     if (tipo === 'salidas personales' || tipo === 'horas sindicales') {
       horas = validateSPHours();
       if (!horas) {
@@ -215,7 +277,8 @@ const CreateRequestPage = () => {
     }
 
     const formData = new FormData();
-    formData.append('id_empleado', user.id_empleado);
+    // CAMBIO PRINCIPAL: Usar el ID del empleado seleccionado o del usuario actual
+    formData.append('id_empleado', targetUser.id_empleado);
     formData.append('tipo', tipo);
     formData.append('motivo', motivo);
     formData.append('fecha_ini', fechaIni);
@@ -260,7 +323,10 @@ const CreateRequestPage = () => {
         },
       });
 
-      setSuccess('Solicitud enviada con éxito.');
+      const targetName = selectedEmployee 
+        ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` 
+        : 'ti';
+      setSuccess(`Solicitud enviada con éxito para ${targetName}.`);
 
       // Reiniciar todos los campos
       setTipo('vacaciones');
@@ -271,6 +337,7 @@ const CreateRequestPage = () => {
       setHoraFin('');
       setTurno('');
       setFile(null);
+      setSelectedEmployee(null);
     } catch (error) {
       console.error('Error al enviar la solicitud:', error);
       setError('Error al enviar la solicitud.');
@@ -279,6 +346,8 @@ const CreateRequestPage = () => {
     }
   };
 
+  const targetUser = getTargetUser();
+
   return (
     <div
       className={`max-w-4xl mx-auto p-6 rounded-lg ${
@@ -286,9 +355,52 @@ const CreateRequestPage = () => {
       }`}
     >
       <h1 className="text-xl font-bold mb-4">Solicitar Permiso</h1>
+      
       {error && <div className="mb-4 text-red-500">{error}</div>}
       {success && <div className="mb-4 text-green-500">{success}</div>}
-      <form onSubmit={handleSubmit}>
+      
+      <div onSubmit={handleSubmit} style={{display: 'contents'}}>
+        {/* NUEVO: Selector de empleado - Solo para jefes */}
+        {user?.type === 'jefe' && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
+            <label className="block text-sm font-medium mb-2">
+              Crear solicitud para:
+            </label>
+            <select
+              value={selectedEmployee?.id_empleado || ''}
+              onChange={handleEmployeeChange}
+              className={`w-full p-2 border rounded ${
+                darkMode ? 'bg-gray-700 text-white' : 'bg-white text-black'
+              }`}
+              disabled={isLoadingEmployees}
+            >
+              <option value="">Para mí mismo</option>
+              {employees.map(emp => (
+                <option key={emp.id_empleado} value={emp.id_empleado}>
+                  {emp.nombre} {emp.apellidos} - {emp.id_empleado} ({emp.type})
+                </option>
+              ))}
+            </select>
+            {isLoadingEmployees && (
+              <p className="text-sm text-gray-500 mt-1">Cargando empleados...</p>
+            )}
+          </div>
+        )}
+
+        {/* NUEVO: Información del usuario objetivo */}
+        <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+          <h3 className="font-medium text-sm mb-2">
+            Solicitud para: {selectedEmployee ? `${selectedEmployee.nombre} ${selectedEmployee.apellidos}` : `${user.nombre} ${user.apellidos}`}
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+            <span>Vacaciones: {targetUser.vacaciones || 0}</span>
+            <span>AP: {targetUser.AP || 0}</span>
+            <span>SP: {targetUser.SP || 0}h</span>
+            <span>H. Sindicales: {targetUser.horas_sindicales || 0}h</span>
+            <span>Módulo: {targetUser.modulo || 0}</span>
+          </div>
+        </div>
+
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2" htmlFor="tipo">
             Tipo de Solicitud
@@ -330,7 +442,7 @@ const CreateRequestPage = () => {
           />
         </div>
 
-        {(tipo === 'vacaciones' || tipo === 'licencias por dias') && (
+        {!['asuntos propios', 'licencias por jornadas', 'horas sindicales', 'vestuario', 'salidas personales', 'modulo'].includes(tipo) && (
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2" htmlFor="fechaFin">
               Fecha de Fin
@@ -384,10 +496,7 @@ const CreateRequestPage = () => {
           </>
         )}
 
-        {(tipo === 'asuntos propios' ||
-          tipo === 'licencias por jornadas' ||
-          tipo === 'compensacion grupos especiales' ||
-          tipo === 'horas sindicales') && (
+        {['asuntos propios', 'licencias por jornadas', 'compensacion grupos especiales', 'horas sindicales'].includes(tipo) && (
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2" htmlFor="turno">
               Turno
@@ -442,7 +551,8 @@ const CreateRequestPage = () => {
         </div>
 
         <button
-          type="submit"
+          type="button"
+          onClick={handleSubmit}
           className={`w-full p-2 rounded ${
             isLoading ? 'bg-blue-300' : 'bg-blue-500'
           } text-white hover:bg-blue-600`}
@@ -450,7 +560,7 @@ const CreateRequestPage = () => {
         >
           {isLoading ? 'Realizando comprobaciones...' : 'Enviar Solicitud'}
         </button>
-      </form>
+      </div>
     </div>
   );
 };

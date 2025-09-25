@@ -2,7 +2,6 @@
 import BaseApiService from './BaseApiService';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-
 const API_URL = `${API_BASE_URL}/requests`;
 
 class RequestApiService {
@@ -41,6 +40,12 @@ class RequestApiService {
     // Eliminar una solicitud por ID
     async deleteRequest(id) {
         return await BaseApiService.delete(`${API_URL}/${id}`);
+    }
+
+    // NUEVO MÉTODO: Obtener lista de empleados (solo para jefes)
+    async getEmployees() {
+        const url = `${API_BASE_URL}/employees`;
+        return await BaseApiService.get(url);
     }
 }
 

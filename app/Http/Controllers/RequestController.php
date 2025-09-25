@@ -401,7 +401,7 @@ public function getEmployees()
     )
     ->whereIn('type', ['bombero', 'mando', 'empleado'])
     ->orderBy('nombre')
-    ->orderBy('apellidos')
+    ->orderBy('apellido')
     ->get();
     
     return response()->json($employees);

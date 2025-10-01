@@ -43,6 +43,41 @@ const FirefighterAssignment = () => {
 
   const { darkMode } = useDarkMode();
 
+  const subtleTextClass = darkMode
+    ? 'text-slate-300'
+    : 'text-slate-600';
+  const cardContainerClass = `mx-auto mt-6 w-full max-w-7xl overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
+    darkMode
+      ? 'border-slate-800 bg-slate-950/60 text-slate-100'
+      : 'border-slate-200 bg-white/80 text-slate-900 backdrop-blur'
+  }`;
+  const headerGradientClass = `bg-gradient-to-r px-8 py-10 text-white transition-colors duration-300 ${
+    darkMode
+      ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80'
+      : 'from-primary-600 via-primary-700 to-primary-800'
+  }`;
+  const sectionCardClass = `rounded-2xl border px-5 py-6 transition-colors ${
+    darkMode
+      ? 'border-slate-800 bg-slate-900/60'
+      : 'border-slate-200 bg-slate-50/70'
+  }`;
+  const inputBaseClass = `w-full rounded-2xl border px-4 py-3 text-base font-medium shadow-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-transparent ${
+    darkMode
+      ? 'border-slate-700 bg-slate-900/80 text-slate-100 placeholder-slate-400'
+      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+  }`;
+  const pillButtonBaseClass = `inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2`;
+  const neutralPillButtonClass = `${pillButtonBaseClass} ${
+    darkMode
+      ? 'bg-slate-800/60 text-slate-200 hover:bg-slate-800'
+      : 'bg-white text-slate-700 hover:bg-slate-100'
+  }`;
+  const primaryPillButtonClass = `${pillButtonBaseClass} ${
+    darkMode
+      ? 'bg-primary-500/80 text-white hover:bg-primary-500'
+      : 'bg-primary-500 text-white hover:bg-primary-600'
+  }`;
+
   useEffect(() => {
     fetchAssignments();
   }, [currentMonth]);
@@ -152,11 +187,11 @@ const FirefighterAssignment = () => {
   // Se aplica la búsqueda sobre el conjunto completo filtrado por mes, ahora normalizando el texto
   const searchedAssignments = filteredAssignments.filter((assignment) => {
     if (!searchTerm.trim()) return true;
-    
+
     const fullName = getUsuarioNombre(assignment.id_empleado);
     const normalizedFullName = normalizeText(fullName);
     const normalizedSearchTerm = normalizeText(searchTerm);
-    
+
     const words = normalizedSearchTerm.split(/\s+/).filter(Boolean);
     return words.every(word => normalizedFullName.includes(word));
   });
@@ -191,104 +226,226 @@ const FirefighterAssignment = () => {
     }
   };
 
-  if (loading) return <div className="text-center py-8">Cargando...</div>;
-  if (error) return <div className="text-center py-8 text-red-500">Error: {error}</div>;
+  const stats = [
+    {
+      label: 'Asignaciones del mes',
+      value: filteredAssignments.length
+    },
+    {
+      label: 'Resultados visibles',
+      value: searchedAssignments.length
+    },
+    {
+      label: 'Bomberos registrados',
+      value: usuarios.length
+    }
+  ];
 
   return (
-    <div className={`min-h-screen p-6 ${darkMode ? 'bg-gray-900 text-gray-200' : 'bg-gray-100 text-gray-900'}`}>
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">
-            Asignaciones de Bomberos - {currentMonth.format('MMMM YYYY')}
-          </h1>
-          <div className="flex space-x-4">
-            <button
-              onClick={() => handleMonthChange(-1)}
-              className="bg-blue-600 text-white px-4 py-2 rounded flex items-center"
-            >
-              <FontAwesomeIcon icon={faChevronLeft} />
-              <span className="ml-2">Mes Anterior</span>
-            </button>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded flex items-center"
-            >
-              <FontAwesomeIcon icon={faPlus} />
-              <span className="ml-2">Añadir Asignación</span>
-            </button>
-            <button
-              onClick={() => handleMonthChange(1)}
-              className="bg-blue-600 text-white px-4 py-2 rounded flex items-center"
-            >
-              <span className="mr-2">Mes Siguiente</span>
-              <FontAwesomeIcon icon={faChevronRight} />
-            </button>
+    <div
+      className={`min-h-screen px-4 py-8 sm:px-6 lg:px-8 ${
+        darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
+      }`}
+    >
+      <div className={cardContainerClass}>
+        <div className={headerGradientClass}>
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/80">
+            Planificación de brigadas
+          </p>
+          <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold">
+                Asignaciones de Bomberos
+              </h1>
+              <p className="mt-3 max-w-2xl text-base text-white/90">
+                Gestiona las asignaciones activas, revisa la disponibilidad del personal y realiza ajustes de manera rápida.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handleMonthChange(-1)}
+                className={neutralPillButtonClass}
+              >
+                <FontAwesomeIcon icon={faChevronLeft} />
+                <span>Mes anterior</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(true)}
+                className={primaryPillButtonClass}
+              >
+                <FontAwesomeIcon icon={faPlus} />
+                <span>Nueva asignación</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleMonthChange(1)}
+                className={neutralPillButtonClass}
+              >
+                <span>Mes siguiente</span>
+                <FontAwesomeIcon icon={faChevronRight} />
+              </button>
+            </div>
+          </div>
+          <div className="mt-6 inline-flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-3 text-base font-semibold text-white shadow-lg backdrop-blur">
+            <span>{currentMonth.format('MMMM YYYY')}</span>
           </div>
         </div>
 
-        {/* Search input */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Buscar por nombre y apellido"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={`w-full px-4 py-2 rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
-          />
-        </div>
-
-        {/* Main Content */}
-        <div className={`p-6 rounded-lg shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-          {filteredAssignments.length === 0 ? (
-            <div className="text-center py-4">No hay asignaciones para este mes.</div>
-          ) : searchedAssignments.length === 0 ? (
-            <div className="text-center py-4">No hay resultados para la búsqueda.</div>
-          ) : (
-            <AssignmentsTable
-              assignments={paginatedAssignments}
-              setSelectedAssignment={setSelectedAssignment}
-              setShowEditModal={setShowEditModal}
-              handleDelete={handleDelete}
-              darkMode={darkMode}
-              deleteLoading={deleteLoading}
-              sortConfig={sortConfig}
-              handleSort={handleSort}
-            />
+        <div className="space-y-8 px-6 py-8 sm:px-10">
+          {(loading || error) && (
+            <div
+              className={`rounded-2xl border px-5 py-4 text-sm font-medium ${
+                loading
+                  ? darkMode
+                    ? 'border-primary-500/40 bg-primary-500/10 text-primary-100'
+                    : 'border-primary-200 bg-primary-50 text-primary-700'
+                  : ''
+              } ${
+                error
+                  ? darkMode
+                    ? 'border-red-500/40 bg-red-500/10 text-red-200'
+                    : 'border-red-200 bg-red-50 text-red-700'
+                  : ''
+              }`}
+            >
+              {loading ? 'Cargando asignaciones...' : `Error: ${error}`}
+            </div>
           )}
 
-          {/* Pagination */}
-          <div className="flex justify-between items-center mt-6">
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1 || searchedAssignments.length === 0}
-              className={`px-4 py-2 rounded ${
-                currentPage === 1 || searchedAssignments.length === 0
-                  ? 'bg-gray-500'
-                  : 'bg-blue-600 text-white'
-              }`}
-            >
-              Anterior
-            </button>
-            <span>
-              Página {currentPage} de {totalPages || 1}
-            </span>
-            <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className={`px-4 py-2 rounded ${
-                currentPage === totalPages || totalPages === 0
-                  ? 'bg-gray-500'
-                  : 'bg-blue-600 text-white'
-              }`}
-            >
-              Siguiente
-            </button>
-          </div>
+          <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <div className={sectionCardClass}>
+              <label className="text-sm font-semibold text-primary-600 dark:text-primary-200">
+                Búsqueda avanzada
+              </label>
+              <p className={`mt-2 text-sm ${subtleTextClass}`}>
+                Filtra por nombre y apellidos para localizar rápidamente a cualquier miembro del cuerpo.
+              </p>
+              <div className="mt-4">
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre y apellido"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={inputBaseClass}
+                />
+              </div>
+            </div>
+
+            <div className={`${sectionCardClass} flex flex-col justify-between gap-4`}>
+              <div>
+                <p className="text-sm font-semibold text-primary-600 dark:text-primary-200">
+                  Resumen del periodo
+                </p>
+                <p className={`mt-2 text-sm ${subtleTextClass}`}>
+                  Información clave para el mes seleccionado.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {stats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className={`rounded-2xl px-4 py-3 text-center shadow-sm ${
+                      darkMode
+                        ? 'bg-slate-900/70 text-slate-100'
+                        : 'bg-white text-slate-800'
+                    }`}
+                  >
+                    <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200">
+                      {stat.label}
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className={sectionCardClass}>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">Listado de asignaciones</h2>
+                <p className={`mt-2 text-sm ${subtleTextClass}`}>
+                  Consulta, edita o elimina asignaciones directamente desde la tabla interactiva.
+                </p>
+              </div>
+              <div className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold ${
+                darkMode
+                  ? 'bg-primary-500/20 text-primary-100'
+                  : 'bg-primary-100 text-primary-700'
+              }`}>
+                <FontAwesomeIcon icon={faSortUp} />
+                <FontAwesomeIcon icon={faSortDown} />
+                <span>Ordenación disponible</span>
+              </div>
+            </div>
+
+            <div className="mt-6 overflow-hidden rounded-2xl border border-dashed border-slate-300/60 dark:border-slate-700/60">
+              {loading ? (
+                <div className="px-6 py-12 text-center text-base font-medium">
+                  Cargando asignaciones...
+                </div>
+              ) : filteredAssignments.length === 0 ? (
+                <div className="px-6 py-12 text-center text-base font-medium">
+                  No hay asignaciones registradas para este mes.
+                </div>
+              ) : searchedAssignments.length === 0 ? (
+                <div className="px-6 py-12 text-center text-base font-medium">
+                  No se encontraron resultados para la búsqueda actual.
+                </div>
+              ) : (
+                <AssignmentsTable
+                  assignments={paginatedAssignments}
+                  setSelectedAssignment={setSelectedAssignment}
+                  setShowEditModal={setShowEditModal}
+                  handleDelete={handleDelete}
+                  darkMode={darkMode}
+                  deleteLoading={deleteLoading}
+                  sortConfig={sortConfig}
+                  handleSort={handleSort}
+                />
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className={`text-sm ${subtleTextClass}`}>
+                Mostrando {paginatedAssignments.length} de {searchedAssignments.length} resultados
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1 || searchedAssignments.length === 0}
+                  className={`${neutralPillButtonClass} ${
+                    currentPage === 1 || searchedAssignments.length === 0
+                      ? 'cursor-not-allowed opacity-60'
+                      : ''
+                  }`}
+                >
+                  Anterior
+                </button>
+                <span className="text-base font-semibold">
+                  Página {Math.min(currentPage, totalPages || 1)} de {totalPages || 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className={`${neutralPillButtonClass} ${
+                    currentPage === totalPages || totalPages === 0
+                      ? 'cursor-not-allowed opacity-60'
+                      : ''
+                  }`}
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
 
-      {/* Modals */}
       <AddAssignmentModal show={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAdd} />
       <EditAssignmentModal
         assignment={selectedAssignment}

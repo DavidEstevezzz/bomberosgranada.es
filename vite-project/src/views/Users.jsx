@@ -134,14 +134,9 @@ const Users = () => {
 
     const uniqueRoles = [...new Set(users.map((user) => user.role_name))];
 
-    const pageWrapperClass = `min-h-[calc(100vh-6rem)] w-full px-4 py-10 transition-colors duration-300 ${
-        darkMode ? "bg-slate-950 text-slate-100" : "bg-slate-100 text-slate-900"
-    }`;
     const cardContainerClass = `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-full overflow-hidden rounded-3xl border shadow-xl backdrop-blur transition-colors duration-300 ${
-        darkMode
-            ? "border-slate-800 bg-slate-900/80 text-slate-100"
-            : "border-slate-200 bg-white/90 text-slate-900"
-    }`;
+  darkMode ? 'border-slate-800 bg-slate-900/80 text-slate-100' : 'border-slate-200 bg-white/90 text-slate-900'
+}`;
     const sectionCardClass = `rounded-2xl border px-5 py-6 transition-colors ${
         darkMode
             ? "border-slate-800 bg-slate-900/60"
@@ -159,19 +154,16 @@ const Users = () => {
 
     if (loading) {
         return (
-            <div className={pageWrapperClass}>
                 <div
                     className={`${cardContainerClass} flex items-center justify-center py-16`}
                 >
                     <p className="text-sm font-medium">Cargando usuarios...</p>
                 </div>
-            </div>
         );
     }
 
     if (error) {
         return (
-            <div className={pageWrapperClass}>
                 <div
                     className={`${cardContainerClass} flex items-center justify-center py-16`}
                 >
@@ -179,18 +171,18 @@ const Users = () => {
                         Error: {error}
                     </p>
                 </div>
-            </div>
         );
     }
 
     return (
-        <div className={pageWrapperClass}>
+        <>
+      
             <div className={cardContainerClass}>
                 <div
                     className={`bg-gradient-to-r px-8 py-10 text-white transition-colors duration-300 ${
                         darkMode
                             ? "from-primary-900/90 via-primary-700/90 to-primary-500/80"
-                            : "from-primary-200 via-primary-300 to-primary-400"
+                            : "from-primary-400 via-primary-500 to-primary-600"
                     }`}
                 >
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
@@ -205,8 +197,7 @@ const Users = () => {
                                 }`}
                             >
                                 Consulta y administra la información de todos
-                                los usuarios del sistema con una vista clara y
-                                responsiva.
+                                los usuarios del sistema.
                             </p>
                         </div>
                         <button
@@ -487,7 +478,7 @@ const Users = () => {
                     employee={selectedUser}
                 />
             )}
-        </div>
+        </>
     );
 };
 

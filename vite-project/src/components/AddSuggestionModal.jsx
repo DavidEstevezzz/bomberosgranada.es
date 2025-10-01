@@ -1,107 +1,192 @@
-import React, { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import React, { useEffect, useState } from 'react';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import SuggestionApiService from '../services/SuggestionApiService';
 import { useStateContext } from '../contexts/ContextProvider';
 
+const INITIAL_VALUES = Object.freeze({
+  titulo: '',
+  descripcion: '',
+});
 
 const AddSuggestionModal = ({ isOpen, onClose, onAdd }) => {
   const { darkMode } = useDarkMode();
-  const [formValues, setFormValues] = useState({ titulo: '', descripcion: '' });
-  const [errorMessages, setErrorMessages] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useStateContext();
-
+  const [formValues, setFormValues] = useState(INITIAL_VALUES);
+  const [errorMessages, setErrorMessages] = useState({});
+  const [submitError, setSubmitError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      setFormValues({ titulo: '', descripcion: '' });
-      setErrorMessages({});
-      setIsSubmitting(false);
+    if (!isOpen) {
+      return;
     }
+
+    setFormValues(INITIAL_VALUES);
+    setErrorMessages({});
+    setSubmitError(null);
+    setIsSubmitting(false);
   }, [isOpen]);
 
-  const handleChange = (e) => {
-    setFormValues({ ...formValues, [e.target.name]: e.target.value });
+  if (!isOpen) {
+    return null;
+  }
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+    setSubmitError(null);
+    onClose();
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
-    // Agregar el id del usuario autenticado a los datos enviados
-    const dataToSend = {
-      ...formValues,
-      usuario_id: user.id_empleado, // Asegúrate de que user.id_empleado esté definido
-    };
-  
-    console.log("Datos enviados:", dataToSend);
-  
     if (isSubmitting) return;
+
     setIsSubmitting(true);
     setErrorMessages({});
-  
+    setSubmitError(null);
+
     try {
-      const response = await SuggestionApiService.createSuggestion(dataToSend);
-      console.log("Respuesta de la API:", response.data);
-      onAdd(); // para refrescar la lista
-      onClose();
-    } catch (error) {
-      console.error("Error al crear sugerencia:", error);
-      if (error.response && error.response.data) {
-        console.error("Datos del error:", error.response.data);
+      const payload = {
+        ...formValues,
+        usuario_id: user?.id_empleado,
+      };
+
+      const response = await SuggestionApiService.createSuggestion(payload);
+      if (onAdd) {
+        onAdd(response.data);
       }
-      setErrorMessages({ general: 'Error al crear la sugerencia.' });
+      handleClose();
+    } catch (error) {
+      console.error('Error al crear sugerencia:', error);
+      if (error.response?.data) {
+        if (typeof error.response.data === 'object') {
+          setErrorMessages(error.response.data);
+          const generalError = error.response.data.general || error.response.data.error;
+          if (generalError) {
+            setSubmitError(generalError);
+          }
+        } else {
+          setSubmitError(String(error.response.data));
+        }
+      } else {
+        setSubmitError('No se pudo crear la sugerencia. Inténtalo nuevamente.');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
-  
 
-  if (!isOpen) return null;
+  const overlayClass =
+    'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-10 backdrop-blur';
+  const modalClass = `relative flex w-full max-w-xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
+    darkMode ? 'border-slate-800 bg-slate-950/90 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+  }`;
+  const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white ${
+    darkMode
+      ? 'bg-gradient-to-r from-primary-900/90 via-primary-700/90 to-primary-600/80'
+      : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700'
+  }`;
+  const labelClass = 'text-xs font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200';
+  const inputClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+    darkMode
+      ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
+      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+  }`;
+  const textareaClass = `min-h-[140px] w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+    darkMode
+      ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
+      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+  }`;
+  const helperClass = `text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`;
+  const errorClass = 'text-xs font-medium text-red-500';
+  const cancelButtonClass = `inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+    darkMode
+      ? 'border-slate-700 text-slate-200 hover:border-slate-500 hover:text-white focus:ring-primary-500 focus:ring-offset-slate-900'
+      : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-900 focus:ring-primary-500 focus:ring-offset-white'
+  }`;
+  const submitButtonClass = `inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+    darkMode
+      ? 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-slate-900'
+      : 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-white'
+  }`;
 
   return (
-    <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 z-50">
-      <div className={`p-4 w-full max-w-lg rounded-lg shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <div className={`flex justify-between items-center pb-4 mb-4 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-          <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Crear Sugerencia</h3>
-          <button onClick={onClose} disabled={isSubmitting} className={`p-1.5 rounded-lg ${darkMode ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-400 hover:bg-gray-200'}`}>
-            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
+    <div className={overlayClass} onMouseDown={handleClose}>
+      <div
+        className={modalClass}
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className={headerClass}>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">Sugerencias</p>
+            <h2 className="mt-2 text-2xl font-semibold">Compartir propuesta</h2>
+            <p className="mt-3 text-sm text-white/90">
+              Detalla tu idea para ayudarnos a mejorar procesos, recursos o comunicación interna.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/70"
+            aria-label="Cerrar"
+            disabled={isSubmitting}
+          >
+            <span className="text-2xl leading-none">×</span>
           </button>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="titulo" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Título</label>
+
+        <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6 sm:px-8">
+          {submitError && (
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
+                darkMode ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
+              {submitError}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <span className={labelClass}>Título</span>
             <input
               type="text"
               name="titulo"
-              id="titulo"
               value={formValues.titulo}
               onChange={handleChange}
-              className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
+              className={inputClass}
+              placeholder="Resume tu sugerencia en una frase"
               required
             />
-            {errorMessages.titulo && <span className="text-red-500 text-sm">{errorMessages.titulo}</span>}
+            {errorMessages.titulo && <p className={errorClass}>{errorMessages.titulo}</p>}
           </div>
-          <div className="mb-4">
-            <label htmlFor="descripcion" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Descripción</label>
+
+          <div className="space-y-2">
+            <span className={labelClass}>Descripción</span>
             <textarea
               name="descripcion"
-              id="descripcion"
               value={formValues.descripcion}
               onChange={handleChange}
-              className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
+              className={textareaClass}
+              placeholder="Describe el contexto, la propuesta y el beneficio esperado"
               required
             />
-            {errorMessages.descripcion && <span className="text-red-500 text-sm">{errorMessages.descripcion}</span>}
+            <p className={helperClass}>Incluye detalles que faciliten su evaluación por parte del equipo gestor.</p>
+            {errorMessages.descripcion && <p className={errorClass}>{errorMessages.descripcion}</p>}
           </div>
-          {errorMessages.general && <div className="text-red-500 mb-4">{errorMessages.general}</div>}
-          <div className="flex justify-end space-x-2">
-            <button type="button" onClick={onClose} disabled={isSubmitting} className="px-4 py-2 rounded border">
+
+          <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={handleClose} className={cancelButtonClass} disabled={isSubmitting}>
               Cancelar
             </button>
-            <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded bg-blue-600 text-white">
-              {isSubmitting ? 'Enviando...' : 'Crear Sugerencia'}
+            <button type="submit" className={submitButtonClass} disabled={isSubmitting}>
+              {isSubmitting ? 'Enviando…' : 'Crear sugerencia'}
             </button>
           </div>
         </form>

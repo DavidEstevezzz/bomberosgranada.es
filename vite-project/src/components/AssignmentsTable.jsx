@@ -83,8 +83,8 @@ const AssignmentsTable = ({
         <div
           className={`rounded-2xl border px-6 py-12 text-center text-base font-medium ${
             darkMode
-              ? 'border-slate-800/80 bg-slate-900/80 text-slate-200'
-              : 'border-slate-200 bg-slate-50 text-slate-600'
+              ? 'border-slate-800/80 bg-slate-800/80 text-slate-200'
+              : 'border-slate-200 bg-slate-200 text-slate-600'
           }`}
         >
           No hay asignaciones disponibles

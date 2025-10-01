@@ -48,8 +48,8 @@ const FirefighterAssignment = () => {
     : 'text-slate-600';
   const cardContainerClass = `min-h-screen w-full mx-auto max-w-full overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
   darkMode
-    ? 'border-slate-800 bg-slate-950/60 text-slate-100'
-    : 'border-slate-200 bg-white/90 text-slate-900 backdrop-blur'
+    ? 'border-slate-700 bg-slate-800/60 text-slate-100'
+    : 'border-slate-100 bg-slate-200 text-slate-900 backdrop-blur'
 }`;
   const headerGradientClass = `bg-gradient-to-r px-8 py-10 text-white transition-colors duration-300 ${
     darkMode
@@ -329,33 +329,7 @@ const FirefighterAssignment = () => {
               </div>
             </div>
 
-            <div className={`${sectionCardClass} flex flex-col justify-between gap-5`}>
-              <div>
-                <p className="text-sm font-semibold text-primary-600 dark:text-primary-200">
-                  Resumen del periodo
-                </p>
-                <p className={`mt-2 text-sm ${subtleTextClass}`}>
-                  Información clave para el mes seleccionado.
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {stats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className={`rounded-2xl px-4 py-3 text-center shadow-sm ${
-                      darkMode
-                        ? 'bg-slate-900/70 text-slate-100'
-                        : 'bg-white text-slate-800'
-                    }`}
-                  >
-                    <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200">
-                      {stat.label}
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            
           </section>
 
           <section className={sectionCardClass}>
@@ -377,7 +351,7 @@ const FirefighterAssignment = () => {
               </div>
             </div>
 
-            <div className="mt-6 overflow-hidden rounded-2xl border border-dashed border-slate-300/60 dark:border-slate-700/60">
+            <div className="mt-6 overflow-hidden rounded-2xl ">
               {loading ? (
                 <div className="px-6 py-12 text-center text-base font-medium">
                   Cargando asignaciones...

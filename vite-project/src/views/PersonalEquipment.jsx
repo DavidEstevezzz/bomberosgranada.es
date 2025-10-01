@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import PersonalEquipmentApiService from '../services/PersonalEquipmentApiService';
 import ParkApiService from '../services/ParkApiService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faEllipsisH, faCheck, faTimes, faFilePdf } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faCheck, faTimes, faFilePdf, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import EditPersonalEquipmentModal from '../components/EditPersonalEquipmentModal';
 import AddPersonalEquipmentModal from '../components/AddPersonalEquipmentModal';
 import { useDarkMode } from '../contexts/DarkModeContext';
@@ -25,8 +25,11 @@ const PersonalEquipment = () => {
   const { darkMode } = useDarkMode();
 
   useEffect(() => {
-    fetchEquipments();
     fetchParks();
+  }, []);
+
+  useEffect(() => {
+    fetchEquipments();
   }, [selectedParkFilter]);
 
   const fetchParks = async () => {
@@ -110,15 +113,15 @@ const PersonalEquipment = () => {
       return { key: column, direction: 'asc' };
     });
   };
-  const filteredEquipments = equipments.filter((equipment) => {
+  const filteredEquipments = useMemo(() => {
     const normalizedSearch = normalizeString(searchTerm);
-    return (
+    return equipments.filter((equipment) =>
       normalizeString(equipment.nombre).includes(normalizedSearch) ||
       normalizeString(equipment.categoria).includes(normalizedSearch)
     );
-  });
+  }, [equipments, searchTerm]);
 
-  const sortedEquipments = React.useMemo(() => {
+  const sortedEquipments = useMemo(() => {
     const items = [...filteredEquipments];
     if (!sortConfig) {
       return items.sort((a, b) => {
@@ -160,11 +163,39 @@ const PersonalEquipment = () => {
           return 0;
       }
 
-
     });
 
     return items;
   }, [filteredEquipments, sortConfig]);
+
+  const parkOptions = useMemo(() => {
+    const parkNames = parks
+      .map((park) => park.nombre)
+      .filter((name) => !!name);
+    return ['Todas', ...Array.from(new Set(parkNames))];
+  }, [parks]);
+
+  const totalEquipments = equipments.length;
+  const availableEquipments = equipments.filter((equipment) => equipment.disponible).length;
+  const unavailableEquipments = totalEquipments - availableEquipments;
+
+  const summaryStats = [
+    {
+      label: 'Equipos totales',
+      value: totalEquipments.toLocaleString('es-ES'),
+      helper: selectedParkFilter === 'Todas' ? 'Todos los parques' : selectedParkFilter,
+    },
+    {
+      label: 'Disponibles',
+      value: availableEquipments.toLocaleString('es-ES'),
+      helper: 'En servicio',
+    },
+    {
+      label: 'No disponibles',
+      value: unavailableEquipments.toLocaleString('es-ES'),
+      helper: 'Revisión necesaria',
+    },
+  ];
 
   // Función para exportar a PDF los equipos no disponibles
   const exportToPDF = () => {
@@ -324,156 +355,305 @@ const PersonalEquipment = () => {
     }
   };
 
+  const pageWrapperClass = `min-h-[calc(100vh-6rem)] w-full px-4 py-10 transition-colors duration-300 ${
+    darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
+  }`;
+  const cardContainerClass = `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-full overflow-hidden rounded-3xl border shadow-xl backdrop-blur transition-colors duration-300 ${
+    darkMode ? 'border-slate-800 bg-slate-900/80 text-slate-100' : 'border-slate-200 bg-white/90 text-slate-900'
+  }`;
+  const sectionCardClass = `rounded-2xl border px-5 py-6 transition-colors ${
+    darkMode ? 'border-slate-700 bg-slate-800/60' : 'border-slate-200 bg-slate-50/70'
+  }`;
+  const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
+  const inputBaseClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${
+    darkMode
+      ? 'border-slate-700 bg-slate-900/60 text-slate-100 placeholder-slate-400'
+      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+  }`;
+  const primaryButtonClass = `inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 ${
+    darkMode
+      ? 'bg-primary-500 hover:bg-primary-400 focus:ring-offset-slate-900'
+      : 'bg-primary-600 hover:bg-primary-500 focus:ring-offset-white'
+  }`;
+  const secondaryButtonClass = `inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 ${
+    darkMode
+      ? 'border border-slate-700 bg-slate-900/60 text-slate-100 hover:bg-slate-800 focus:ring-offset-slate-900'
+      : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 focus:ring-offset-white'
+  }`;
+  const filterButtonClass = (active) =>
+    `inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold transition-colors duration-200 ${
+      active
+        ? darkMode
+          ? 'border-primary-500/60 bg-primary-500/20 text-primary-100'
+          : 'border-primary-500 bg-primary-500 text-white shadow-sm'
+        : darkMode
+          ? 'border-slate-700 bg-slate-900/40 text-slate-200 hover:border-primary-400/60 hover:text-primary-200'
+          : 'border-slate-200 bg-white text-slate-600 hover:border-primary-300 hover:text-primary-600'
+    }`;
+  const statusBadgeClass = (available) =>
+    `inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
+      available
+        ? darkMode
+          ? 'bg-emerald-500/10 text-emerald-200'
+          : 'bg-emerald-50 text-emerald-600'
+        : darkMode
+          ? 'bg-rose-500/10 text-rose-200'
+          : 'bg-rose-50 text-rose-600'
+    }`;
+  const tableActionButtonClass = (variant) => {
+    const baseClass = 'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
+    switch (variant) {
+      case 'edit':
+        return `${baseClass} ${
+          darkMode
+            ? 'bg-slate-900/60 text-slate-100 hover:bg-slate-800 focus:ring-primary-400 focus:ring-offset-slate-900'
+            : 'bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-primary-400 focus:ring-offset-white'
+        }`;
+      case 'toggle-disable':
+        return `${baseClass} ${
+          darkMode
+            ? 'bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 focus:ring-amber-400 focus:ring-offset-slate-900'
+            : 'bg-amber-50 text-amber-600 hover:bg-amber-100 focus:ring-amber-400 focus:ring-offset-white'
+        }`;
+      case 'delete':
+        return `${baseClass} ${
+          darkMode
+            ? 'bg-rose-500/20 text-rose-200 hover:bg-rose-500/30 focus:ring-rose-400 focus:ring-offset-slate-900'
+            : 'bg-rose-50 text-rose-600 hover:bg-rose-100 focus:ring-rose-400 focus:ring-offset-white'
+        }`;
+      case 'toggle-active':
+        return `${baseClass} ${
+          darkMode
+            ? 'bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 focus:ring-emerald-400 focus:ring-offset-slate-900'
+            : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 focus:ring-emerald-400 focus:ring-offset-white'
+        }`;
+      default:
+        return baseClass;
+    }
+  };
 
-
-  if (loading) return <div>Cargando equipos...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  return (
-    <div className={`p-8 rounded-xl ${darkMode ? 'bg-gray-900' : 'bg-gray-300'}`}>
-      {/* Cabecera y botones */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-4">
-        <h1 className={`text-2xl font-bold mb-4 md:mb-0 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
-          Equipos Personales
-        </h1>
-        <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-2">
-          <button
-            onClick={handleAddClick}
-            className="bg-blue-600 text-white px-4 py-2 rounded flex items-center space-x-2"
-          >
-            <FontAwesomeIcon icon={faPlus} />
-            <span>Añadir equipo</span>
-          </button>
-          <button
-            onClick={exportToPDF}
-            className="bg-indigo-600 text-white px-4 py-2 rounded flex items-center space-x-2"
-          >
-            <FontAwesomeIcon icon={faFilePdf} />
-            <span>Exportar No Disponibles a PDF</span>
-          </button>
+  if (loading) {
+    return (
+      <div className={pageWrapperClass}>
+        <div className={`${cardContainerClass} flex items-center justify-center py-16`}>
+          <p className="text-sm font-medium">Cargando equipos...</p>
         </div>
       </div>
+    );
+  }
 
-      {/* Filtro por parque */}
-      <div className="flex justify-center space-x-4 mb-4">
-        <button
-          onClick={() => setSelectedParkFilter("Todas")}
-          className={`px-4 py-2 rounded ${selectedParkFilter === "Todas" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-800"}`}
+  return (
+    <div className={pageWrapperClass}>
+      <div className={cardContainerClass}>
+        <div
+          className={`bg-gradient-to-r px-8 py-10 text-white transition-colors duration-300 ${
+            darkMode
+              ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80'
+              : 'from-primary-500 via-primary-600 to-primary-700'
+          }`}
         >
-          Todas
-        </button>
-        <button
-          onClick={() => setSelectedParkFilter("Parque Norte")}
-          className={`px-4 py-2 rounded ${selectedParkFilter === "Parque Norte" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-800"}`}
-        >
-          Parque Norte
-        </button>
-        <button
-          onClick={() => setSelectedParkFilter("Parque Sur")}
-          className={`px-4 py-2 rounded ${selectedParkFilter === "Parque Sur" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-800"}`}
-        >
-          Parque Sur
-        </button>
-      </div>
-
-      {/* Panel de búsqueda */}
-      <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-gray-200 text-black'}`}>
-        <div className="flex flex-col md:flex-row items-center justify-between border-b border-gray-600 pb-2 mb-4 space-y-4 md:space-y-0 md:space-x-4">
-          <input
-            type="text"
-            placeholder="Buscar equipos (nombre, categoría)"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className={`${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'} px-4 py-2 rounded w-full md:w-3/4`}
-          />
-          <div className="flex items-center space-x-2">
-            <FontAwesomeIcon icon={faEllipsisH} className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
+            Inventario personal
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold">Equipos personales</h1>
+          <p className="mt-3 max-w-3xl text-sm text-white/90">
+            Gestiona la disponibilidad de los equipos asignados a cada parque, aplica filtros y exporta listados actualizados.
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {summaryStats.map((stat) => (
+              <div key={stat.label} className="rounded-2xl bg-white/10 px-4 py-4 text-sm backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">{stat.label}</p>
+                <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
+                {stat.helper && (
+                  <p className="mt-1 text-xs text-white/80">{stat.helper}</p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Tabla de equipos */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th onClick={() => handleSort('nombre')} className="py-2 px-2 text-center cursor-pointer">Nombre</th>
-                <th onClick={() => handleSort('categoria')} className="py-2 px-2 text-center cursor-pointer">Categoría</th>
-                <th onClick={() => handleSort('parque')} className="py-2 px-2 text-center cursor-pointer">Parque</th>
-                <th onClick={() => handleSort('disponible')} className="py-2 px-2 text-center cursor-pointer">Disponible</th>
-                <th className="py-2 px-2 text-center" style={{ width: '300px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedEquipments.map((equipment) => (
-                <tr
-                  key={equipment.id}
-                  className={`border-b border-gray-700`}
-                >
-                  <td className="py-2 px-2 text-center">{equipment.nombre}</td>
-                  <td className="py-2 px-2 text-center">{equipment.categoria}</td>
-                  <td className="py-2 px-2 text-center">{getParkName(equipment.parque)}</td>
-                  <td className="py-2 px-2 text-center">
-                    {equipment.disponible ? (
-                      <FontAwesomeIcon icon={faCheck} className="text-green-500" />
-                    ) : (
-                      <FontAwesomeIcon icon={faTimes} className="text-red-500" />
-                    )}
-                  </td>
-                  <td className="py-2 px-2 flex justify-center space-x-2">
-                    <button
-                      onClick={() => handleEditClick(equipment)}
-                      className="bg-blue-600 text-white px-3 py-1 rounded flex items-center space-x-1"
+        <div className="space-y-8 px-6 py-8 sm:px-10">
+          {error && (
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
+                darkMode
+                  ? 'border-rose-500/40 bg-rose-500/10 text-rose-200'
+                  : 'border-rose-200 bg-rose-50 text-rose-700'
+              }`}
+            >
+              {error}
+            </div>
+          )}
+
+          <section className={sectionCardClass}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-primary-600 dark:text-primary-200">Filtrado y gestión</p>
+                <p className={`text-xs ${subtleTextClass}`}>
+                  Selecciona un parque, busca por nombre o categoría y administra los equipos disponibles.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button onClick={handleAddClick} className={primaryButtonClass}>
+                  <FontAwesomeIcon icon={faPlus} />
+                  <span>Añadir equipo</span>
+                </button>
+                <button onClick={exportToPDF} className={secondaryButtonClass}>
+                  <FontAwesomeIcon icon={faFilePdf} />
+                  <span>Exportar no disponibles</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                {parkOptions.map((park) => (
+                  <button
+                    key={park}
+                    onClick={() => setSelectedParkFilter(park)}
+                    className={filterButtonClass(park === selectedParkFilter)}
+                  >
+                    {park}
+                  </button>
+                ))}
+              </div>
+              <div className="w-full max-w-sm">
+                <label htmlFor="equipment-search" className="sr-only">
+                  Buscar equipos
+                </label>
+                <div className="relative">
+                  <input
+                    id="equipment-search"
+                    type="text"
+                    placeholder="Buscar por nombre o categoría"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    className={`${inputBaseClass} pr-10`}
+                  />
+                  <FontAwesomeIcon
+                    icon={faMagnifyingGlass}
+                    className={`pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 ${
+                      darkMode ? 'text-slate-400' : 'text-slate-400'
+                    }`}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className={`${sectionCardClass} overflow-hidden`}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+                <thead className={darkMode ? 'bg-slate-900/60' : 'bg-slate-100/70'}>
+                  <tr>
+                    <th
+                      scope="col"
+                      onClick={() => handleSort('nombre')}
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-primary-500 dark:text-slate-300"
                     >
-                      <FontAwesomeIcon icon={faEdit} />
-                      <span>Editar</span>
-                    </button>
-                    <button
-                      onClick={() => handleToggleDisponibilidad(equipment)}
-                      className={`${equipment.disponible
-                        ? 'bg-red-600'
-                        : 'bg-green-600'
-                        } text-white px-3 py-1 rounded flex items-center space-x-1`}
+                      Nombre
+                    </th>
+                    <th
+                      scope="col"
+                      onClick={() => handleSort('categoria')}
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-primary-500 dark:text-slate-300"
                     >
-                      {equipment.disponible ? 'Inhabilitar' : 'Habilitar'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(equipment)}
-                      className="bg-red-600 text-white px-3 py-1 rounded flex items-center space-x-1"
+                      Categoría
+                    </th>
+                    <th
+                      scope="col"
+                      onClick={() => handleSort('parque')}
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-primary-500 dark:text-slate-300"
                     >
-                      <FontAwesomeIcon icon={faTrash} />
-                      <span>Eliminar</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {sortedEquipments.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="py-4 text-center">
-                    No se encontraron equipos.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                      Parque
+                    </th>
+                    <th
+                      scope="col"
+                      onClick={() => handleSort('disponible')}
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 transition-colors hover:text-primary-500 dark:text-slate-300"
+                    >
+                      Disponibilidad
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {sortedEquipments.map((equipment) => (
+                    <tr
+                      key={equipment.id}
+                      className={`transition-colors duration-150 ${
+                        darkMode ? 'hover:bg-slate-900/40' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <td className="whitespace-nowrap px-4 py-4 text-sm font-medium">{equipment.nombre}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-sm">{equipment.categoria}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-sm">{getParkName(equipment.parque)}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-sm">
+                        <span className={statusBadgeClass(equipment.disponible)}>
+                          <FontAwesomeIcon icon={equipment.disponible ? faCheck : faTimes} />
+                          {equipment.disponible ? 'Disponible' : 'No disponible'}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-4">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleEditClick(equipment)}
+                            className={tableActionButtonClass('edit')}
+                          >
+                            <FontAwesomeIcon icon={faEdit} />
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleToggleDisponibilidad(equipment)}
+                            className={tableActionButtonClass(
+                              equipment.disponible ? 'toggle-disable' : 'toggle-active'
+                            )}
+                          >
+                            {equipment.disponible ? 'Inhabilitar' : 'Habilitar'}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(equipment)}
+                            className={tableActionButtonClass('delete')}
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {sortedEquipments.length === 0 && (
+                    <tr>
+                      <td colSpan="5" className="px-4 py-6 text-center text-sm font-medium">
+                        No se encontraron equipos para los filtros seleccionados.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Modales */}
+          {selectedEquipment && (
+            <EditPersonalEquipmentModal
+              isOpen={isEditModalOpen}
+              onClose={() => setIsEditModalOpen(false)}
+              equipment={selectedEquipment}
+              onUpdate={handleUpdateEquipment}
+              parks={parks}
+            />
+          )}
+          <AddPersonalEquipmentModal
+            isOpen={isAddModalOpen}
+            onClose={() => setIsAddModalOpen(false)}
+            onAdd={handleAddEquipment}
+            parks={parks}
+          />
         </div>
       </div>
-
-      {/* Modales */}
-      {selectedEquipment && (
-        <EditPersonalEquipmentModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          equipment={selectedEquipment}
-          onUpdate={handleUpdateEquipment}
-          parks={parks}
-        />
-      )}
-      <AddPersonalEquipmentModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAdd={handleAddEquipment}
-        parks={parks}
-      />
     </div>
   );
 };

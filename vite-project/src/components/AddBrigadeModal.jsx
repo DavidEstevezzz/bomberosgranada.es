@@ -1,116 +1,192 @@
 import React, { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import BrigadesApiService from '../services/BrigadesApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
+const initialValues = {
+  id_parque: '',
+  nombre: '',
+};
+
 const AddBrigadeModal = ({ isOpen, onClose, onAdd }) => {
-  if (!isOpen) return null;
-
-  const [formValues, setFormValues] = useState({
-    id_parque: '',
-    nombre: ''
-  });
-
+  const [formValues, setFormValues] = useState(initialValues);
   const [errorMessages, setErrorMessages] = useState({});
+  const [submitError, setSubmitError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { darkMode } = useDarkMode();
 
   useEffect(() => {
-    console.log('Modal is open:', isOpen);
+    if (isOpen) {
+      setFormValues(initialValues);
+      setErrorMessages({});
+      setSubmitError(null);
+      setIsSubmitting(false);
+    }
   }, [isOpen]);
 
-  const handleChange = (e) => {
-    setFormValues({
-      ...formValues,
-      [e.target.name]: e.target.value
-    });
+  if (!isOpen) {
+    return null;
+  }
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+    setSubmitError(null);
+    onClose();
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    console.log('Submit event triggered');
-    setErrorMessages({});
-    if (isSubmitting) {
-      console.log('Submission prevented due to ongoing submission');
-      return;
-    }
+    if (isSubmitting) return;
 
-    console.log('Starting submission');
     setIsSubmitting(true);
+    setSubmitError(null);
+    setErrorMessages({});
 
     try {
       const response = await BrigadesApiService.createBrigade(formValues);
-      console.log('Brigade added successfully:', response.data);
       onAdd(response.data);
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('Failed to add brigade:', error);
-      if (error.response && error.response.data) {
-        setErrorMessages(error.response.data);
+      if (error.response?.data) {
+        if (typeof error.response.data === 'object') {
+          setErrorMessages(error.response.data);
+          const generalError = error.response.data.general || error.response.data.error;
+          if (generalError) {
+            setSubmitError(generalError);
+          }
+        } else {
+          setSubmitError(String(error.response.data));
+        }
       } else {
-        setErrorMessages({ general: 'An error occurred' });
+        setSubmitError('No se pudo crear la brigada. Inténtalo de nuevo.');
       }
     } finally {
-      console.log('Submission finished');
       setIsSubmitting(false);
     }
   };
 
+  const inputClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+    darkMode
+      ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
+      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+  }`;
+  const selectClass = `w-full appearance-none rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+    darkMode ? 'border-slate-800 bg-slate-900/70 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+  }`;
+  const labelClass = 'text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200';
+  const errorClass = 'text-xs font-medium text-red-500';
+
   return (
-    <div className={`fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-full bg-black bg-opacity-50`}>
-      <div className={`p-4 w-full max-w-2xl rounded-lg shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <div className={`flex justify-between items-center pb-4 mb-4 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-          <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Añadir Brigada</h3>
-          <button onClick={onClose} className={`p-1.5 rounded-lg ${darkMode ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-400 hover:bg-gray-200'}`} disabled={isSubmitting}>
-            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-10 backdrop-blur"
+      onMouseDown={handleClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={`relative flex w-full max-w-xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
+          darkMode ? 'border-slate-800 bg-slate-950/90 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+        }`}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div
+          className={`flex items-start justify-between gap-4 px-6 py-5 text-white ${
+            darkMode
+              ? 'bg-gradient-to-r from-primary-900/90 via-primary-700/90 to-primary-600/80'
+              : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700'
+          }`}
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">Nueva brigada</p>
+            <h2 className="mt-2 text-2xl font-semibold">Añadir brigada</h2>
+            <p className="mt-3 text-sm text-white/90">
+              Define el nombre y el parque asignado para incorporar una nueva brigada al sistema.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/70"
+            aria-label="Cerrar"
+          >
+            <span className="text-2xl leading-none">×</span>
           </button>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 mb-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="nombre" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Nombre</label>
+
+        <div className="max-h-[70vh] space-y-6 overflow-y-auto px-6 py-6 sm:px-8">
+          {submitError && (
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
+                darkMode ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
+              {submitError}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <span className={labelClass}>Nombre de la brigada</span>
               <input
                 type="text"
                 name="nombre"
-                id="nombre"
                 value={formValues.nombre}
                 onChange={handleChange}
-                className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
                 required
+                className={inputClass}
+                placeholder="Ej. Brigada Alfa"
               />
-              {errorMessages.nombre && <span className="text-red-500 text-sm">{errorMessages.nombre}</span>}
+              {errorMessages.nombre && <p className={errorClass}>{errorMessages.nombre}</p>}
             </div>
-            <div>
-              <label htmlFor="id_parque" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Parque</label>
+
+            <div className="space-y-2">
+              <span className={labelClass}>Parque</span>
               <select
                 name="id_parque"
-                id="id_parque"
                 value={formValues.id_parque}
                 onChange={handleChange}
-                className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
                 required
+                className={selectClass}
               >
                 <option value="">Selecciona un parque</option>
                 <option value="1">Parque Norte</option>
                 <option value="2">Parque Sur</option>
               </select>
-              {errorMessages.id_parque && <span className="text-red-500 text-sm">{errorMessages.id_parque}</span>}
+              {errorMessages.id_parque && <p className={errorClass}>{errorMessages.id_parque}</p>}
             </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <button type="submit" className={`text-sm px-5 py-2.5 text-center font-medium rounded-lg focus:outline-none focus:ring-4 ${darkMode ? 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-800' : 'bg-primary-700 hover:bg-primary-800 text-white focus:ring-primary-300'}`} disabled={isSubmitting}>
-              {isSubmitting ? 'Enviando...' : 'Añadir Brigada'}
-            </button>
-            <button type="button" onClick={() => {
-              console.log('Closing modal');
-              onClose();
-            }} className={`text-sm px-5 py-2.5 text-center font-medium rounded-lg focus:outline-none focus:ring-4 ${darkMode ? 'text-red-500 border border-red-500 hover:text-white hover:bg-red-600 focus:ring-red-900' : 'text-red-600 border border-red-600 hover:text-white hover:bg-red-600 focus:ring-red-300'}`}>
-              <FontAwesomeIcon icon={faTimes} className="w-5 h-5 mr-1" />
-              Cancelar
-            </button>
-          </div>
-        </form>
+
+            <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={handleClose}
+                className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  darkMode
+                    ? 'border border-slate-700 text-slate-200 hover:border-slate-500 hover:text-white focus:ring-primary-500 focus:ring-offset-slate-900'
+                    : 'border border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-900 focus:ring-primary-500 focus:ring-offset-white'
+                }`}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  darkMode
+                    ? 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-slate-900'
+                    : 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-white'
+                }`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Guardando...' : 'Añadir brigada'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

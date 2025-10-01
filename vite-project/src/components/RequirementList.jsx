@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faChevronLeft, faChevronRight, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faChevronLeft, faChevronRight, faCheck, faTimes, faFilter, faTrash } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
 import AssignmentsApiService from '../services/AssignmentsApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
@@ -13,11 +13,54 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
     const [firefighters, setFirefighters] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [filter, setFilter] = useState('');
     const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
-    // Mapeo de los incrementos introducidos para cada usuario (id_empleado)
     const [dayHours, setDayHours] = useState({});
     const [nightHours, setNightHours] = useState({});
+    
+    // Estados para filtros múltiples
+    const [filters, setFilters] = useState([{ id: 1, type: 'puesto', value: '' }]);
+    const [showFilterMenu, setShowFilterMenu] = useState(false);
+    const [nextFilterId, setNextFilterId] = useState(2);
+
+    const cardContainerClass = `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-full overflow-hidden rounded-3xl border shadow-xl backdrop-blur transition-colors duration-300 ${
+        darkMode ? 'border-slate-800 bg-slate-900/80 text-slate-100' : 'border-slate-200 bg-white/90 text-slate-900'
+    }`;
+    const sectionBaseClass = `rounded-2xl border px-5 py-6 transition-colors ${
+        darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50/70'
+    }`;
+    const statCardClass = `rounded-2xl border px-4 py-4 transition-colors ${
+        darkMode ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-white text-slate-700'
+    }`;
+    const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
+    const inputBaseClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${
+        darkMode
+            ? 'border-slate-700 bg-slate-900/60 text-slate-100 placeholder-slate-400'
+            : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+    }`;
+    const compactInputClass = `w-full rounded-xl border px-3 py-2 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${
+        darkMode
+            ? 'border-slate-700 bg-slate-900/60 text-slate-100 placeholder-slate-400'
+            : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+    }`;
+    const buttonBaseClass = 'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400';
+    const secondaryButtonClass = `${buttonBaseClass} ${
+        darkMode
+            ? 'border border-slate-700 bg-slate-900/60 text-slate-200 hover:bg-slate-800/60'
+            : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+    }`;
+    const acceptButtonClass = `${buttonBaseClass} ${
+        darkMode
+            ? 'border border-emerald-500/40 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25'
+            : 'border border-emerald-200 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20'
+    }`;
+    const rejectButtonClass = `${buttonBaseClass} ${
+        darkMode
+            ? 'border border-rose-500/40 bg-rose-500/15 text-rose-200 hover:bg-rose-500/25'
+            : 'border border-rose-200 bg-rose-500/10 text-rose-700 hover:bg-rose-500/20'
+    }`;
+    const infoPillClass = `inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
+        darkMode ? 'border-slate-700 bg-slate-900/60 text-slate-200' : 'border-slate-200 bg-white text-slate-600'
+    }`;
 
     // Función para cargar la lista de bomberos
     const fetchFirefighters = async () => {
@@ -25,20 +68,15 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
         try {
             const response = await fetchData(selectedDate);
             const fetchedFirefighters = response.data.available_firefighters;
-            // Ordenar de menor a mayor según orderColumn; en caso de empate, usar orderColumn2 si existe o por dni (descendente)
             const orderedFirefighters = fetchedFirefighters.sort((a, b) => {
                 const diff = a[orderColumn] - b[orderColumn];
                 if (diff === 0) {
                     if (orderColumn2) {
-                        // Verificar si los valores son timestamps (cadenas de fecha/hora)
                         if (typeof a[orderColumn2] === 'string' && a[orderColumn2].includes('-')) {
-                            // Convertir las cadenas de fecha a objetos Date para comparar
                             const dateA = new Date(a[orderColumn2]);
                             const dateB = new Date(b[orderColumn2]);
-                            // Ordenar de más reciente a más antiguo
                             return dateA - dateB;
                         } else {
-                            // Si no son timestamps, comparar numéricamente como antes
                             return a[orderColumn2] - b[orderColumn2];
                         }
                     }
@@ -71,9 +109,49 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
         setSelectedDate(nextDay);
     };
 
-    // Filtro de la lista por puesto
-    const handleFilterChange = (event) => {
-        setFilter(event.target.value);
+    // Funciones para gestionar filtros múltiples
+    const handleAddFilter = (filterType) => {
+        setFilters([...filters, { id: nextFilterId, type: filterType, value: '' }]);
+        setNextFilterId(nextFilterId + 1);
+        setShowFilterMenu(false);
+    };
+
+    const handleFilterChange = (id, value) => {
+        setFilters(filters.map(filter => 
+            filter.id === id ? { ...filter, value } : filter
+        ));
+    };
+
+    const handleRemoveFilter = (id) => {
+        if (filters.length > 1) {
+            setFilters(filters.filter(filter => filter.id !== id));
+        }
+    };
+
+    const getFilterPlaceholder = (type) => {
+        switch(type) {
+            case 'puesto':
+                return 'Buscar por puesto...';
+            case 'nombre':
+                return 'Buscar por nombre o apellido...';
+            case 'dni':
+                return 'Buscar por número de funcionario (DNI)...';
+            default:
+                return 'Buscar...';
+        }
+    };
+
+    const getFilterLabel = (type) => {
+        switch(type) {
+            case 'puesto':
+                return 'Puesto';
+            case 'nombre':
+                return 'Nombre/Apellido';
+            case 'dni':
+                return 'Nº Funcionario';
+            default:
+                return 'Filtro';
+        }
     };
 
     // Cambiar el valor del input para horas diurnas
@@ -122,7 +200,6 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
                 increment: totalIncrement,
                 orderColumn2: orderColumn2
             });
-            // Recargar la lista tras la actualización
             await fetchFirefighters();
             clearInputs(id);
         } catch (error) {
@@ -136,20 +213,17 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
         if (totalIncrement === null) return;
 
         try {
-            // Primero incrementamos la columna principal (horas_ofrecidas)
             await AssignmentsApiService.incrementUserColumn(id, {
                 column: orderColumn,
                 increment: totalIncrement,
                 orderColumn2: orderColumn2
             });
 
-            // Luego incrementamos la columna horas_aceptadas
             await AssignmentsApiService.incrementUserColumn(id, {
                 column: 'horas_aceptadas',
                 increment: totalIncrement
             });
 
-            // Recargar la lista tras la actualización
             await fetchFirefighters();
             clearInputs(id);
         } catch (error) {
@@ -157,10 +231,26 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
         }
     };
 
-    // Filtrar la lista en base al puesto
-    const filteredFirefighters = firefighters.filter((firefighter) =>
-        firefighter.puesto.toLowerCase().includes(filter.toLowerCase())
-    );
+    // Filtrar la lista aplicando todos los filtros activos
+    const filteredFirefighters = firefighters.filter((firefighter) => {
+        return filters.every(filter => {
+            if (!filter.value) return true; // Si el filtro está vacío, no filtrar
+            
+            const searchValue = filter.value.toLowerCase();
+            
+            switch(filter.type) {
+                case 'puesto':
+                    return firefighter.puesto.toLowerCase().includes(searchValue);
+                case 'nombre':
+                    const nombreCompleto = `${firefighter.nombre} ${firefighter.apellido}`.toLowerCase();
+                    return nombreCompleto.includes(searchValue);
+                case 'dni':
+                    return firefighter.dni.toString().includes(searchValue);
+                default:
+                    return true;
+            }
+        });
+    });
 
     // Función auxiliar para formatear la fecha
     const formatTimestamp = (timestamp) => {
@@ -168,109 +258,333 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
         return dayjs(timestamp).format('DD/MM/YYYY HH:mm');
     };
 
-    if (loading) return <div>Loading...</div>;
-    if (error) return <div>Error: {error}</div>;
+    const stats = [
+        { label: 'Registrados', value: firefighters.length },
+        { label: 'Coinciden con el filtro', value: filteredFirefighters.length },
+        { label: 'Fecha consultada', value: dayjs(selectedDate).format('DD/MM/YYYY') },
+    ];
+
+    // Obtener tipos de filtro disponibles (excluyendo los ya añadidos)
+    const availableFilterTypes = ['puesto', 'nombre', 'dni'].filter(
+        type => !filters.some(filter => filter.type === type)
+    );
+
+    if (loading) {
+        return (
+            <div className={cardContainerClass}>
+                <div className="flex min-h-[280px] items-center justify-center px-6 py-10">
+                    <p className={`text-sm font-medium ${subtleTextClass}`}>Cargando datos...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className={cardContainerClass}>
+                <div className="flex min-h-[280px] items-center justify-center px-6 py-10">
+                    <p className="text-sm font-semibold text-rose-500">Error: {error}</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
-            <h2 className="text-2xl font-bold mb-4 text-center">{title}</h2>
-
-            <div className="flex justify-between items-center mb-4">
-                <button
-                    onClick={handlePreviousDay}
-                    className={`px-4 py-2 rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-300 text-gray-700'}`}
-                >
-                    <FontAwesomeIcon icon={faChevronLeft} /> Anterior
-                </button>
-                <span className="text-lg font-bold">{dayjs(selectedDate).format('DD/MM/YYYY')}</span>
-                <button
-                    onClick={handleNextDay}
-                    className={`px-4 py-2 rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-300 text-gray-700'}`}
-                >
-                    Siguiente <FontAwesomeIcon icon={faChevronRight} />
-                </button>
+        <div className={cardContainerClass}>
+            <div
+                className={`bg-gradient-to-r px-6 py-8 text-white transition-colors duration-300 sm:px-10 ${
+                    darkMode
+                        ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80'
+                        : 'from-primary-400 via-primary-500 to-primary-600'
+                }`}
+            >
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
+                            Gestión de disponibilidad
+                        </p>
+                        <h2 className="mt-2 text-3xl font-semibold">{title}</h2>
+                        <p className="mt-3 max-w-3xl text-sm text-white/90">
+                            Consulta la disponibilidad del personal y gestiona rápidamente las horas ofrecidas y aceptadas en cada turno.
+                        </p>
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <div className="flex items-center justify-end gap-2">
+                            <button onClick={handlePreviousDay} className={secondaryButtonClass}>
+                                <FontAwesomeIcon icon={faChevronLeft} />
+                                <span>Anterior</span>
+                            </button>
+                            <span className="rounded-2xl border border-white/30 px-4 py-2 text-sm font-semibold uppercase tracking-wide">
+                                {dayjs(selectedDate).format('DD/MM/YYYY')}
+                            </span>
+                            <button onClick={handleNextDay} className={secondaryButtonClass}>
+                                <span>Siguiente</span>
+                                <FontAwesomeIcon icon={faChevronRight} />
+                            </button>
+                        </div>
+                        <span className="self-end text-xs font-medium uppercase tracking-[0.2em] text-white/70">
+                            Actualizado al último cambio
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            <div className="mb-4">
-                <input
-                    type="text"
-                    value={filter}
-                    onChange={handleFilterChange}
-                    placeholder="Filtrar por puesto"
-                    className={`px-4 py-2 rounded w-full ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-300 text-gray-700'}`}
-                />
-            </div>
+            <div className="space-y-8 px-6 py-8 sm:px-10">
+                <section className={sectionBaseClass}>
+                    <div className="flex flex-col gap-4">
+                        {/* Filtros dinámicos */}
+                        <div className="space-y-3">
+                            {filters.map((filter, index) => (
+                                <div key={filter.id} className="flex items-end gap-3">
+                                    <div className="flex-1 space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200">
+                                            {getFilterLabel(filter.type)}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={filter.value}
+                                            onChange={(e) => handleFilterChange(filter.id, e.target.value)}
+                                            placeholder={getFilterPlaceholder(filter.type)}
+                                            className={inputBaseClass}
+                                        />
+                                    </div>
+                                    {filters.length > 1 && (
+                                        <button
+                                            onClick={() => handleRemoveFilter(filter.id)}
+                                            className={`${secondaryButtonClass} shrink-0`}
+                                            title="Eliminar filtro"
+                                        >
+                                            <FontAwesomeIcon icon={faTrash} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
 
-            <div className={`overflow-x-auto w-full shadow-md sm:rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                <table className="w-full table-fixed text-sm text-center">
-                    <thead className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
-                        <tr>
-                            <th className="py-3 px-2 w-1/4">Nombre</th>
-                            <th className="py-3 px-2 w-1/6">Teléfono</th>
-                            <th className="py-3 px-2 w-1/6">Puesto</th>
-                            <th className="py-3 px-2 w-1/12">Horas</th>
-                            <th className="py-3 px-2 w-1/6">Última</th>
-                            {user?.type === 'jefe' && <th className="py-3 px-2 w-1/3">Acción</th>}
-                        </tr>
-                    </thead>
-                    <tbody>
+                        {/* Botón para añadir filtros */}
+                        {availableFilterTypes.length > 0 && (
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowFilterMenu(!showFilterMenu)}
+                                    className={`${infoPillClass} cursor-pointer transition-colors hover:bg-primary-100 dark:hover:bg-primary-900/20`}
+                                >
+                                    <FontAwesomeIcon icon={faPlus} className="text-xs" />
+                                    Añadir filtro
+                                </button>
+
+                                {/* Menú desplegable de filtros */}
+                                {showFilterMenu && (
+                                    <div className={`absolute left-0 top-full mt-2 z-10 rounded-xl border shadow-lg ${
+                                        darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'
+                                    }`}>
+                                        <div className="p-2">
+                                            {availableFilterTypes.map((type) => (
+                                                <button
+                                                    key={type}
+                                                    onClick={() => handleAddFilter(type)}
+                                                    className={`w-full rounded-lg px-4 py-2 text-left text-sm transition-colors ${
+                                                        darkMode
+                                                            ? 'hover:bg-slate-800 text-slate-200'
+                                                            : 'hover:bg-slate-100 text-slate-700'
+                                                    }`}
+                                                >
+                                                    <FontAwesomeIcon icon={faFilter} className="mr-2 text-xs" />
+                                                    {getFilterLabel(type)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                        {stats.map((stat) => (
+                            <div key={stat.label} className={statCardClass}>
+                                <p className={`text-xs font-semibold uppercase tracking-wide ${subtleTextClass}`}>
+                                    {stat.label}
+                                </p>
+                                <p className="mt-2 text-base font-semibold">{stat.value}</p>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                <section className={sectionBaseClass}>
+                    <div className="hidden w-full overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-slate-800 md:block">
+                        <table className="min-w-full table-auto text-sm">
+                            <thead className={darkMode ? 'bg-slate-900/60 text-slate-300' : 'bg-slate-100 text-slate-700'}>
+                                <tr className="text-left">
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Nombre</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Teléfono</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Puesto</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-center">Horas</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Última actualización</th>
+                                    {user?.type === 'jefe' && (
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-center">Gestión</th>
+                                    )}
+                                </tr>
+                            </thead>
+                            <tbody className={darkMode ? 'divide-slate-800' : 'divide-slate-200'}>
+                                {filteredFirefighters.map((firefighter, index) => (
+                                    <tr
+                                        key={firefighter.id_empleado}
+                                        className={`${
+                                            darkMode
+                                                ? 'divide-slate-800 bg-slate-900/40 text-slate-100 hover:bg-slate-900/60'
+                                                : 'divide-slate-200 bg-white hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <td className="px-4 py-4 align-middle">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-semibold">{index + 1}. {firefighter.nombre} {firefighter.apellido}</span>
+                                                <span className={`text-xs ${subtleTextClass}`}>DNI: {firefighter.dni}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4 align-middle">
+                                            <span className="text-sm font-medium">{firefighter.telefono || '—'}</span>
+                                        </td>
+                                        <td className="px-4 py-4 align-middle">
+                                            <span className="text-sm font-medium">{firefighter.puesto}</span>
+                                        </td>
+                                        <td className="px-4 py-4 text-center align-middle">
+                                            <span className="text-base font-semibold text-primary-600 dark:text-primary-300">{firefighter[orderColumn]}</span>
+                                        </td>
+                                        <td className="px-4 py-4 align-middle">
+                                            <span className="text-sm font-medium">{formatTimestamp(firefighter[orderColumn2]) || 'Sin registros'}</span>
+                                        </td>
+                                        {user?.type === 'jefe' && (
+                                            <td className="px-4 py-4 align-middle">
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className={`text-xs font-semibold uppercase tracking-wide ${subtleTextClass}`}>
+                                                                Diurnas
+                                                            </span>
+                                                            <input
+                                                                type="number"
+                                                                value={dayHours[firefighter.id_empleado] || ''}
+                                                                onChange={(e) => handleDayHoursChange(firefighter.id_empleado, e.target.value)}
+                                                                className={`${compactInputClass} max-w-[6rem]`}
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className={`text-xs font-semibold uppercase tracking-wide ${subtleTextClass}`}>
+                                                                Nocturnas
+                                                            </span>
+                                                            <input
+                                                                type="number"
+                                                                value={nightHours[firefighter.id_empleado] || ''}
+                                                                onChange={(e) => handleNightHoursChange(firefighter.id_empleado, e.target.value)}
+                                                                className={`${compactInputClass} max-w-[6rem]`}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2 sm:flex-row">
+                                                        <button
+                                                            onClick={() => handleAcceptSubmit(firefighter.id_empleado)}
+                                                            className={acceptButtonClass}
+                                                            title="Aceptar horas"
+                                                        >
+                                                            <FontAwesomeIcon icon={faCheck} /> Aceptar
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleRejectSubmit(firefighter.id_empleado)}
+                                                            className={rejectButtonClass}
+                                                            title="Rechazar horas"
+                                                        >
+                                                            <FontAwesomeIcon icon={faTimes} /> Rechazar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="space-y-4 md:hidden">
                         {filteredFirefighters.map((firefighter, index) => (
-                            <tr
+                            <div
                                 key={firefighter.id_empleado}
-                                className={`${darkMode ? 'bg-gray-700 border-gray-800 hover:bg-gray-600' : 'bg-white border-b hover:bg-gray-50'}`}
+                                className={`rounded-2xl border px-4 py-4 transition-colors ${
+                                    darkMode ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-white text-slate-700'
+                                }`}
                             >
-                                <td className="py-4 px-2 truncate">{index + 1}. {firefighter.nombre} {firefighter.apellido}</td>
-                                <td className="py-4 px-2 truncate">{firefighter.telefono}</td>
-                                <td className="py-4 px-2 truncate">{firefighter.puesto}</td>
-                                <td className="py-4 px-2 text-center">{firefighter[orderColumn]}</td>
-                                <td className="py-4 px-2 truncate">{formatTimestamp(firefighter[orderColumn2])}</td>
+                                <div className="flex flex-col gap-2">
+                                    <div>
+                                        <p className="text-base font-semibold">
+                                            {index + 1}. {firefighter.nombre} {firefighter.apellido}
+                                        </p>
+                                        <p className={`text-xs ${subtleTextClass}`}>DNI: {firefighter.dni}</p>
+                                    </div>
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                        <span className={infoPillClass}>Teléfono: {firefighter.telefono || '—'}</span>
+                                        <span className={infoPillClass}>Puesto: {firefighter.puesto}</span>
+                                    </div>
+                                    <div
+                                        className={`flex items-center justify-between rounded-xl border px-3 py-3 text-sm font-semibold transition-colors ${
+                                            darkMode
+                                                ? 'border-primary-500/30 bg-primary-500/10 text-primary-200'
+                                                : 'border-primary-200 bg-primary-50 text-primary-700'
+                                        }`}
+                                    >
+                                        <span>Horas registradas</span>
+                                        <span>{firefighter[orderColumn]}</span>
+                                    </div>
+                                    <p className={`text-xs ${subtleTextClass}`}>
+                                        Última actualización: {formatTimestamp(firefighter[orderColumn2]) || 'Sin registros'}
+                                    </p>
+                                </div>
 
                                 {user?.type === 'jefe' && (
-                                    <td className="py-4 px-2 flex justify-center items-center space-x-4">
-                                        <div className="flex flex-col space-y-2">
-                                            <div className="flex items-center whitespace-nowrap">
-                                                <span className="text-xs mr-2">Diurnas:&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                    <div className="mt-4 space-y-3">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-wide">
+                                                <span className={subtleTextClass}>Diurnas</span>
                                                 <input
                                                     type="number"
                                                     value={dayHours[firefighter.id_empleado] || ''}
                                                     onChange={(e) => handleDayHoursChange(firefighter.id_empleado, e.target.value)}
-                                                    className={`w-16 p-1 border rounded ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-300 text-gray-700'}`}
+                                                    className={compactInputClass}
                                                 />
-                                            </div>
-                                            <div className="flex items-center whitespace-nowrap">
-                                                <span className="text-xs mr-2">Nocturnas:</span>
+                                            </label>
+                                            <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-wide">
+                                                <span className={subtleTextClass}>Nocturnas</span>
                                                 <input
                                                     type="number"
                                                     value={nightHours[firefighter.id_empleado] || ''}
                                                     onChange={(e) => handleNightHoursChange(firefighter.id_empleado, e.target.value)}
-                                                    className={`w-16 p-1 border rounded ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-300 text-gray-700'}`}
+                                                    className={compactInputClass}
                                                 />
-                                            </div>
+                                            </label>
                                         </div>
-                                        <div className="flex flex-col space-y-2">
+                                        <div className="grid gap-2 sm:grid-cols-2">
                                             <button
                                                 onClick={() => handleAcceptSubmit(firefighter.id_empleado)}
-                                                className={`px-3 py-1 rounded ${darkMode ? 'bg-green-600 text-white' : 'bg-green-500 text-white'}`}
+                                                className={acceptButtonClass}
                                                 title="Aceptar horas"
                                             >
                                                 <FontAwesomeIcon icon={faCheck} /> Aceptar
                                             </button>
                                             <button
                                                 onClick={() => handleRejectSubmit(firefighter.id_empleado)}
-                                                className={`px-3 py-1 rounded ${darkMode ? 'bg-red-600 text-white' : 'bg-red-500 text-white'}`}
+                                                className={rejectButtonClass}
                                                 title="Rechazar horas"
                                             >
                                                 <FontAwesomeIcon icon={faTimes} /> Rechazar
                                             </button>
                                         </div>
-                                    </td>
+                                    </div>
                                 )}
-                            </tr>
+                            </div>
                         ))}
-                    </tbody>
-                </table>
+                    </div>
+                </section>
             </div>
-
         </div>
     );
 };

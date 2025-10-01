@@ -28,7 +28,9 @@ const ShiftChangeRequestPage = () => {
   const { darkMode } = useDarkMode();
   const [employees, setEmployees] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm2, setSearchTerm2] = useState('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [selectedEmployeeId2, setSelectedEmployeeId2] = useState('');
   const [fecha, setFecha] = useState('');
   const [fecha2, setFecha2] = useState('');
   const [turno, setTurno] = useState('Dia Completo');
@@ -36,6 +38,8 @@ const ShiftChangeRequestPage = () => {
   const [changeType, setChangeType] = useState('simple');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  const isJefe = user?.type === 'jefe';
 
   useEffect(() => {
     const fetchAndFilterEmployees = async () => {
@@ -59,6 +63,13 @@ const ShiftChangeRequestPage = () => {
     }
   }, [changeType]);
 
+  // Si no es jefe, establecer automáticamente el primer empleado como el usuario actual
+  useEffect(() => {
+    if (!isJefe && user?.id_empleado && !selectedEmployeeId) {
+      setSelectedEmployeeId(String(user.id_empleado));
+    }
+  }, [isJefe, user, selectedEmployeeId]);
+
   const filteredEmployees = useMemo(() => {
     const normalizedTerm = removeDiacritics(searchTerm.toLowerCase());
 
@@ -73,6 +84,25 @@ const ShiftChangeRequestPage = () => {
     });
   }, [employees, searchTerm]);
 
+  const filteredEmployees2 = useMemo(() => {
+    const normalizedTerm = removeDiacritics(searchTerm2.toLowerCase());
+
+    return employees.filter((emp) => {
+      // Excluir el primer empleado seleccionado
+      if (String(emp.id_empleado) === String(selectedEmployeeId)) {
+        return false;
+      }
+      
+      const fullName = `${emp.nombre ?? ''} ${emp.apellido ?? ''}`.trim().toLowerCase();
+      const dni = (emp.dni ?? '').toLowerCase();
+      const normalizedName = removeDiacritics(fullName);
+      return (
+        normalizedName.includes(normalizedTerm) ||
+        removeDiacritics(dni).includes(normalizedTerm)
+      );
+    });
+  }, [employees, searchTerm2, selectedEmployeeId]);
+
   const selectedEmployee = useMemo(
     () =>
       employees.find(
@@ -81,24 +111,42 @@ const ShiftChangeRequestPage = () => {
     [employees, selectedEmployeeId]
   );
 
+  const selectedEmployee2 = useMemo(
+    () =>
+      employees.find(
+        (emp) => String(emp.id_empleado) === String(selectedEmployeeId2)
+      ) || null,
+    [employees, selectedEmployeeId2]
+  );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
     if (!selectedEmployeeId) {
-      setError('Selecciona un compañero para completar la solicitud.');
+      setError(isJefe ? 'Selecciona el primer bombero para completar la solicitud.' : 'Selecciona un compañero para completar la solicitud.');
+      return;
+    }
+
+    if (!selectedEmployeeId2) {
+      setError(isJefe ? 'Selecciona el segundo bombero para completar la solicitud.' : 'Selecciona un compañero para completar la solicitud.');
+      return;
+    }
+
+    if (selectedEmployeeId === selectedEmployeeId2) {
+      setError('Los dos bomberos seleccionados deben ser diferentes.');
       return;
     }
 
     try {
       const requestData = {
-        id_empleado1: user.id_empleado,
-        id_empleado2: selectedEmployeeId,
+        id_empleado1: selectedEmployeeId,
+        id_empleado2: selectedEmployeeId2,
         fecha,
         fecha2: changeType === 'espejo' ? fecha2 : null,
         turno: changeType === 'espejo' ? 'Dia Completo' : turno,
-        motivo,
+        motivo: isJefe ? `[Solicitado por jefe] ${motivo}` : motivo,
         estado: 'en_tramite',
       };
 
@@ -106,7 +154,11 @@ const ShiftChangeRequestPage = () => {
 
       setSuccess('Solicitud de cambio de guardia enviada con éxito.');
       setSearchTerm('');
-      setSelectedEmployeeId('');
+      setSearchTerm2('');
+      if (isJefe) {
+        setSelectedEmployeeId('');
+      }
+      setSelectedEmployeeId2('');
       setFecha('');
       setFecha2('');
       setTurno('Dia Completo');
@@ -149,10 +201,14 @@ const ShiftChangeRequestPage = () => {
           }`}
         >
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
-            Gestión de guardias
+            Gestión de guardias {isJefe && '· Modo Jefe'}
           </p>
           <h1 className="mt-2 text-3xl font-semibold">Solicitar cambio de guardia</h1>
-          
+          {isJefe && (
+            <p className="mt-2 text-sm text-white/90">
+              Como jefe, puedes solicitar cambios de guardia entre dos bomberos
+            </p>
+          )}
         </div>
 
         <div className="space-y-8 px-6 py-8 sm:px-10">
@@ -220,42 +276,81 @@ const ShiftChangeRequestPage = () => {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-primary-600 dark:text-primary-200">
-                    Buscar y seleccionar compañero
+                    {isJefe ? 'Seleccionar bomberos para el cambio' : 'Buscar y seleccionar compañero'}
                   </p>
                   <p className={`mt-1 text-xs ${subtleTextClass}`}>
-                    Escribe su nombre o NF para localizarlo rápidamente y confirmar con quién realizas el cambio.
+                    {isJefe 
+                      ? 'Selecciona los dos bomberos que realizarán el intercambio de guardias.'
+                      : 'Escribe su nombre o NF para localizarlo rápidamente y confirmar con quién realizas el cambio.'}
                   </p>
                 </div>
               </div>
 
               <div className="mt-5 grid gap-5 lg:grid-cols-[1.2fr_1fr]">
                 <div className="space-y-4">
+                  {isJefe && (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200" htmlFor="search">
+                          Buscar primer bombero
+                        </label>
+                        <input
+                          id="search"
+                          type="text"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className={inputBaseClass}
+                          placeholder="Escribe un nombre o NF"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200" htmlFor="employee">
+                          Primer bombero
+                        </label>
+                        <select
+                          id="employee"
+                          value={selectedEmployeeId}
+                          onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                          className={inputBaseClass}
+                          required
+                        >
+                          <option value="">Selecciona un bombero</option>
+                          {filteredEmployees.map((employee) => (
+                            <option key={employee.id_empleado} value={employee.id_empleado}>
+                              {`${employee.nombre ?? ''} ${employee.apellido ?? ''}`.trim()} · DNI {employee.dni || 'Sin DNI'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
+                  
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200" htmlFor="search">
-                      Buscar bombero
+                    <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200" htmlFor="search2">
+                      {isJefe ? 'Buscar segundo bombero' : 'Buscar bombero'}
                     </label>
                     <input
-                      id="search"
+                      id="search2"
                       type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      value={searchTerm2}
+                      onChange={(e) => setSearchTerm2(e.target.value)}
                       className={inputBaseClass}
                       placeholder="Escribe un nombre o NF"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200" htmlFor="employee">
-                      Selecciona un compañero
+                    <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200" htmlFor="employee2">
+                      {isJefe ? 'Segundo bombero' : 'Selecciona un compañero'}
                     </label>
                     <select
-                      id="employee"
-                      value={selectedEmployeeId}
-                      onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                      id="employee2"
+                      value={selectedEmployeeId2}
+                      onChange={(e) => setSelectedEmployeeId2(e.target.value)}
                       className={inputBaseClass}
                       required
                     >
                       <option value="">Selecciona un bombero</option>
-                      {filteredEmployees.map((employee) => (
+                      {filteredEmployees2.map((employee) => (
                         <option key={employee.id_empleado} value={employee.id_empleado}>
                           {`${employee.nombre ?? ''} ${employee.apellido ?? ''}`.trim()} · DNI {employee.dni || 'Sin DNI'}
                         </option>
@@ -272,24 +367,32 @@ const ShiftChangeRequestPage = () => {
                 >
                   <div>
                     <p className={`text-xs font-medium uppercase tracking-[0.25em] ${subtleTextClass}`}>
-                      Tu guardia
-                    </p>
-                    <p className="mt-1 text-base font-semibold">
-                      {`${user?.nombre || ''} ${user?.apellido || ''}`.trim() || 'Tu usuario'}
-                    </p>
-                    
-                  </div>
-                  <div className="mt-6 border-t border-dashed border-slate-400/50 pt-4">
-                    <p className={`text-xs font-medium uppercase tracking-[0.25em] ${subtleTextClass}`}>
-                      Compañero seleccionado
+                      {isJefe ? 'Primer bombero' : 'Tu guardia'}
                     </p>
                     <p className="mt-1 text-base font-semibold">
                       {selectedEmployee
                         ? `${selectedEmployee.nombre || ''} ${selectedEmployee.apellido || ''}`.trim()
+                        : isJefe 
+                          ? 'Pendiente de selección'
+                          : `${user?.nombre || ''} ${user?.apellido || ''}`.trim() || 'Tu usuario'}
+                    </p>
+                    {selectedEmployee && (
+                      <p className={`text-xs font-medium ${subtleTextClass}`}>
+                        DNI {selectedEmployee?.dni || '—'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="mt-6 border-t border-dashed border-slate-400/50 pt-4">
+                    <p className={`text-xs font-medium uppercase tracking-[0.25em] ${subtleTextClass}`}>
+                      {isJefe ? 'Segundo bombero' : 'Compañero seleccionado'}
+                    </p>
+                    <p className="mt-1 text-base font-semibold">
+                      {selectedEmployee2
+                        ? `${selectedEmployee2.nombre || ''} ${selectedEmployee2.apellido || ''}`.trim()
                         : 'Pendiente de selección'}
                     </p>
                     <p className={`text-xs font-medium ${subtleTextClass}`}>
-                      DNI {selectedEmployee?.dni || '—'}
+                      DNI {selectedEmployee2?.dni || '—'}
                     </p>
                   </div>
                 </div>
@@ -300,7 +403,7 @@ const ShiftChangeRequestPage = () => {
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200" htmlFor="fecha">
-                    Fecha de tu guardia
+                    {isJefe ? 'Fecha de guardia del primer bombero' : 'Fecha de tu guardia'}
                   </label>
                   <input
                     type="date"
@@ -314,7 +417,7 @@ const ShiftChangeRequestPage = () => {
                 {changeType === 'espejo' ? (
                   <div className="space-y-2">
                     <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200" htmlFor="fecha2">
-                      Fecha de la guardia del compañero
+                      {isJefe ? 'Fecha de guardia del segundo bombero' : 'Fecha de la guardia del compañero'}
                     </label>
                     <input
                       type="date"

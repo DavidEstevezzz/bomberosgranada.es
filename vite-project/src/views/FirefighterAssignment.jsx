@@ -310,7 +310,7 @@ const FirefighterAssignment = () => {
             </div>
           )}
 
-          <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <section className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <div className={sectionCardClass}>
               <label className="text-sm font-semibold text-primary-600 dark:text-primary-200">
                 Búsqueda avanzada
@@ -329,7 +329,7 @@ const FirefighterAssignment = () => {
               </div>
             </div>
 
-            <div className={`${sectionCardClass} flex flex-col justify-between gap-4`}>
+            <div className={`${sectionCardClass} flex flex-col justify-between gap-5`}>
               <div>
                 <p className="text-sm font-semibold text-primary-600 dark:text-primary-200">
                   Resumen del periodo

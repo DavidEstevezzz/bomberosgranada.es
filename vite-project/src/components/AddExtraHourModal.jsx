@@ -24,6 +24,14 @@ const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
   const [submitError, setSubmitError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const numericFields = useMemo(
+    () => [
+      { name: 'horas_diurnas', label: 'Horas diurnas' },
+      { name: 'horas_nocturnas', label: 'Horas nocturnas' },
+    ],
+    [],
+  );
+  
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -142,13 +150,7 @@ const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
       : 'bg-primary-600 hover-bg-primary-500 focus:ring-primary-400 focus:ring-offset-white'
   }`.replace('hover-bg', 'hover:bg'); // ensures consistent string without mutation
 
-  const numericFields = useMemo(
-    () => [
-      { name: 'horas_diurnas', label: 'Horas diurnas' },
-      { name: 'horas_nocturnas', label: 'Horas nocturnas' },
-    ],
-    [],
-  );
+  
 
   return (
     <div className={overlayClass} onMouseDown={handleClose}>

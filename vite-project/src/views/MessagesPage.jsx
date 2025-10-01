@@ -435,7 +435,7 @@ const MessagesPage = () => {
           <p className={`mt-3 max-w-3xl text-sm ${
             darkMode ? 'text-white/90' : 'text-slate-700/90'
           }`}>
-            Consulta, responde y gestiona los mensajes de tu equipo con un diseño renovado y mucho más visual.
+            Consulta, responde y gestiona los mensajes de tu equipo.
           </p>
         </div>
 

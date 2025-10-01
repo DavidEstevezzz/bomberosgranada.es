@@ -46,11 +46,11 @@ const FirefighterAssignment = () => {
   const subtleTextClass = darkMode
     ? 'text-slate-300'
     : 'text-slate-600';
-  const cardContainerClass = `mx-auto mt-6 w-full max-w-7xl overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
-    darkMode
-      ? 'border-slate-800 bg-slate-950/60 text-slate-100'
-      : 'border-slate-200 bg-white/80 text-slate-900 backdrop-blur'
-  }`;
+  const cardContainerClass = `min-h-screen w-full mx-auto max-w-full overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
+  darkMode
+    ? 'border-slate-800 bg-slate-950/60 text-slate-100'
+    : 'border-slate-200 bg-white/90 text-slate-900 backdrop-blur'
+}`;
   const headerGradientClass = `bg-gradient-to-r px-8 py-10 text-white transition-colors duration-300 ${
     darkMode
       ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80'
@@ -242,11 +242,7 @@ const FirefighterAssignment = () => {
   ];
 
   return (
-    <div
-      className={`min-h-screen px-4 py-8 sm:px-6 lg:px-8 ${
-        darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
-      }`}
-    >
+    <>
       <div className={cardContainerClass}>
         <div className={headerGradientClass}>
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/80">
@@ -258,7 +254,7 @@ const FirefighterAssignment = () => {
                 Asignaciones de Bomberos
               </h1>
               <p className="mt-3 max-w-2xl text-base text-white/90">
-                Gestiona las asignaciones activas, revisa la disponibilidad del personal y realiza ajustes de manera rápida.
+                Gestiona las asignaciones activas y la modificación de las mismas.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -453,7 +449,7 @@ const FirefighterAssignment = () => {
         onClose={() => setShowEditModal(false)}
         onEdit={handleEdit}
       />
-    </div>
+    </>
   );
 };
 

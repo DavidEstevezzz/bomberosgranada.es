@@ -4,10 +4,12 @@ import GuardsApiService from '../services/GuardsApiService';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import 'dayjs/locale/es';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
+dayjs.locale('es');
 
 const EmployeeSalary = ({ user }) => {
   const { darkMode } = useDarkMode();
@@ -27,7 +29,7 @@ const EmployeeSalary = ({ user }) => {
       console.log('El usuario aún no está listo. Esperando...');
       return; // No ejecutar nada hasta que el usuario esté disponible
     }
-    
+
     const fetchAssignmentsAndGuards = async () => {
       try {
         console.log('Inicio de fetchAssignmentsAndGuards');
@@ -145,73 +147,189 @@ const EmployeeSalary = ({ user }) => {
     setCurrentMonth(prev => prev.add(1, 'month'));
   };
 
-  if (loading || !dataReady) return <div>Cargando...</div>; // Asegurar que los datos están listos
-  if (error) return <div>Error: {error}</div>;
+  const cardClass = `rounded-2xl border px-5 py-6 transition-colors ${
+    darkMode ? 'border-slate-800 bg-slate-950/60 text-slate-100' : 'border-slate-200 bg-white/80 text-slate-900'
+  }`;
+  const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
+  const pillButtonClass = `inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
+    darkMode
+      ? 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-primary-400 hover:text-primary-200'
+      : 'border-slate-200 bg-white text-slate-600 hover:border-primary-400 hover:text-primary-600'
+  }`;
+  const tableWrapperClass = `overflow-hidden rounded-2xl border transition-colors ${
+    darkMode ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-200 bg-white'
+  }`;
+  const tableHeadClass = darkMode ? 'bg-slate-900/60 text-slate-300' : 'bg-slate-100 text-slate-600';
+  const tableRowClass = darkMode
+    ? 'divide-y divide-slate-800/60 text-slate-100'
+    : 'divide-y divide-slate-200 text-slate-700';
+  const tableRowHoverClass = `transition-colors ${
+    darkMode ? 'hover:bg-slate-900/60' : 'hover:bg-slate-50/80'
+  }`;
+  const summaryCardClass = `rounded-2xl border px-4 py-4 transition-colors ${
+    darkMode ? 'border-slate-800 bg-slate-900/60 text-slate-100' : 'border-slate-200 bg-white text-slate-700'
+  }`;
+
+  const monthLabel = currentMonth.locale('es').format('MMMM YYYY');
+  const formattedMonthLabel = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+  const totalSalaryFormatted = `${totalSalary.toLocaleString('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} €`;
+
+  const summaryStats = [
+    { label: 'Guardias liquidadas', value: guards.length },
+    { label: 'Guardias futuras', value: futureGuards.length },
+  ];
+
+  if (loading || !dataReady) {
+    return (
+      <section className={cardClass}>
+        <p className={`text-sm font-medium ${subtleTextClass}`}>Cargando información de asignaciones y guardias...</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className={cardClass}>
+        <p className="text-sm font-semibold text-red-500">{error}</p>
+      </section>
+    );
+  }
 
   return (
-    <div className={`max-w-4xl mx-auto p-6 rounded-lg ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
-      <div className="mt-2">
-        <h3 className="text-lg font-semibold mb-2 text-center">Asignaciones en {currentMonth.format('MMMM YYYY')}</h3>
-        <div className="flex justify-between mb-4">
-          <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-400" onClick={handlePreviousMonth}>Anterior</button>
-          <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-400" onClick={handleNextMonth}>Siguiente</button>
+    <section className={cardClass}>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200">
+            Asignaciones y guardias
+          </p>
+          <h3 className="mt-2 text-xl font-semibold">Resumen mensual</h3>
+          <p className={`mt-1 text-xs ${subtleTextClass}`}>
+            Controla las asignaciones confirmadas y su impacto en el salario estimado del mes seleccionado.
+          </p>
         </div>
-        {assignments.length > 0 ? (
-          <div className={`overflow-x-auto shadow-md sm:rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-            <table className="w-full text-sm text-center">
-              <thead className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
-                <tr>
-                  <th className="py-3 px-6">Fecha Inicio</th>
-                  <th className="py-3 px-6">Turno</th>
-                  <th className="py-3 px-6">Brigada Origen</th>
-                  <th className="py-3 px-6">Brigada Destino</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assignments.map(assignment => (
-                  <tr key={assignment.id_asignacion} className={`${darkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-b hover:bg-gray-50'}`}>
-                    <td className="py-4 px-6">{assignment.fecha_ini}</td>
-                    <td className="py-4 px-6">{assignment.turno}</td>
-                    <td className="py-4 px-6">{assignment.brigade_origin ? assignment.brigade_origin.nombre : 'N/A'}</td>
-                    <td className="py-4 px-6">{assignment.brigade_destination ? assignment.brigade_destination.nombre : 'N/A'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+          <span
+            className={`inline-flex items-center rounded-full border px-4 py-2 text-xs font-semibold ${
+              darkMode ? 'border-slate-700 bg-slate-900/70 text-slate-200' : 'border-slate-200 bg-white text-slate-600'
+            }`}
+          >
+            {formattedMonthLabel}
+          </span>
+          <div className="flex gap-2">
+            <button type="button" onClick={handlePreviousMonth} className={pillButtonClass}>
+              Mes anterior
+            </button>
+            <button type="button" onClick={handleNextMonth} className={pillButtonClass}>
+              Mes siguiente
+            </button>
           </div>
-        ) : (
-          <p className="text-gray-500">No hay asignaciones en este mes.</p>
-        )}
+        </div>
       </div>
-      {/* Tabla de guardias */}
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-2">Guardias para las Asignaciones</h3>
-        {guards.length > 0 ? (
-          <div className={`overflow-x-auto shadow-md sm:rounded-lg border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-            <table className="w-full text-sm text-center">
-              <thead className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
-                <tr>
-                  <th className="py-3 px-6">Día</th>
-                  <th className="py-3 px-6">Tipo de Día</th>
-                  <th className="py-3 px-6">Brigada</th>
-                </tr>
-              </thead>
-              <tbody>
-                {guards.map(guard => (
-                  <tr key={guard.date} className={`${darkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-b hover:bg-gray-50'}`}>
-                    <td className="py-4 px-6">{guard.date}</td>
-                    <td className="py-4 px-6">{guard.tipo}</td>
-                    <td className="py-4 px-6">{guard.brigade ? guard.brigade.nombre : guard.id_brigada}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        {summaryStats.map((stat) => (
+          <div key={stat.label} className={summaryCardClass}>
+            <p className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200">
+              {stat.label}
+            </p>
+            <p className="mt-2 text-lg font-semibold">{stat.value}</p>
           </div>
-        ) : (
-          <p className="text-gray-500">No hay guardias para las asignaciones en este mes.</p>
-        )}
+        ))}
       </div>
-    </div>
+
+      <div className="mt-6 space-y-6">
+        <div>
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-500 dark:text-primary-200">
+              Asignaciones registradas
+            </h4>
+          </div>
+          {assignments.length > 0 ? (
+            <div className={`${tableWrapperClass} mt-3`}>
+              <table className="w-full text-sm">
+                <thead className={tableHeadClass}>
+                  <tr>
+                    <th className="px-4 py-3 text-left">Fecha inicio</th>
+                    <th className="px-4 py-3 text-left">Turno</th>
+                    <th className="px-4 py-3 text-left">Brigada origen</th>
+                    <th className="px-4 py-3 text-left">Brigada destino</th>
+                  </tr>
+                </thead>
+                <tbody className={`${tableRowClass}`}>
+                  {assignments.map((assignment) => (
+                    <tr key={assignment.id_asignacion} className={tableRowHoverClass}>
+                      <td className="px-4 py-3">
+                        {dayjs(assignment.fecha_ini).format('DD MMM YYYY')}
+                      </td>
+                      <td className="px-4 py-3">{assignment.turno}</td>
+                      <td className="px-4 py-3">
+                        {assignment.brigade_origin ? assignment.brigade_origin.nombre : 'N/A'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {assignment.brigade_destination ? assignment.brigade_destination.nombre : 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div
+              className={`mt-3 rounded-2xl border border-dashed px-4 py-5 text-sm ${
+                darkMode
+                  ? 'border-slate-700/70 bg-slate-900/40 text-slate-300'
+                  : 'border-slate-200 text-slate-500'
+              }`}
+            >
+              No hay asignaciones registradas en este mes.
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-500 dark:text-primary-200">
+              Guardias vinculadas
+            </h4>
+          </div>
+          {guards.length > 0 ? (
+            <div className={`${tableWrapperClass} mt-3`}>
+              <table className="w-full text-sm">
+                <thead className={tableHeadClass}>
+                  <tr>
+                    <th className="px-4 py-3 text-left">Día</th>
+                    <th className="px-4 py-3 text-left">Tipo</th>
+                    <th className="px-4 py-3 text-left">Brigada</th>
+                  </tr>
+                </thead>
+                <tbody className={`${tableRowClass}`}>
+                  {guards.map((guard) => (
+                    <tr key={`${guard.date}-${guard.id_brigada}`} className={tableRowHoverClass}>
+                      <td className="px-4 py-3">{dayjs(guard.date).format('DD MMM YYYY')}</td>
+                      <td className="px-4 py-3">{guard.tipo || 'Guardia'}</td>
+                      <td className="px-4 py-3">{guard.brigade ? guard.brigade.nombre : guard.id_brigada}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div
+              className={`mt-3 rounded-2xl border border-dashed px-4 py-5 text-sm ${
+                darkMode
+                  ? 'border-slate-700/70 bg-slate-900/40 text-slate-300'
+                  : 'border-slate-200 text-slate-500'
+              }`}
+            >
+              No hay guardias asociadas a las asignaciones durante este periodo.
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 };
 

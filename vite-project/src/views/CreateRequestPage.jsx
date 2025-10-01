@@ -27,6 +27,14 @@ const CreateRequestPage = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+  
+  // Cache para optimización
+  const [brigadeCache, setBrigadeCache] = useState({});
+
+  // Limpiar cache cuando cambie el empleado seleccionado
+  useEffect(() => {
+    setBrigadeCache({});
+  }, [selectedEmployee]);
 
   // Cargar empleados si es jefe
   useEffect(() => {
@@ -64,27 +72,15 @@ const CreateRequestPage = () => {
     }
   };
 
-  // Obtener el usuario objetivo (empleado seleccionado o usuario actual)
-  const getTargetUser = () => {
-    if (selectedEmployee) {
-      return selectedEmployee;
-    }
-    return user || {};
-  };
-
-  // Sincronizar fechaFin con fechaIni para ciertos tipos de solicitud
-  useEffect(() => {
-    if (
-      tipo === 'asuntos propios' ||
-      tipo === 'licencias por jornadas' ||
-      tipo === 'horas sindicales' ||
-      tipo === 'vestuario'
-    ) {
-      setFechaFin(fechaIni);
-    }
-  }, [tipo, fechaIni]);
-
+  // Función optimizada con cache
   const fetchUserBrigadeForDate = async (date, targetUserId = null) => {
+    const cacheKey = `${targetUserId || user?.id_empleado}-${date}`;
+    
+    // Si ya tenemos el resultado en cache, lo devolvemos
+    if (brigadeCache[cacheKey]) {
+      return brigadeCache[cacheKey];
+    }
+
     try {
       const assignments = await AssignmentsApiService.getAssignments();
       const formattedDate = dayjs(date).format('YYYY-MM-DD');
@@ -107,16 +103,76 @@ const CreateRequestPage = () => {
       });
 
       const lastAssignment = sortedAssignments[0];
-      if (lastAssignment) {
-        return lastAssignment.id_brigada_destino;
-      }
-      return null;
+      const result = lastAssignment ? lastAssignment.id_brigada_destino : null;
+      
+      // Guardar en cache
+      setBrigadeCache(prev => ({ ...prev, [cacheKey]: result }));
+      
+      return result;
     } catch (error) {
       console.error('Error al obtener la brigada del usuario:', error);
       setError('Error al obtener la brigada del usuario.');
       return null;
     }
   };
+
+  // MÉTODO validateDates CORREGIDO - Con la lógica correcta de la versión antigua
+  const validateDates = async () => {
+    try {
+      const targetUserId = selectedEmployee?.id_empleado || user.id_empleado;
+      
+      // Validar fecha de inicio
+      const startBrigade = await fetchUserBrigadeForDate(fechaIni, targetUserId);
+      const startDateGuards = await GuardsApiService.getGuardsByDate(fechaIni);
+      
+      // Validar fecha de fin + 1 día
+      const endDatePlusOne = dayjs(fechaFin).add(1, 'day').format('YYYY-MM-DD');
+      const endBrigade = await fetchUserBrigadeForDate(endDatePlusOne, targetUserId);
+      const endDateGuards = await GuardsApiService.getGuardsByDate(endDatePlusOne);
+      
+      // LÓGICA CORRECTA: Debe TENER guardia para poder pedir vacaciones
+      const isStartDateValid = startDateGuards.data.some(
+        (guard) => guard.id_brigada === startBrigade
+      );
+      const isEndDateValid = endDateGuards.data.some(
+        (guard) => guard.id_brigada === endBrigade
+      );
+      
+      if (!isStartDateValid || !isEndDateValid) {
+        const userName = selectedEmployee
+          ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}` 
+          : 'el usuario';
+        setError(`${userName} no cumple las condiciones para solicitar vacaciones en estas fechas. Debe tener guardia asignada.`);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error validando fechas de guardia:', error);
+      setError('Error al validar fechas de guardia.');
+      return false;
+    }
+  };
+
+  // Obtener el usuario objetivo (empleado seleccionado o usuario actual)
+  const getTargetUser = () => {
+    if (selectedEmployee) {
+      return selectedEmployee;
+    }
+    return user || {};
+  };
+
+  // Sincronizar fechaFin con fechaIni para ciertos tipos de solicitud
+  useEffect(() => {
+    if (
+      tipo === 'asuntos propios' ||
+      tipo === 'licencias por jornadas' ||
+      tipo === 'horas sindicales' ||
+      tipo === 'vestuario'
+    ) {
+      setFechaFin(fechaIni);
+    }
+  }, [tipo, fechaIni]);
 
   const validateVacationDays = () => {
     const targetUser = getTargetUser();
@@ -208,54 +264,6 @@ const CreateRequestPage = () => {
     }
 
     return hoursDifference;
-  };
-
-  const validateDates = async () => {
-    try {
-      const targetUserId = selectedEmployee?.id_empleado || user.id_empleado;
-      const startDate = dayjs(fechaIni);
-      const endDate = dayjs(fechaFin);
-      const currentDate = startDate.clone();
-
-      while (currentDate.isSameOrBefore(endDate)) {
-        const brigadeId = await fetchUserBrigadeForDate(
-          currentDate.format('YYYY-MM-DD'),
-          targetUserId
-        );
-
-        if (brigadeId) {
-          try {
-            const guardsResponse = await GuardsApiService.getGuards();
-            const hasGuard = guardsResponse.data.some(
-              (guard) =>
-                guard.id_brigada === brigadeId &&
-                dayjs(guard.fecha).isSame(currentDate, 'day')
-            );
-
-            if (hasGuard) {
-              const userName = selectedEmployee
-                ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
-                : 'el usuario';
-              setError(
-                `${userName} tiene una guardia asignada el ${currentDate.format(
-                  'DD/MM/YYYY'
-                )}. No se puede solicitar vacaciones en esa fecha.`
-              );
-              return false;
-            }
-          } catch (guardError) {
-            console.error('Error al validar guardias:', guardError);
-          }
-        }
-
-        currentDate.add(1, 'day');
-      }
-      return true;
-    } catch (error) {
-      console.error('Error validando fechas de guardia:', error);
-      setError('Error al validar fechas de guardia.');
-      return false;
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -384,12 +392,9 @@ const CreateRequestPage = () => {
     }
   };
 
-  const pageWrapperClass = `min-h-[calc(100vh-6rem)] w-full px-4 py-10 transition-colors duration-300 ${
-    darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
-  }`;
-  const cardContainerClass = `mx-auto max-w-5xl overflow-hidden rounded-3xl border shadow-xl backdrop-blur ${
-    darkMode ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-white/90'
-  }`;
+  const cardContainerClass = `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-full overflow-hidden rounded-3xl border shadow-xl backdrop-blur transition-colors duration-300 ${
+  darkMode ? 'border-slate-800 bg-slate-900/80 text-slate-100' : 'border-slate-200 bg-white/90 text-slate-900'
+}`;
   const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
   const inputBaseClass = `w-full rounded-2xl border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${
     darkMode
@@ -402,11 +407,9 @@ const CreateRequestPage = () => {
   // Validación de seguridad: Si no hay usuario, mostrar cargando
   if (!user) {
     return (
-      <div className={pageWrapperClass}>
         <div className={`${cardContainerClass} flex items-center justify-center py-16`}>
           <p className="text-sm font-medium">Cargando usuario...</p>
         </div>
-      </div>
     );
   }
 
@@ -420,13 +423,12 @@ const CreateRequestPage = () => {
   ];
 
   return (
-    <div className={pageWrapperClass}>
       <div className={cardContainerClass}>
         <div
           className={`bg-gradient-to-r px-8 py-10 text-white transition-colors duration-300 ${
             darkMode
               ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80'
-              : 'from-primary-200 via-primary-300 to-primary-400'
+              : 'from-primary-400 via-primary-500 to-primary-600'
           }`}
         >
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
@@ -504,7 +506,7 @@ const CreateRequestPage = () => {
                   </option>
                   {employees.map((emp) => (
                     <option key={emp.id_empleado} value={emp.id_empleado}>
-                      {`${emp?.nombre || ''} ${emp?.apellido || ''}`.trim()} · DNI {emp?.dni || 'Sin DNI'}
+                      {`${emp?.nombre || ''} ${emp?.apellido || ''}`.trim()} 
                     </option>
                   ))}
                 </select>
@@ -705,7 +707,6 @@ const CreateRequestPage = () => {
           </form>
         </div>
       </div>
-    </div>
   );
 };
 

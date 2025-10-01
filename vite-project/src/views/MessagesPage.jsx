@@ -29,7 +29,7 @@ const MessageThread = ({ message, onReply, users }) => {
       let filename = 'attachment';
       const contentDisposition = response.headers['content-disposition'];
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        const filenameMatch = contentDisposition.match(/filename=\"(.+)\"/);
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1];
         }
@@ -55,57 +55,65 @@ const MessageThread = ({ message, onReply, users }) => {
     }
   };
 
+  const baseBubbleClass =
+    'relative max-w-[75%] rounded-3xl px-5 py-4 text-[15px] leading-7 shadow-lg ring-1 transition-all duration-300';
+  const ownMessageClass = darkMode
+    ? 'bg-primary-500/15 text-primary-100 ring-primary-400/40 ml-auto'
+    : 'bg-primary-500 text-white ring-primary-500/40 ml-auto shadow-primary-300/40';
+  const incomingMessageClass = darkMode
+    ? 'bg-slate-900/80 text-slate-100 ring-slate-700'
+    : 'bg-white text-slate-700 ring-slate-200';
+  const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-500';
+  const actionButtonClass = `mt-3 inline-flex items-center justify-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+    darkMode
+      ? 'bg-primary-500/20 text-primary-100 hover:bg-primary-500/30 focus:ring-primary-400/50 focus:ring-offset-slate-900'
+      : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/50 focus:ring-offset-white'
+  }`;
+
   return (
     <div className="flex flex-col w-full">
-      <div className={`flex w-full my-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+      <div className={`flex w-full py-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
         <div
-          className={`relative max-w-[75%] p-3 rounded-xl shadow-md text-sm transition-all ${
-            isOwnMessage
-              ? `bg-green-500 text-white ${darkMode ? 'dark:bg-green-600' : ''}`
-              : `bg-gray-200 text-gray-800 ${darkMode ? 'dark:bg-gray-700 dark:text-white' : ''}`
+          className={`${baseBubbleClass} ${
+            isOwnMessage ? ownMessageClass : incomingMessageClass
           }`}
           style={{ alignSelf: isOwnMessage ? 'flex-end' : 'flex-start' }}
         >
           {!isOwnMessage && (
-            <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+            <p className="mb-1 text-xs font-semibold text-primary-600 dark:text-primary-200">
               {getUserName(message.sender_id)}
             </p>
           )}
-          <p>{message.body}</p>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 text-right">
-            {dayjs(message.created_at).format('HH:mm')}
+          <p className="leading-relaxed">{message.body}</p>
+          <p className={`mt-2 text-[10px] text-right font-medium ${subtleTextClass}`}>
+            {dayjs(message.created_at).format('DD MMM YYYY · HH:mm')}
           </p>
           {message.attachment && (
             <button
               onClick={handleDownloadAttachment}
-              className="mt-2 text-xs text-blue-500 hover:underline"
+              className={`mt-3 inline-flex items-center gap-2 text-[11px] font-semibold transition-colors ${
+                darkMode
+                  ? 'text-primary-200 hover:text-primary-100'
+                  : 'text-primary-600 hover:text-primary-700'
+              }`}
             >
-              <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4 inline-block mr-1" />
-              Descargar Adjunto
+              <FontAwesomeIcon icon={faFilePdf} className="h-3.5 w-3.5" />
+              Descargar adjunto
             </button>
           )}
           {isLastMessage && (
-            <button
-              onClick={() => onReply(message)}
-              className="mt-2 text-xs bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 transition-all"
-            >
+            <button onClick={() => onReply(message)} className={actionButtonClass}>
               Responder
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col w-full">
-        {message.replies && message.replies.length > 0 && (
+      <div className="flex flex-col w-full pl-6">
+        {message.replies && message.replies.length > 0 &&
           message.replies.map((reply) => (
-            <MessageThread
-              key={reply.id}
-              message={reply}
-              onReply={onReply}
-              users={users}
-            />
-          ))
-        )}
+            <MessageThread key={reply.id} message={reply} onReply={onReply} users={users} />
+          ))}
       </div>
     </div>
   );
@@ -125,6 +133,85 @@ const MessagesPage = () => {
   const [replyMessage, setReplyMessage] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(dayjs());
 
+  const pageWrapperClass = `min-h-[calc(100vh-6rem)] w-full px-4 py-10 transition-colors duration-300 ${
+    darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
+  }`;
+  const cardContainerClass = `mx-auto max-w-6xl overflow-hidden rounded-3xl border shadow-xl backdrop-blur ${
+    darkMode ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-white/90'
+  }`;
+  const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
+  const statsCardClass = `rounded-2xl border px-5 py-4 transition-colors duration-200 ${
+    darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/80'
+  }`;
+  const statsLabelClass =
+    'text-sm font-semibold uppercase tracking-[0.28em] text-primary-600 dark:text-primary-100';
+  const statsValueClass = 'mt-2 text-3xl font-semibold';
+  const toggleWrapperClass = `inline-flex flex-wrap gap-2 rounded-full border px-3 py-3 transition-colors duration-200 ${
+    darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50'
+  }`;
+  const toggleButtonClass = (isActive) =>
+    `inline-flex items-center justify-center rounded-full px-5 py-2.5 text-base font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+      isActive
+        ? darkMode
+          ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/40 focus:ring-primary-500/60 focus:ring-offset-slate-900'
+          : 'bg-primary-500 text-white shadow-lg shadow-primary-500/30 focus:ring-primary-500/50 focus:ring-offset-slate-50'
+        : darkMode
+        ? 'border border-slate-700 bg-transparent text-slate-300 hover:border-primary-400 hover:text-primary-100 focus:ring-primary-400/40 focus:ring-offset-slate-900'
+        : 'border border-slate-200 bg-white text-slate-600 hover:border-primary-400 hover:text-primary-600 focus:ring-primary-400/40 focus:ring-offset-slate-50'
+    }`;
+  const baseButtonClass =
+    'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-base font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
+  const primaryButtonClass = `${baseButtonClass} ${
+    darkMode
+      ? 'bg-primary-500 text-white hover:bg-primary-400 focus:ring-primary-500/60 focus:ring-offset-slate-900'
+      : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/50 focus:ring-offset-slate-50'
+  }`;
+  const monthButtonClass = `${baseButtonClass} ${
+    darkMode
+      ? 'border border-slate-700 bg-slate-900/70 text-slate-100 hover:border-primary-400 hover:text-primary-100 focus:ring-primary-500/50 focus:ring-offset-slate-900'
+      : 'border border-slate-200 bg-white text-slate-700 hover:border-primary-400 hover:text-primary-600 focus:ring-primary-400/40 focus:ring-offset-slate-50'
+  }`;
+  const actionPillClass = (variant) => {
+    const base =
+      'inline-flex items-center justify-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1';
+    if (variant === 'primary') {
+      return `${base} ${
+        darkMode
+          ? 'bg-primary-500/25 text-primary-50 hover:bg-primary-500/35 focus:ring-primary-300/40 focus:ring-offset-slate-900'
+          : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/40 focus:ring-offset-white'
+      }`;
+    }
+    if (variant === 'success') {
+      return `${base} ${
+        darkMode
+          ? 'bg-emerald-500/25 text-emerald-100 hover:bg-emerald-500/35 focus:ring-emerald-400/40 focus:ring-offset-slate-900'
+          : 'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500/40 focus:ring-offset-white'
+      }`;
+    }
+    if (variant === 'danger') {
+      return `${base} ${
+        darkMode
+          ? 'bg-red-500/25 text-red-100 hover:bg-red-500/35 focus:ring-red-400/40 focus:ring-offset-slate-900'
+          : 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500/40 focus:ring-offset-white'
+      }`;
+    }
+    return base;
+  };
+  const badgeClass = (variant) =>
+    `inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+      variant === 'unread'
+        ? darkMode
+          ? 'bg-primary-500/30 text-primary-50'
+          : 'bg-primary-100 text-primary-600'
+        : variant === 'attachment'
+        ? darkMode
+          ? 'bg-amber-500/25 text-amber-100'
+          : 'bg-amber-100 text-amber-600'
+        : darkMode
+        ? 'bg-slate-800 text-slate-100'
+        : 'bg-slate-100 text-slate-600'
+    }`;
+
   // Verificar si el usuario es jefe
   const isJefe = user?.type === 'jefe';
 
@@ -137,7 +224,7 @@ const MessagesPage = () => {
   const canDeleteMessage = (message) => {
     // Los jefes pueden eliminar cualquier mensaje
     if (isJefe) return true;
-    
+
     // Los usuarios normales solo pueden eliminar mensajes no masivos
     return !isMassiveMessage(message);
   };
@@ -245,14 +332,14 @@ const MessagesPage = () => {
   const handleMarkMassiveAsRead = async (messageId) => {
     try {
       await MessagesApiService.markMassiveAsRead(messageId);
-      
+
       // Actualizar la UI localmente
       setInbox((prevInbox) =>
         prevInbox.map((msg) =>
           msg.id === messageId ? { ...msg, is_read: true, read_by_admin: true } : msg
         )
       );
-      
+
       alert('Mensaje masivo marcado como leído para todos los usuarios correspondientes.');
     } catch (error) {
       console.error('Error al marcar mensaje masivo como leído:', error);
@@ -308,171 +395,256 @@ const MessagesPage = () => {
     fetchMessages();
   };
 
-  if (loading) return <div className="text-center py-4">Cargando...</div>;
+  if (loading) {
+    return (
+      <div className={pageWrapperClass}>
+        <div className={`${cardContainerClass} flex items-center justify-center py-16`}>
+          <p className="text-sm font-semibold">Cargando mensajes...</p>
+        </div>
+      </div>
+    );
+  }
 
   const messages = view === 'inbox' ? inbox : sent;
+  const unreadCount = messages.filter((message) => !message.is_read).length;
+  const capitalizedMonth =
+    currentMonth.format('MMMM YYYY').charAt(0).toUpperCase() +
+    currentMonth.format('MMMM YYYY').slice(1);
+  const messageStats = [
+    { label: 'Bandeja actual', value: view === 'inbox' ? 'Entrada' : 'Salida' },
+    { label: 'Mensajes del mes', value: messages.length },
+    { label: 'Sin leer', value: unreadCount },
+  ];
 
   return (
-    <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}`}>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Mensajes</h1>
-        <button
-          onClick={() => { setReplyMessage(null); setShowModal(true); }}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+    <div className={pageWrapperClass}>
+      <div className={cardContainerClass}>
+        <div
+          className={`bg-gradient-to-r px-8 py-10 transition-colors duration-300 ${
+            darkMode
+              ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80 text-white'
+              : 'from-primary-200 via-primary-300 to-primary-400 text-slate-900'
+          }`}
         >
-          Crear Mensaje
-        </button>
-      </div>
-
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex space-x-4">
-          <button
-            onClick={() => setView('inbox')}
-            className={`px-4 py-2 rounded ${view === 'inbox' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'}`}
-          >
-            Bandeja de Entrada
-          </button>
-          <button
-            onClick={() => setView('sent')}
-            className={`px-4 py-2 rounded ${view === 'sent' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'}`}
-          >
-            Bandeja de Salida
-          </button>
+          <p className={`text-sm font-semibold uppercase tracking-[0.28em] ${
+            darkMode ? 'text-white/90' : 'text-slate-800/90'
+          }`}>
+            Centro de comunicaciones
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold">Mensajes internos</h1>
+          <p className={`mt-3 max-w-3xl text-sm ${
+            darkMode ? 'text-white/90' : 'text-slate-700/90'
+          }`}>
+            Consulta, responde y gestiona los mensajes de tu equipo con un diseño renovado y mucho más visual.
+          </p>
         </div>
-        <div className="flex space-x-4">
-          <button onClick={handlePreviousMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
-            Mes Anterior
-          </button>
-          <span className="text-lg mt-2 font-semibold">
-            {currentMonth.format('MMMM YYYY').charAt(0).toUpperCase() +
-              currentMonth.format('MMMM YYYY').slice(1)}
-          </span>
-          <button onClick={handleNextMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
-            Mes Siguiente
-          </button>
-        </div>
-      </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full table-auto text-center">
-          <thead className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-800'}`}>
-            <tr>
-              <th className="py-2 px-4">Fecha</th>
-              <th className="py-2 px-4">Asunto</th>
-              <th className="py-2 px-4">Remitente/Destinatario</th>
-              <th className="py-2 px-4">Tipo</th>
-              <th className="py-2 px-4">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {messages.length > 0 ? (
-              messages.map((message) => (
-                console.log(`Mensaje ${message.id}:`, {
-                  isJefe: user?.type === 'jefe',
-                  isMassive: isMassiveMessage(message),
-                  isRead: message.is_read,
-                  massive: message.massive,
-                  view: view
-                }),
-                <tr
-                  key={message.id}
-                  className={`border-b ${message.is_read ? (darkMode ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
-                >
-                  <td className="py-2 px-4">
-                    {new Date(message.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="py-2 px-4">{message.subject || 'Sin asunto'}</td>
-                  <td className="py-2 px-4">
-                    {view === 'inbox'
-                      ? getUserName(message.sender_id)
-                      : getUserName(message.receiver_id)}
-                  </td>
-                  <td className="py-2 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      isMassiveMessage(message) 
-                        ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
-                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                    }`}>
-                      {isMassiveMessage(message) ? `Masivo (${message.massive})` : 'Individual'}
-                    </span>
-                  </td>
-                  
-                  <td className="py-2 px-4">
-                    <div className="flex space-x-2 justify-center items-center">
-                      <button
-                        onClick={() => handleOpenMessage(message)}
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                      >
-                        Abrir
-                      </button>
-                      
-                      {/* Botón para marcar mensaje masivo como leído (solo para jefes y mensajes masivos no leídos) */}
-                      {isJefe && isMassiveMessage(message) && !message.is_read && view === 'inbox' && (
-                        <button
-                          onClick={() => handleMarkMassiveAsRead(message.id)}
-                          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                          title="Marcar como leído para todos"
-                        >
-                          <FontAwesomeIcon icon={faCheckDouble} className="w-4 h-4" />
-                        </button>
-                      )}
-                      
-                      {/* Botón de eliminar con lógica condicional */}
-                      {canDeleteMessage(message) && (
-                        <button
-                          onClick={() => handleDelete(message.id)}
-                          className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-                          title={isJefe ? "Eliminar mensaje (Admin)" : "Eliminar mensaje"}
-                        >
-                          <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="6" className="text-center py-4">
-                  No hay mensajes en esta bandeja.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+        <div className="space-y-8 px-6 py-8 sm:px-10">
+          <div className="grid gap-5 sm:grid-cols-3">
+            {messageStats.map((stat) => (
+              <div key={stat.label} className={statsCardClass}>
+                <p className={statsLabelClass}>{stat.label}</p>
+                <p className={statsValueClass}>{stat.value}</p>
+              </div>
+            ))}
+          </div>
 
-      {showModal && (
-        <CreateMessageModal
-          isOpen={showModal}
-          onClose={closeModal}
-          currentUserRole={user?.type}
-          replyMessage={replyMessage}
-        />
-      )}
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className={toggleWrapperClass}>
+              <button onClick={() => setView('inbox')} className={toggleButtonClass(view === 'inbox')}>
+                Bandeja de entrada
+              </button>
+              <button onClick={() => setView('sent')} className={toggleButtonClass(view === 'sent')}>
+                Bandeja de salida
+              </button>
+            </div>
 
-      {selectedMessage && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 transition-opacity">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <div className="flex items-center gap-2">
+                <button onClick={handlePreviousMonth} className={monthButtonClass}>
+                  Mes anterior
+                </button>
+                <span className={`text-base font-semibold ${subtleTextClass}`}>{capitalizedMonth}</span>
+                <button onClick={handleNextMonth} className={monthButtonClass}>
+                  Mes siguiente
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  setReplyMessage(null);
+                  setShowModal(true);
+                }}
+                className={primaryButtonClass}
+              >
+                Crear mensaje
+              </button>
+            </div>
+          </div>
+
           <div
-            className={`p-6 w-full max-w-2xl rounded-lg shadow-lg transition-all ${
-              darkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200'
+            className={`overflow-hidden rounded-2xl border shadow-lg transition-colors duration-200 ${
+              darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'
             }`}
           >
-            {/* Encabezado de la modal */}
-            <div className={`flex justify-between items-center pb-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-300'}`}>
-              <h2 className="text-lg font-bold">Chat</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-left text-base dark:divide-slate-800">
+                <thead
+                  className={`${
+                    darkMode
+                      ? 'bg-slate-900/90 text-slate-100'
+                      : 'bg-slate-50 text-slate-700'
+                  } text-sm font-semibold uppercase tracking-[0.18em]`}
+                >
+                  <tr>
+                    <th className="px-6 py-5">Fecha</th>
+                    <th className="px-6 py-5">Asunto</th>
+                    <th className="px-6 py-5">Remitente/Destinatario</th>
+                    <th className="px-6 py-5">Tipo</th>
+                    <th className="px-6 py-5 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {messages.length > 0 ? (
+                    messages.map((message) => {
+                      const isMassive = isMassiveMessage(message);
+                      const isUnread = !message.is_read;
+                      return (
+                        <tr
+                          key={message.id}
+                          className={`transition-colors duration-200 ${
+                            isUnread
+                              ? darkMode
+                                ? 'bg-primary-500/10 hover:bg-primary-500/20'
+                                : 'bg-primary-50 hover:bg-primary-100/60'
+                              : darkMode
+                              ? 'hover:bg-slate-900/50'
+                              : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <td className={`px-6 py-4 align-top text-base font-semibold ${
+                            darkMode ? 'text-slate-100' : 'text-slate-800'
+                          }`}>
+                            {new Date(message.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 align-top">
+                            <div className="flex flex-col gap-2">
+                              <p className={`text-base font-semibold ${
+                                darkMode ? 'text-slate-100' : 'text-slate-800'
+                              }`}>
+                                {message.subject || 'Sin asunto'}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {isUnread && <span className={badgeClass('unread')}>Nuevo</span>}
+                                {message.attachment && (
+                                  <span className={badgeClass('attachment')}>Adjunto</span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 align-top">
+                            <p className={`text-base font-medium ${
+                              darkMode ? 'text-slate-100' : 'text-slate-700'
+                            }`}>
+                              {view === 'inbox'
+                                ? getUserName(message.sender_id)
+                                : getUserName(message.receiver_id)}
+                            </p>
+                            <p className={`mt-1 text-sm ${subtleTextClass}`}>
+                              {isMassive
+                                ? 'Mensaje enviado a múltiples destinatarios'
+                                : 'Comunicación individual'}
+                            </p>
+                          </td>
+                          <td className="px-6 py-4 align-top">
+                            <span
+                              className={badgeClass(isMassive ? 'massive' : 'individual')}
+                            >
+                              {isMassive ? `Masivo (${message.massive})` : 'Individual'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 align-top">
+                            <div className="flex flex-wrap items-center justify-center gap-2 text-base">
+                              <button
+                                onClick={() => handleOpenMessage(message)}
+                                className={actionPillClass('primary')}
+                              >
+                                Abrir
+                              </button>
+                              {isJefe && isMassive && !message.is_read && view === 'inbox' && (
+                                <button
+                                  onClick={() => handleMarkMassiveAsRead(message.id)}
+                                  className={actionPillClass('success')}
+                                  title="Marcar como leído para todos"
+                                >
+                                  <FontAwesomeIcon icon={faCheckDouble} className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {canDeleteMessage(message) && (
+                                <button
+                                  onClick={() => handleDelete(message.id)}
+                                  className={actionPillClass('danger')}
+                                  title={isJefe ? 'Eliminar mensaje (admin)' : 'Eliminar mensaje'}
+                                >
+                                  <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-10 text-center text-base font-medium">
+                        No hay mensajes en esta bandeja durante el mes seleccionado.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {showModal && (
+            <CreateMessageModal
+              isOpen={showModal}
+              onClose={closeModal}
+              currentUserRole={user?.type}
+              replyMessage={replyMessage}
+            />
+          )}
+        </div>
+      </div>
+
+      {selectedMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6 backdrop-blur">
+          <div
+            className={`w-full max-w-3xl overflow-hidden rounded-3xl border shadow-2xl transition-all duration-300 ${
+              darkMode
+                ? 'border-slate-800 bg-slate-950/95'
+                : 'border-slate-200 bg-white/95'
+            }`}
+          >
+            <div
+              className={`flex items-center justify-between border-b px-6 py-4 ${
+                darkMode ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-slate-100'
+              }`}
+            >
+              <h2 className="text-lg font-semibold">Conversación</h2>
               <button
                 onClick={() => setSelectedMessage(null)}
-                className={`p-2 rounded-full focus:outline-none focus:ring-2 ${
-                  darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'
+                className={`rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  darkMode
+                    ? 'text-slate-300 hover:bg-slate-800 focus:ring-slate-700 focus:ring-offset-slate-900'
+                    : 'text-slate-500 hover:bg-slate-200 focus:ring-slate-200 focus:ring-offset-white'
                 }`}
+                aria-label="Cerrar conversación"
               >
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
 
-            {/* Contenido del chat con scrollbar y mayor ancho */}
-            <div className="overflow-y-auto max-h-[500px] p-4 space-y-2">
+            <div className="max-h-[65vh] space-y-4 overflow-y-auto px-6 py-6">
               <MessageThread message={selectedMessage} onReply={handleReply} users={users} />
             </div>
           </div>

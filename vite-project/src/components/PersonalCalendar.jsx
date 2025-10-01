@@ -1,9 +1,10 @@
-// PersonalCalendar.jsx
 import React, { useEffect } from 'react';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useDarkMode } from '../contexts/DarkModeContext';
 
 const PersonalCalendar = ({ calendarDate, guardEvents = [], requestEvents = [] }) => {
+  const { darkMode } = useDarkMode();
   useEffect(() => {
     console.log('PersonalCalendar - guardEvents array:', guardEvents);
     console.log('PersonalCalendar - requestEvents array:', requestEvents);
@@ -66,13 +67,19 @@ const PersonalCalendar = ({ calendarDate, guardEvents = [], requestEvents = [] }
     format(addDays(startOfCurrentWeek, i), 'EEEE', { locale: es })
   );
 
+  const weekDayClass = `text-center text-xs font-semibold uppercase tracking-[0.2em] ${darkMode ? 'text-slate-300' : 'text-slate-500'
+    }`;
+  const baseCellClass = darkMode
+    ? 'border-slate-800/70 bg-slate-950/40 text-slate-200 hover:bg-slate-900/60'
+    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50/80';
+
   return (
     <div className="calendar w-full">
       {/* Encabezado de los días de la semana */}
       <div className="grid grid-cols-7 gap-2 mb-2">
         {weekDays.map((day) => (
-          <div key={day} className="day-name text-center font-bold capitalize">
-            {day}
+          <div key={day} className={weekDayClass}>
+            {day.charAt(0).toUpperCase() + day.slice(1)}
           </div>
         ))}
       </div>
@@ -82,23 +89,27 @@ const PersonalCalendar = ({ calendarDate, guardEvents = [], requestEvents = [] }
           const { date, day, monthOffset } = item;
           const dateString = format(date, 'yyyy-MM-dd');
           const eventForDay = getEventForDate(dateString);
-          let cellColor = 'hover:bg-gray-200';
           let label = null;
+          let eventClasses = '';
+          let eventLabelClass = darkMode ? 'text-slate-300' : 'text-slate-500';
           if (eventForDay) {
-            cellColor = eventForDay.color || 'bg-blue-500';
+            eventClasses = `${eventForDay.color} hover:opacity-90`;
+            const usesLightBg = eventForDay.color?.includes('yellow') || eventForDay.color?.includes('white');
+            eventLabelClass = usesLightBg ? 'text-slate-900' : 'text-white';
             label = eventForDay.label;
           }
           return (
             <div
               key={index}
-              className={`day h-24 p-4 text-center cursor-pointer rounded-lg border ${
-                monthOffset !== 0 ? 'text-gray-400' : 'text-black'
-              } ${cellColor}`}
+              className={`day flex h-24 cursor-pointer flex-col items-center justify-center rounded-xl border p-4 text-center text-xs transition-colors ${monthOffset !== 0 ? 'opacity-50' : ''
+                } ${eventForDay ? eventClasses : baseCellClass}`}
             >
-              <div className="flex flex-col items-center justify-center h-full">
-                <div>{day}</div>
-                {label && <div className="brigade-name text-xs mt-1">{label}</div>}
-              </div>
+              <div className="text-sm font-semibold">{day}</div>
+              {label && (
+                <div className={`mt-2 text-[0.65rem] font-medium leading-tight ${eventLabelClass}`}>
+                  {label}
+                </div>
+              )}
             </div>
           );
         })}

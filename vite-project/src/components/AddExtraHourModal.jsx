@@ -91,71 +91,113 @@ const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
 
   if (!isOpen) return null;
 
+  const overlayClass = 'fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6 backdrop-blur-sm';
+  const modalClass = `w-full max-w-3xl overflow-hidden rounded-3xl border shadow-2xl transition-colors ${darkMode ? 'border-slate-800 bg-slate-950/80 text-slate-100' : 'border-slate-200 bg-white/95 text-slate-900'
+    }`;
+  const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white ${darkMode
+    ? 'bg-gradient-to-r from-primary-900 via-primary-700 to-primary-500'
+    : 'bg-gradient-to-r from-primary-200 via-primary-300 to-primary-400 text-slate-900'
+    }`;
+  const inputBaseClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${darkMode
+    ? 'border-slate-700 bg-slate-900/60 text-slate-100 placeholder-slate-400'
+    : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+    }`;
+  const labelClass = 'text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200';
+  const submitButtonClass = `inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2 ${darkMode ? 'bg-primary-500 hover:bg-primary-400 focus:ring-offset-slate-950' : 'bg-primary-500 hover:bg-primary-600 focus:ring-offset-white'
+    }`;
+  const cancelButtonClass = `inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2 ${darkMode
+    ? 'border-slate-700 text-slate-200 hover:border-primary-400 hover:text-primary-200 focus:ring-offset-slate-950'
+    : 'border-slate-200 text-slate-600 hover:border-primary-400 hover:text-primary-600 focus:ring-offset-white'
+    }`;
+
   return (
-    <div className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-full bg-black bg-opacity-50">
-      <div className={`p-4 w-full max-w-2xl rounded-lg shadow-lg ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'}`}>
-        <div className={`flex justify-between items-center pb-4 mb-4 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-          <h3 className="text-lg font-semibold">Añadir Hora Extra</h3>
-          <button onClick={onClose} className={`p-1.5 rounded-lg ${darkMode ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-400 hover:bg-gray-200'}`} disabled={isSubmitting}>
-            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
+    <div className={overlayClass}>
+      <div className={modalClass}>
+        <div className={headerClass}>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80 dark:text-white/70">
+              Registrar horas extra
+            </p>
+            <h3 className="mt-1 text-xl font-semibold">Añade el detalle del servicio adicional</h3>
+            <p className="mt-2 text-xs text-white/80 dark:text-white/70">
+              Selecciona al empleado, la fecha y las horas realizadas para actualizar el registro mensual.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+            disabled={isSubmitting}
+          >
+            <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
           </button>
         </div>
-        <div className="mb-4">
+        <div className="px-6 pt-6">
+          <label className="text-xs font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200">
+            Buscar empleado
+          </label>
           <input
             type="text"
-            placeholder="Buscar empleado"
+            placeholder="Introduce nombre o apellido"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`w-full px-4 py-2 rounded ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'}`}
+            className={`${inputBaseClass} mt-2`}
           />
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 mb-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="id_empleado" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Empleado</label>
+        <form onSubmit={handleSubmit} className="px-6 pb-6">
+          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label htmlFor="id_empleado" className={labelClass}>
+                Empleado
+              </label>
               <select
                 name="id_empleado"
                 id="id_empleado"
                 value={formValues.id_empleado}
                 onChange={handleChange}
-                className={`bg-gray-50 border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300 text-gray-900'}`}
+                className={inputBaseClass}
                 required
               >
                 <option value="">Seleccione un empleado</option>
-                {filteredEmployees.map(employee => (
+                {filteredEmployees.map((employee) => (
                   <option key={employee.id_empleado} value={employee.id_empleado}>
                     {employee.nombre} {employee.apellido}
                   </option>
                 ))}
               </select>
-              {errorMessages.id_empleado && <span className="text-red-500 text-sm">{errorMessages.id_empleado}</span>}
-            </div>
-            <div>
-              <label htmlFor="date" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Fecha</label>
-              <input
+              {errorMessages.id_empleado && (
+                <p className="text-xs font-medium text-red-500">{errorMessages.id_empleado}</p>
+              )}            </div>
+            <div className="space-y-2">
+              <label htmlFor="date" className={labelClass}>
+                Fecha
+              </label><input
                 type="date"
                 name="date"
                 id="date"
                 value={formValues.date}
                 onChange={handleChange}
-                className={`bg-gray-50 border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300 text-gray-900'}`}
+                className={inputBaseClass}
                 required
               />
-              {errorMessages.date && <span className="text-red-500 text-sm">{errorMessages.date}</span>}
-            </div>
-            <div>
-              <label htmlFor="horas_diurnas" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Horas Diurnas</label>
+              {errorMessages.date && (
+                <p className="text-xs font-medium text-red-500">{errorMessages.date}</p>
+              )}            </div>
+            <div className="space-y-2">
+              <label htmlFor="horas_diurnas" className={labelClass}>
+                Horas diurnas
+              </label>
               <input
                 type="number"
                 name="horas_diurnas"
                 id="horas_diurnas"
                 value={formValues.horas_diurnas}
                 onChange={handleChange}
-                className={`bg-gray-50 border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300 text-gray-900'}`}
+                className={inputBaseClass}
                 required
               />
-              {errorMessages.horas_diurnas && <span className="text-red-500 text-sm">{errorMessages.horas_diurnas}</span>}
-            </div>
+              {errorMessages.horas_diurnas && (
+                <p className="text-xs font-medium text-red-500">{errorMessages.horas_diurnas}</p>
+              )}            </div>
             <div>
               <label htmlFor="horas_nocturnas" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Horas Nocturnas</label>
               <input

@@ -1,4 +1,3 @@
-// UserGuardsCalendarPage.jsx
 import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
@@ -134,15 +133,15 @@ const UserGuardsCalendarPage = ({ user }) => {
                 const matchingTurn = matching[0].turno;
                 const otherTurn = other.turno;
                 let suffix = "";
-                
+
                 // Determinar el sufijo basado en los turnos específicos y el orden de las asignaciones
                 // Si la brigada coincidente es el destino solo para el turno de mañana y luego cambia, mostrar "Mañana"
-                if (matchingTurn === "Mañana" && otherTurn === "Tarde" && 
+                if (matchingTurn === "Mañana" && otherTurn === "Tarde" &&
                     other.id_brigada_origen === requiredBrigada) {
                   suffix = "Mañana";
-                } 
+                }
                 // Si la brigada coincidente es el destino solo para el turno de tarde y luego cambia, mostrar "Tarde"
-                else if (matchingTurn === "Tarde" && otherTurn === "Noche" && 
+                else if (matchingTurn === "Tarde" && otherTurn === "Noche" &&
                          other.id_brigada_origen === requiredBrigada) {
                   suffix = "Tarde";
                 }
@@ -153,9 +152,9 @@ const UserGuardsCalendarPage = ({ user }) => {
                 // En otros casos, usar la lógica genérica basada solo en el turno de la asignación coincidente
                 else {
                   // Verificar si hay un cambio de brigada durante el día
-                  const isTemporaryAssignment = other.id_brigada_origen === requiredBrigada || 
+                  const isTemporaryAssignment = other.id_brigada_origen === requiredBrigada ||
                                                 other.id_brigada_destino === requiredBrigada;
-                  
+
                   if (isTemporaryAssignment) {
                     // Si la asignación es temporal (la brigada cambia durante el día)
                     if (matchingTurn === "Mañana") suffix = "Mañana";
@@ -175,11 +174,11 @@ const UserGuardsCalendarPage = ({ user }) => {
                 const sorted = matching.sort((a, b) =>
                   turnPriority.indexOf(a.turno) - turnPriority.indexOf(b.turno)
                 );
-                
+
                 // Verificar si las asignaciones representan un cambio temporal
                 const isSequential = sorted[0].id_brigada_origen === sorted[1].id_brigada_destino ||
                                      sorted[1].id_brigada_origen === sorted[0].id_brigada_destino;
-                
+
                 let suffix = "";
                 if (isSequential) {
                   // Si hay un cambio secuencial de brigadas, mostrar solo los turnos aplicables
@@ -324,8 +323,34 @@ const UserGuardsCalendarPage = ({ user }) => {
     setCurrentMonth(prev => prev.add(1, 'month'));
   };
 
-  if (loading || !dataReady) return <div>Cargando...</div>;
-  if (error) return <div>Error: {error}</div>;
+  const cardClass = `rounded-2xl border px-5 py-6 transition-colors ${
+    darkMode ? 'border-slate-800 bg-slate-950/60 text-slate-100' : 'border-slate-200 bg-white/80 text-slate-900'
+  }`;
+  const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
+  const pillButtonClass = `inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
+    darkMode
+      ? 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-primary-400 hover:text-primary-200'
+      : 'border-slate-200 bg-white text-slate-600 hover:border-primary-400 hover:text-primary-600'
+  }`;
+  const calendarWrapperClass = `rounded-2xl border border-dashed px-4 py-4 transition-colors ${
+    darkMode ? 'border-slate-700/60 bg-slate-900/40' : 'border-slate-200 bg-white'
+  }`;
+
+  if (loading || !dataReady) {
+    return (
+      <section className={cardClass}>
+        <p className={`text-sm font-medium ${subtleTextClass}`}>Cargando calendario de guardias...</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className={cardClass}>
+        <p className="text-sm font-semibold text-red-500">{error}</p>
+      </section>
+    );
+  }
 
   const capitalizeFirstLetter = (string) =>
     string.charAt(0).toUpperCase() + string.slice(1);
@@ -333,27 +358,46 @@ const UserGuardsCalendarPage = ({ user }) => {
   const capitalizedMonthString = capitalizeFirstLetter(rawMonthString);
 
   return (
-    <div className={`min-h-screen p-4 ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-800'}`}>
-      <h1 className="text-2xl font-bold mb-6 text-center">
-        Guardias de {user.nombre} {user.apellido}
-      </h1>
-      <div className="flex justify-between items-center max-w-3xl mx-auto mb-4">
-        <button onClick={handlePreviousMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
-          Mes Anterior
-        </button>
-        <span className="text-xl font-semibold">{capitalizedMonthString}</span>
-        <button onClick={handleNextMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
-          Mes Siguiente
-        </button>
+    <section className={cardClass}>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200">
+            Calendario de guardias
+          </p>
+          <h3 className="mt-2 text-xl font-semibold">
+            {user.nombre} {user.apellido}
+          </h3>
+          <p className={`mt-1 text-xs ${subtleTextClass}`}>
+            Visualiza las guardias asignadas y las solicitudes confirmadas para este periodo.
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+          <span
+            className={`inline-flex items-center rounded-full border px-4 py-2 text-xs font-semibold ${
+              darkMode ? 'border-slate-700 bg-slate-900/70 text-slate-200' : 'border-slate-200 bg-white text-slate-600'
+            }`}
+          >
+            {capitalizedMonthString}
+          </span>
+          <div className="flex gap-2">
+            <button type="button" onClick={handlePreviousMonth} className={pillButtonClass}>
+              Mes anterior
+            </button>
+            <button type="button" onClick={handleNextMonth} className={pillButtonClass}>
+              Mes siguiente
+            </button>
+          </div>
+        </div>
       </div>
-      <div className="max-w-3xl mx-auto">
+
+      <div className={`${calendarWrapperClass} mt-6`}>
         <PersonalCalendar
           calendarDate={currentMonth.toDate()}
           guardEvents={guardEvents}
           requestEvents={requestEvents}
         />
       </div>
-    </div>
+    </section>
   );
 };
 

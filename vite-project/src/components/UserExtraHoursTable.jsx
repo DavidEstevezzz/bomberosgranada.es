@@ -68,72 +68,146 @@ const UserExtraHoursTable = ({ user }) => {
     setCurrentMonth(newMonth);
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  const cardClass = `rounded-2xl border px-5 py-6 transition-colors ${
+    darkMode ? 'border-slate-800 bg-slate-950/60 text-slate-100' : 'border-slate-200 bg-white/80 text-slate-900'
+  }`;
+  const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
+  const pillButtonClass = `inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
+    darkMode
+      ? 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-primary-400 hover:text-primary-200'
+      : 'border-slate-200 bg-white text-slate-600 hover:border-primary-400 hover:text-primary-600'
+  }`;
+  const tableWrapperClass = `overflow-hidden rounded-2xl border transition-colors ${
+    darkMode ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-200 bg-white'
+  }`;
+  const tableHeadClass = darkMode ? 'bg-slate-900/60 text-slate-300' : 'bg-slate-100 text-slate-600';
+  const tableBodyClass = darkMode
+    ? 'divide-y divide-slate-800/60 text-slate-100'
+    : 'divide-y divide-slate-200 text-slate-700';
+  const tableRowHoverClass = `transition-colors ${
+    darkMode ? 'hover:bg-slate-900/60' : 'hover:bg-slate-50/80'
+  }`;
+
+  const monthLabel = dayjs(currentMonth).format('MMMM YYYY');
+  const formattedMonthLabel = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+  const totalDineroNumber = Number(totalDinero);
+  const totalDineroFormatted = `${totalDineroNumber.toLocaleString('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} €`;
+
+  const summaryStats = [
+    { label: 'Horas diurnas', value: totalDiurnas },
+    { label: 'Horas nocturnas', value: totalNocturnas },
+    { label: 'Total generado', value: totalDineroFormatted },
+  ];
+
+  if (loading) {
+    return (
+      <section className={cardClass}>
+        <p className={`text-sm font-medium ${subtleTextClass}`}>Cargando horas extra del mes...</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className={cardClass}>
+        <p className="text-sm font-semibold text-red-500">{error}</p>
+      </section>
+    );
+  }
 
   return (
-    <div
-      className={`p-4 mt-4 max-w-4xl mx-auto rounded-lg ${
-        darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'
-      }`}
-    >
-      <h1 className="text-2xl font-bold mb-4">Horas Extra</h1>
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={handlePreviousMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
-          Mes Anterior
-        </button>
-        <span className="text-lg font-semibold">{dayjs(currentMonth).format('MMMM YYYY').charAt(0).toUpperCase() + dayjs(currentMonth).format('MMMM YYYY').slice(1)}</span>
-        <button onClick={handleNextMonth} className="bg-blue-500 text-white px-4 py-2 rounded">
-          Mes Siguiente
-        </button>
+    <section className={cardClass}>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200">
+            Horas extra
+          </p>
+          <h3 className="mt-2 text-xl font-semibold">Resumen mensual de servicios adicionales</h3>
+          <p className={`mt-1 text-xs ${subtleTextClass}`}>
+            Consulta las horas realizadas fuera de turno y su retribución estimada.
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+          <span
+            className={`inline-flex items-center rounded-full border px-4 py-2 text-xs font-semibold ${
+              darkMode ? 'border-slate-700 bg-slate-900/70 text-slate-200' : 'border-slate-200 bg-white text-slate-600'
+            }`}
+          >
+            {formattedMonthLabel}
+          </span>
+          <div className="flex gap-2">
+            <button type="button" onClick={handlePreviousMonth} className={pillButtonClass}>
+              Mes anterior
+            </button>
+            <button type="button" onClick={handleNextMonth} className={pillButtonClass}>
+              Mes siguiente
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'}`}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr>
-                <th className="py-2 px-2">Fecha</th>
-                <th className="py-2 px-2">Horas Diurnas</th>
-                <th className="py-2 px-2">Horas Nocturnas</th>
-                <th className="py-2 px-2">Total Salario</th>
-              </tr>
-            </thead>
-            <tbody>
-              {extraHours.length === 0 ? (
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        {summaryStats.map((stat) => (
+          <div
+            key={stat.label}
+            className={`rounded-2xl border px-4 py-4 transition-colors ${
+              darkMode ? 'border-slate-800 bg-slate-900/60 text-slate-100' : 'border-slate-200 bg-white text-slate-700'
+            }`}
+          >
+            <p className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200">
+              {stat.label}
+            </p>
+            <p className="mt-2 text-lg font-semibold">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        {extraHours.length > 0 ? (
+          <div className={tableWrapperClass}>
+            <table className="w-full text-sm">
+              <thead className={tableHeadClass}>
                 <tr>
-                  <td colSpan="4" className="text-center py-4">
-                    No hay horas extras para este mes
-                  </td>
+                  <th className="px-4 py-3 text-left">Fecha</th>
+                  <th className="px-4 py-3 text-left">Horas diurnas</th>
+                  <th className="px-4 py-3 text-left">Horas nocturnas</th>
+                  <th className="px-4 py-3 text-left">Retribución</th>
                 </tr>
-              ) : (
-                extraHours.map((extraHour) => {
+              </thead>
+              <tbody className={tableBodyClass}>
+                {extraHours.map((extraHour) => {
                   const totalSalary =
                     extraHour.horas_diurnas * parseFloat(extraHour.salarie.precio_diurno) +
                     extraHour.horas_nocturnas * parseFloat(extraHour.salarie.precio_nocturno);
 
                   return (
-                    <tr key={extraHour.id} className="border-b border-gray-700">
-                      <td className="py-2 px-2">{dayjs(extraHour.date).format('DD-MM-YYYY')}</td>
-                      <td className="py-2 px-2">{extraHour.horas_diurnas}</td>
-                      <td className="py-2 px-2">{extraHour.horas_nocturnas}</td>
-                      <td className="py-2 px-2">{totalSalary.toFixed(2)} €</td>
+                    <tr key={extraHour.id} className={tableRowHoverClass}>
+                      <td className="px-4 py-3">{dayjs(extraHour.date).format('DD MMM YYYY')}</td>
+                      <td className="px-4 py-3">{extraHour.horas_diurnas}</td>
+                      <td className="px-4 py-3">{extraHour.horas_nocturnas}</td>
+                      <td className="px-4 py-3">{totalSalary.toFixed(2)} €</td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div
+            className={`rounded-2xl border border-dashed px-4 py-5 text-sm ${
+              darkMode
+                ? 'border-slate-700/70 bg-slate-900/40 text-slate-300'
+                : 'border-slate-200 text-slate-500'
+            }`}
+          >
+            No hay horas extra registradas en este mes.
+          </div>
+        )}
       </div>
-
-      <div className="mt-4 p-4 rounded-lg bg-gray-700 text-white">
-        <h2 className="text-lg font-bold">Resumen</h2>
-        <p>Total Horas Diurnas: {totalDiurnas}</p>
-        <p>Total Horas Nocturnas: {totalNocturnas}</p>
-        <p>Total Dinero Generado: {totalDinero} €</p>
-      </div>
-    </div>
+    </section>
   );
 };
 

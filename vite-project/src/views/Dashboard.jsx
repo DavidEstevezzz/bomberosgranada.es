@@ -35,7 +35,7 @@ const Dashboard = () => {
   }, []);
 
   const handleDateClick = (date, parkId) => {
-    const formattedDate = format(date, 'yyyy-MM-dd'); // Formatea la fecha correctamente
+    const formattedDate = format(date, 'yyyy-MM-dd');
     const guard = guards.find((guard) => guard.date === formattedDate);
   
     if (guard) {
@@ -55,26 +55,22 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex flex-col items-start justify-start min-h-screen p-4">
+    <div className="space-y-8">
       {/* Calendario del Parque Norte */}
-      <div className="w-full p-4 bg-gray-50 rounded-lg shadow-lg mb-6">
-        <h1 className="text-2xl text-center font-bold mb-4">Calendario de Brigadas - Parque Norte</h1>
-        <Calendar 
-          onDateClick={(date) => handleDateClick(date, 1)} // Parque Norte
-          guards={guards}
-          brigadeMap={brigadeMap}
-        />
-      </div>
+      <Calendar 
+        onDateClick={(date) => handleDateClick(date, 1)}
+        guards={guards}
+        brigadeMap={brigadeMap}
+        title="Parque Norte"
+      />
 
       {/* Calendario del Parque Sur */}
-      <div className="w-full p-4 bg-gray-50 rounded-lg shadow-lg">
-        <h1 className="text-2xl text-center font-bold mb-4">Calendario de Brigadas - Parque Sur</h1>
-        <Calendar 
-          onDateClick={(date) => handleDateClick(date, 2)} // Parque Sur
-          guards={guards}
-          brigadeMap={brigadeMap}
-        />
-      </div>
+      <Calendar 
+        onDateClick={(date) => handleDateClick(date, 2)}
+        guards={guards}
+        brigadeMap={brigadeMap}
+        title="Parque Sur"
+      />
     </div>
   );
 };

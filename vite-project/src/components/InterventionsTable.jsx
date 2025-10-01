@@ -8,16 +8,15 @@ import UsuariosApiService from '../services/UsuariosApiService';
 const InterventionsTable = ({
   idGuard,
   darkMode,
-  onEditIntervention,    // Función para abrir el modal de edición con los datos seleccionados
-  onDeleteIntervention,  // Función para borrar la intervención
-  refreshTrigger,        // Variable para refrescar la lista
+  onEditIntervention,
+  onDeleteIntervention,
+  refreshTrigger,
 }) => {
   const [interventions, setInterventions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [users, setUsers] = useState([]);
 
-  // Obtener usuarios para mostrar nombre y apellido del "mando"
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -55,28 +54,58 @@ const InterventionsTable = ({
     return user ? `${user.nombre} ${user.apellido}` : 'Desconocido';
   };
 
-  const getUserInitial = (id_empleado) => {
-    const user = users.find((u) => u.id_empleado === id_empleado);
-    return user ? user.nombre.charAt(0).toUpperCase() : 'D';
-  };
-
   if (loading) {
-    return <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Cargando...</p>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <p className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+          Cargando intervenciones...
+        </p>
+      </div>
+    );
   }
+
   if (error) {
-    return <p className={`text-center ${darkMode ? 'text-red-300' : 'text-red-500'}`}>Error: {error}</p>;
+    return (
+      <div className={`rounded-2xl border p-6 ${
+        darkMode ? 'border-red-500/40 bg-red-500/10' : 'border-red-200 bg-red-50'
+      }`}>
+        <p className={`text-sm font-medium ${darkMode ? 'text-red-200' : 'text-red-700'}`}>
+          Error: {error}
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className={`p-8 rounded-xl ${darkMode ? 'bg-gray-900' : 'bg-gray-300'}`}>
+    <div className={`rounded-2xl border transition-colors ${
+      darkMode 
+        ? 'border-slate-800 bg-slate-900/60' 
+        : 'border-slate-200 bg-white'
+    }`}>
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse rounded-xl">
+        <table className="w-full">
           <thead>
-            <tr className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-900'} pl-2 pr-2`}>
-              <th className="py-2 px-2">Parte</th>
-              <th className="py-2 px-2">Mando</th>
-              <th className="py-2 px-2">Tipo</th>
-              <th className="py-2 px-2" style={{ width: '200px' }}>Acciones</th>
+            <tr className={`border-b ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <th className={`py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider ${
+                darkMode ? 'text-slate-400' : 'text-slate-600'
+              }`}>
+                Parte
+              </th>
+              <th className={`py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider ${
+                darkMode ? 'text-slate-400' : 'text-slate-600'
+              }`}>
+                Mando
+              </th>
+              <th className={`py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider ${
+                darkMode ? 'text-slate-400' : 'text-slate-600'
+              }`}>
+                Tipo
+              </th>
+              <th className={`py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider ${
+                darkMode ? 'text-slate-400' : 'text-slate-600'
+              }`}>
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -84,37 +113,61 @@ const InterventionsTable = ({
               interventions.map((intervention) => (
                 <tr
                   key={intervention.parte}
-                  className={darkMode ? 'border-b border-gray-700 bg-gray-800 text-gray-200' : 'border-b border-gray-300 bg-white text-gray-900'}
+                  className={`border-b transition-colors ${
+                    darkMode 
+                      ? 'border-slate-800/50 hover:bg-slate-800/50' 
+                      : 'border-slate-200 hover:bg-slate-50'
+                  }`}
                 >
-                  <td className="py-2 px-2">{intervention.parte}</td>
-                  <td className="py-2 px-2 flex items-center space-x-2">
-                    <div>
-                      <p className="font-bold">{getUserName(intervention.mando)}</p>
-                    </div>
+                  <td className={`py-3 px-4 text-sm font-medium ${
+                    darkMode ? 'text-slate-200' : 'text-slate-900'
+                  }`}>
+                    {intervention.parte}
                   </td>
-                  <td className="py-2 px-2">{intervention.tipo}</td>
-                  <td className="py-2 px-2 flex space-x-2">
-                    <button
-                      onClick={() => onEditIntervention(intervention)}
-                      className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 flex items-center space-x-1"
-                    >
-                      <FontAwesomeIcon icon={faEdit} />
-                      <span>Editar</span>
-                    </button>
-                    <button
-                      onClick={() => onDeleteIntervention(intervention.parte)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded flex items-center space-x-1"
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                      <span>Borrar</span>
-                    </button>
+                  <td className={`py-3 px-4 text-sm ${
+                    darkMode ? 'text-slate-200' : 'text-slate-900'
+                  }`}>
+                    {getUserName(intervention.mando)}
+                  </td>
+                  <td className={`py-3 px-4 text-sm ${
+                    darkMode ? 'text-slate-200' : 'text-slate-900'
+                  }`}>
+                    {intervention.tipo}
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => onEditIntervention(intervention)}
+                        className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 ${
+                          darkMode
+                            ? 'bg-blue-600 text-white hover:bg-blue-500'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}
+                      >
+                        <FontAwesomeIcon icon={faEdit} className="w-3.5 h-3.5" />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        onClick={() => onDeleteIntervention(intervention.parte)}
+                        className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 ${
+                          darkMode
+                            ? 'bg-red-600 text-white hover:bg-red-500'
+                            : 'bg-red-600 text-white hover:bg-red-700'
+                        }`}
+                      >
+                        <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
+                        <span>Borrar</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="4" className={`text-center py-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  No hay intervenciones disponibles
+                <td colSpan="4" className="py-8 text-center">
+                  <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    No hay intervenciones disponibles
+                  </p>
                 </td>
               </tr>
             )}

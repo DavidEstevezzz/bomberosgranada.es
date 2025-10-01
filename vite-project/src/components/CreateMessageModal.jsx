@@ -1,32 +1,21 @@
-import React, { useState, useEffect } from 'react';
+// vite-project/src/components/CreateMessageModal.jsx
+import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import UsersApiService from '../services/UsuariosApiService';
 import MessagesApiService from '../services/MessagesApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
-import { useStateContext } from '../contexts/ContextProvider';
 
-// Función para eliminar diacríticos (acentos, etc.)
 function removeDiacritics(str) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
-
-const isMobileDevice = () => window.innerWidth <= 768;
 
 const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) => {
   const { darkMode } = useDarkMode();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // En lugar de un checkbox para mensaje masivo, usaremos radio buttons para definir el alcance
-  // Los valores serán:
-  // "individual": mensaje individual (selección manual del destinatario)
-  // "toda": toda la plantilla
-  // "mandos": sólo usuarios con type = "mando"
-  // "bomberos": sólo usuarios con type = "bomberos"
-  const [messageScope, setMessageScope] = useState("individual");
-
+  const [messageScope, setMessageScope] = useState('individual');
   const [formData, setFormData] = useState({
     receiver_id: '',
     subject: '',
@@ -35,92 +24,114 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
     parent_id: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  const { user } = useStateContext();
+  const [submitError, setSubmitError] = useState(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setIsMobile(isMobileDevice());
-      fetchUsers();
-
-      setFormData({
-        // Si es respuesta, asignamos receiver_id del objeto replyMessage
-        receiver_id: replyMessage ? replyMessage.receiver_id : '',
-        subject: replyMessage
-          ? replyMessage.subject.startsWith('Re:')
-            ? replyMessage.subject
-            : 'Re: ' + replyMessage.subject
-          : '',
-        body: '',
-        attachment: null,
-        parent_id: replyMessage ? replyMessage.parent_id || replyMessage.id : '',
-      });
-
-      setSearchTerm('');
-      setMessageScope("individual"); // Por defecto, mensaje individual
-      setIsSubmitting(false);
+    if (!isOpen) {
+      return;
     }
+
+    const fetchUsers = async () => {
+      try {
+        const response = await UsersApiService.getUsuarios();
+        setUsers(response.data);
+        setFilteredUsers(response.data);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+
+    fetchUsers();
+
+    setFormData({
+      receiver_id: replyMessage ? replyMessage.receiver_id : '',
+      subject: replyMessage
+        ? replyMessage.subject.startsWith('Re:')
+          ? replyMessage.subject
+          : `Re: ${replyMessage.subject}`
+        : '',
+      body: '',
+      attachment: null,
+      parent_id: replyMessage ? replyMessage.parent_id || replyMessage.id : '',
+    });
+    setSearchTerm('');
+    setMessageScope('individual');
+    setSubmitError(null);
+    setIsSubmitting(false);
   }, [isOpen, replyMessage]);
 
-  const fetchUsers = async () => {
-    try {
-      const response = await UsersApiService.getUsuarios();
-      setUsers(response.data);
-      setFilteredUsers(response.data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
   useEffect(() => {
+    if (!searchTerm) {
+      setFilteredUsers(users);
+      return;
+    }
+
     const normalizedTerm = removeDiacritics(searchTerm.toLowerCase());
-    const filtered = users.filter((user) => {
-      const fullName = `${user.nombre} ${user.apellido}`.toLowerCase();
+    const filtered = users.filter((candidate) => {
+      const fullName = `${candidate.nombre} ${candidate.apellido}`.toLowerCase();
       return removeDiacritics(fullName).includes(normalizedTerm);
     });
     setFilteredUsers(filtered);
   }, [searchTerm, users]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  useEffect(() => {
+    if (messageScope !== 'individual') {
+      setFormData((prev) => ({ ...prev, receiver_id: '' }));
+    }
+  }, [messageScope]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)) {
-        alert('Solo se permiten archivos PDF, JPG o PNG.');
-        return;
-      }
-      if (file.size > 2048 * 1024) {
-        alert('El archivo debe ser menor a 2 MB.');
-        return;
-      }
-      setFormData((prev) => ({ ...prev, attachment: file }));
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)) {
+      alert('Solo se permiten archivos PDF, JPG o PNG.');
+      return;
     }
+    if (file.size > 2048 * 1024) {
+      alert('El archivo debe ser menor a 2 MB.');
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, attachment: file }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleClose = () => {
+    if (isSubmitting) return;
+    setSubmitError(null);
+    onClose();
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (isSubmitting) return;
+
     setIsSubmitting(true);
+    setSubmitError(null);
 
     const data = new FormData();
-    // Si es un mensaje individual, se requiere el receptor seleccionado
-    if (!(currentUserRole?.toLowerCase() === 'jefe' && messageScope !== 'individual')) {
+    const normalizedRole = currentUserRole?.toLowerCase();
+
+    if (!(normalizedRole === 'jefe' && messageScope !== 'individual')) {
       data.append('receiver_id', formData.receiver_id);
     }
+
     data.append('subject', formData.subject);
     data.append('body', formData.body);
+
     if (formData.parent_id) {
       data.append('parent_id', formData.parent_id);
     }
     if (formData.attachment) {
       data.append('attachment', formData.attachment);
     }
-    // Si el mensaje es masivo (no es individual), enviamos el scope en el campo massive
-    if (currentUserRole?.toLowerCase() === 'jefe' && messageScope !== 'individual') {
+
+    if (normalizedRole === 'jefe' && messageScope !== 'individual') {
       data.append('massive', messageScope);
     } else {
       data.append('massive', 'false');
@@ -128,9 +139,15 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
 
     try {
       await MessagesApiService.sendMessage(data);
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('Error sending message:', error.response?.data || error.message);
+      const backendMessage = error.response?.data;
+      setSubmitError(
+        typeof backendMessage === 'string'
+          ? backendMessage
+          : backendMessage?.error || 'No se pudo enviar el mensaje. Inténtalo nuevamente.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -138,172 +155,199 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
 
   if (!isOpen) return null;
 
-  const modalContentClass = isMobile ? 'overflow-y-auto h-screen' : '';
+  const isChief = currentUserRole?.toLowerCase() === 'jefe';
+  const messageScopeOptions = useMemo(
+    () => [
+      { value: 'individual', label: 'Mensaje individual' },
+      { value: 'toda', label: 'Toda la plantilla' },
+      { value: 'mandos', label: 'Mandos' },
+      { value: 'bomberos', label: 'Bomberos' },
+    ],
+    []
+  );
+
+  const overlayClass = 'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-10 backdrop-blur';
+  const modalClass = `relative flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
+    darkMode ? 'border-slate-800 bg-slate-950/90 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+  }`;
+  const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white ${
+    darkMode
+      ? 'bg-gradient-to-r from-primary-900/90 via-primary-700/90 to-primary-600/80'
+      : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700'
+  }`;
+  const labelClass = 'text-xs font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200';
+  const helperClass = `text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`;
+  const inputClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+    darkMode
+      ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
+      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+  }`;
+  const textareaClass = `min-h-[132px] w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+    darkMode
+      ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
+      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+  }`;
+  const cancelButtonClass = `inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+    darkMode
+      ? 'border-slate-700 text-slate-200 hover:border-slate-500 hover:text-white focus:ring-primary-500 focus:ring-offset-slate-900'
+      : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-900 focus:ring-primary-500 focus:ring-offset-white'
+  }`;
+  const submitButtonClass = `inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+    darkMode
+      ? 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-slate-900'
+      : 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-white'
+  }`;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div className={`p-6 w-full max-w-2xl rounded-lg shadow-lg ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'} ${modalContentClass}`}>
-        <div className={`flex justify-between items-center pb-4 mb-4 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-          <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            {replyMessage ? 'Responder Mensaje' : 'Crear Mensaje'}
-          </h2>
-          <button onClick={onClose} className={`p-1.5 rounded-lg ${darkMode ? 'text-gray-400 hover:bg-gray-600' : 'text-gray-400 hover:bg-gray-200'}`} disabled={isSubmitting}>
-            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
+    <div className={overlayClass} onMouseDown={handleClose}>
+      <div className={modalClass} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+        <div className={headerClass}>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">Comunicaciones</p>
+            <h2 className="mt-2 text-2xl font-semibold">
+              {replyMessage ? 'Responder mensaje' : 'Crear mensaje'}
+            </h2>
+            <p className="mt-3 text-sm text-white/90">
+              {replyMessage
+                ? 'Da seguimiento a la conversación manteniendo el historial de la bandeja.'
+                : 'Envía un aviso al equipo seleccionando el destinatario o el alcance del mensaje masivo.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/70"
+            aria-label="Cerrar"
+            disabled={isSubmitting}
+          >
+            <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Opciones de mensaje masivo para Jefe */}
-        {currentUserRole?.toLowerCase() === 'jefe' && (
-          <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium">
-              Tipo de Mensaje
-            </label>
-            <div className="flex space-x-4">
-              <label className="flex items-center space-x-1">
-                <input
-                  type="radio"
-                  value="individual"
-                  checked={messageScope === 'individual'}
-                  onChange={(e) => setMessageScope(e.target.value)}
-                  disabled={isSubmitting}
-                />
-                <span>Mensaje Individual</span>
-              </label>
-              <label className="flex items-center space-x-1">
-                <input
-                  type="radio"
-                  value="toda"
-                  checked={messageScope === 'toda'}
-                  onChange={(e) => setMessageScope(e.target.value)}
-                  disabled={isSubmitting}
-                />
-                <span>Toda la plantilla</span>
-              </label>
-              <label className="flex items-center space-x-1">
-                <input
-                  type="radio"
-                  value="mandos"
-                  checked={messageScope === 'mandos'}
-                  onChange={(e) => setMessageScope(e.target.value)}
-                  disabled={isSubmitting}
-                />
-                <span>Mandos</span>
-              </label>
-              <label className="flex items-center space-x-1">
-                <input
-                  type="radio"
-                  value="bomberos"
-                  checked={messageScope === 'bomberos'}
-                  onChange={(e) => setMessageScope(e.target.value)}
-                  disabled={isSubmitting}
-                />
-                <span>Bomberos</span>
-              </label>
+        <form onSubmit={handleSubmit} className="max-h-[75vh] space-y-6 overflow-y-auto px-6 py-6 sm:px-8">
+          {submitError && (
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
+                darkMode ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
+              {submitError}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Mostrar buscador y selector de destinatario solo para mensaje individual y cuando no sea respuesta */}
-        {(currentUserRole !== 'Jefe' || messageScope === 'individual') && !replyMessage && (
-          <>
-            <div className="mb-4">
-              <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Buscar Usuario
-              </label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300 text-gray-900'}`}
-                placeholder="Escriba un nombre"
-                disabled={isSubmitting}
-              />
-            </div>
-            <div className="mb-4">
-              <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Destinatario
-              </label>
-              <select
-                name="receiver_id"
-                value={formData.receiver_id}
-                onChange={handleChange}
-                className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
-                required={messageScope === 'individual'}
-                disabled={isSubmitting}
-              >
-                <option value="">Seleccione un usuario</option>
-                {filteredUsers.map((u) => (
-                  <option key={u.id_empleado} value={u.id_empleado}>
-                    {u.nombre} {u.apellido}
-                  </option>
+          {isChief && (
+            <div
+              className={`space-y-3 rounded-3xl border px-5 py-4 ${
+                darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50'
+              }`}
+            >
+              <span className={labelClass}>Alcance del mensaje</span>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {messageScopeOptions.map((option) => (
+                  <label
+                    key={option.value}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
+                      messageScope === option.value
+                        ? darkMode
+                          ? 'border-primary-500 bg-primary-500/10 text-primary-200'
+                          : 'border-primary-500 bg-primary-500/5 text-primary-700'
+                        : darkMode
+                          ? 'border-slate-800 bg-slate-900/60 text-slate-300 hover:border-primary-500/60'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-primary-200'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      value={option.value}
+                      checked={messageScope === option.value}
+                      onChange={(event) => setMessageScope(event.target.value)}
+                      disabled={isSubmitting}
+                      className="h-4 w-4 accent-primary-500"
+                    />
+                    <span>{option.label}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
+              <p className={helperClass}>
+                Los mensajes masivos se envían según el rol seleccionado y no requieren destinatario individual.
+              </p>
             </div>
-          </>
-        )}
+          )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Asunto
-            </label>
+          {(!isChief || messageScope === 'individual') && !replyMessage && (
+            <div className={`space-y-5 rounded-3xl border px-5 py-4 ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
+              <div className="space-y-2">
+                <span className={labelClass}>Buscar usuario</span>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  className={inputClass}
+                  placeholder="Introduce un nombre o apellido"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div className="space-y-2">
+                <span className={labelClass}>Destinatario</span>
+                <select
+                  name="receiver_id"
+                  value={formData.receiver_id}
+                  onChange={handleChange}
+                  className={inputClass}
+                  required
+                  disabled={isSubmitting}
+                >
+                  <option value="">Selecciona un usuario</option>
+                  {filteredUsers.map((candidate) => (
+                    <option key={candidate.id_empleado} value={candidate.id_empleado}>
+                      {candidate.nombre} {candidate.apellido}
+                    </option>
+                  ))}
+                </select>
+                <p className={helperClass}>Solo aparecerán usuarios con acceso activo en la plataforma.</p>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <span className={labelClass}>Asunto</span>
             <input
               type="text"
               name="subject"
               value={formData.subject}
               onChange={handleChange}
-              className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
+              className={inputClass}
+              placeholder="Añade un asunto descriptivo"
               required
               disabled={isSubmitting}
             />
           </div>
 
-          <div className="mb-4">
-            <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Mensaje
-            </label>
+          <div className="space-y-2">
+            <span className={labelClass}>Mensaje</span>
             <textarea
               name="body"
               value={formData.body}
               onChange={handleChange}
-              className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 text-gray-900'}`}
-              rows="4"
+              className={textareaClass}
+              placeholder="Escribe el contenido del mensaje"
               required
               disabled={isSubmitting}
             />
           </div>
 
-          <div className="mb-4">
-            <label className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Archivo Adjunto
-            </label>
-            <input
-              type="file"
-              onChange={handleFileChange}
-              className={`block w-full text-sm ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}
-              disabled={isSubmitting}
-            />
+          <div className="space-y-2">
+            <span className={labelClass}>Archivo adjunto</span>
+            <input type="file" onChange={handleFileChange} className={inputClass} disabled={isSubmitting} />
+            <p className={helperClass}>Formatos permitidos: PDF, JPG, PNG (máx. 2&nbsp;MB).</p>
           </div>
 
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className={`px-5 py-2.5 text-sm font-medium rounded-lg focus:outline-none focus:ring-4 ${darkMode
-                  ? 'text-red-500 border border-red-500 hover:text-white hover:bg-red-600'
-                  : 'text-red-600 border border-red-600 hover:text-white hover:bg-red-600'
-                }`}
-              disabled={isSubmitting}
-            >
+          <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+            <button type="button" onClick={handleClose} className={cancelButtonClass} disabled={isSubmitting}>
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`px-5 py-2.5 text-sm font-medium rounded-lg focus:outline-none focus:ring-4 ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-700 hover:bg-blue-800 text-white'
-                }`}
-            >
-              {isSubmitting ? 'Enviando...' : 'Enviar Mensaje'}
+            <button type="submit" className={submitButtonClass} disabled={isSubmitting}>
+              {isSubmitting ? 'Enviando…' : 'Enviar mensaje'}
             </button>
           </div>
         </form>

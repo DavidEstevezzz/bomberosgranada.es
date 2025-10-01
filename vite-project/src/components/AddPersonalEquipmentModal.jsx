@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import PersonalEquipmentApiService from '../services/PersonalEquipmentApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
@@ -41,7 +42,21 @@ const AddPersonalEquipmentModal = ({ isOpen, onClose, onAdd, parks = [] }) => {
     fetchCategories();
   }, [isOpen]);
 
-  if (!isOpen) {
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const { body } = document;
+    const originalOverflow = body.style.overflow;
+    body.style.overflow = 'hidden';
+
+    return () => {
+      body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
+  if (!isOpen || typeof document === 'undefined') {
     return null;
   }
 
@@ -103,26 +118,26 @@ const AddPersonalEquipmentModal = ({ isOpen, onClose, onAdd, parks = [] }) => {
   const modalClass = `relative flex w-full max-w-2xl flex-col my-auto overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${darkMode ? 'border-slate-800 bg-slate-950/90 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
     }`;
   const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white ${darkMode
-      ? 'bg-gradient-to-r from-primary-900/90 via-primary-700/90 to-primary-600/80'
-      : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700'
+    ? 'bg-gradient-to-r from-primary-900/90 via-primary-700/90 to-primary-600/80'
+    : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700'
     }`;
   const labelClass = 'text-xs font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200';
   const inputClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${darkMode
-      ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
-      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+    ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
+    : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
     }`;
   const helperClass = `text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`;
   const errorClass = 'text-xs font-medium text-red-500';
   const cancelButtonClass = `inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${darkMode
-      ? 'border-slate-700 text-slate-200 hover:border-slate-500 hover:text-white focus:ring-primary-500 focus:ring-offset-slate-900'
-      : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-900 focus:ring-primary-500 focus:ring-offset-white'
+    ? 'border-slate-700 text-slate-200 hover:border-slate-500 hover:text-white focus:ring-primary-500 focus:ring-offset-slate-900'
+    : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-900 focus:ring-primary-500 focus:ring-offset-white'
     }`;
   const submitButtonClass = `inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${darkMode
-      ? 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-slate-900'
-      : 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-white'
+    ? 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-slate-900'
+    : 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-white'
     }`;
 
-  return (
+  return createPortal(
     <div className={overlayClass} onMouseDown={handleClose}>
       <div
         className={modalClass}
@@ -236,8 +251,8 @@ const AddPersonalEquipmentModal = ({ isOpen, onClose, onAdd, parks = [] }) => {
           </div>
         </form>
       </div>
-    </div>
-  );
+    </div>,
+    document.body,);
 };
 
 export default AddPersonalEquipmentModal;

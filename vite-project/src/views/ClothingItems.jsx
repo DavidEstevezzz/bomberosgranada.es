@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ClothingItemApiService from '../services/ClothingItemApiService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faSearch } from '@fortawesome/free-solid-svg-icons';
+import {
+  faPlus,
+  faEdit,
+  faTrash,
+  faSearch,
+} from '@fortawesome/free-solid-svg-icons';
 import EditClothingItemModal from '../components/EditClothingItemModal';
 import AddClothingItemModal from '../components/AddClothingItemModal';
 import { useDarkMode } from '../contexts/DarkModeContext';
@@ -109,87 +114,192 @@ const ClothingItems = () => {
     }
   };
 
-  if (loading) return <div>Cargando ítems de vestuario...</div>;
-  if (error) return <div>Error: {error}</div>;
+  const cardContainerClass = `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-full overflow-hidden rounded-3xl border shadow-xl backdrop-blur transition-colors duration-300 ${
+    darkMode
+      ? 'border-slate-800 bg-slate-900/80 text-slate-100'
+      : 'border-slate-200 bg-white/90 text-slate-900'
+  }`;
+  const sectionCardClass = `rounded-2xl border px-5 py-6 transition-colors ${
+    darkMode
+      ? 'border-slate-800 bg-slate-900/60'
+      : 'border-slate-200 bg-slate-50/70'
+  }`;
+  const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
+  const inputBaseClass = `w-full rounded-2xl border px-4 py-3 text-base transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${
+    darkMode
+      ? 'border-slate-700 bg-slate-900/60 text-slate-100 placeholder-slate-400'
+      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+  }`;
+  const actionButtonBaseClass = `inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-base font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 ${
+    darkMode ? 'focus:ring-offset-slate-900' : 'focus:ring-offset-white'
+  }`;
+
+  if (loading) {
+    return (
+      <div className={`${cardContainerClass} flex items-center justify-center py-16`}>
+        <p className="text-base font-medium">Cargando ítems de vestuario...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`${cardContainerClass} flex items-center justify-center py-16`}>
+        <p className="text-base font-semibold text-red-500">Error: {error}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className={`p-8 rounded-xl ${darkMode ? 'bg-gray-900' : 'bg-gray-300'}`}>
-      {/* Cabecera y botón de añadir */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-4">
-        <h1 className={`text-2xl font-bold mb-4 md:mb-0 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
-          Gestión de Vestuario
-        </h1>
-        <button
-          onClick={handleAddClick}
-          className="bg-blue-600 text-white px-4 py-2 rounded flex items-center space-x-2"
+    <>
+      <div className={cardContainerClass}>
+        <div
+          className={`bg-gradient-to-r px-8 py-10 text-white transition-colors duration-300 ${
+            darkMode
+              ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80'
+              : 'from-primary-400 via-primary-500 to-primary-600'
+          }`}
         >
-          <FontAwesomeIcon icon={faPlus} />
-          <span>Añadir ítem</span>
-        </button>
-      </div>
-
-      {/* Panel de búsqueda */}
-      <div className={`p-4 rounded-lg mb-4 ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-gray-200 text-black'}`}>
-        <div className="flex items-center">
-          <FontAwesomeIcon icon={faSearch} className="mr-2" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className={`${darkMode ? 'bg-gray-700 text-gray-200' : 'bg-white text-gray-700'} px-4 py-2 rounded w-full`}
-          />
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
+            Gestión de vestuario
+          </p>
+          <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold">Ítems de vestuario</h1>
+              <p className={`max-w-2xl text-base ${darkMode ? 'text-white/80' : 'text-white/90'}`}>
+                Organiza los elementos disponibles para las brigadas y mantén su inventario siempre actualizado con acciones rápidas.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleAddClick}
+                className={`${actionButtonBaseClass} ${
+                  darkMode
+                    ? 'bg-primary-500/90 text-white hover:bg-primary-400'
+                    : 'bg-white/90 text-primary-600 hover:bg-white'
+                }`}
+              >
+                <FontAwesomeIcon icon={faPlus} />
+                <span>Registrar ítem</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Tabla de ítems de vestuario */}
-      <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-gray-200 text-black'}`}>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-400'}`}>
-                <th className="py-2 px-4 text-left">Nombre</th>
-                <th className="py-2 px-4 text-center" style={{ width: '200px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredClothingItems.map((item) => (
-                <tr
-                  key={item.id}
-                  className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-400'}`}
+        <div className="space-y-8 px-6 py-8 sm:px-10">
+          <div className={sectionCardClass}>
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex-1 space-y-3">
+                <label htmlFor="clothing-search" className={`text-sm font-medium ${subtleTextClass}`}>
+                  Buscar ítems por nombre
+                </label>
+                <div className="relative">
+                  <input
+                    id="clothing-search"
+                    type="text"
+                    placeholder="Escribe para filtrar ítems"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    className={inputBaseClass}
+                  />
+                  <FontAwesomeIcon
+                    icon={faSearch}
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 text-lg ${subtleTextClass}`}
+                  />
+                </div>
+              </div>
+              <div
+                className={`flex w-full flex-col gap-2 rounded-2xl border px-5 py-4 text-base ${
+                  darkMode ? 'border-slate-800 bg-slate-900/40' : 'border-slate-200 bg-white'
+                } lg:w-64`}
+              >
+                <p className={`font-semibold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                  Resumen rápido
+                </p>
+                <div className={`flex items-center justify-between text-base ${subtleTextClass}`}>
+                  <span>Total de ítems</span>
+                  <span className="font-semibold text-primary-500">{clothingItems.length}</span>
+                </div>
+                <div className={`flex items-center justify-between text-base ${subtleTextClass}`}>
+                  <span>Ítems visibles</span>
+                  <span className="font-semibold text-primary-500">{filteredClothingItems.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={sectionCardClass}>
+            {filteredClothingItems.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredClothingItems.map((item) => (
+                  <article
+                    key={item.id}
+                    className={`flex flex-col justify-between gap-4 rounded-2xl border px-6 py-5 transition-colors duration-200 ${
+                      darkMode
+                        ? 'border-slate-800 bg-slate-950/60 hover:bg-slate-900/60'
+                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium uppercase tracking-wide text-primary-500">
+                        Elemento de vestuario
+                      </p>
+                      <h2 className="text-xl font-semibold leading-tight">{item.name}</h2>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => handleEditClick(item)}
+                        className={`${actionButtonBaseClass} ${
+                          darkMode
+                            ? 'bg-primary-500/80 text-white hover:bg-primary-400'
+                            : 'bg-primary-500 text-white hover:bg-primary-600'
+                        }`}
+                      >
+                        <FontAwesomeIcon icon={faEdit} />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(item)}
+                        className={`${actionButtonBaseClass} ${
+                          darkMode
+                            ? 'bg-red-500/80 text-white hover:bg-red-400'
+                            : 'bg-red-500 text-white hover:bg-red-600'
+                        }`}
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                        <span>Eliminar</span>
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div
+                className={`flex flex-col items-center justify-center gap-3 rounded-2xl border px-6 py-12 text-center ${
+                  darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'
+                }`}
+              >
+                <p className="text-lg font-semibold">No se han encontrado ítems de vestuario</p>
+                <p className={`max-w-md text-base ${subtleTextClass}`}>
+                  Ajusta tu búsqueda o añade un nuevo elemento para mantener actualizado el inventario de protección.
+                </p>
+                <button
+                  onClick={handleAddClick}
+                  className={`${actionButtonBaseClass} ${
+                    darkMode
+                      ? 'bg-primary-500/80 text-white hover:bg-primary-400'
+                      : 'bg-primary-500 text-white hover:bg-primary-600'
+                  }`}
                 >
-                  <td className="py-2 px-4">{item.name}</td>
-                  <td className="py-2 px-4 flex justify-center space-x-2">
-                    <button
-                      onClick={() => handleEditClick(item)}
-                      className="bg-blue-600 text-white px-3 py-1 rounded flex items-center space-x-1"
-                    >
-                      <FontAwesomeIcon icon={faEdit} />
-                      <span>Editar</span>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(item)}
-                      className="bg-red-600 text-white px-3 py-1 rounded flex items-center space-x-1"
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                      <span>Eliminar</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredClothingItems.length === 0 && (
-                <tr>
-                  <td colSpan="2" className="py-4 text-center">
-                    No se encontraron ítems de vestuario.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                  <FontAwesomeIcon icon={faPlus} />
+                  <span>Crear ítem</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Modales */}
       {selectedClothingItem && (
         <EditClothingItemModal
           isOpen={isEditModalOpen}
@@ -203,7 +313,7 @@ const ClothingItems = () => {
         onClose={() => setIsAddModalOpen(false)}
         onAdd={handleAddClothingItem}
       />
-    </div>
+    </>
   );
 };
 

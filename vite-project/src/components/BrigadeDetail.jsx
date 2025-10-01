@@ -16,7 +16,7 @@ import ExtendWorkingDayModal from './ExtendWorkingDayModal';
 import AssignFirefighterToBajasModal from './AssignFirefighterToBajasModal.jsx';
 import RequireFirefighterModal from './RequireFirefighterModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faChevronLeft, faChevronRight, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -133,27 +133,27 @@ const BrigadeDetail = () => {
   switch (brigade?.nombre) {
     case 'Brigada A':
       brigadeColor = 'bg-green-500';
-      nameColor = 'text-black';
+      nameColor = 'text-white';
       break;
     case 'Brigada B':
-      brigadeColor = 'bg-zinc-50';
-      nameColor = 'text-black';
+      brigadeColor = darkMode ? 'bg-slate-700' : 'bg-zinc-50';
+      nameColor = darkMode ? 'text-slate-200' : 'text-slate-700';
       break;
     case 'Brigada C':
       brigadeColor = 'bg-blue-500';
-      nameColor = 'text-black';
+      nameColor = 'text-white';
       break;
     case 'Brigada D':
       brigadeColor = 'bg-red-600';
-      nameColor = 'text-black';
+      nameColor = 'text-white';
       break;
     case 'Brigada E':
       brigadeColor = 'bg-yellow-300';
-      nameColor = 'text-black';
+      nameColor = darkMode ? 'text-slate-900' : 'text-slate-900';
       break;
     case 'Brigada F':
       brigadeColor = 'bg-gray-300';
-      nameColor = 'text-gray-600';
+      nameColor = 'text-gray-700';
       break;
     default:
       brigadeColor = '';
@@ -501,94 +501,96 @@ const BrigadeDetail = () => {
   }, [previousGuards]);
 
   const PreviousAssignmentDisplay = ({ firefighter }) => {
-  // Obtener asignación del caché
-  const prevAssignmentInfo = previousAssignmentsCache[firefighter.id_empleado];
+    // Obtener asignación del caché
+    const prevAssignmentInfo = previousAssignmentsCache[firefighter.id_empleado];
 
-  // 🔍 LOG GENERAL PARA TODOS LOS CAMBIOS DE GUARDIA
-  if (firefighter.id_change_request) {
-    console.log(`🔄 FRONTEND CG ${firefighter.id_change_request} - ${firefighter.nombre} ${firefighter.apellido}:`, {
-      id_empleado: firefighter.id_empleado,
-      id_change_request: firefighter.id_change_request,
-      tipo_asignacion: firefighter.tipo_asignacion,
-      tipo_asignacion_type: typeof firefighter.tipo_asignacion,
-      requerimiento: firefighter.requerimiento,
-      changeRequestsInfo_disponible: !!changeRequestsInfo[firefighter.id_change_request],
-      changeRequestsInfo_data: changeRequestsInfo[firefighter.id_change_request],
-      todas_las_props: Object.keys(firefighter)
-    });
-  }
-
-  let extra = '';
-  if (firefighter.requerimiento) {
-    extra = ' (R)';
-    
-    // Log para requerimientos
+    // 🔍 LOG GENERAL PARA TODOS LOS CAMBIOS DE GUARDIA
     if (firefighter.id_change_request) {
-      console.log(`🔄 CG ${firefighter.id_change_request} - Marcado como requerimiento, usando (R)`);
+      console.log(`🔄 FRONTEND CG ${firefighter.id_change_request} - ${firefighter.nombre} ${firefighter.apellido}:`, {
+        id_empleado: firefighter.id_empleado,
+        id_change_request: firefighter.id_change_request,
+        tipo_asignacion: firefighter.tipo_asignacion,
+        tipo_asignacion_type: typeof firefighter.tipo_asignacion,
+        requerimiento: firefighter.requerimiento,
+        changeRequestsInfo_disponible: !!changeRequestsInfo[firefighter.id_change_request],
+        changeRequestsInfo_data: changeRequestsInfo[firefighter.id_change_request],
+        todas_las_props: Object.keys(firefighter)
+      });
     }
-  } else if (firefighter.id_change_request) {
-    console.log(`🔄 CG ${firefighter.id_change_request} - Entrando en lógica CG:`, {
-      tipo_asignacion: firefighter.tipo_asignacion,
-      es_ida: firefighter.tipo_asignacion === 'ida',
-      es_string: typeof firefighter.tipo_asignacion === 'string'
-    });
 
-    // NUEVA LÓGICA: Solo mostrar CG si tipo_asignacion es 'ida'
-    if (firefighter.tipo_asignacion === 'ida') {
-      console.log(`🔄 CG ${firefighter.id_change_request} - Es tipo "ida", procesando...`);
-      
-      const info = changeRequestsInfo[firefighter.id_change_request];
-      
-      if (info) {
-        console.log(`🔄 CG ${firefighter.id_change_request} - Info encontrada:`, {
-          empleado1: info.empleado1,
-          empleado2: info.empleado2
-        });
-        
-        const other = info.empleado1?.id_empleado === firefighter.id_empleado
-          ? info.empleado2
-          : info.empleado1;
-        
-        console.log(`🔄 CG ${firefighter.id_change_request} - Other determinado:`, {
-          empleado1_id: info.empleado1?.id_empleado,
-          empleado2_id: info.empleado2?.id_empleado,
-          firefighter_id: firefighter.id_empleado,
-          other: other,
-          other_valid: other && other.id_empleado !== firefighter.id_empleado
-        });
-        
-        if (other && other.id_empleado !== firefighter.id_empleado) {
-          extra = ` (CG ${other.nombre} ${other.apellido})`;
-          console.log(`🔄 CG ${firefighter.id_change_request} - Extra final con nombre:`, extra);
+    let extra = '';
+    if (firefighter.requerimiento) {
+      extra = ' (R)';
+
+      // Log para requerimientos
+      if (firefighter.id_change_request) {
+        console.log(`🔄 CG ${firefighter.id_change_request} - Marcado como requerimiento, usando (R)`);
+      }
+    } else if (firefighter.id_change_request) {
+      console.log(`🔄 CG ${firefighter.id_change_request} - Entrando en lógica CG:`, {
+        tipo_asignacion: firefighter.tipo_asignacion,
+        es_ida: firefighter.tipo_asignacion === 'ida',
+        es_string: typeof firefighter.tipo_asignacion === 'string'
+      });
+
+      // NUEVA LÓGICA: Solo mostrar CG si tipo_asignacion es 'ida'
+      if (firefighter.tipo_asignacion === 'ida') {
+        console.log(`🔄 CG ${firefighter.id_change_request} - Es tipo "ida", procesando...`);
+
+        const info = changeRequestsInfo[firefighter.id_change_request];
+
+        if (info) {
+          console.log(`🔄 CG ${firefighter.id_change_request} - Info encontrada:`, {
+            empleado1: info.empleado1,
+            empleado2: info.empleado2
+          });
+
+          const other = info.empleado1?.id_empleado === firefighter.id_empleado
+            ? info.empleado2
+            : info.empleado1;
+
+          console.log(`🔄 CG ${firefighter.id_change_request} - Other determinado:`, {
+            empleado1_id: info.empleado1?.id_empleado,
+            empleado2_id: info.empleado2?.id_empleado,
+            firefighter_id: firefighter.id_empleado,
+            other: other,
+            other_valid: other && other.id_empleado !== firefighter.id_empleado
+          });
+
+          if (other && other.id_empleado !== firefighter.id_empleado) {
+            extra = ` (CG ${other.nombre} ${other.apellido})`;
+            console.log(`🔄 CG ${firefighter.id_change_request} - Extra final con nombre:`, extra);
+          } else {
+            extra = ' (CG)';
+            console.log(`🔄 CG ${firefighter.id_change_request} - Extra final sin nombre:`, extra);
+          }
         } else {
           extra = ' (CG)';
-          console.log(`🔄 CG ${firefighter.id_change_request} - Extra final sin nombre:`, extra);
+          console.log(`🔄 CG ${firefighter.id_change_request} - No info disponible, usando (CG)`);
         }
       } else {
-        extra = ' (CG)';
-        console.log(`🔄 CG ${firefighter.id_change_request} - No info disponible, usando (CG)`);
+        console.log(`🔄 CG ${firefighter.id_change_request} - NO es "ida" (es "${firefighter.tipo_asignacion}"), no mostrando CG`);
       }
-    } else {
-      console.log(`🔄 CG ${firefighter.id_change_request} - NO es "ida" (es "${firefighter.tipo_asignacion}"), no mostrando CG`);
     }
-  }
 
-  // Log final del resultado
-  if (firefighter.id_change_request) {
-    console.log(`🔄 CG ${firefighter.id_change_request} - RESULTADO FINAL: "${firefighter.nombre} ${firefighter.apellido}${extra}"`);
-  }
+    // Log final del resultado
+    if (firefighter.id_change_request) {
+      console.log(`🔄 CG ${firefighter.id_change_request} - RESULTADO FINAL: "${firefighter.nombre} ${firefighter.apellido}${extra}"`);
+    }
 
-  return (
-    <div className="flex items-center">
-      {firefighter.nombre} {firefighter.apellido}{extra}
-      {prevAssignmentInfo && (
-        <span className="ml-2 text-xs text-gray-300">
-          {prevAssignmentInfo.asignacion} ({prevAssignmentInfo.fecha})
+    return (
+      <div className="flex items-center gap-2">
+        <span className={darkMode ? 'text-slate-200' : 'text-slate-900'}>
+          {firefighter.nombre} {firefighter.apellido}{extra}
         </span>
-      )}
-    </div>
-  );
-};
+        {prevAssignmentInfo && (
+          <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            {prevAssignmentInfo.asignacion} ({prevAssignmentInfo.fecha})
+          </span>
+        )}
+      </div>
+    );
+  };
   // Funciones de modal
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
@@ -1651,9 +1653,38 @@ const BrigadeDetail = () => {
       alert('Ha ocurrido un error al generar el PDF. Por favor, inténtelo de nuevo.');
     }
   };
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!brigade) return <div>No brigade data available.</div>;
+
+  if (loading) {
+    return (
+      <div className={`flex items-center justify-center min-h-screen ${darkMode ? 'bg-slate-950' : 'bg-slate-100'}`}>
+        <div className={`text-lg font-semibold ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+          Cargando...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`flex items-center justify-center min-h-screen ${darkMode ? 'bg-slate-950' : 'bg-slate-100'}`}>
+        <div className={`rounded-2xl border p-6 ${
+          darkMode ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'
+        }`}>
+          <p className="font-semibold">Error: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!brigade) {
+    return (
+      <div className={`flex items-center justify-center min-h-screen ${darkMode ? 'bg-slate-950' : 'bg-slate-100'}`}>
+        <div className={`text-lg font-semibold ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+          No hay datos de brigada disponibles.
+        </div>
+      </div>
+    );
+  }
 
   // Para la tabla de la página, definimos los turnos
   const shifts = [
@@ -1663,351 +1694,506 @@ const BrigadeDetail = () => {
   ];
 
   return (
-    <div className="p-4 flex flex-col items-center w-full">
-      <button onClick={() => navigate(-1)} className="bg-gray-600 text-white px-4 py-2 rounded flex items-center space-x-2 mb-4">
-        <FontAwesomeIcon icon={faArrowLeft} />
-        <span>Volver</span>
-      </button>
-      <div className="bg-gray-800 text-white p-4 rounded-lg w-full">
-        <h1 className="text-2xl font-bold mb-4 text-center">{brigade.nombre}</h1>
-        <p className="text-center"><strong>Parque:</strong> {brigade.park ? brigade.park.nombre : 'No disponible'}</p>
-        <p className="text-center"><strong>Número de Bomberos:</strong> {firefighters.length}</p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          {shifts.map(shift => (
-            <div key={shift.key} className="bg-gray-700 p-2 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2 text-center">{shift.label}</h3>
-              {/* Fila separadora en blanco */}
-              <table className="w-full text-sm text-left">
-                <thead>
-                  <tr>
-                    <th className="py-1 px-2">Categoría</th>
-                    <th className="py-1 px-2 text-right">Conteo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td colSpan="2" className="py-1"></td>
-                  </tr>
-                  {categorizeFirefighters(shift.key).map((data, index) => {
-                    const { isBelowMinimum, minimumCount } = checkMinimums(data.category, data.count);
-                    return (
-                      <tr key={index} className="border-b border-gray-600">
-                        <td className="py-1 px-2">{data.category}</td>
-                        <td className={`py-1 px-2 text-right ${isBelowMinimum ? 'text-red-500' : ''}`}>
-                          {data.count} {isBelowMinimum && <span className="text-sm">(min {minimumCount})</span>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ))}
-        </div>
-
-        <h2 className="text-xl font-bold mt-6 mb-6 text-center">Bomberos Asignados</h2>
-        <div className="overflow-x-auto w-full rounded-lg">
-          <table className="w-full text-center bg-gray-700 rounded-lg border-2 border-gray-700">
-            <thead className={`${brigadeColor} ${nameColor}`}>
-              <tr>
-                <th className="py-2 px-2">Nombre</th>
-                <th className="py-2 px-2">Puesto</th>
-                <th className="py-2 px-2">Turno Asignado</th>
-                {['mando', 'jefe'].includes(user.type) && (
-                  <th className="py-2 px-2">Asignación</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {shifts.map(shift => (
-                <React.Fragment key={shift.key}>
-                  <tr className="bg-gray-800 text-white">
-                    <td colSpan="4" className="py-4 px-4 text-center font-bold">{shift.label}</td>
-                  </tr>
-                  {/* Separador en blanco */}
-                  <tr>
-                    <td colSpan="4" className="py-1"></td>
-                  </tr>
-                  {filterFirefightersByShift(shift.key).length > 0 ? (
-                    filterFirefightersByShift(shift.key).map((firefighter, index) => {
-                      // Obtenemos la asignación previa para este turno y empleado (guard anterior: id_guard - 10)
-                      const prevAssign = getPreviousAssignment(shift.key, firefighter.id_empleado);
-                      return (
-                        <tr key={`${firefighter.id_empleado}-${index}`} className="border-b border-gray-700">
-                          <td className="py-2 px-2">
-                            {loadingPreviousAssignments ? (
-                              <div className="flex items-center">
-                                {firefighter.nombre} {firefighter.apellido} <span className="ml-2 text-xs text-gray-400">cargando...</span>
-                              </div>
-                            ) : (
-                              <PreviousAssignmentDisplay firefighter={firefighter} />
-                            )}
-                          </td>
-                          <td className="py-2 px-2">{firefighter.puesto}</td>
-                          <td className="py-2 px-2">{firefighter.turno}</td>
-                          <td className="py-2 px-2">
-                            {['mando', 'jefe'].includes(user.type) && (
-                              <select
-                                className="bg-gray-700 text-white p-1 rounded"
-                                value={assignments[shift.key][firefighter.id_empleado] || ''}
-                                onChange={(e) =>
-                                  handleAssignmentChange(shift.key, firefighter.id_empleado, e.target.value)
-                                }
-                              >
-                                <option value="" disabled>
-                                  Seleccione
-                                </option>
-                                {getFilteredOptions(firefighter.puesto).map((option) => (
-                                  <option key={option} value={option}>
-                                    {option}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan="4" className="text-center py-4">No hay bomberos asignados para este turno.</td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <button onClick={() => exportToPDF()} className="bg-green-500 text-white px-4 py-2 rounded mt-4">
-          Exportar a PDF
+    <div className={`min-h-screen px-4 py-6 sm:px-6 lg:px-8 transition-colors duration-300 ${
+      darkMode ? 'bg-slate-950' : 'bg-slate-100'
+    }`}>
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* Botón Volver */}
+        <button 
+          onClick={() => navigate(-1)} 
+          className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
+            darkMode
+              ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
+              : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
+          <span>Volver</span>
         </button>
 
-        {['mando', 'jefe'].includes(user.type) && (
-          <div className="flex flex-wrap gap-4 mt-4">
-            <button
-              onClick={handleOpenModal}
-              className="px-4 py-2 bg-green-500 text-white rounded"
-            >
-              Completar Cuadrante
-            </button>
-            <button
-              onClick={handleOpenDailyModal}
-              className="px-4 py-2 bg-blue-500 text-white rounded"
-            >
-              Actividades Diarias
-            </button>
-            <button onClick={() => setShowAssignFirefighterModal(true)} className="px-4 py-2 bg-purple-500 text-white rounded">
-              Trasladar bombero
-            </button>
-            <button
-              onClick={() => setShowRequireFirefighterModal(true)}
-              className="px-4 py-2 bg-orange-500 text-white rounded"
-            >
-              Requerir Bombero
-            </button>
-            <button
-              onClick={() => setShowAssignFirefighterToBajasModal(true)}
-              className="px-4 py-2 bg-teal-500 text-white rounded"
-            >
-              Asignar Baja Sobrevenida
-            </button>
-            <button
-              onClick={() => setShowExtendWorkingDayModal(true)}
-              className="px-4 py-2 bg-indigo-500 text-white rounded"
-            >
-              Prolongar Jornada
-            </button>
+       
 
+        {/* Card Principal */}
+        <div className={`rounded-3xl border transition-colors duration-300 overflow-hidden ${
+          darkMode 
+            ? 'border-slate-800 bg-slate-900/80' 
+            : 'border-slate-200 bg-white'
+        }`}>
+          {/* Header con gradiente de color de brigada */}
+          <div className={`px-6 py-8 sm:px-8 ${brigadeColor}`}>
+            <h1 className={`text-3xl font-bold text-center ${nameColor}`}>
+              {brigade.nombre}
+            </h1>
+            <div className={`mt-4 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm ${nameColor}`}>
+              <p>
+                <span className="font-semibold">Parque:</span> {brigade.park ? brigade.park.nombre : 'No disponible'}
+              </p>
+              <span className="hidden sm:inline">•</span>
+              <p>
+                <span className="font-semibold">Bomberos:</span> {firefighters.length}
+              </p>
+            </div>
           </div>
-        )}
 
-        <div className="mt-6 w-full">
-          <h2 className="text-xl font-bold mb-4">Comentarios</h2>
-          <div className="bg-gray-700 p-4 rounded-lg">
-            {user.type === 'jefe' ? (
-              <>
-                <textarea
-                  className="w-full p-2 rounded bg-gray-600 text-white"
-                  rows="4"
-                  placeholder="Añadir comentarios..."
-                  value={comentarios}
-                  onChange={(e) => setComentarios(e.target.value)}
-                />
-                <button
-                  onClick={handleCommentSubmit}
-                  className={`mt-2 px-4 py-2 rounded ${isUpdating ? 'bg-gray-500' : 'bg-blue-500'} text-white`}
-                  disabled={isUpdating}
+          {/* Contenido */}
+          <div className="p-6 sm:p-8 space-y-8">
+            {/* Grid de Estadísticas por Turno */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {shifts.map(shift => (
+                <div 
+                  key={shift.key} 
+                  className={`rounded-2xl border p-5 transition-colors ${
+                    darkMode 
+                      ? 'border-slate-800 bg-slate-900/60' 
+                      : 'border-slate-200 bg-slate-50'
+                  }`}
                 >
-                  {isUpdating ? 'Guardando...' : 'Guardar Comentarios'}
+                  <h3 className={`text-sm font-semibold uppercase tracking-[0.3em] mb-4 text-center ${
+                    darkMode ? 'text-primary-400' : 'text-primary-600'
+                  }`}>
+                    {shift.label}
+                  </h3>
+                  
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className={`border-b ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                        <th className={`py-2 px-3 text-left text-xs font-semibold uppercase tracking-wider ${
+                          darkMode ? 'text-slate-400' : 'text-slate-600'
+                        }`}>
+                          Categoría
+                        </th>
+                        <th className={`py-2 px-3 text-right text-xs font-semibold uppercase tracking-wider ${
+                          darkMode ? 'text-slate-400' : 'text-slate-600'
+                        }`}>
+                          Conteo
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categorizeFirefighters(shift.key).map((data, index) => {
+                        const { isBelowMinimum, minimumCount } = checkMinimums(data.category, data.count);
+                        return (
+                          <tr 
+                            key={index} 
+                            className={`border-b ${darkMode ? 'border-slate-800/50' : 'border-slate-200/50'}`}
+                          >
+                            <td className={`py-2 px-3 ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                              {data.category}
+                            </td>
+                            <td className={`py-2 px-3 text-right font-medium ${
+                              isBelowMinimum 
+                                ? darkMode ? 'text-red-400' : 'text-red-600' 
+                                : darkMode ? 'text-slate-200' : 'text-slate-900'
+                            }`}>
+                              {data.count} 
+                              {isBelowMinimum && (
+                                <span className="text-xs ml-1">(mín {minimumCount})</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+
+            {/* Tabla Principal de Bomberos */}
+            <div>
+              <h2 className={`text-xl font-bold mb-6 ${
+                darkMode ? 'text-slate-100' : 'text-slate-900'
+              }`}>
+                Bomberos Asignados
+              </h2>
+              
+              <div className="overflow-x-auto rounded-2xl border ${darkMode ? 'border-slate-800' : 'border-slate-200'}">
+                <table className="w-full">
+                  <thead className={`${brigadeColor} ${nameColor}`}>
+                    <tr>
+                      <th className="py-3 px-4 text-sm font-semibold text-left">Nombre</th>
+                      <th className="py-3 px-4 text-sm font-semibold text-left">Puesto</th>
+                      <th className="py-3 px-4 text-sm font-semibold text-left">Turno Asignado</th>
+                      {['mando', 'jefe'].includes(user.type) && (
+                        <th className="py-3 px-4 text-sm font-semibold text-left">Asignación</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shifts.map(shift => (
+                      <React.Fragment key={shift.key}>
+                        <tr className={`${
+                          darkMode 
+                            ? 'bg-slate-800/80 text-slate-100' 
+                            : 'bg-slate-100 text-slate-900'
+                        }`}>
+                          <td colSpan="4" className="py-3 px-4 text-center font-bold text-sm uppercase tracking-wider">
+                            {shift.label}
+                          </td>
+                        </tr>
+                        {filterFirefightersByShift(shift.key).length > 0 ? (
+                          filterFirefightersByShift(shift.key).map((firefighter, index) => (
+                            <tr 
+                              key={`${firefighter.id_empleado}-${index}`} 
+                              className={`border-b transition-colors ${
+                                darkMode 
+                                  ? 'border-slate-800/50 hover:bg-slate-800/50' 
+                                  : 'border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              <td className={`py-3 px-4 text-sm ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                                {loadingPreviousAssignments ? (
+                                  <div className="flex items-center gap-2">
+                                    <span>{firefighter.nombre} {firefighter.apellido}</span>
+                                    <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                      cargando...
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <PreviousAssignmentDisplay firefighter={firefighter} />
+                                )}
+                              </td>
+                              <td className={`py-3 px-4 text-sm ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                                {firefighter.puesto}
+                              </td>
+                              <td className={`py-3 px-4 text-sm ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>
+                                {firefighter.turno}
+                              </td>
+                              {['mando', 'jefe'].includes(user.type) && (
+                                <td className="py-3 px-4">
+                                  <select
+                                    className={`rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 w-full ${
+                                      darkMode
+                                        ? 'border-slate-700 bg-slate-800 text-slate-100'
+                                        : 'border-slate-300 bg-white text-slate-900'
+                                    }`}
+                                    value={assignments[shift.key][firefighter.id_empleado] || ''}
+                                    onChange={(e) =>
+                                      handleAssignmentChange(shift.key, firefighter.id_empleado, e.target.value)
+                                    }
+                                  >
+                                    <option value="" disabled>
+                                      Seleccione
+                                    </option>
+                                    {getFilteredOptions(firefighter.puesto).map((option) => (
+                                      <option key={option} value={option}>
+                                        {option}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                              )}
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td 
+                              colSpan="4" 
+                              className={`text-center py-4 text-sm ${
+                                darkMode ? 'text-slate-400' : 'text-slate-500'
+                              }`}
+                            >
+                              No hay bomberos asignados para este turno.
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Botón Exportar PDF */}
+            <button 
+              onClick={() => exportToPDF()} 
+              className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 ${
+                darkMode
+                  ? 'bg-green-600 hover:bg-green-500'
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
+            >
+              <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4" />
+              Exportar a PDF
+            </button>
+
+            {/* Botones de Acción - Solo para Mandos y Jefes */}
+            {['mando', 'jefe'].includes(user.type) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <button
+                  onClick={handleOpenModal}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-green-600 hover:bg-green-700 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200"
+                >
+                  Completar Cuadrante
                 </button>
-              </>
-            ) : (
-              <p className="text-white">{comentarios || 'No hay comentarios disponibles.'}</p>
-            )}
-          </div>
-
-          <div className="mt-6 w-full">
-            <h2 className="text-xl font-bold mb-4">Incidencias de Personal</h2>
-            <div className="bg-gray-700 p-4 rounded-lg">
-              {['mando', 'jefe'].includes(user.type) ? (
-                <>
-                  <textarea
-                    className="w-full p-2 rounded bg-gray-600 text-white"
-                    rows="4"
-                    placeholder="Añadir incidencias de personal..."
-                    value={incidenciasPersonal}
-                    onChange={(e) => setIncidenciasPersonal(e.target.value)}
-                  />
-                  <button
-                    onClick={handlePersonalIncidentsSubmit}
-                    className={`mt-2 px-4 py-2 rounded ${isUpdatingPersonal ? 'bg-gray-500' : 'bg-blue-500'
-                      } text-white`}
-                    disabled={isUpdatingPersonal}
-                  >
-                    {isUpdatingPersonal ? 'Guardando...' : 'Guardar Incidencias de Personal'}
-                  </button>
-                </>
-              ) : (
-                <p className="text-white">
-                  {incidenciasPersonal || 'No hay incidencias de personal disponibles.'}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Incidencias Generales y Propuestas */}
-          <div className="mt-6 w-full">
-            <h2 className="text-xl font-bold mb-4">Incidencias Generales y Propuestas</h2>
-            <div className="bg-gray-700 p-4 rounded-lg">
-              {['mando', 'jefe'].includes(user.type) ? (
-                <>
-                  <textarea
-                    className="w-full p-2 rounded bg-gray-600 text-white"
-                    rows="4"
-                    placeholder="Añadir incidencias generales y propuestas..."
-                    value={incidenciasGenerales}
-                    onChange={(e) => setIncidenciasGenerales(e.target.value)}
-                  />
-                  <button
-                    onClick={handleGeneralIncidentsSubmit}
-                    className={`mt-2 px-4 py-2 rounded ${isUpdatingGenerales ? 'bg-gray-500' : 'bg-blue-500'
-                      } text-white`}
-                    disabled={isUpdatingGenerales}
-                  >
-                    {isUpdatingGenerales ? 'Guardando...' : 'Guardar Incidencias Generales'}
-                  </button>
-                </>
-              ) : (
-                <p className="text-white">
-                  {incidenciasGenerales || 'No hay incidencias generales disponibles.'}
-                </p>
-              )}
-            </div>
-          </div>
-
-
-          {(['mando', 'jefe'].includes(user.type)) && (
-            <div className="mt-6 w-full">
-              <h2 className="text-xl font-bold mb-4">Intervenciones</h2>
-              <div className="flex justify-end mb-4">
                 <button
-                  onClick={() => {
-                    if (!guardDetails?.id) {
-                      alert('No se ha creado una guardia para esta fecha. Primero complete el cuadrante.');
-                      return;
-                    }
-                    setShowAddInterventionModal(true);
-                  }}
-                  className="bg-green-500 text-white px-4 py-2 rounded"
-                  disabled={!guardDetails?.id}
+                  onClick={handleOpenDailyModal}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200"
                 >
-                  Añadir Intervención
+                  Actividades Diarias
+                </button>
+                <button 
+                  onClick={() => setShowAssignFirefighterModal(true)} 
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-purple-600 hover:bg-purple-700 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200"
+                >
+                  Trasladar bombero
+                </button>
+                <button
+                  onClick={() => setShowRequireFirefighterModal(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 hover:bg-orange-700 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200"
+                >
+                  Requerir Bombero
+                </button>
+                <button
+                  onClick={() => setShowAssignFirefighterToBajasModal(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-teal-600 hover:bg-teal-700 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200"
+                >
+                  Asignar Baja Sobrevenida
+                </button>
+                <button
+                  onClick={() => setShowExtendWorkingDayModal(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200"
+                >
+                  Prolongar Jornada
                 </button>
               </div>
-              <InterventionsTable
-                idGuard={guardDetails?.id}
-                darkMode={darkMode}
-                refreshTrigger={refreshInterventions}
-                onEditIntervention={handleEditIntervention}
-                onDeleteIntervention={handleDeleteIntervention}
-              />
+            )}
+
+            {/* Sección de Comentarios */}
+            <div className="space-y-6">
+              <div>
+                <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                  Comentarios
+                </h2>
+                <div className={`rounded-2xl border p-6 transition-colors ${
+                  darkMode 
+                    ? 'border-slate-800 bg-slate-900/60' 
+                    : 'border-slate-200 bg-slate-50'
+                }`}>
+                  {user.type === 'jefe' ? (
+                    <>
+                      <textarea
+                        className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+                          darkMode
+                            ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
+                            : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
+                        }`}
+                        rows="4"
+                        placeholder="Añadir comentarios..."
+                        value={comentarios}
+                        onChange={(e) => setComentarios(e.target.value)}
+                      />
+                      <button
+                        onClick={handleCommentSubmit}
+                        className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${
+                          isUpdating 
+                            ? 'bg-slate-500 cursor-not-allowed' 
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                        disabled={isUpdating}
+                      >
+                        {isUpdating ? 'Guardando...' : 'Guardar Comentarios'}
+                      </button>
+                    </>
+                  ) : (
+                    <p className={darkMode ? 'text-slate-200' : 'text-slate-700'}>
+                      {comentarios || 'No hay comentarios disponibles.'}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Incidencias de Personal */}
+              <div>
+                <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                  Incidencias de Personal
+                </h2>
+                <div className={`rounded-2xl border p-6 transition-colors ${
+                  darkMode 
+                    ? 'border-slate-800 bg-slate-900/60' 
+                    : 'border-slate-200 bg-slate-50'
+                }`}>
+                  {['mando', 'jefe'].includes(user.type) ? (
+                    <>
+                      <textarea
+                        className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+                          darkMode
+                            ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
+                            : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
+                        }`}
+                        rows="4"
+                        placeholder="Añadir incidencias de personal..."
+                        value={incidenciasPersonal}
+                        onChange={(e) => setIncidenciasPersonal(e.target.value)}
+                      />
+                      <button
+                        onClick={handlePersonalIncidentsSubmit}
+                        className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${
+                          isUpdatingPersonal 
+                            ? 'bg-slate-500 cursor-not-allowed' 
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                        disabled={isUpdatingPersonal}
+                      >
+                        {isUpdatingPersonal ? 'Guardando...' : 'Guardar Incidencias de Personal'}
+                      </button>
+                    </>
+                  ) : (
+                    <p className={darkMode ? 'text-slate-200' : 'text-slate-700'}>
+                      {incidenciasPersonal || 'No hay incidencias de personal disponibles.'}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Incidencias Generales y Propuestas */}
+              <div>
+                <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                  Incidencias Generales y Propuestas
+                </h2>
+                <div className={`rounded-2xl border p-6 transition-colors ${
+                  darkMode 
+                    ? 'border-slate-800 bg-slate-900/60' 
+                    : 'border-slate-200 bg-slate-50'
+                }`}>
+                  {['mando', 'jefe'].includes(user.type) ? (
+                    <>
+                      <textarea
+                        className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+                          darkMode
+                            ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
+                            : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
+                        }`}
+                        rows="4"
+                        placeholder="Añadir incidencias generales y propuestas..."
+                        value={incidenciasGenerales}
+                        onChange={(e) => setIncidenciasGenerales(e.target.value)}
+                      />
+                      <button
+                        onClick={handleGeneralIncidentsSubmit}
+                        className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${
+                          isUpdatingGenerales 
+                            ? 'bg-slate-500 cursor-not-allowed' 
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                        disabled={isUpdatingGenerales}
+                      >
+                        {isUpdatingGenerales ? 'Guardando...' : 'Guardar Incidencias Generales'}
+                      </button>
+                    </>
+                  ) : (
+                    <p className={darkMode ? 'text-slate-200' : 'text-slate-700'}>
+                      {incidenciasGenerales || 'No hay incidencias generales disponibles.'}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Sección de Intervenciones - Solo para Mandos y Jefes */}
+              {(['mando', 'jefe'].includes(user.type)) && (
+                <div>
+                  <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                    Intervenciones
+                  </h2>
+                  <div className="flex justify-end mb-4">
+                    <button
+                      onClick={() => {
+                        if (!guardDetails?.id) {
+                          alert('No se ha creado una guardia para esta fecha. Primero complete el cuadrante.');
+                          return;
+                        }
+                        setShowAddInterventionModal(true);
+                      }}
+                      className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 ${
+                        !guardDetails?.id
+                          ? 'bg-slate-500 cursor-not-allowed'
+                          : 'bg-green-600 hover:bg-green-700'
+                      }`}
+                      disabled={!guardDetails?.id}
+                    >
+                      Añadir Intervención
+                    </button>
+                  </div>
+                  <InterventionsTable
+                    idGuard={guardDetails?.id}
+                    darkMode={darkMode}
+                    refreshTrigger={refreshInterventions}
+                    onEditIntervention={handleEditIntervention}
+                    onDeleteIntervention={handleDeleteIntervention}
+                    />
+                </div>
+              )}
             </div>
-          )}
-
-          {/* Modal para añadir intervención */}
-          <AddInterventionModal
-            show={showAddInterventionModal}
-            onClose={() => setShowAddInterventionModal(false)}
-            onAdded={() => setRefreshInterventions((prev) => !prev)}
-            idGuard={guardDetails?.id}
-            firefighters={firefighters.filter((f) => f.puesto === 'Subinspector' || f.puesto === 'Oficial')}
-          />
-
-          <RequireFirefighterModal
-            show={showRequireFirefighterModal}
-            onClose={() => setShowRequireFirefighterModal(false)}
-            onAdd={handleRefreshData}  // Se llama después de requerir el bombero
-            brigade={brigade}
-            fecha={selectedDate}
-          />
-
-          <EditInterventionModal
-            show={showEditInterventionModal}
-            intervention={selectedIntervention}
-            onClose={() => setShowEditInterventionModal(false)}
-            onEdited={() => setRefreshInterventions((prev) => !prev)}
-            firefighters={firefighters.filter((f) => f.puesto === 'Subinspector' || f.puesto === 'Oficial')}
-          />
-
-          <AddDailyActivitiesModal
-            isOpen={isDailyModalOpen}
-            onClose={handleCloseDailyModal}
-            onUpdate={handleUpdateDailyActivities}
-            id_brigada={id_brigada}
-            selectedDate={selectedDate}
-          />
-
-          <AssignFirefighterToBajasModal
-            isOpen={showAssignFirefighterToBajasModal}
-            onClose={() => setShowAssignFirefighterToBajasModal(false)}
-            firefighters={firefighters}
-            guardDate={selectedDate}
-            currentBrigade={brigade}
-          />
-
-
-          <AddGuardCommentsModal
-            isOpen={isModalOpen}
-            onClose={handleCloseModal}
-            onUpdate={handleUpdateComments}
-            id_brigada={id_brigada}
-            selectedDate={selectedDate}
-          />
-
-          <AssignFirefighterModal
-            isOpen={showAssignFirefighterModal}
-            onClose={() => setShowAssignFirefighterModal(false)}
-            firefighters={firefighters}
-            currentBrigade={brigade}
-            guardDate={selectedDate}
-          />
-
-          <ExtendWorkingDayModal
-            isOpen={showExtendWorkingDayModal}
-            onClose={() => setShowExtendWorkingDayModal(false)}
-            firefighters={firefighters}
-            guardDate={selectedDate}
-            onSuccess={handleRefreshData} // Para refrescar datos después de la operación
-          />
+          </div>
         </div>
+
+        {/* Modales */}
+        <AddInterventionModal
+          show={showAddInterventionModal}
+          onClose={() => setShowAddInterventionModal(false)}
+          onAdded={() => setRefreshInterventions((prev) => !prev)}
+          idGuard={guardDetails?.id}
+          firefighters={firefighters.filter((f) => f.puesto === 'Subinspector' || f.puesto === 'Oficial')}
+        />
+
+        <RequireFirefighterModal
+          show={showRequireFirefighterModal}
+          onClose={() => setShowRequireFirefighterModal(false)}
+          onAdd={handleRefreshData}
+          brigade={brigade}
+          fecha={selectedDate}
+        />
+
+        <EditInterventionModal
+          show={showEditInterventionModal}
+          intervention={selectedIntervention}
+          onClose={() => setShowEditInterventionModal(false)}
+          onEdited={() => setRefreshInterventions((prev) => !prev)}
+          firefighters={firefighters.filter((f) => f.puesto === 'Subinspector' || f.puesto === 'Oficial')}
+        />
+
+        <AddDailyActivitiesModal
+          isOpen={isDailyModalOpen}
+          onClose={handleCloseDailyModal}
+          onUpdate={handleUpdateDailyActivities}
+          id_brigada={id_brigada}
+          selectedDate={selectedDate}
+        />
+
+        <AssignFirefighterToBajasModal
+          isOpen={showAssignFirefighterToBajasModal}
+          onClose={() => setShowAssignFirefighterToBajasModal(false)}
+          firefighters={firefighters}
+          guardDate={selectedDate}
+          currentBrigade={brigade}
+        />
+
+        <AddGuardCommentsModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onUpdate={handleUpdateComments}
+          id_brigada={id_brigada}
+          selectedDate={selectedDate}
+        />
+
+        <AssignFirefighterModal
+          isOpen={showAssignFirefighterModal}
+          onClose={() => setShowAssignFirefighterModal(false)}
+          firefighters={firefighters}
+          currentBrigade={brigade}
+          guardDate={selectedDate}
+        />
+
+        <ExtendWorkingDayModal
+          isOpen={showExtendWorkingDayModal}
+          onClose={() => setShowExtendWorkingDayModal(false)}
+          firefighters={firefighters}
+          guardDate={selectedDate}
+          onSuccess={handleRefreshData}
+        />
       </div>
     </div>
   );
-
 };
 
-
 export default BrigadeDetail;
-

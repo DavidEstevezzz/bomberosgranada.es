@@ -37,6 +37,8 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
   const [submitError, setSubmitError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const puestoOptions = useMemo(() => PUESTO_BY_TYPE[formValues.type] ?? [], [formValues.type]);
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -51,8 +53,6 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
   if (!isOpen) {
     return null;
   }
-
-  const puestoOptions = useMemo(() => PUESTO_BY_TYPE[formValues.type] ?? [], [formValues.type]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -104,8 +104,8 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
   };
 
   const overlayClass =
-    'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-10 backdrop-blur';
-  const modalClass = `relative flex w-full max-w-4xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
+    'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6 backdrop-blur overflow-y-auto';
+  const modalClass = `relative flex w-full max-w-4xl flex-col my-6 overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
     darkMode ? 'border-slate-800 bg-slate-950/90 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
   }`;
   const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white ${
@@ -159,7 +159,7 @@ const AddUserModal = ({ isOpen, onClose, onAdd }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6 sm:px-8">
+        <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6 sm:px-8 max-h-[calc(100vh-200px)] overflow-y-auto">
           {submitError && (
             <div
               className={`rounded-2xl border px-4 py-3 text-sm font-medium ${

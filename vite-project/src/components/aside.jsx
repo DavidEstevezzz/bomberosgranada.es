@@ -10,7 +10,7 @@ import {
   faChartBar,
   faFile,
   faCalendar,
-  faCaretDown,
+  faChevronDown,
   faTruck,
   faExclamationTriangle,
   faLightbulb,
@@ -18,7 +18,7 @@ import {
   faFilePdf,
   faRadio,
   faCalendarCheck,
-  faClipboardList // Nuevo icono para ver detalles
+  faClipboardList
 } from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -89,9 +89,9 @@ const Aside = ({ className }) => {
 
   if (!user) {
     return (
-      <aside className={`w-64 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'} ${className}`}>
+      <aside className={`w-64 ${darkMode ? 'bg-slate-950 border-r border-slate-800' : 'bg-white border-r border-slate-200'} ${className}`}>
         <div className="flex items-center justify-center h-screen">
-          <p>Cargando menú...</p>
+          <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Cargando menú...</p>
         </div>
       </aside>
     );
@@ -99,95 +99,155 @@ const Aside = ({ className }) => {
 
   const userType = user.type;
 
+  // Estilos base
+  const asideBaseClass = `w-64 h-screen overflow-y-auto transition-colors duration-300 ${
+    darkMode ? 'bg-slate-950 border-r border-slate-800' : 'bg-white border-r border-slate-200'
+  }`;
+
+  const linkClass = `group flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-xl mx-2 ${
+    darkMode
+      ? 'text-slate-300 hover:bg-slate-900 hover:text-primary-400'
+      : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'
+  }`;
+
+  const dropdownButtonClass = `group flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left transition-all duration-200 rounded-xl mx-2 ${
+    darkMode
+      ? 'text-slate-300 hover:bg-slate-900 hover:text-primary-400'
+      : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'
+  }`;
+
+  const dropdownItemClass = `block px-4 py-2.5 text-sm transition-all duration-200 rounded-lg mx-6 my-1 ${
+    darkMode
+      ? 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+  }`;
+
+  const iconClass = `w-5 h-5 mr-3 transition-colors ${
+    darkMode ? 'text-slate-400 group-hover:text-primary-400' : 'text-slate-500 group-hover:text-primary-600'
+  }`;
+
+  const badgeClass = `ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full transition-all duration-200 ${
+    darkMode 
+      ? 'bg-primary-500/20 text-primary-300 ring-1 ring-primary-500/30' 
+      : 'bg-primary-500 text-white shadow-sm'
+  }`;
+
+  const badgeRedClass = `ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full transition-all duration-200 ${
+    darkMode 
+      ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30' 
+      : 'bg-red-500 text-white shadow-sm'
+  }`;
+
   return (
-    <aside
-      className={`w-64 h-screen overflow-y-auto ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-300 text-black'} ${className}`}
-    >
-      <nav className="mt-6">
+    <aside className={`${asideBaseClass} ${className}`}>
+      <nav className="py-6 space-y-1">
         {/* Inicio */}
-        <a href="/dashboard" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-          <FontAwesomeIcon icon={faTachometerAlt} className="w-5 h-5 mr-2" />
-          Inicio
+        <a href="/dashboard" className={linkClass}>
+          <FontAwesomeIcon icon={faTachometerAlt} className={iconClass} />
+          <span>Inicio</span>
         </a>
 
-        {/* Notificaciones */}
-        <a href="/messages" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-          <FontAwesomeIcon icon={faInbox} className="w-5 h-5 mr-2" />
-          Mensajes
+        {/* Mensajes */}
+        <a href="/messages" className={linkClass}>
+          <FontAwesomeIcon icon={faInbox} className={iconClass} />
+          <span>Mensajes</span>
           {unreadCount > 0 && (
-            <span className="ml-auto bg-blue-600 text-white text-sm font-semibold px-2.5 py-0.5 rounded-full">
-              {unreadCount}
-            </span>
+            <span className={badgeClass}>{unreadCount}</span>
           )}
         </a>
 
-        {/* Nuevo menú: Vehículos */}
+        {/* Vehículos - Solo Jefe */}
         {userType === 'jefe' && (
-          <a href="/vehicles" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-            <FontAwesomeIcon icon={faTruck} className="w-5 h-5 mr-2" />
-            Vehículos
+          <a href="/vehicles" className={linkClass}>
+            <FontAwesomeIcon icon={faTruck} className={iconClass} />
+            <span>Vehículos</span>
           </a>
         )}
 
-        {/* Equipos */}
+        {/* Inventario - Jefe o Mando */}
         {(userType === 'jefe' || userType === 'mando') && (
           <div className="relative">
-            <button onClick={() => toggleDropdown('equipment')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <button onClick={() => toggleDropdown('equipment')} className={dropdownButtonClass}>
               <span className="flex items-center">
-                <FontAwesomeIcon icon={faRadio} className="w-5 h-5 mr-2" />
-                Inventario
+                <FontAwesomeIcon icon={faRadio} className={iconClass} />
+                <span>Inventario</span>
               </span>
-              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.equipment ? 'rotate-180' : ''}`} />
+              <FontAwesomeIcon 
+                icon={faChevronDown} 
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  dropdownOpen.equipment ? 'rotate-180' : ''
+                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              />
             </button>
             {dropdownOpen.equipment && (
-              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                <a href="/personal-equipment" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Equipos Personales</a>
-                <a href="/clothing-items" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Vestuario</a>
+              <div className="py-2">
+                <a href="/personal-equipment" className={dropdownItemClass}>
+                  Equipos Personales
+                </a>
+                <a href="/clothing-items" className={dropdownItemClass}>
+                  Vestuario
+                </a>
               </div>
             )}
           </div>
         )}
 
-        {/* Usuarios */}
+        {/* Usuarios - Solo Jefe */}
         {userType === 'jefe' && (
-          <a href="/users" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-            <FontAwesomeIcon icon={faUser} className="w-5 h-5 mr-2" />
-            Usuarios
+          <a href="/users" className={linkClass}>
+            <FontAwesomeIcon icon={faUser} className={iconClass} />
+            <span>Usuarios</span>
           </a>
         )}
 
-        {/* Brigadas */}
+        {/* Brigadas - Solo Jefe */}
         {userType === 'jefe' && (
           <div className="relative">
-            <button onClick={() => toggleDropdown('brigades')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <button onClick={() => toggleDropdown('brigades')} className={dropdownButtonClass}>
               <span className="flex items-center">
-                <FontAwesomeIcon icon={faPeopleGroup} className="w-5 h-5 mr-2" />
-                Brigadas
+                <FontAwesomeIcon icon={faPeopleGroup} className={iconClass} />
+                <span>Brigadas</span>
               </span>
-              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.brigades ? 'rotate-180' : ''}`} />
+              <FontAwesomeIcon 
+                icon={faChevronDown} 
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  dropdownOpen.brigades ? 'rotate-180' : ''
+                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              />
             </button>
             {dropdownOpen.brigades && (
-              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                <a href="/brigades" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Ver Brigadas</a>
-                <a href="/firefighter-assignments" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Asignar Brigada</a>
+              <div className="py-2">
+                <a href="/brigades" className={dropdownItemClass}>
+                  Ver Brigadas
+                </a>
+                <a href="/firefighter-assignments" className={dropdownItemClass}>
+                  Asignar Brigada
+                </a>
               </div>
             )}
           </div>
         )}
 
-        {/* Configuración */}
+        {/* Configuración - Solo Jefe */}
         {userType === 'jefe' && (
           <div className="relative">
-            <button onClick={() => toggleDropdown('settings')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <button onClick={() => toggleDropdown('settings')} className={dropdownButtonClass}>
               <span className="flex items-center">
-                <FontAwesomeIcon icon={faGear} className="w-5 h-5 mr-2" />
-                Configuración
+                <FontAwesomeIcon icon={faGear} className={iconClass} />
+                <span>Configuración</span>
               </span>
-              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.settings ? 'rotate-180' : ''}`} />
+              <FontAwesomeIcon 
+                icon={faChevronDown} 
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  dropdownOpen.settings ? 'rotate-180' : ''
+                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              />
             </button>
             {dropdownOpen.settings && (
-              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                <a href="/settings" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Preferencias</a>
+              <div className="py-2">
+                <a href="/settings" className={dropdownItemClass}>
+                  Preferencias
+                </a>
               </div>
             )}
           </div>
@@ -195,98 +255,130 @@ const Aside = ({ className }) => {
 
         {/* Horas Extra */}
         <div className="relative">
-          <button onClick={() => toggleDropdown('extraHours')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+          <button onClick={() => toggleDropdown('extraHours')} className={dropdownButtonClass}>
             <span className="flex items-center">
-              <FontAwesomeIcon icon={faClock} className="w-5 h-5 mr-2" />
-              Horas Extra
+              <FontAwesomeIcon icon={faClock} className={iconClass} />
+              <span>Horas Extra</span>
             </span>
-            <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.extraHours ? 'rotate-180' : ''}`} />
+            <FontAwesomeIcon 
+              icon={faChevronDown} 
+              className={`w-4 h-4 transition-transform duration-200 ${
+                dropdownOpen.extraHours ? 'rotate-180' : ''
+              } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+            />
           </button>
           {dropdownOpen.extraHours && (
-            <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+            <div className="py-2">
               {userType === 'jefe' && (
-                <a href="/horas-extra" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Horas Extra</a>
+                <>
+                  <a href="/horas-extra" className={dropdownItemClass}>
+                    Horas Extra
+                  </a>
+                  <a href="/total-horas-extra" className={dropdownItemClass}>
+                    Total Horas Extra
+                  </a>
+                </>
               )}
-              {userType === 'jefe' && (
-                <a href="/total-horas-extra" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Total Horas Extra</a>
-              )}
-
-              <a href="/horas-requerimientos" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Horas Ofrecidas</a>
-
-              <a href="/requerimientos" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos 24h</a>
-              <a href="/requerimientos-10-horas" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos 10h</a>
-              <a href="/requerimientos-operadores-mañana" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos Operadores Mañana</a>
-              <a href="/requerimientos-operadores-noche" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Requerimientos Operadores Noche</a>
+              <a href="/horas-requerimientos" className={dropdownItemClass}>
+                Horas Ofrecidas
+              </a>
+              <a href="/requerimientos" className={dropdownItemClass}>
+                Requerimientos 24h
+              </a>
+              <a href="/requerimientos-10-horas" className={dropdownItemClass}>
+                Requerimientos 10h
+              </a>
+              <a href="/requerimientos-operadores-mañana" className={dropdownItemClass}>
+                Requerimientos Operadores Mañana
+              </a>
+              <a href="/requerimientos-operadores-noche" className={dropdownItemClass}>
+                Requerimientos Operadores Noche
+              </a>
             </div>
           )}
         </div>
 
         {/* Solicitudes */}
         <div className="relative">
-          <button onClick={() => toggleDropdown('solicitudes')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+          <button onClick={() => toggleDropdown('solicitudes')} className={dropdownButtonClass}>
             <span className="flex items-center">
-              <FontAwesomeIcon icon={faFile} className="w-5 h-5 mr-2" />
-              Solicitudes
+              <FontAwesomeIcon icon={faFile} className={iconClass} />
+              <span>Solicitudes</span>
             </span>
-            <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.solicitudes ? 'rotate-180' : ''}`} />
+            <FontAwesomeIcon 
+              icon={faChevronDown} 
+              className={`w-4 h-4 transition-transform duration-200 ${
+                dropdownOpen.solicitudes ? 'rotate-180' : ''
+              } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+            />
           </button>
           {dropdownOpen.solicitudes && (
-            <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-              <a href="/solicitud" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Crear Solicitud</a>
-              <a href="/cambio-guardia" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Crear Cambio de Guardia</a>
-              <a href="/lista-solicitudes" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Mis solicitudes</a>
-              {userType !== 'bombero' && <a href="/solicitudes" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Lista de Solicitudes</a>}
-              {userType !== 'bombero' && <a href="/solicitudes-guardia" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>Solicitudes de Guardia</a>}
+            <div className="py-2">
+              <a href="/solicitud" className={dropdownItemClass}>
+                Crear Solicitud
+              </a>
+              <a href="/cambio-guardia" className={dropdownItemClass}>
+                Crear Cambio de Guardia
+              </a>
+              <a href="/lista-solicitudes" className={dropdownItemClass}>
+                Mis solicitudes
+              </a>
+              {userType !== 'bombero' && (
+                <>
+                  <a href="/solicitudes" className={dropdownItemClass}>
+                    Lista de Solicitudes
+                  </a>
+                  <a href="/solicitudes-guardia" className={dropdownItemClass}>
+                    Solicitudes de Guardia
+                  </a>
+                </>
+              )}
             </div>
           )}
         </div>
 
-        {/* Incidencias */}
+        {/* Incidencias - Jefe o Mando */}
         {(userType === 'jefe' || userType === 'mando') && (
-          <a href="/incidents" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-            <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 mr-2" />
-            Incidencias
+          <a href="/incidents" className={linkClass}>
+            <FontAwesomeIcon icon={faExclamationTriangle} className={iconClass} />
+            <span>Incidencias</span>
             {pendingIncidentsCount > 0 && (
-              <span className="ml-auto bg-red-600 text-white text-sm font-semibold px-2.5 py-0.5 rounded-full">
-                {pendingIncidentsCount}
-              </span>
+              <span className={badgeRedClass}>{pendingIncidentsCount}</span>
             )}
           </a>
         )}
 
-        {/* Menú desplegable para Calendarios - Solo visible para jefes o mandos especiales */}
+        {/* Calendarios - Jefe o Mando Especial */}
         {(userType === 'jefe' || isMandoEspecial) && (
           <div className="relative">
-            <button onClick={() => toggleDropdown('calendars')} className={`flex items-center justify-between w-full py-2.5 px-4 text-left ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
+            <button onClick={() => toggleDropdown('calendars')} className={dropdownButtonClass}>
               <span className="flex items-center">
-                <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 mr-2" />
-                Calendarios
+                <FontAwesomeIcon icon={faCalendar} className={iconClass} />
+                <span>Calendarios</span>
               </span>
-              <FontAwesomeIcon icon={faCaretDown} className={`w-5 h-5 transition-transform ${dropdownOpen.calendars ? 'rotate-180' : ''}`} />
+              <FontAwesomeIcon 
+                icon={faChevronDown} 
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  dropdownOpen.calendars ? 'rotate-180' : ''
+                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              />
             </button>
             {dropdownOpen.calendars && (
-              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+              <div className="py-2">
                 {userType === 'jefe' && (
-                  <a href="/calendario-norte" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
-                    <FontAwesomeIcon icon={faCalendar} className="w-4 h-4 mr-2" />
+                  <a href="/calendario-norte" className={dropdownItemClass}>
                     Calendario Guardias
                   </a>
                 )}
-
-                {/* Solo mostrar los enlaces relacionados con guardias especiales si el usuario es mando especial */}
                 {isMandoEspecial && (
                   <>
-                    <a href="/calendario-especial" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
-                      <FontAwesomeIcon icon={faCalendarCheck} className="w-4 h-4 mr-2" />
+                    <a href="/calendario-especial" className={dropdownItemClass}>
                       Gestionar Guardias Especiales
                     </a>
-
-                    <a href="/detalle-guardia-calendario" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
-                      <FontAwesomeIcon icon={faClipboardList} className="w-4 h-4 mr-2" />
+                    <a href="/detalle-guardia-calendario" className={dropdownItemClass}>
                       Ver Detalles de Guardias
                     </a>
-                    <a href="/brigade-practices" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
-                      <FontAwesomeIcon icon={faChartBar} className="w-4 h-4 mr-2" />
+                    <a href="/brigade-practices" className={dropdownItemClass}>
                       Registro de Prácticas
                     </a>
                   </>
@@ -297,22 +389,24 @@ const Aside = ({ className }) => {
         )}
 
         {/* Sugerencias */}
-        <a href="/sugerencias" className={`flex items-center py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-700 hover:bg-gray-200 hover:text-black'}`}>
-          <FontAwesomeIcon icon={faLightbulb} className="w-5 h-5 mr-2" />
-          Sugerencias
+        <a href="/sugerencias" className={linkClass}>
+          <FontAwesomeIcon icon={faLightbulb} className={iconClass} />
+          <span>Sugerencias</span>
         </a>
 
+        {/* Traslados - Jefe o Mando */}
         {(userType === 'jefe' || userType === 'mando') && (
-          <a href="/transfers" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
-            <FontAwesomeIcon icon={faExchangeAlt} className="w-5 h-5 mr-2" />
-            Traslados
+          <a href="/transfers" className={linkClass}>
+            <FontAwesomeIcon icon={faExchangeAlt} className={iconClass} />
+            <span>Traslados</span>
           </a>
         )}
 
+        {/* Parte Jefatura - Jefe o Mando */}
         {(userType === 'jefe' || userType === 'mando') && (
-          <a href="/pdf" className={`block py-2.5 px-4 ${darkMode ? 'text-gray-300 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-300'}`}>
-            <FontAwesomeIcon icon={faFilePdf} className="w-5 h-5 mr-2" />
-            Parte Jefatura
+          <a href="/pdf" className={linkClass}>
+            <FontAwesomeIcon icon={faFilePdf} className={iconClass} />
+            <span>Parte Jefatura</span>
           </a>
         )}
       </nav>

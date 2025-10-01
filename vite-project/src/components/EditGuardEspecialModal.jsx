@@ -7,23 +7,26 @@ const EditGuardEspecialModal = ({ isOpen, onClose, guard, setGuards, availableBr
   const [type, setType] = useState('');
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
   const { darkMode } = useDarkMode();
 
   useEffect(() => {
     if (guard) {
-      console.log('Datos de guardia recibidos:', guard);
       setBrigadeId(guard.id_brigada);
-      // ✅ CAMBIO: Usar 'especiales' en lugar de 'tipo'
       setType(guard.especiales || '');
     }
-  }, [guard]);
+    if (isOpen) {
+      setErrorMessage(null);
+    }
+  }, [guard, isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage(null);
 
     if (!brigadeId || !type) {
-      alert('Por favor, completa todos los campos.');
+      setErrorMessage('Por favor, completa todos los campos.');
       setLoading(false);
       return;
     }
@@ -38,27 +41,24 @@ const EditGuardEspecialModal = ({ isOpen, onClose, guard, setGuards, availableBr
     try {
       // Determinar qué ID usar para la actualización
       const guardId = guard.id_guard || guard.id;
-      
+
       if (!guardId) {
         throw new Error('No se pudo determinar el ID de la guardia');
       }
-      
-      console.log('Actualizando guardia con ID:', guardId);
-      console.log('Datos a enviar:', updatedGuard); // 🔍 Para debuggear
-      
+
       const response = await GuardsApiService.updateGuard(guardId, updatedGuard);
-      
+
       // Actualizar el estado de guardias en la página padre
-      setGuards(prevGuards => 
-        prevGuards.map(g => 
+      setGuards(prevGuards =>
+        prevGuards.map(g =>
           (g.id_guard === guardId || g.id === guardId) ? response.data : g
         )
       );
-      
+
       onClose();
     } catch (error) {
       console.error('Error al actualizar la guardia:', error);
-      alert(`Error al actualizar: ${error.message}`);
+      setErrorMessage(error?.response?.data?.message || error.message || 'Error al actualizar la guardia.');
     } finally {
       setLoading(false);
     }
@@ -68,113 +68,171 @@ const EditGuardEspecialModal = ({ isOpen, onClose, guard, setGuards, availableBr
     if (!window.confirm('¿Estás seguro de que deseas eliminar esta guardia?')) {
       return;
     }
-    
+
     // Determinar qué ID usar para la eliminación
     const guardId = guard.id_guard || guard.id;
-    
+
     if (!guardId) {
       console.error('ID de guardia no disponible. Objeto guard:', guard);
-      alert('No se puede eliminar la guardia: ID no disponible');
+      setErrorMessage('No se puede eliminar la guardia: ID no disponible');
       return;
     }
-    
-    console.log('Eliminando guardia con ID:', guardId);
+
     setDeleteLoading(true);
 
     try {
       await GuardsApiService.deleteGuard(guardId);
-      
+
       // Eliminar la guardia del estado en la página padre
-      setGuards(prevGuards => 
+      setGuards(prevGuards =>
         prevGuards.filter(g => g.id_guard !== guardId && g.id !== guardId)
       );
-      
+
       onClose();
     } catch (error) {
       console.error('Error al eliminar la guardia:', error);
-      alert(`Error al eliminar: ${error.message}`);
+      setErrorMessage(error?.response?.data?.message || error.message || 'Error al eliminar la guardia.');
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  if (!guard) return null;
+  if (!guard || !isOpen) return null;
+
+  const overlayClass =
+    'fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/70 px-4 py-6 backdrop-blur overflow-y-auto';
+  const modalClass = `relative my-auto w-full max-w-xl overflow-hidden rounded-3xl border shadow-2xl transition-colors duración-300 ${
+    darkMode ? 'border-slate-800 bg-slate-950/90 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+  }`;
+  const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white ${
+    darkMode
+      ? 'bg-gradient-to-r from-primary-900/90 via-primary-700/90 to-primary-600/80'
+      : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700'
+  }`;
+  const labelClass = 'text-xs font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200';
+  const selectClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
+    darkMode
+      ? 'border-slate-800 bg-slate-900/70 text-slate-100'
+      : 'border-slate-200 bg-white text-slate-900'
+  }`;
+  const helperClass = `text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`;
+  const cancelButtonClass = `inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+    darkMode
+      ? 'border-slate-700 text-slate-200 hover:border-slate-500 hover:text-white focus:ring-primary-500 focus:ring-offset-slate-900'
+      : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-900 focus:ring-primary-500 focus:ring-offset-white'
+  }`;
+  const submitButtonClass = `inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+    darkMode
+      ? 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-slate-900'
+      : 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-white'
+  }`;
+  const deleteButtonClass = `inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+    darkMode
+      ? 'bg-red-500 hover:bg-red-400 focus:ring-red-400 focus:ring-offset-slate-900'
+      : 'bg-red-500 hover:bg-red-400 focus:ring-red-300 focus:ring-offset-white'
+  }`;
 
   return (
-    isOpen && (
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div className={`relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-          <div className="mt-3 text-center">
-            <h3 className={`text-lg leading-6 font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Editar Guardia Especial
-            </h3>
-            <div className="mt-4">
-              <form onSubmit={handleSubmit}>
-                <label className={`${darkMode ? 'text-white' : 'text-gray-900'}`} htmlFor="brigadeId">
-                  Brigada
-                </label>
-                <select
-                  id="brigadeId"
-                  className="mt-1 mb-4 p-2 border rounded w-full"
-                  value={brigadeId}
-                  onChange={e => setBrigadeId(e.target.value)}
-                  required
-                >
-                  <option value="">Selecciona una brigada</option>
-                  {availableBrigades.map(brigade => (
-                    <option key={brigade.id_brigada} value={brigade.id_brigada}>
-                      {brigade.nombre}
-                    </option>
-                  ))}
-                </select>
+    <div className={overlayClass} onMouseDown={() => !(loading || deleteLoading) && onClose()}>
+      <div
+        className={modalClass}
+        role="dialog"
+        aria-modal="true"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className={headerClass}>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">Guardias especiales</p>
+            <h2 className="mt-2 text-2xl font-semibold">Editar guardia especial</h2>
+            <p className="mt-3 text-sm text-white/90">
+              Actualiza la brigada y el tipo asignado para mantener la cobertura operativa al día.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/70"
+            aria-label="Cerrar"
+            disabled={loading || deleteLoading}
+          >
+            <span className="text-2xl leading-none">×</span>
+          </button>
+        </div>
 
-                <label className={`${darkMode ? 'text-white' : 'text-gray-900'}`} htmlFor="type">
-                  Tipo de guardia especial
-                </label>
-                <select
-                  id="type"
-                  className="mt-1 mb-4 p-2 border rounded w-full"
-                  value={type}
-                  onChange={e => setType(e.target.value)}
-                  required
-                >
-                  <option value="">Selecciona tipo</option>
-                  <option value="Guardia localizada">Guardia localizada</option>
-                  <option value="Prácticas">Prácticas</option>
-                </select>
-
-                <div className="mt-4 flex space-x-2">
-                  <button
-                    type="submit"
-                    className="p-2 bg-blue-500 text-white rounded hover:bg-blue-400 flex-1"
-                    disabled={loading}
-                  >
-                    {loading ? 'Guardando...' : 'Guardar cambios'}
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    className="p-2 bg-red-500 text-white rounded hover:bg-red-400 flex-1"
-                    disabled={deleteLoading}
-                  >
-                    {deleteLoading ? 'Eliminando...' : 'Eliminar'}
-                  </button>
-                </div>
-              </form>
+        <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6 sm:px-8">
+          {errorMessage && (
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
+                darkMode ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
+              {errorMessage}
             </div>
-            <div className="mt-4">
+          )}
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <span className={labelClass}>Brigada asignada</span>
+              <select
+                id="brigadeId"
+                className={selectClass}
+                value={brigadeId}
+                onChange={(e) => setBrigadeId(e.target.value)}
+                required
+              >
+                <option value="">Selecciona una brigada</option>
+                {availableBrigades.map((brigade) => (
+                  <option key={brigade.id_brigada} value={brigade.id_brigada}>
+                    {brigade.nombre}
+                  </option>
+                ))}
+              </select>
+              <p className={helperClass}>Escoge la brigada que asumirá la cobertura especial.</p>
+            </div>
+
+            <div className="space-y-2">
+              <span className={labelClass}>Tipo de guardia especial</span>
+              <select
+                id="type"
+                className={selectClass}
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                required
+              >
+                <option value="">Selecciona tipo</option>
+                <option value="Guardia localizada">Guardia localizada</option>
+                <option value="Prácticas">Prácticas</option>
+              </select>
+              <p className={helperClass}>Define la modalidad de la guardia especial asignada.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+            <button
+              type="button"
+              onClick={handleDelete}
+              className={deleteButtonClass}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? 'Eliminando...' : 'Eliminar guardia'}
+            </button>
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row">
               <button
+                type="button"
                 onClick={onClose}
-                className="bg-gray-500 text-white active:bg-gray-600 w-full px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none"
+                className={cancelButtonClass}
+                disabled={loading || deleteLoading}
               >
                 Cancelar
               </button>
+              <button type="submit" className={submitButtonClass} disabled={loading}>
+                {loading ? 'Guardando...' : 'Guardar cambios'}
+              </button>
             </div>
           </div>
-        </div>
+        </form>
       </div>
-    )
+    </div>
   );
 };
 

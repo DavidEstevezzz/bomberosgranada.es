@@ -166,11 +166,15 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
     []
   );
 
-  const overlayClass = 'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-10 backdrop-blur';
-  const modalClass = `relative flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
+  // CAMBIO AQUÍ: items-center → items-start, añadido pt-8 y overflow-y-auto
+  const overlayClass = 'fixed inset-0 z-50 flex items-start justify-center bg-slate-900/70 px-4 pt-8 pb-8 backdrop-blur overflow-y-auto';
+  
+  // CAMBIO AQUÍ: añadido max-h-[calc(100vh-4rem)] para limitar altura
+  const modalClass = `relative flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 max-h-[calc(100vh-4rem)] ${
     darkMode ? 'border-slate-800 bg-slate-950/90 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
   }`;
-  const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white ${
+  
+  const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white flex-shrink-0 ${
     darkMode
       ? 'bg-gradient-to-r from-primary-900/90 via-primary-700/90 to-primary-600/80'
       : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700'
@@ -224,7 +228,8 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="max-h-[75vh] space-y-6 overflow-y-auto px-6 py-6 sm:px-8">
+        {/* CAMBIO AQUÍ: Cambiado max-h-[75vh] por flex-1 overflow-y-auto para mejor manejo del scroll */}
+        <form onSubmit={handleSubmit} className="flex-1 space-y-6 overflow-y-auto px-6 py-6 sm:px-8">
           {submitError && (
             <div
               className={`rounded-2xl border px-4 py-3 text-sm font-medium ${

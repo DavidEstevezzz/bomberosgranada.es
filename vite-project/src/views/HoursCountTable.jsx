@@ -7,12 +7,12 @@ import { useStateContext } from '../contexts/ContextProvider';
 
 const HoursCountTable = () => {
   const { darkMode } = useDarkMode();
-  const { user } = useStateContext(); 
+  const { user } = useStateContext();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const isJefe = user?.type === 'jefe';
 
   // Función para normalizar texto (quitar acentos y convertir a minúsculas)
@@ -29,7 +29,7 @@ const HoursCountTable = () => {
     try {
       const response = await UsuariosApiService.getUsuarios();
       // Filter out users without a specified position
-      const usuariosConPuesto = response.data.filter(usuario => 
+      const usuariosConPuesto = response.data.filter(usuario =>
         usuario.puesto && usuario.puesto.trim() !== ''
       );
       setUsuarios(usuariosConPuesto);
@@ -54,90 +54,186 @@ const HoursCountTable = () => {
   // Filtrar usuarios según el término de búsqueda
   const filteredUsuarios = usuarios.filter((usuario) => {
     if (searchTerm === '') return true;
-    
+
     const normalizedSearch = normalizeText(searchTerm);
     const normalizedNombre = normalizeText(usuario.nombre || '');
     const normalizedApellido = normalizeText(usuario.apellido || '');
     const nombreCompleto = `${normalizedNombre} ${normalizedApellido}`;
-    
+
     return nombreCompleto.includes(normalizedSearch);
   });
 
-  if (loading) return <div className="flex justify-center items-center h-screen">Cargando usuarios...</div>;
-  if (error) return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
+  const pageWrapperClass = 'px-3 py-6 sm:px-8';
+  const cardContainerClass = `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-6xl overflow-hidden rounded-3xl border shadow-xl backdrop-blur transition-colors duration-300 ${
+    darkMode
+      ? 'border-slate-800 bg-slate-950/80 text-slate-100'
+      : 'border-slate-200 bg-white/95 text-slate-900'
+  }`;
+  const headerGradientClass = `bg-gradient-to-r px-6 py-8 sm:px-10 text-white transition-colors duration-300 ${
+    darkMode
+      ? 'from-primary-950 via-primary-800 to-primary-600'
+      : 'from-primary-400 via-primary-500 to-primary-600'
+  }`;
+  const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
+  const sectionBaseClass = `rounded-2xl border px-5 py-6 transition-colors ${
+    darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50/70'
+  }`;
+  const surfaceCardClass = `rounded-2xl border px-5 py-5 transition-colors ${
+    darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'
+  }`;
+  const inputBaseClass = `w-full rounded-2xl border px-5 py-3 text-base transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${
+    darkMode
+      ? 'border-slate-800 bg-slate-950/60 text-slate-100 placeholder-slate-400'
+      : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+  }`;
+  const badgeClass = `inline-flex min-w-[3rem] items-center justify-center rounded-full px-3 py-1 text-sm font-semibold ${
+    darkMode ? 'bg-primary-500/15 text-primary-300' : 'bg-primary-500/10 text-primary-700'
+  }`;
 
-  return (
-    <div className={`p-4 w-full ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
-      <h2 className="text-2xl font-bold mb-4 text-center">Total horas ofrecidas año 2025</h2>
-
-      <div className="mb-4 relative">
-        <div className="flex items-center w-full">
-          <div className="relative flex-grow">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="Buscar por nombre o apellido"
-              className={`pl-10 pr-4 py-2 rounded w-full ${
-                darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'
-              }`}
-            />
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3">
-              <FontAwesomeIcon icon={faSearch} className="text-gray-500" />
-            </div>
+  if (loading) {
+    return (
+      <div className={pageWrapperClass}>
+        <div className={`${cardContainerClass} flex items-center justify-center py-20`}>
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white" />
+            <p className="text-base font-medium">Cargando usuarios...</p>
           </div>
         </div>
       </div>
+    );
+  }
 
-      <div className={`overflow-x-auto w-full shadow-md sm:rounded-lg border ${
-        darkMode ? 'border-gray-700' : 'border-gray-200'
-      }`}>
-        <table className="w-full text-sm text-left">
-          <thead className={`${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
-            <tr className={`grid ${isJefe ? 'grid-cols-12' : 'grid-cols-10'} w-full`}>
-              <th className="py-3 px-2 col-span-1 text-center">#</th>
-              <th className="py-3 px-2 col-span-4">Nombre</th>
-              <th className="py-3 px-2 col-span-3">Puesto</th>
-              <th className="py-3 px-2 col-span-2 text-center">Horas Ofrecidas</th>
-              {isJefe && <th className="py-3 px-2 col-span-2 text-center">Horas Aceptadas</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsuarios.map((usuario, index) => (
-              <tr
-                key={usuario.id_empleado || index}
-                className={`grid ${isJefe ? 'grid-cols-12' : 'grid-cols-10'} w-full ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-800 hover:bg-gray-600' 
-                    : index % 2 === 0 
-                      ? 'bg-white border-b hover:bg-gray-50' 
-                      : 'bg-gray-50 border-b hover:bg-gray-100'
-                }`}
-              >
-                <td className="py-4 px-2 col-span-1 text-center">{index + 1}</td>
-                <td className="py-4 px-2 col-span-4 truncate">
-                  {usuario.nombre} {usuario.apellido}
-                </td>
-                <td className="py-4 px-2 col-span-3 truncate">{usuario.puesto}</td>
-                <td className="py-4 px-2 col-span-2 text-center">{usuario.horas_ofrecidas || 0}</td>
-                {isJefe && <td className="py-4 px-2 col-span-2 text-center">{usuario.horas_aceptadas || 0}</td>}
-              </tr>
-            ))}
-            {filteredUsuarios.length === 0 && (
-              <tr className={`grid ${isJefe ? 'grid-cols-12' : 'grid-cols-10'} w-full ${
-                darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-700'
-              }`}>
-                <td className={`py-4 px-2 col-span-${isJefe ? '12' : '10'} text-center`}>
-                  No se encontraron usuarios con ese criterio de búsqueda
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+  if (error) {
+    return (
+      <div className={pageWrapperClass}>
+        <div className={`${cardContainerClass} space-y-6`}>
+          <div className={headerGradientClass}>
+            <h1 className="text-3xl font-semibold">Total horas ofrecidas</h1>
+            <p className="mt-2 max-w-2xl text-base text-white/90">
+              No se ha podido obtener la información solicitada en este momento. Inténtalo de nuevo más tarde.
+            </p>
+          </div>
+          <div
+            className={`mx-6 mb-10 rounded-2xl border px-5 py-5 text-base font-medium ${
+              darkMode
+                ? 'border-red-500/40 bg-red-500/10 text-red-100'
+                : 'border-red-200 bg-red-50 text-red-700'
+            }`}
+          >
+            Error: {error}
+          </div>
+        </div>
       </div>
-      
-      <div className="mt-4 text-right text-sm">
-        <p>Total de usuarios: {filteredUsuarios.length}</p>
+    );
+  }
+
+  return (
+    <div className={pageWrapperClass}>
+      <div className={`${cardContainerClass} space-y-8`}>
+        <div className={headerGradientClass}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/80">
+                Gestión de horas
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold">Total horas ofrecidas 2025</h1>
+              <p className="mt-3 max-w-2xl text-base text-white/90">
+                Consulta y filtra las horas ofrecidas por cada profesional para hacer seguimiento del estado de sus aportaciones.
+              </p>
+            </div>
+            <span className={badgeClass}>Usuarios: {filteredUsuarios.length}</span>
+          </div>
+        </div>
+
+        <div className="space-y-8 px-6 pb-10 sm:px-10">
+          <section className={sectionBaseClass}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">Listado general</h2>
+                <p className={`mt-1 text-base ${subtleTextClass}`}>
+                  Utiliza el buscador para localizar rápidamente a cualquier miembro por su nombre o apellido.
+                </p>
+              </div>
+            </div>
+            <div className={`${surfaceCardClass} mt-6 space-y-6`}>
+              <div className="relative">
+                <FontAwesomeIcon
+                  icon={faSearch}
+                  className={`pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-lg ${
+                    darkMode ? 'text-slate-500' : 'text-slate-400'
+                  }`}
+                />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  placeholder="Buscar por nombre o apellido"
+                  className={`${inputBaseClass} pl-12`}
+                />
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-transparent">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+                    <thead className={darkMode ? 'bg-slate-900/60 text-slate-200' : 'bg-slate-100 text-slate-700'}>
+                      <tr>
+                        <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-[0.18em]">#</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-[0.18em]">Nombre</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-[0.18em]">Puesto</th>
+                        <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-[0.18em]">
+                          Horas ofrecidas
+                        </th>
+                        {isJefe && (
+                          <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-[0.18em]">
+                            Horas aceptadas
+                          </th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className={darkMode ? 'divide-y divide-slate-800 bg-slate-950/40' : 'divide-y divide-slate-200 bg-white'}>
+                      {filteredUsuarios.map((usuario, index) => (
+                        <tr
+                          key={usuario.id_empleado || index}
+                          className={
+                            darkMode
+                              ? 'transition-colors hover:bg-slate-900/60'
+                              : index % 2 === 0
+                              ? 'transition-colors hover:bg-slate-50'
+                              : 'bg-slate-50 transition-colors hover:bg-slate-100'
+                          }
+                        >
+                          <td className="px-6 py-4 text-center text-base font-semibold">{index + 1}</td>
+                          <td className="px-6 py-4 text-base font-semibold">
+                            {usuario.nombre} {usuario.apellido}
+                          </td>
+                          <td className={`px-6 py-4 text-base ${subtleTextClass}`}>{usuario.puesto}</td>
+                          <td className="px-6 py-4 text-center text-base font-semibold">
+                            {usuario.horas_ofrecidas || 0}
+                          </td>
+                          {isJefe && (
+                            <td className="px-6 py-4 text-center text-base font-semibold">
+                              {usuario.horas_aceptadas || 0}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                      {filteredUsuarios.length === 0 && (
+                        <tr>
+                          <td
+                            className="px-6 py-6 text-center text-base"
+                            colSpan={isJefe ? 5 : 4}
+                          >
+                            No se encontraron usuarios con ese criterio de búsqueda.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

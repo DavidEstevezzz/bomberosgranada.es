@@ -1744,7 +1744,7 @@ const BrigadeDetail = () => {
                   key={shift.key} 
                   className={`rounded-2xl border p-5 transition-colors ${
                     darkMode 
-                      ? 'border-slate-800 bg-slate-900/60' 
+                      ? 'border-slate-800 bg-slate-800/60' 
                       : 'border-slate-200 bg-slate-50'
                   }`}
                 >
@@ -1754,7 +1754,7 @@ const BrigadeDetail = () => {
                     {shift.label}
                   </h3>
                   
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm $">
                     <thead>
                       <tr className={`border-b ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                         <th className={`py-2 px-3 text-left text-xs font-semibold uppercase tracking-wider ${
@@ -1807,7 +1807,7 @@ const BrigadeDetail = () => {
                 Bomberos Asignados
               </h2>
               
-              <div className="overflow-x-auto rounded-2xl border ${darkMode ? 'border-slate-800' : 'border-slate-200'}">
+              <div className="overflow-x-auto rounded-2xl border ${darkMode ? 'border-slate-800'  : 'border-slate-200'}">
                 <table className="w-full">
                   <thead className={`${brigadeColor} ${nameColor}`}>
                     <tr>

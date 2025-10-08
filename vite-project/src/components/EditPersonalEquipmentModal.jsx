@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import PersonalEquipmentApiService from '../services/PersonalEquipmentApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
-const EditPersonalEquipmentModal = ({ isOpen, onClose, equipment, onUpdate }) => {
+const EditPersonalEquipmentModal = ({ isOpen, onClose, equipment, onUpdate, parks = [] }) => {
   const [formValues, setFormValues] = useState({
     id: equipment.id || '',
     nombre: equipment.nombre || '',
     categoria: equipment.categoria || '',
     parque: equipment?.parque || null
-
   });
   const [categories, setCategories] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,7 +20,8 @@ const EditPersonalEquipmentModal = ({ isOpen, onClose, equipment, onUpdate }) =>
       setFormValues({
         id: equipment.id || '',
         nombre: equipment.nombre || '',
-        categoria: equipment.categoria || ''
+        categoria: equipment.categoria || '',
+        parque: equipment.parque || null
       });
       setIsSubmitting(false);
       fetchCategories();
@@ -40,6 +40,13 @@ const EditPersonalEquipmentModal = ({ isOpen, onClose, equipment, onUpdate }) =>
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormValues({ ...formValues, [name]: value });
+  };
+
+  const handleParqueChange = (e) => {
+    setFormValues({ 
+      ...formValues, 
+      parque: e.target.value ? Number(e.target.value) : null 
+    });
   };
 
   const handleSubmit = async (event) => {
@@ -115,15 +122,16 @@ const EditPersonalEquipmentModal = ({ isOpen, onClose, equipment, onUpdate }) =>
                 ))}
               </select>
             </div>
-            <div className="mb-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Parque
-              </label>
+            {/* Parque */}
+            <div>
+              <label htmlFor="parque" className={`block mb-2 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Parque</label>
               <select
                 name="parque"
-                value={formData.parque || ''}
-                onChange={(e) => setFormData({ ...formData, parque: e.target.value ? Number(e.target.value) : null })}
-                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                id="parque"
+                value={formValues.parque || ''}
+                onChange={handleParqueChange}
+                disabled={isSubmitting}
+                className={`bg-gray-50 border text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500' : 'border-gray-300 text-gray-900 focus:ring-primary-600 focus:border-primary-600'}`}
               >
                 <option value="">No asignado</option>
                 {parks.map((park) => (

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash, faTimes, faEdit, faPlus, faInfoCircle, faHammer, faStop, faBan, faArrowDown, faArrowUp } from '@fortawesome/free-solid-svg-icons';
+import { 
+  faEye, faEyeSlash, faTimes, faEdit, faPlus, faInfoCircle, 
+  faHammer, faStop, faBan, faArrowDown, faArrowUp, faFilePdf, 
+  faCheckCircle, faTrash, faExclamationTriangle 
+} from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -12,7 +16,6 @@ import IncidentDetailModal from '../components/IncidentDetailModal';
 import EditIncidentModal from '../components/EditIncidentModal';
 import ResolveIncidentModal from '../components/ResolveIncidentModal';
 
-
 const IncidentListPage = () => {
   // Estados generales
   const [incidents, setIncidents] = useState([]);
@@ -20,39 +23,44 @@ const IncidentListPage = () => {
   const [error, setError] = useState(null);
   const { darkMode } = useDarkMode();
   const { user } = useStateContext();
+  
+  // Estados de ordenación
   const [pendingHighSortOrder, setPendingHighSortOrder] = useState('asc');
   const [pendingMediumSortOrder, setPendingMediumSortOrder] = useState('asc');
   const [pendingLowSortOrder, setPendingLowSortOrder] = useState('asc');
   const [resolvedSortOrder, setResolvedSortOrder] = useState('asc');
+  
+  // Estados de modales
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [detailIncident, setDetailIncident] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [editIncident, setEditIncident] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [searchParams] = useState();
-  const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState("Todas");
   const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [resolutionText, setResolutionText] = useState("");
-
-  // Estados para incidencias resueltas (filtradas por mes)  
-  const [currentMonth, setCurrentMonth] = useState(dayjs().month()); // 0 = enero, 11 = diciembre
+  
+  // Filtros
+  const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState("Todas");
+  
+  // Estados para incidencias resueltas (filtradas por mes)
+  const [currentMonth, setCurrentMonth] = useState(dayjs().month());
   const [resolvedCurrentPage, setResolvedCurrentPage] = useState(1);
   const resolvedItemsPerPage = 5;
-
-  // Estados para la paginación de incidencias pendientes (10 por página)
+  
+  // Estados para paginación de incidencias pendientes
   const pendingItemsPerPage = 10;
   const [pendingHighPage, setPendingHighPage] = useState(1);
   const [pendingMediumPage, setPendingMediumPage] = useState(1);
   const [pendingLowPage, setPendingLowPage] = useState(1);
-
+  
   // Estados para ordenación por extras
   const [pendingHighExtrasSortOrder, setPendingHighExtrasSortOrder] = useState('asc');
   const [pendingMediumExtrasSortOrder, setPendingMediumExtrasSortOrder] = useState('asc');
   const [pendingLowExtrasSortOrder, setPendingLowExtrasSortOrder] = useState('asc');
   const [resolvedExtrasSortOrder, setResolvedExtrasSortOrder] = useState('asc');
-
+  
   // Estados para controlar qué columna está activa para ordenar
   const [pendingHighSortBy, setPendingHighSortBy] = useState('fecha');
   const [pendingMediumSortBy, setPendingMediumSortBy] = useState('fecha');
@@ -80,8 +88,6 @@ const IncidentListPage = () => {
     setLoading(true);
     try {
       const response = await IncidentApiService.getIncidents();
-      console.log("Incidencias recibidas:", response.data);
-      // Ordenar por fecha ascendente usando el campo "fecha"
       const sorted = response.data.sort((a, b) => dayjs(a.fecha).diff(dayjs(b.fecha)));
       setIncidents(sorted);
       setError(null);
@@ -93,28 +99,22 @@ const IncidentListPage = () => {
     }
   };
 
-  // Funciones auxiliares para mostrar nombres
+  // Funciones auxiliares
   const getCreatorName = (incident) =>
     incident.creator ? `${incident.creator.nombre} ${incident.creator.apellido}` : incident.id_empleado;
+  
   const getEmployee2Name = (incident) =>
     incident.employee2 ? `${incident.employee2.nombre} ${incident.employee2.apellido}` : '';
 
   const normalizeTypeName = (tipo) => {
     switch (tipo?.toLowerCase()) {
-      case 'vehiculo':
-        return 'Vehículo';
-      case 'personal':
-        return 'Personal';
-      case 'instalacion':
-        return 'Instalación';
-      case 'equipo':
-        return 'Equipos Personales';
-      case 'vestuario':
-        return 'Vestuario';
-      case 'equipos_comunes':
-        return 'Equipos Comunes';
-      default:
-        return tipo?.charAt(0).toUpperCase() + tipo?.slice(1) || '';
+      case 'vehiculo': return 'Vehículo';
+      case 'personal': return 'Personal';
+      case 'instalacion': return 'Instalación';
+      case 'equipo': return 'Equipos Personales';
+      case 'vestuario': return 'Vestuario';
+      case 'equipos_comunes': return 'Equipos Comunes';
+      default: return tipo?.charAt(0).toUpperCase() + tipo?.slice(1) || '';
     }
   };
 
@@ -137,12 +137,7 @@ const IncidentListPage = () => {
     return [...array].sort((a, b) => {
       const extraA = getExtraValue(a).toLowerCase();
       const extraB = getExtraValue(b).toLowerCase();
-
-      if (order === 'asc') {
-        return extraA.localeCompare(extraB);
-      } else {
-        return extraB.localeCompare(extraA);
-      }
+      return order === 'asc' ? extraA.localeCompare(extraB) : extraB.localeCompare(extraA);
     });
   };
 
@@ -155,95 +150,6 @@ const IncidentListPage = () => {
     return array;
   };
 
-  // Filtrar incidencias por parque (si se selecciona alguna; de lo contrario se muestran todas)
-  const filteredIncidents = incidents.filter((incident) => {
-    const matchesPark =
-      selectedParkFilter === "Todas" ||
-      (incident.park &&
-        incident.park.nombre.toLowerCase() === selectedParkFilter.toLowerCase());
-
-    const matchesType =
-      selectedTypeFilter === "Todas" ||
-      (incident.tipo &&
-        incident.tipo.toLowerCase() === selectedTypeFilter.toLowerCase());
-
-    return matchesPark && matchesType;
-  });
-
-  // Separar incidencias en pendientes y resueltas
-  const pendingIncidents = filteredIncidents.filter(
-    (incident) => incident.estado.toLowerCase() === 'pendiente'
-  );
-  const resolvedIncidents = filteredIncidents.filter(
-    (incident) => incident.estado.toLowerCase() === 'resuelta'
-  );
-
-  // Para las incidencias resueltas, filtramos por mes
-  // Para las incidencias resueltas, filtramos por mes
-  const filteredResolvedIncidents = resolvedIncidents.filter((incident) =>
-    dayjs(incident.fecha).month() === currentMonth
-  );
-  // Ordenamos según el estado (ascendente o descendente)
-  const sortedResolvedIncidents = sortIncidents(
-    filteredResolvedIncidents,
-    resolvedSortBy,
-    resolvedSortBy === 'fecha' ? resolvedSortOrder : resolvedExtrasSortOrder
-  );
-  const totalResolvedPages = Math.ceil(sortedResolvedIncidents.length / resolvedItemsPerPage);
-  const resolvedIndexOfLast = resolvedCurrentPage * resolvedItemsPerPage;
-  const resolvedIndexOfFirst = resolvedIndexOfLast - resolvedItemsPerPage;
-  const currentResolvedIncidents = sortedResolvedIncidents.slice(resolvedIndexOfFirst, resolvedIndexOfLast);
-
-  // Obtener el nombre del mes con la primera letra en mayúscula
-  const monthName = dayjs().month(currentMonth).format('MMMM');
-  const formattedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-
-  // Dividir las incidencias pendientes según su nivel
-  const pendingHigh = pendingIncidents.filter(
-    (incident) => incident.nivel && incident.nivel.toLowerCase() === 'alto'
-  );
-  const pendingMedium = pendingIncidents.filter(
-    (incident) => incident.nivel && incident.nivel.toLowerCase() === 'medio'
-  );
-  const pendingLow = pendingIncidents.filter(
-    (incident) => incident.nivel && incident.nivel.toLowerCase() === 'bajo'
-  );
-
-  // Paginación para pendientes de nivel Alto
-  const totalHighPages = Math.ceil(pendingHigh.length / pendingItemsPerPage);
-  const highIndexOfLast = pendingHighPage * pendingItemsPerPage;
-  const highIndexOfFirst = highIndexOfLast - pendingItemsPerPage;
-  const sortedPendingHigh = sortIncidents(
-    pendingHigh,
-    pendingHighSortBy,
-    pendingHighSortBy === 'fecha' ? pendingHighSortOrder : pendingHighExtrasSortOrder
-  ); const currentPendingHigh = sortedPendingHigh.slice(highIndexOfFirst, highIndexOfLast);
-
-  // Paginación para pendientes de nivel Medio
-  const totalMediumPages = Math.ceil(pendingMedium.length / pendingItemsPerPage);
-  const mediumIndexOfLast = pendingMediumPage * pendingItemsPerPage;
-  const mediumIndexOfFirst = mediumIndexOfLast - pendingItemsPerPage;
-  const sortedPendingMedium = sortIncidents(
-    pendingMedium,
-    pendingMediumSortBy,
-    pendingMediumSortBy === 'fecha' ? pendingMediumSortOrder : pendingMediumExtrasSortOrder
-  );
-  const currentPendingMedium = sortedPendingMedium.slice(mediumIndexOfFirst, mediumIndexOfLast);
-
-  // Paginación para pendientes de nivel Bajo
-  const totalLowPages = Math.ceil(pendingLow.length / pendingItemsPerPage);
-  const lowIndexOfLast = pendingLowPage * pendingItemsPerPage;
-  const lowIndexOfFirst = lowIndexOfLast - pendingItemsPerPage;
-
-  const sortedPendingLow = sortIncidents(
-    pendingLow,
-    pendingLowSortBy,
-    pendingLowSortBy === 'fecha' ? pendingLowSortOrder : pendingLowExtrasSortOrder
-  );
-  const currentPendingLow = sortedPendingLow.slice(lowIndexOfFirst, lowIndexOfLast);
-
-
-  // Función para exportar a PDF (usa todos los pendientes sin paginar)
   const exportPDF = () => {
     const doc = new jsPDF();
     let yOffset = 10;
@@ -253,18 +159,7 @@ const IncidentListPage = () => {
 
     const tableData = [];
     pendingIncidents.forEach(incident => {
-      let extraInfo = '';
-      if (incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre) {
-        extraInfo = incident.vehicle.nombre;
-      } else if (incident.tipo.toLowerCase() === 'personal' && incident.employee2) {
-        extraInfo = getEmployee2Name(incident);
-      } else if (incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item) {
-        extraInfo = incident.clothing_item.name;
-      } else if (incident.tipo.toLowerCase() === 'equipo' && incident.equipment) {
-        extraInfo = incident.equipment.nombre;
-      } else if (incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo) {
-        extraInfo = incident.nombre_equipo;
-      }
+      let extraInfo = getExtraValue(incident);
       tableData.push({
         fecha: dayjs(incident.fecha).format('DD/MM/YYYY'),
         descripcion: incident.descripcion,
@@ -281,7 +176,6 @@ const IncidentListPage = () => {
       { header: 'Vehículo/Empleado', dataKey: 'extra' },
       { header: 'Descripción', dataKey: 'descripcion' },
       { header: 'Fecha', dataKey: 'fecha' },
-
     ];
 
     doc.autoTable({
@@ -316,14 +210,12 @@ const IncidentListPage = () => {
       await IncidentApiService.resolveIncident(selectedIncident.id_incidencia, resolverData);
       setIsResolveModalOpen(false);
       setResolutionText("");
-      fetchIncidents(); // Actualiza la lista de incidencias
+      fetchIncidents();
     } catch (err) {
       console.error("Error al resolver la incidencia: ", err);
     }
   };
 
-
-  // Función para marcar una incidencia como leída
   const handleMarkAsRead = async (incidentId) => {
     try {
       await IncidentApiService.markAsRead(incidentId);
@@ -333,7 +225,6 @@ const IncidentListPage = () => {
     }
   };
 
-  // Función para eliminar una incidencia
   const handleDelete = async (incidentId) => {
     if (window.confirm("¿Estás seguro de que deseas eliminar esta incidencia?")) {
       try {
@@ -345,158 +236,290 @@ const IncidentListPage = () => {
     }
   };
 
-  // Función para abrir el modal de detalle
   const openDetailModal = (incident) => {
     setDetailIncident(incident);
     setIsDetailModalOpen(true);
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  // Filtrar incidencias
+  const filteredIncidents = incidents.filter((incident) => {
+    const matchesPark = selectedParkFilter === "Todas" ||
+      (incident.park && incident.park.nombre.toLowerCase() === selectedParkFilter.toLowerCase());
+    const matchesType = selectedTypeFilter === "Todas" ||
+      (incident.tipo && incident.tipo.toLowerCase() === selectedTypeFilter.toLowerCase());
+    return matchesPark && matchesType;
+  });
+
+  // Separar pendientes y resueltas
+  const pendingIncidents = filteredIncidents.filter(
+    (incident) => incident.estado.toLowerCase() === 'pendiente'
+  );
+  const resolvedIncidents = filteredIncidents.filter(
+    (incident) => incident.estado.toLowerCase() === 'resuelta'
+  );
+
+  // Incidencias resueltas filtradas por mes
+  const filteredResolvedIncidents = resolvedIncidents.filter((incident) =>
+    dayjs(incident.fecha).month() === currentMonth
+  );
+  const sortedResolvedIncidents = sortIncidents(
+    filteredResolvedIncidents,
+    resolvedSortBy,
+    resolvedSortBy === 'fecha' ? resolvedSortOrder : resolvedExtrasSortOrder
+  );
+  const totalResolvedPages = Math.ceil(sortedResolvedIncidents.length / resolvedItemsPerPage);
+  const resolvedIndexOfLast = resolvedCurrentPage * resolvedItemsPerPage;
+  const resolvedIndexOfFirst = resolvedIndexOfLast - resolvedItemsPerPage;
+  const currentResolvedIncidents = sortedResolvedIncidents.slice(resolvedIndexOfFirst, resolvedIndexOfLast);
+
+  const monthName = dayjs().month(currentMonth).format('MMMM');
+  const formattedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+  // Dividir pendientes por nivel
+  const pendingHigh = pendingIncidents.filter(
+    (incident) => incident.nivel && incident.nivel.toLowerCase() === 'alto'
+  );
+  const pendingMedium = pendingIncidents.filter(
+    (incident) => incident.nivel && incident.nivel.toLowerCase() === 'medio'
+  );
+  const pendingLow = pendingIncidents.filter(
+    (incident) => incident.nivel && incident.nivel.toLowerCase() === 'bajo'
+  );
+
+  // Paginación para nivel Alto
+  const totalHighPages = Math.ceil(pendingHigh.length / pendingItemsPerPage);
+  const highIndexOfLast = pendingHighPage * pendingItemsPerPage;
+  const highIndexOfFirst = highIndexOfLast - pendingItemsPerPage;
+  const sortedPendingHigh = sortIncidents(
+    pendingHigh,
+    pendingHighSortBy,
+    pendingHighSortBy === 'fecha' ? pendingHighSortOrder : pendingHighExtrasSortOrder
+  );
+  const currentPendingHigh = sortedPendingHigh.slice(highIndexOfFirst, highIndexOfLast);
+
+  // Paginación para nivel Medio
+  const totalMediumPages = Math.ceil(pendingMedium.length / pendingItemsPerPage);
+  const mediumIndexOfLast = pendingMediumPage * pendingItemsPerPage;
+  const mediumIndexOfFirst = mediumIndexOfLast - pendingItemsPerPage;
+  const sortedPendingMedium = sortIncidents(
+    pendingMedium,
+    pendingMediumSortBy,
+    pendingMediumSortBy === 'fecha' ? pendingMediumSortOrder : pendingMediumExtrasSortOrder
+  );
+  const currentPendingMedium = sortedPendingMedium.slice(mediumIndexOfFirst, mediumIndexOfLast);
+
+  // Paginación para nivel Bajo
+  const totalLowPages = Math.ceil(pendingLow.length / pendingItemsPerPage);
+  const lowIndexOfLast = pendingLowPage * pendingItemsPerPage;
+  const lowIndexOfFirst = lowIndexOfLast - pendingItemsPerPage;
+  const sortedPendingLow = sortIncidents(
+    pendingLow,
+    pendingLowSortBy,
+    pendingLowSortBy === 'fecha' ? pendingLowSortOrder : pendingLowExtrasSortOrder
+  );
+  const currentPendingLow = sortedPendingLow.slice(lowIndexOfFirst, lowIndexOfLast);
+
+  // ESTILOS MODERNOS
+const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-slate-100' : 'bg-gray-100 text-slate-900'}`;  
+  const headerClass = `rounded-3xl border p-8 ${
+    darkMode 
+      ? 'border-slate-800 bg-gradient-to-r from-primary-900/50 via-primary-800/50 to-primary-700/50' 
+      : 'border-slate-200 bg-gradient-to-r from-primary-50 via-primary-100 to-primary-50'
+  }`;
+
+  const buttonPrimaryClass = `inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 shadow-lg ${
+    darkMode
+      ? 'bg-primary-600 text-white hover:bg-primary-500'
+      : 'bg-primary-600 text-white hover:bg-primary-500'
+  }`;
+
+  const buttonSecondaryClass = `inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
+    darkMode
+      ? 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+      : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+  }`;
+
+  const filterButtonClass = (isActive) => `
+    px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200
+    ${isActive 
+      ? 'bg-primary-600 text-white shadow-lg scale-105' 
+      : darkMode 
+        ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' 
+        : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+    }
+  `;
+
+  const tableContainerClass = `rounded-3xl border overflow-hidden ${
+    darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'
+  }`;
+
+  const tableHeaderClass = (bgColor) => `
+    px-6 py-4 text-white font-semibold text-lg ${bgColor}
+  `;
+
+  const tableClass = `w-full ${darkMode ? 'text-slate-200' : 'text-slate-900'}`;
+  
+  const thClass = `px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider ${
+    darkMode ? 'bg-slate-800/50 text-slate-300' : 'bg-slate-50 text-slate-600'
+  }`;
+
+  const tdClass = `px-4 py-3 text-sm ${darkMode ? 'border-slate-800' : 'border-slate-200'} border-b`;
+
+  const actionButtonClass = (variant) => {
+    const variants = {
+      success: 'bg-emerald-600 hover:bg-emerald-500 text-white',
+      info: 'bg-slate-600 hover:bg-slate-500 text-white',
+      warning: 'bg-amber-600 hover:bg-amber-500 text-white',
+      danger: 'bg-red-600 hover:bg-red-500 text-white',
+      primary: 'bg-blue-600 hover:bg-blue-500 text-white',
+    };
+    return `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${variants[variant]}`;
+  };
+
+  const paginationClass = `flex items-center justify-center gap-4 mt-6 px-6 pb-6`;
+  
+  const paginationButtonClass = (disabled) => `
+    rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200
+    ${disabled 
+      ? darkMode 
+        ? 'bg-slate-800 text-slate-600 cursor-not-allowed' 
+        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+      : darkMode
+        ? 'bg-primary-600 text-white hover:bg-primary-500'
+        : 'bg-primary-600 text-white hover:bg-primary-500'
+    }
+  `;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-600 mx-auto"></div>
+          <p className={`text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+            Cargando incidencias...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className={`rounded-3xl border p-8 max-w-md ${
+          darkMode ? 'border-red-900 bg-red-950/50' : 'border-red-200 bg-red-50'
+        }`}>
+          <p className={`text-sm font-semibold ${darkMode ? 'text-red-200' : 'text-red-700'}`}>
+            Error: {error}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={`p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      {/* Encabezado y acciones */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Incidencias</h1>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded flex items-center space-x-2"
-          >
-            <FontAwesomeIcon icon={faPlus} />
-            <span>Nueva Incidencia</span>
-          </button>
-          <button
-            onClick={exportPDF}
-            className="bg-indigo-600 text-white px-4 py-2 rounded flex items-center space-x-2"
-          >
-            <span>Exportar a PDF</span>
-          </button>
+    <div className={containerClass}>
+      {/* Header */}
+      <div className={headerClass}>
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div>
+            <p className={`text-sm font-semibold uppercase tracking-[0.3em] ${
+              darkMode ? 'text-primary-300' : 'text-primary-600'
+            }`}>
+              Gestión de Incidencias
+            </p>
+            <h1 className={`mt-2 text-3xl font-bold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+              Incidencias
+            </h1>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => setIsAddModalOpen(true)} className={buttonPrimaryClass}>
+              <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+              <span>Nueva Incidencia</span>
+            </button>
+            <button onClick={exportPDF} className={buttonSecondaryClass}>
+              <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4" />
+              <span>Exportar PDF</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Filtro por parque */}
-      <div className="mb-4">
-        <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
-          Filtrar por Parque
-        </h3>
-        <div className="flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => setSelectedParkFilter("Todas")}
-            className={`px-4 py-2 rounded transition-colors ${selectedParkFilter === "Todas"
-              ? "bg-blue-600 text-white shadow-md"
-              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
-              }`}
-          >
-            Todos los Parques
-          </button>
-          <button
-            onClick={() => setSelectedParkFilter("Parque Sur")}
-            className={`px-4 py-2 rounded transition-colors ${selectedParkFilter === "Parque Sur"
-              ? "bg-blue-600 text-white shadow-md"
-              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
-              }`}
-          >
-            Parque Sur
-          </button>
-          <button
-            onClick={() => setSelectedParkFilter("Parque Norte")}
-            className={`px-4 py-2 rounded transition-colors ${selectedParkFilter === "Parque Norte"
-              ? "bg-blue-600 text-white shadow-md"
-              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
-              }`}
-          >
-            Parque Norte
-          </button>
+      {/* Filtros */}
+      <div className={`rounded-3xl border p-6 space-y-6 ${
+        darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'
+      }`}>
+        {/* Filtro por Parque */}
+        <div>
+          <h3 className={`text-sm font-semibold uppercase tracking-wider mb-3 ${
+            darkMode ? 'text-slate-300' : 'text-slate-600'
+          }`}>
+            Filtrar por Parque
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedParkFilter("Todas")}
+              className={filterButtonClass(selectedParkFilter === "Todas")}
+            >
+              Todos los Parques
+            </button>
+            <button
+              onClick={() => setSelectedParkFilter("Parque Sur")}
+              className={filterButtonClass(selectedParkFilter === "Parque Sur")}
+            >
+              Parque Sur
+            </button>
+            <button
+              onClick={() => setSelectedParkFilter("Parque Norte")}
+              className={filterButtonClass(selectedParkFilter === "Parque Norte")}
+            >
+              Parque Norte
+            </button>
+          </div>
+        </div>
+
+        {/* Filtro por Tipo */}
+        <div>
+          <h3 className={`text-sm font-semibold uppercase tracking-wider mb-3 ${
+            darkMode ? 'text-slate-300' : 'text-slate-600'
+          }`}>
+            Filtrar por Tipo
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {['Todas', 'vehiculo', 'personal', 'instalacion', 'equipo', 'vestuario', 'equipos_comunes'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setSelectedTypeFilter(type)}
+                className={filterButtonClass(selectedTypeFilter === type)}
+              >
+                {type === 'Todas' ? 'Todos los Tipos' : normalizeTypeName(type)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Filtro por tipo de incidencia */}
-      <div className="mb-6">
-        <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>
-          Filtrar por Tipo
-        </h3>
-        <div className="flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => setSelectedTypeFilter("Todas")}
-            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "Todas"
-              ? "bg-indigo-600 text-white shadow-md"
-              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
-              }`}
-          >
-            Todos los Tipos
-          </button>
-          <button
-            onClick={() => setSelectedTypeFilter("vehiculo")}
-            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "vehiculo"
-              ? "bg-indigo-600 text-white shadow-md"
-              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
-              }`}
-          >
-            Vehículos
-          </button>
-          <button
-            onClick={() => setSelectedTypeFilter("personal")}
-            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "personal"
-              ? "bg-indigo-600 text-white shadow-md"
-              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
-              }`}
-          >
-            Personal
-          </button>
-          <button
-            onClick={() => setSelectedTypeFilter("instalacion")}
-            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "instalacion"
-              ? "bg-indigo-600 text-white shadow-md"
-              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
-              }`}
-          >
-            Instalaciones
-          </button>
-          <button
-            onClick={() => setSelectedTypeFilter("equipo")}
-            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "equipo"
-              ? "bg-indigo-600 text-white shadow-md"
-              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
-              }`}
-          >
-            Equipos
-          </button>
-          <button
-            onClick={() => setSelectedTypeFilter("equipos_comunes")}
-            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "equipos_comunes"
-              ? "bg-indigo-600 text-white shadow-md"
-              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
-              }`}
-          >
-            Equipos Comunes
-          </button>
-          <button
-            onClick={() => setSelectedTypeFilter("vestuario")}
-            className={`px-4 py-2 rounded transition-colors ${selectedTypeFilter === "vestuario"
-              ? "bg-indigo-600 text-white shadow-md"
-              : `${darkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
-              }`}
-          >
-            Vestuario
-          </button>
+      {/* Tabla Nivel Alto */}
+      <div className={tableContainerClass}>
+        <div className={tableHeaderClass('bg-red-600')}>
+          <div className="flex items-center gap-2">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5" />
+            <span>Incidencias Pendientes - Nivel Alto</span>
+            {pendingHigh.length > 0 && (
+              <span className="ml-auto inline-flex items-center justify-center px-3 py-1 rounded-full bg-white/20 text-sm font-semibold">
+                {pendingHigh.length}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* Tabla de Incidencias Pendientes - Nivel Alto */}
-      <div className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <h2 className="text-xl font-semibold mb-4 bg-red-600 text-white p-2 rounded">
-          Incidencias Pendientes - Nivel Alto
-        </h2>
         <div className="overflow-x-auto">
-          <table className="w-full text-center">
+          <table className={tableClass}>
             <thead>
               <tr>
-                <th className="py-2 px-2">Creado por</th>
-                <th className="py-2 px-2">Tipo</th>
-                <th
-                  className="py-2 px-2 cursor-pointer"
+                <th className={thClass}>Creado por</th>
+                <th className={thClass}>Tipo</th>
+                <th 
+                  className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingHighSortBy === 'fecha') {
                       setPendingHighSortOrder(pendingHighSortOrder === 'asc' ? 'desc' : 'asc');
@@ -506,12 +529,17 @@ const IncidentListPage = () => {
                     }
                   }}
                 >
-                  Fecha {pendingHighSortBy === 'fecha' && (pendingHighSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                  <div className="flex items-center gap-2">
+                    Fecha
+                    {pendingHighSortBy === 'fecha' && (
+                      <FontAwesomeIcon icon={pendingHighSortOrder === 'asc' ? faArrowUp : faArrowDown} className="w-3 h-3" />
+                    )}
+                  </div>
                 </th>
-                <th className="py-2 px-2">Resolviendo</th>
-                <th className="py-2 px-2">Parque</th>
-                <th
-                  className="py-2 px-2 cursor-pointer"
+                <th className={thClass}>Resolviendo</th>
+                <th className={thClass}>Parque</th>
+                <th 
+                  className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingHighSortBy === 'extras') {
                       setPendingHighExtrasSortOrder(pendingHighExtrasSortOrder === 'asc' ? 'desc' : 'asc');
@@ -521,111 +549,110 @@ const IncidentListPage = () => {
                     }
                   }}
                 >
-                  Extras {pendingHighSortBy === 'extras' && (pendingHighExtrasSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                  <div className="flex items-center gap-2">
+                    Detalles
+                    {pendingHighSortBy === 'extras' && (
+                      <FontAwesomeIcon icon={pendingHighExtrasSortOrder === 'asc' ? faArrowUp : faArrowDown} className="w-3 h-3" />
+                    )}
+                  </div>
                 </th>
-                <th className="py-2 px-2">Acciones</th>
+                <th className={thClass}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {currentPendingHigh.length > 0 ? (
                 currentPendingHigh.map((incident) => (
-                  <tr key={incident.id_incidencia} className="border-b border-gray-700">
-                    <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">{normalizeTypeName(incident.tipo)}</td>
-                    <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
-                    <td className="py-2 px-2">
-                      {incident.leido ? (
-                        <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
+                  <tr key={incident.id_incidencia} className={darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
+                    <td className={tdClass}>{getCreatorName(incident)}</td>
+                    <td className={tdClass}>
+                      <span className="inline-flex px-2 py-1 rounded-lg bg-slate-700 text-sm font-medium">
+                        {normalizeTypeName(incident.tipo)}
+                      </span>
+                    </td>
+                    <td className={tdClass}>{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
+                    <td className={tdClass}>
+                      {incident.resolviendo ? (
+                        <span className="text-amber-500 text-sm">● En progreso</span>
                       ) : (
-                        <FontAwesomeIcon icon={faBan} title="No Resolviendo" />
+                        <span className="text-slate-400 text-sm">○ No resolviendo</span>
                       )}
                     </td>
-                    <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
-                    <td className="py-2 px-2">
-                      {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre ? (
-                        <span>{incident.vehicle.nombre}</span>
+                    <td className={tdClass}>{incident.park?.nombre || 'N/A'}</td>
+                    <td className={tdClass}>
+                      {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle ? (
+                        <span className="text-sm">{incident.vehicle.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
-                        <span>{getEmployee2Name(incident)}</span>
+                        <span className="text-sm">{getEmployee2Name(incident)}</span>
                       ) : incident.tipo.toLowerCase() === 'equipo' && incident.equipment ? (
-                        <span>{incident.equipment.nombre}</span>
+                        <span className="text-sm">{incident.equipment.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
-                        <span>{incident.clothing_item.name}</span>
+                        <span className="text-sm">{incident.clothing_item.name}</span>
                       ) : incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo ? (
-                        <span>{incident.nombre_equipo}</span>
+                        <span className="text-sm">{incident.nombre_equipo}</span>
                       ) : null}
-
                     </td>
-                    <td className="py-2 px-2 flex space-x-2">
-                      <button
-                        onClick={() => openResolveModal(incident)}
-                        className="bg-green-600 text-white px-3 py-1 rounded"
-                      >
-                        Resuelta
-                      </button>
-
-                      <button
-                        onClick={() => openDetailModal(incident)}
-                        className="bg-gray-600 text-white px-3 py-1 rounded flex items-center space-x-1"
-                      >
-                        <FontAwesomeIcon icon={faInfoCircle} />
-                        <span>Detalle</span>
-                      </button>
-                      {!incident.leido && (
-                        <button
-                          onClick={() => handleMarkAsRead(incident.id_incidencia)}
-                          className="bg-yellow-600 text-white px-3 py-1 rounded"
-                        >
-                          Resolviendo
+                    <td className={tdClass}>
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => openResolveModal(incident)} className={actionButtonClass('success')}>
+                          <FontAwesomeIcon icon={faCheckCircle} />
+                          <span className="hidden sm:inline">Resolver</span>
                         </button>
-                      )}
-                      {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
-                        <button
-                          onClick={() => handleDelete(incident.id_incidencia)}
-                          className="bg-red-600 text-white px-3 py-1 rounded"
-                        >
-                          Borrar
+                        <button onClick={() => openDetailModal(incident)} className={actionButtonClass('info')}>
+                          <FontAwesomeIcon icon={faInfoCircle} />
+                          <span className="hidden sm:inline">Ver</span>
                         </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setEditIncident(incident);
-                          setIsEditModalOpen(true);
-                        }}
-                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-1"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
-                        <span>Editar</span>
-                      </button>
+                        {!incident.leido && (
+                          <button onClick={() => handleMarkAsRead(incident.id_incidencia)} className={actionButtonClass('warning')}>
+                            <FontAwesomeIcon icon={faHammer} />
+                            <span className="hidden sm:inline">Resolviendo</span>
+                          </button>
+                        )}
+                        {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
+                          <button onClick={() => handleDelete(incident.id_incidencia)} className={actionButtonClass('danger')}>
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setEditIncident(incident);
+                            setIsEditModalOpen(true);
+                          }} 
+                          className={actionButtonClass('primary')}
+                        >
+                          <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="py-4 text-center">
-                    No hay incidencias pendientes de nivel alto.
+                  <td colSpan="7" className={`${tdClass} text-center py-8`}>
+                    <p className={darkMode ? 'text-slate-400' : 'text-slate-500'}>
+                      No hay incidencias pendientes de nivel alto
+                    </p>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        {/* Controles de paginación para nivel Alto */}
         {totalHighPages > 1 && (
-          <div className="flex justify-center mt-4 space-x-4">
+          <div className={paginationClass}>
             <button
               onClick={() => setPendingHighPage(prev => Math.max(prev - 1, 1))}
               disabled={pendingHighPage === 1}
-              className="bg-blue-600 text-white px-3 py-1 rounded"
+              className={paginationButtonClass(pendingHighPage === 1)}
             >
               Anterior
             </button>
-            <span>
+            <span className="text-sm font-medium">
               Página {pendingHighPage} de {totalHighPages}
             </span>
             <button
               onClick={() => setPendingHighPage(prev => Math.min(prev + 1, totalHighPages))}
               disabled={pendingHighPage === totalHighPages}
-              className="bg-blue-600 text-white px-3 py-1 rounded"
+              className={paginationButtonClass(pendingHighPage === totalHighPages)}
             >
               Siguiente
             </button>
@@ -633,19 +660,27 @@ const IncidentListPage = () => {
         )}
       </div>
 
-      {/* Tabla de Incidencias Pendientes - Nivel Medio */}
-      <div className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <h2 className="text-xl font-semibold mb-4 bg-orange-500 text-white p-2 rounded">
-          Incidencias Pendientes - Nivel Medio
-        </h2>
+      {/* Tabla Nivel Medio */}
+      <div className={tableContainerClass}>
+        <div className={tableHeaderClass('bg-orange-500')}>
+          <div className="flex items-center gap-2">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5" />
+            <span>Incidencias Pendientes - Nivel Medio</span>
+            {pendingMedium.length > 0 && (
+              <span className="ml-auto inline-flex items-center justify-center px-3 py-1 rounded-full bg-white/20 text-sm font-semibold">
+                {pendingMedium.length}
+              </span>
+            )}
+          </div>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-center">
+          <table className={tableClass}>
             <thead>
               <tr>
-                <th className="py-2 px-2">Creado por</th>
-                <th className="py-2 px-2">Tipo</th>
-                <th
-                  className="py-2 px-2 cursor-pointer"
+                <th className={thClass}>Creado por</th>
+                <th className={thClass}>Tipo</th>
+                <th 
+                  className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingMediumSortBy === 'fecha') {
                       setPendingMediumSortOrder(pendingMediumSortOrder === 'asc' ? 'desc' : 'asc');
@@ -655,12 +690,17 @@ const IncidentListPage = () => {
                     }
                   }}
                 >
-                  Fecha {pendingMediumSortBy === 'fecha' && (pendingMediumSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                  <div className="flex items-center gap-2">
+                    Fecha
+                    {pendingMediumSortBy === 'fecha' && (
+                      <FontAwesomeIcon icon={pendingMediumSortOrder === 'asc' ? faArrowUp : faArrowDown} className="w-3 h-3" />
+                    )}
+                  </div>
                 </th>
-                <th className="py-2 px-2">Resolviendo</th>
-                <th className="py-2 px-2">Parque</th>
-                <th
-                  className="py-2 px-2 cursor-pointer"
+                <th className={thClass}>Resolviendo</th>
+                <th className={thClass}>Parque</th>
+                <th 
+                  className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingMediumSortBy === 'extras') {
                       setPendingMediumExtrasSortOrder(pendingMediumExtrasSortOrder === 'asc' ? 'desc' : 'asc');
@@ -670,110 +710,110 @@ const IncidentListPage = () => {
                     }
                   }}
                 >
-                  Extras {pendingMediumSortBy === 'extras' && (pendingMediumExtrasSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                  <div className="flex items-center gap-2">
+                    Detalles
+                    {pendingMediumSortBy === 'extras' && (
+                      <FontAwesomeIcon icon={pendingMediumExtrasSortOrder === 'asc' ? faArrowUp : faArrowDown} className="w-3 h-3" />
+                    )}
+                  </div>
                 </th>
-                <th className="py-2 px-2">Acciones</th>
+                <th className={thClass}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {currentPendingMedium.length > 0 ? (
                 currentPendingMedium.map((incident) => (
-                  <tr key={incident.id_incidencia} className="border-b border-gray-700">
-                    <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">{normalizeTypeName(incident.tipo)}</td>
-                    <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
-                    <td className="py-2 px-2">
-                      {incident.leido ? (
-                        <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
+                  <tr key={incident.id_incidencia} className={darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
+                    <td className={tdClass}>{getCreatorName(incident)}</td>
+                    <td className={tdClass}>
+                      <span className="inline-flex px-2 py-1 rounded-lg bg-slate-700 text-sm font-medium">
+                        {normalizeTypeName(incident.tipo)}
+                      </span>
+                    </td>
+                    <td className={tdClass}>{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
+                    <td className={tdClass}>
+                      {incident.resolviendo ? (
+                        <span className="text-amber-500 text-sm">● En progreso</span>
                       ) : (
-                        <FontAwesomeIcon icon={faBan} title="No Resolviendo" />
+                        <span className="text-slate-400 text-sm">○ No resolviendo</span>
                       )}
                     </td>
-                    <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
-                    <td className="py-2 px-2">
-                      {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre ? (
-                        <span>{incident.vehicle.nombre}</span>
+                    <td className={tdClass}>{incident.park?.nombre || 'N/A'}</td>
+                    <td className={tdClass}>
+                      {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle ? (
+                        <span className="text-sm">{incident.vehicle.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
-                        <span>{getEmployee2Name(incident)}</span>
+                        <span className="text-sm">{getEmployee2Name(incident)}</span>
                       ) : incident.tipo.toLowerCase() === 'equipo' && incident.equipment ? (
-                        <span>{incident.equipment.nombre}</span>
+                        <span className="text-sm">{incident.equipment.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
-                        <span>{incident.clothing_item.name}</span>
+                        <span className="text-sm">{incident.clothing_item.name}</span>
                       ) : incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo ? (
-                        <span>{incident.nombre_equipo}</span>
+                        <span className="text-sm">{incident.nombre_equipo}</span>
                       ) : null}
-
                     </td>
-                    <td className="py-2 px-2 flex space-x-2">
-                      <button
-                        onClick={() => openResolveModal(incident)}
-                        className="bg-green-600 text-white px-3 py-1 rounded"
-                      >
-                        Resuelta
-                      </button>
-                      <button
-                        onClick={() => openDetailModal(incident)}
-                        className="bg-gray-600 text-white px-3 py-1 rounded flex items-center space-x-1"
-                      >
-                        <FontAwesomeIcon icon={faInfoCircle} />
-                        <span>Detalle</span>
-                      </button>
-                      {!incident.leido && (
-                        <button
-                          onClick={() => handleMarkAsRead(incident.id_incidencia)}
-                          className="bg-yellow-600 text-white px-3 py-1 rounded"
-                        >
-                          Resolviendo
+                    <td className={tdClass}>
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => openResolveModal(incident)} className={actionButtonClass('success')}>
+                          <FontAwesomeIcon icon={faCheckCircle} />
+                          <span className="hidden sm:inline">Resolver</span>
                         </button>
-                      )}
-                      {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
-                        <button
-                          onClick={() => handleDelete(incident.id_incidencia)}
-                          className="bg-red-600 text-white px-3 py-1 rounded"
-                        >
-                          Borrar
+                        <button onClick={() => openDetailModal(incident)} className={actionButtonClass('info')}>
+                          <FontAwesomeIcon icon={faInfoCircle} />
+                          <span className="hidden sm:inline">Ver</span>
                         </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setEditIncident(incident);
-                          setIsEditModalOpen(true);
-                        }}
-                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-1"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
-                        <span>Editar</span>
-                      </button>
+                        {!incident.leido && (
+                          <button onClick={() => handleMarkAsRead(incident.id_incidencia)} className={actionButtonClass('warning')}>
+                            <FontAwesomeIcon icon={faHammer} />
+                            <span className="hidden sm:inline">Resolviendo</span>
+                          </button>
+                        )}
+                        {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
+                          <button onClick={() => handleDelete(incident.id_incidencia)} className={actionButtonClass('danger')}>
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setEditIncident(incident);
+                            setIsEditModalOpen(true);
+                          }} 
+                          className={actionButtonClass('primary')}
+                        >
+                          <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="py-4 text-center">
-                    No hay incidencias pendientes de nivel medio.
+                  <td colSpan="7" className={`${tdClass} text-center py-8`}>
+                    <p className={darkMode ? 'text-slate-400' : 'text-slate-500'}>
+                      No hay incidencias pendientes de nivel medio
+                    </p>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        {/* Controles de paginación para nivel Medio */}
         {totalMediumPages > 1 && (
-          <div className="flex justify-center mt-4 space-x-4">
+          <div className={paginationClass}>
             <button
               onClick={() => setPendingMediumPage(prev => Math.max(prev - 1, 1))}
               disabled={pendingMediumPage === 1}
-              className="bg-blue-600 text-white px-3 py-1 rounded"
+              className={paginationButtonClass(pendingMediumPage === 1)}
             >
               Anterior
             </button>
-            <span>
+            <span className="text-sm font-medium">
               Página {pendingMediumPage} de {totalMediumPages}
             </span>
             <button
               onClick={() => setPendingMediumPage(prev => Math.min(prev + 1, totalMediumPages))}
               disabled={pendingMediumPage === totalMediumPages}
-              className="bg-blue-600 text-white px-3 py-1 rounded"
+              className={paginationButtonClass(pendingMediumPage === totalMediumPages)}
             >
               Siguiente
             </button>
@@ -781,19 +821,27 @@ const IncidentListPage = () => {
         )}
       </div>
 
-      {/* Tabla de Incidencias Pendientes - Nivel Bajo */}
-      <div className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <h2 className="text-xl font-semibold mb-4 bg-yellow-500 text-white p-2 rounded">
-          Incidencias Pendientes - Nivel Bajo
-        </h2>
+      {/* Tabla Nivel Bajo */}
+      <div className={tableContainerClass}>
+        <div className={tableHeaderClass('bg-yellow-500')}>
+          <div className="flex items-center gap-2">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5" />
+            <span>Incidencias Pendientes - Nivel Bajo</span>
+            {pendingLow.length > 0 && (
+              <span className="ml-auto inline-flex items-center justify-center px-3 py-1 rounded-full bg-white/20 text-sm font-semibold">
+                {pendingLow.length}
+              </span>
+            )}
+          </div>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-center">
+          <table className={tableClass}>
             <thead>
               <tr>
-                <th className="py-2 px-2">Creado por</th>
-                <th className="py-2 px-2">Tipo</th>
-                <th
-                  className="py-2 px-2 cursor-pointer"
+                <th className={thClass}>Creado por</th>
+                <th className={thClass}>Tipo</th>
+                <th 
+                  className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingLowSortBy === 'fecha') {
                       setPendingLowSortOrder(pendingLowSortOrder === 'asc' ? 'desc' : 'asc');
@@ -803,12 +851,17 @@ const IncidentListPage = () => {
                     }
                   }}
                 >
-                  Fecha {pendingLowSortBy === 'fecha' && (pendingLowSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                  <div className="flex items-center gap-2">
+                    Fecha
+                    {pendingLowSortBy === 'fecha' && (
+                      <FontAwesomeIcon icon={pendingLowSortOrder === 'asc' ? faArrowUp : faArrowDown} className="w-3 h-3" />
+                    )}
+                  </div>
                 </th>
-                <th className="py-2 px-2">Resolviendo</th>
-                <th className="py-2 px-2">Parque</th>
-                <th
-                  className="py-2 px-2 cursor-pointer"
+                <th className={thClass}>Resolviendo</th>
+                <th className={thClass}>Parque</th>
+                <th 
+                  className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingLowSortBy === 'extras') {
                       setPendingLowExtrasSortOrder(pendingLowExtrasSortOrder === 'asc' ? 'desc' : 'asc');
@@ -818,109 +871,110 @@ const IncidentListPage = () => {
                     }
                   }}
                 >
-                  Extras {pendingLowSortBy === 'extras' && (pendingLowExtrasSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                  <div className="flex items-center gap-2">
+                    Detalles
+                    {pendingLowSortBy === 'extras' && (
+                      <FontAwesomeIcon icon={pendingLowExtrasSortOrder === 'asc' ? faArrowUp : faArrowDown} className="w-3 h-3" />
+                    )}
+                  </div>
                 </th>
-                <th className="py-2 px-2">Acciones</th>
+                <th className={thClass}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {currentPendingLow.length > 0 ? (
                 currentPendingLow.map((incident) => (
-                  <tr key={incident.id_incidencia} className="border-b border-gray-700">
-                    <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">{normalizeTypeName(incident.tipo)}</td>
-                    <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
-                    <td className="py-2 px-2">
-                      {incident.leido ? (
-                        <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
+                  <tr key={incident.id_incidencia} className={darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
+                    <td className={tdClass}>{getCreatorName(incident)}</td>
+                    <td className={tdClass}>
+                      <span className="inline-flex px-2 py-1 rounded-lg bg-slate-700 text-sm font-medium">
+                        {normalizeTypeName(incident.tipo)}
+                      </span>
+                    </td>
+                    <td className={tdClass}>{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
+                    <td className={tdClass}>
+                      {incident.resolviendo ? (
+                        <span className="text-amber-500 text-sm">● En progreso</span>
                       ) : (
-                        <FontAwesomeIcon icon={faBan} title="No Resolviendo" />
+                        <span className="text-slate-400 text-sm">○ No resolviendo</span>
                       )}
                     </td>
-                    <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
-                    <td className="py-2 px-2">
-                      {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre ? (
-                        <span>{incident.vehicle.nombre}</span>
+                    <td className={tdClass}>{incident.park?.nombre || 'N/A'}</td>
+                    <td className={tdClass}>
+                      {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle ? (
+                        <span className="text-sm">{incident.vehicle.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
-                        <span>{getEmployee2Name(incident)}</span>
+                        <span className="text-sm">{getEmployee2Name(incident)}</span>
                       ) : incident.tipo.toLowerCase() === 'equipo' && incident.equipment ? (
-                        <span>{incident.equipment.nombre}</span>
+                        <span className="text-sm">{incident.equipment.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
-                        <span>{incident.clothing_item.name}</span>
+                        <span className="text-sm">{incident.clothing_item.name}</span>
                       ) : incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo ? (
-                        <span>{incident.nombre_equipo}</span>
+                        <span className="text-sm">{incident.nombre_equipo}</span>
                       ) : null}
                     </td>
-                    <td className="py-2 px-2 flex space-x-2">
-                      <button
-                        onClick={() => openResolveModal(incident)}
-                        className="bg-green-600 text-white px-3 py-1 rounded"
-                      >
-                        Resuelta
-                      </button>
-                      <button
-                        onClick={() => openDetailModal(incident)}
-                        className="bg-gray-600 text-white px-3 py-1 rounded flex items-center space-x-1"
-                      >
-                        <FontAwesomeIcon icon={faInfoCircle} />
-                        <span>Detalle</span>
-                      </button>
-                      {!incident.leido && (
-                        <button
-                          onClick={() => handleMarkAsRead(incident.id_incidencia)}
-                          className="bg-yellow-600 text-white px-3 py-1 rounded"
-                        >
-                          Resolviendo
+                    <td className={tdClass}>
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => openResolveModal(incident)} className={actionButtonClass('success')}>
+                          <FontAwesomeIcon icon={faCheckCircle} />
+                          <span className="hidden sm:inline">Resolver</span>
                         </button>
-                      )}
-                      {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
-                        <button
-                          onClick={() => handleDelete(incident.id_incidencia)}
-                          className="bg-red-600 text-white px-3 py-1 rounded"
-                        >
-                          Borrar
+                        <button onClick={() => openDetailModal(incident)} className={actionButtonClass('info')}>
+                          <FontAwesomeIcon icon={faInfoCircle} />
+                          <span className="hidden sm:inline">Ver</span>
                         </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setEditIncident(incident);
-                          setIsEditModalOpen(true);
-                        }}
-                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-1"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
-                        <span>Editar</span>
-                      </button>
+                        {!incident.leido && (
+                          <button onClick={() => handleMarkAsRead(incident.id_incidencia)} className={actionButtonClass('warning')}>
+                            <FontAwesomeIcon icon={faHammer} />
+                            <span className="hidden sm:inline">Resolviendo</span>
+                          </button>
+                        )}
+                        {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
+                          <button onClick={() => handleDelete(incident.id_incidencia)} className={actionButtonClass('danger')}>
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setEditIncident(incident);
+                            setIsEditModalOpen(true);
+                          }} 
+                          className={actionButtonClass('primary')}
+                        >
+                          <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="py-4 text-center">
-                    No hay incidencias pendientes de nivel bajo.
+                  <td colSpan="7" className={`${tdClass} text-center py-8`}>
+                    <p className={darkMode ? 'text-slate-400' : 'text-slate-500'}>
+                      No hay incidencias pendientes de nivel bajo
+                    </p>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        {/* Controles de paginación para nivel Bajo */}
         {totalLowPages > 1 && (
-          <div className="flex justify-center mt-4 space-x-4">
+          <div className={paginationClass}>
             <button
               onClick={() => setPendingLowPage(prev => Math.max(prev - 1, 1))}
               disabled={pendingLowPage === 1}
-              className="bg-blue-600 text-white px-3 py-1 rounded"
+              className={paginationButtonClass(pendingLowPage === 1)}
             >
               Anterior
             </button>
-            <span>
+            <span className="text-sm font-medium">
               Página {pendingLowPage} de {totalLowPages}
             </span>
             <button
               onClick={() => setPendingLowPage(prev => Math.min(prev + 1, totalLowPages))}
               disabled={pendingLowPage === totalLowPages}
-              className="bg-blue-600 text-white px-3 py-1 rounded"
+              className={paginationButtonClass(pendingLowPage === totalLowPages)}
             >
               Siguiente
             </button>
@@ -928,43 +982,60 @@ const IncidentListPage = () => {
         )}
       </div>
 
-      {/* Tabla de Incidencias Resueltas */}
-      <div className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <h2 className="text-xl font-semibold mb-4 bg-green-600 text-white p-2 rounded">
-          Incidencias Resueltas - {formattedMonthName}
-        </h2>
-        {/* Controles para filtrar por mes */}
-        <div className="flex justify-between items-center mb-4">
-          <button
-            onClick={() => {
-              setCurrentMonth(prev => Math.max(prev - 1, 0));
-              setResolvedCurrentPage(1); // reiniciar paginación
-            }}
-            disabled={currentMonth === 0}
-            className="bg-gray-500 text-white px-3 py-1 rounded"
-          >
-            Mes Anterior
-          </button>
-          <span className="font-bold">{formattedMonthName}</span>
-          <button
-            onClick={() => {
-              setCurrentMonth(prev => Math.min(prev + 1, 11));
-              setResolvedCurrentPage(1);
-            }}
-            disabled={currentMonth === 11}
-            className="bg-gray-500 text-white px-3 py-1 rounded"
-          >
-            Mes Siguiente
-          </button>
+      {/* Tabla Incidencias Resueltas */}
+      <div className={tableContainerClass}>
+        <div className={tableHeaderClass('bg-emerald-600')}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faCheckCircle} className="w-5 h-5" />
+              <span>Incidencias Resueltas - {formattedMonthName}</span>
+              {currentResolvedIncidents.length > 0 && (
+                <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-white/20 text-sm font-semibold">
+                  {sortedResolvedIncidents.length}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setCurrentMonth(prev => Math.max(prev - 1, 0));
+                  setResolvedCurrentPage(1);
+                }}
+                disabled={currentMonth === 0}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                  currentMonth === 0 
+                    ? 'bg-white/10 text-white/40 cursor-not-allowed' 
+                    : 'bg-white/20 hover:bg-white/30 text-white'
+                }`}
+              >
+                ← Anterior
+              </button>
+              <span className="text-sm font-semibold">{formattedMonthName}</span>
+              <button
+                onClick={() => {
+                  setCurrentMonth(prev => Math.min(prev + 1, 11));
+                  setResolvedCurrentPage(1);
+                }}
+                disabled={currentMonth === 11}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                  currentMonth === 11 
+                    ? 'bg-white/10 text-white/40 cursor-not-allowed' 
+                    : 'bg-white/20 hover:bg-white/30 text-white'
+                }`}
+              >
+                Siguiente →
+              </button>
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className={tableClass}>
             <thead>
               <tr>
-                <th className="py-2 px-2">Creado por</th>
-                <th className="py-2 px-2">Tipo</th>
-                <th
-                  className="py-2 px-2 cursor-pointer"
+                <th className={thClass}>Creado por</th>
+                <th className={thClass}>Tipo</th>
+                <th 
+                  className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (resolvedSortBy === 'fecha') {
                       setResolvedSortOrder(resolvedSortOrder === 'asc' ? 'desc' : 'asc');
@@ -974,12 +1045,17 @@ const IncidentListPage = () => {
                     }
                   }}
                 >
-                  Fecha {resolvedSortBy === 'fecha' && (resolvedSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                  <div className="flex items-center gap-2">
+                    Fecha
+                    {resolvedSortBy === 'fecha' && (
+                      <FontAwesomeIcon icon={resolvedSortOrder === 'asc' ? faArrowUp : faArrowDown} className="w-3 h-3" />
+                    )}
+                  </div>
                 </th>
-                <th className="py-2 px-2">Resolviendo</th>
-                <th className="py-2 px-2">Parque</th>
-                <th
-                  className="py-2 px-2 cursor-pointer"
+                <th className={thClass}>Resuelto por</th>
+                <th className={thClass}>Parque</th>
+                <th 
+                  className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (resolvedSortBy === 'extras') {
                       setResolvedExtrasSortOrder(resolvedExtrasSortOrder === 'asc' ? 'desc' : 'asc');
@@ -989,95 +1065,96 @@ const IncidentListPage = () => {
                     }
                   }}
                 >
-                  Extras {resolvedSortBy === 'extras' && (resolvedExtrasSortOrder === 'asc' ? <FontAwesomeIcon icon={faArrowUp} /> : <FontAwesomeIcon icon={faArrowDown} />)}
+                  <div className="flex items-center gap-2">
+                    Detalles
+                    {resolvedSortBy === 'extras' && (
+                      <FontAwesomeIcon icon={resolvedExtrasSortOrder === 'asc' ? faArrowUp : faArrowDown} className="w-3 h-3" />
+                    )}
+                  </div>
                 </th>
-                <th className="py-2 px-2">Acciones</th>
+                <th className={thClass}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {currentResolvedIncidents.length > 0 ? (
                 currentResolvedIncidents.map((incident) => (
-                  <tr key={incident.id_incidencia} className="border-b border-gray-700">
-                    <td className="py-2 px-2">{getCreatorName(incident)}</td>
-                    <td className="py-2 px-2">{normalizeTypeName(incident.tipo)}</td>
-                    <td className="py-2 px-2">{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
-                    <td className="py-2 px-2">
-                      {incident.leido ? (
-                        <FontAwesomeIcon icon={faHammer} title="Resolviendo" />
-                      ) : (
-                        <FontAwesomeIcon icon={faBan} title="No Resolviendo" />
-                      )}
+                  <tr key={incident.id_incidencia} className={darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
+                    <td className={tdClass}>{getCreatorName(incident)}</td>
+                    <td className={tdClass}>
+                      <span className="inline-flex px-2 py-1 rounded-lg bg-emerald-700/20 text-emerald-400 text-sm font-medium">
+                        {normalizeTypeName(incident.tipo)}
+                      </span>
                     </td>
-                    <td className="py-2 px-2">{incident.park ? incident.park.nombre : incident.id_parque}</td>
-                    <td className="py-2 px-2">
-                      {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle && incident.vehicle.nombre ? (
-                        <span>{incident.vehicle.nombre}</span>
+                    <td className={tdClass}>{dayjs(incident.fecha).format('DD/MM/YYYY')}</td>
+                    <td className={tdClass}>
+                      {incident.resolver ? `${incident.resolver.nombre} ${incident.resolver.apellido}` : 'N/A'}
+                    </td>
+                    <td className={tdClass}>{incident.park?.nombre || 'N/A'}</td>
+                    <td className={tdClass}>
+                      {incident.tipo.toLowerCase() === 'vehiculo' && incident.vehicle ? (
+                        <span className="text-sm">{incident.vehicle.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'personal' && incident.employee2 ? (
-                        <span>{getEmployee2Name(incident)}</span>
+                        <span className="text-sm">{getEmployee2Name(incident)}</span>
                       ) : incident.tipo.toLowerCase() === 'equipo' && incident.equipment ? (
-                        <span>{incident.equipment.nombre}</span>
+                        <span className="text-sm">{incident.equipment.nombre}</span>
                       ) : incident.tipo.toLowerCase() === 'vestuario' && incident.clothing_item ? (
-                        <span>{incident.clothing_item.name}</span>
+                        <span className="text-sm">{incident.clothing_item.name}</span>
                       ) : incident.tipo.toLowerCase() === 'equipos_comunes' && incident.nombre_equipo ? (
-                        <span>{incident.nombre_equipo}</span>
+                        <span className="text-sm">{incident.nombre_equipo}</span>
                       ) : null}
                     </td>
-                    <td className="py-2 px-2 flex space-x-2">
-                      <button
-                        onClick={() => openDetailModal(incident)}
-                        className="bg-gray-600 text-white px-3 py-1 rounded flex items-center space-x-1"
-                      >
-                        <FontAwesomeIcon icon={faInfoCircle} />
-                        <span>Detalle</span>
-                      </button>
-                      {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
-                        <button
-                          onClick={() => handleDelete(incident.id_incidencia)}
-                          className="bg-red-600 text-white px-3 py-1 rounded"
-                        >
-                          Borrar
+                    <td className={tdClass}>
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => openDetailModal(incident)} className={actionButtonClass('info')}>
+                          <FontAwesomeIcon icon={faInfoCircle} />
+                          <span className="hidden sm:inline">Ver</span>
                         </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setEditIncident(incident);
-                          setIsEditModalOpen(true);
-                        }}
-                        className="bg-blue-500 text-white px-3 py-1 rounded flex items-center space-x-1"
-                      >
-                        <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
-                        <span>Editar</span>
-                      </button>
+                        {(user?.type === 'jefe' || incident.id_empleado === user?.id_empleado) && (
+                          <button onClick={() => handleDelete(incident.id_incidencia)} className={actionButtonClass('danger')}>
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setEditIncident(incident);
+                            setIsEditModalOpen(true);
+                          }} 
+                          className={actionButtonClass('primary')}
+                        >
+                          <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="py-4 text-center">
-                    No hay incidencias resueltas.
+                  <td colSpan="7" className={`${tdClass} text-center py-8`}>
+                    <p className={darkMode ? 'text-slate-400' : 'text-slate-500'}>
+                      No hay incidencias resueltas en {formattedMonthName}
+                    </p>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        {/* Controles de paginación para incidencias resueltas */}
         {totalResolvedPages > 1 && (
-          <div className="flex justify-center mt-4 space-x-4">
+          <div className={paginationClass}>
             <button
               onClick={() => setResolvedCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={resolvedCurrentPage === 1}
-              className="bg-blue-600 text-white px-3 py-1 rounded"
+              className={paginationButtonClass(resolvedCurrentPage === 1)}
             >
               Anterior
             </button>
-            <span>
+            <span className="text-sm font-medium">
               Página {resolvedCurrentPage} de {totalResolvedPages}
             </span>
             <button
               onClick={() => setResolvedCurrentPage(prev => Math.min(prev + 1, totalResolvedPages))}
               disabled={resolvedCurrentPage === totalResolvedPages}
-              className="bg-blue-600 text-white px-3 py-1 rounded"
+              className={paginationButtonClass(resolvedCurrentPage === totalResolvedPages)}
             >
               Siguiente
             </button>
@@ -1108,7 +1185,6 @@ const IncidentListPage = () => {
           onUpdate={fetchIncidents}
         />
       )}
-
       {isResolveModalOpen && (
         <ResolveIncidentModal
           isOpen={isResolveModalOpen}
@@ -1118,7 +1194,6 @@ const IncidentListPage = () => {
           onSubmit={handleResolveSubmit}
         />
       )}
-
     </div>
   );
 };

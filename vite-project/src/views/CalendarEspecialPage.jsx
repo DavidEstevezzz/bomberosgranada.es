@@ -150,8 +150,6 @@ const CalendarEspecialPage = () => {
 
     return (
         <div className="flex flex-col items-start justify-start min-h-screen mt-3">
-            <div className="w-full p-4 bg-gray-50 rounded-lg shadow-lg">
-                <h1 className="text-2xl font-bold mb-4">Calendario de Guardias Especiales</h1>
                 <Calendar
                     onDateClick={handleDateClick}
                     onEditClick={(guard) => {
@@ -176,7 +174,6 @@ const CalendarEspecialPage = () => {
                     guards={especialGuards} // Solo mostrar guardias especiales en el calendario
                     brigadeMap={brigadeMap}
                 />
-            </div>
 
             {modalOpen && (
                 <GuardEspecialModal

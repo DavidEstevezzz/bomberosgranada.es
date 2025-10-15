@@ -224,6 +224,9 @@ rimary-400 ${
       ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
       : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
   }`;
+  const dateInputClass = `${inputClass} ${
+  darkMode ? '[color-scheme:dark]' : ''
+}`;
   const textareaClass = `${inputClass} min-h-[140px] resize-y`;
   const helperClass = `text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`;
   const errorClass = 'text-xs font-medium text-red-500';
@@ -462,7 +465,7 @@ rimary-400 ${
                 id="fecha"
                 value={formValues.fecha}
                 onChange={handleChange}
-                className={inputClass}
+                className={dateInputClass}
                 required
               />
               {errorMessages.fecha && <p className={errorClass}>{errorMessages.fecha}</p>}

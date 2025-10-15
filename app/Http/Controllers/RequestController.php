@@ -262,6 +262,7 @@ class RequestController extends Controller
 
             // Enviar correo de notificación
 
+            // Enviar correo de notificación
             $user = $miRequest->EnviadaPor;
 
             Log::info("=== INICIO PROCESO ENVÍO CORREO ===");
@@ -294,10 +295,15 @@ class RequestController extends Controller
             ]);
 
             // Configuración específica según el mailer
-            if ($mailMailer === 'sendgrid') {
+            if ($mailMailer === 'mailgun') {
+                Log::info("🎯 Usando Mailgun API");
+                Log::info("MAILGUN_DOMAIN: " . config('services.mailgun.domain'));
+                Log::info("MAILGUN_SECRET configurado: " . (config('services.mailgun.secret') ? 'SÍ' : 'NO'));
+                Log::info("MAILGUN_ENDPOINT: " . config('services.mailgun.endpoint'));
+            } elseif ($mailMailer === 'sendgrid') {
                 Log::info("🎯 Usando SendGrid API");
                 Log::info("API KEY configurada: " . (config('services.sendgrid.key') ? 'SÍ' : 'NO'));
-            } else {
+            } elseif ($mailMailer === 'smtp') {
                 Log::info("📧 Configuración SMTP:", [
                     'MAIL_HOST' => config('mail.mailers.smtp.host'),
                     'MAIL_PORT' => config('mail.mailers.smtp.port'),
@@ -316,8 +322,8 @@ class RequestController extends Controller
             try {
                 Log::info("🚀 Iniciando envío de correo...");
 
-                // Solo verificar conectividad SMTP si no es SendGrid API
-                if ($mailMailer !== 'sendgrid') {
+                // Solo verificar conectividad SMTP si es SMTP puro
+                if ($mailMailer === 'smtp') {
                     Log::info("🔌 Verificando conectividad SMTP...");
 
                     $host = config('mail.mailers.smtp.host');
@@ -335,7 +341,7 @@ class RequestController extends Controller
                         fclose($fp);
                     }
                 } else {
-                    Log::info("⚡ Usando SendGrid API (no requiere conexión SMTP)");
+                    Log::info("⚡ Usando {$mailMailer} API (no requiere conexión SMTP)");
                 }
 
                 // Medir tiempo de envío
@@ -361,6 +367,7 @@ class RequestController extends Controller
                 Log::error("Mensaje: " . $e->getMessage());
                 Log::error("Código: " . $e->getCode());
                 Log::error("Archivo: " . $e->getFile() . ":" . $e->getLine());
+                Log::error("Stack trace: " . $e->getTraceAsString());
 
                 // Información adicional de debug
                 Log::error("🔍 Información adicional:");
@@ -376,42 +383,42 @@ class RequestController extends Controller
         }
     }
 
-/**
- * Obtener lista de empleados para jefes
- */
-public function getEmployees()
-{
-    $user = Auth::user();
-    
-    // Solo los jefes pueden acceder a esta función
-    if ($user->type !== 'jefe') {
-        return response()->json(['message' => 'No autorizado'], 403);
+    /**
+     * Obtener lista de empleados para jefes
+     */
+    public function getEmployees()
+    {
+        $user = Auth::user();
+
+        // Solo los jefes pueden acceder a esta función
+        if ($user->type !== 'jefe') {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $employees = User::select(
+            'id_empleado',
+            'nombre',
+            'apellido',
+            'dni',
+            'vacaciones',
+            'AP',
+            'SP',
+            'horas_sindicales',
+            'modulo',
+            'type'
+        )
+            ->whereIn('type', ['bombero', 'mando', 'empleado'])
+            ->orderBy('nombre')
+            ->orderBy('apellido')
+            ->get();
+
+        return response()->json($employees);
     }
-    
-    $employees = User::select(
-        'id_empleado', 
-        'nombre', 
-        'apellido',  
-        'dni',       
-        'vacaciones', 
-        'AP', 
-        'SP', 
-        'horas_sindicales',
-        'modulo',
-        'type'
-    )
-    ->whereIn('type', ['bombero', 'mando', 'empleado'])
-    ->orderBy('nombre')
-    ->orderBy('apellido')
-    ->get();
-    
-    return response()->json($employees);
-}
 
     private function createAssignments($miRequest)
     {
 
-        
+
 
         $brigadeId = null;
 
@@ -774,7 +781,4 @@ public function getEmployees()
 
         $user->save();
     }
-    
 }
-
-

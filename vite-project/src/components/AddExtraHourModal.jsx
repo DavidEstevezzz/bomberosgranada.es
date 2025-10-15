@@ -31,7 +31,7 @@ const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
     ],
     [],
   );
-  
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -124,33 +124,31 @@ const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
 
   const overlayClass =
     'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-10 backdrop-blur';
-  const modalClass = `relative flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${
-    darkMode ? 'border-slate-800 bg-slate-950/90 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
-  }`;
-  const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white ${
-    darkMode
+  const modalClass = `relative flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${darkMode ? 'border-slate-800 bg-slate-950/90 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+    }`;
+  const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white ${darkMode
       ? 'bg-gradient-to-r from-primary-900/90 via-primary-700/90 to-primary-600/80'
       : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700'
-  }`;
-  const inputBaseClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 ${
-    darkMode
+    }`;
+  const inputBaseClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 ${darkMode
       ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
       : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
-  }`;
+    }`;
+
+  // Clase especial para el input de fecha con ícono del calendario visible en modo oscuro
+  const dateInputClass = `${inputBaseClass} ${darkMode ? '[color-scheme:dark]' : ''
+    }`;
+
   const labelClass = 'text-xs font-semibold uppercase tracking-[0.3em] text-primary-500 dark:text-primary-200';
   const helperTextClass = `text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`;
-  const cancelButtonClass = `inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-    darkMode
+  const cancelButtonClass = `inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${darkMode
       ? 'border-slate-700 text-slate-200 hover:border-slate-500 hover:text-white focus:ring-primary-500 focus:ring-offset-slate-900'
       : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-900 focus:ring-primary-500 focus:ring-offset-white'
-  }`;
-  const submitButtonClass = `inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-    darkMode
+    }`;
+  const submitButtonClass = `inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${darkMode
       ? 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-slate-900'
-      : 'bg-primary-600 hover-bg-primary-500 focus:ring-primary-400 focus:ring-offset-white'
-  }`.replace('hover-bg', 'hover:bg'); // ensures consistent string without mutation
-
-  
+      : 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-white'
+    }`;
 
   return (
     <div className={overlayClass} onMouseDown={handleClose}>
@@ -177,68 +175,73 @@ const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
         <div className="space-y-6 px-6 py-6 sm:px-8">
           {submitError && (
             <div
-              className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
-                darkMode ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'
-              }`}
+              className={`rounded-2xl border px-4 py-3 text-sm font-medium ${darkMode
+                  ? 'border-red-900/30 bg-red-950/20 text-red-400'
+                  : 'border-red-200 bg-red-50 text-red-600'
+                }`}
             >
               {submitError}
             </div>
           )}
 
-          <div className="space-y-2">
-            <span className={labelClass}>Buscar empleado</span>
-            <input
-              type="text"
-              placeholder="Introduce nombre o apellido"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className={inputBaseClass}
-            />
-            <p className={helperTextClass}>El listado se filtrará automáticamente según escribas.</p>
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="id_empleado" className={labelClass}>
-                  Empleado
-                </label>
-                <select
-                  name="id_empleado"
-                  id="id_empleado"
-                  value={formValues.id_empleado}
-                  onChange={handleChange}
-                  className={inputBaseClass}
-                  required
-                >
-                  <option value="">Seleccione un empleado</option>
-                  {filteredEmployees.map((employee) => (
-                    <option key={employee.id_empleado} value={employee.id_empleado}>
-                      {employee.nombre} {employee.apellido}
-                    </option>
-                  ))}
-                </select>
-                {errorMessages.id_empleado && (
-                  <p className="text-xs font-medium text-red-500">{errorMessages.id_empleado}</p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <label htmlFor="searchTerm" className={labelClass}>
+                Buscar empleado
+              </label>
+              <input
+                type="text"
+                id="searchTerm"
+                name="searchTerm"
+                placeholder="Escribe el nombre del empleado..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className={inputBaseClass}
+              />
+              <p className={helperTextClass}>Filtra la lista escribiendo el nombre o apellido.</p>
+            </div>
 
-              <div className="space-y-2">
-                <label htmlFor="date" className={labelClass}>
-                  Fecha
-                </label>
-                <input
-                  type="date"
-                  name="date"
-                  id="date"
-                  value={formValues.date}
-                  onChange={handleChange}
-                  className={inputBaseClass}
-                  required
-                />
-                {errorMessages.date && <p className="text-xs font-medium text-red-500">{errorMessages.date}</p>}
-              </div>
+            <div className="space-y-2">
+              <label htmlFor="id_empleado" className={labelClass}>
+                Empleado
+              </label>
+              <select
+                name="id_empleado"
+                id="id_empleado"
+                value={formValues.id_empleado}
+                onChange={handleChange}
+                className={inputBaseClass}
+                required
+              >
+                <option value="">Seleccione un empleado</option>
+                {filteredEmployees.map((employee) => (
+                  <option key={employee.id_empleado} value={employee.id_empleado}>
+                    {employee.nombre} {employee.apellido}
+                  </option>
+                ))}
+              </select>
+              {errorMessages.id_empleado && (
+                <p className="text-xs font-medium text-red-500">{errorMessages.id_empleado}</p>
+              )}
+            </div>
 
+            <div className="space-y-2">
+              <label htmlFor="date" className={labelClass}>
+                Fecha del servicio
+              </label>
+              <input
+                type="date"
+                name="date"
+                id="date"
+                value={formValues.date}
+                onChange={handleChange}
+                className={dateInputClass}
+                required
+              />
+              {errorMessages.date && <p className="text-xs font-medium text-red-500">{errorMessages.date}</p>}
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2">
               {numericFields.map(({ name, label }) => (
                 <div key={name} className="space-y-2">
                   <label htmlFor={name} className={labelClass}>
@@ -248,13 +251,19 @@ const AddExtraHourModal = ({ isOpen, onClose, onAdd }) => {
                     type="number"
                     name={name}
                     id={name}
-                    min="0"
-                    step="0.25"
                     value={formValues[name]}
                     onChange={handleChange}
                     className={inputBaseClass}
+                    min={0}
+                    step="0.5"
                     required
                   />
+                  {name === 'horas_diurnas' && (
+                    <p className={helperTextClass}>Introduce el total de horas realizadas en horario diurno.</p>
+                  )}
+                  {name === 'horas_nocturnas' && (
+                    <p className={helperTextClass}>Añade las horas entre las 22:00 y las 06:00.</p>
+                  )}
                   {errorMessages[name] && <p className="text-xs font-medium text-red-500">{errorMessages[name]}</p>}
                 </div>
               ))}

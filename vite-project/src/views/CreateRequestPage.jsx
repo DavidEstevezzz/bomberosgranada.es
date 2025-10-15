@@ -56,6 +56,14 @@ const CreateRequestPage = () => {
     loadEmployees();
   }, [user]);
 
+  useEffect(() => {
+  // Limpiar campos de hora si se selecciona "Día Completo" en horas sindicales
+  if (tipo === 'horas sindicales' && turno === 'Día Completo') {
+    setHoraIni('');
+    setHoraFin('');
+  }
+}, [tipo, turno]);
+
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
@@ -167,7 +175,7 @@ const CreateRequestPage = () => {
   // CORREGIDO: Mapeo correcto de campos para 'compensacion grupos especiales'
   const validateDaysAvailable = (type) => {
     const targetUser = getTargetUser();
-    
+
     // Mapear el tipo al campo correcto de la base de datos
     let field;
     if (type === 'asuntos propios') {
@@ -177,7 +185,7 @@ const CreateRequestPage = () => {
     } else {
       field = 'otros';
     }
-    
+
     const availableDays = targetUser[field] || 0;
 
     if (availableDays <= 0) {
@@ -242,6 +250,23 @@ const CreateRequestPage = () => {
   // Validación para Horas Sindicales
   const validateSindicalHours = () => {
     const targetUser = getTargetUser();
+
+    // Si es "Día Completo", automáticamente son 24 horas
+    if (turno === 'Día Completo') {
+      const availableHours = targetUser.horas_sindicales || 0;
+      if (24 > availableHours) {
+        const userName = selectedEmployee
+          ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
+          : 'El usuario';
+        setError(
+          `${userName} no tiene suficientes horas sindicales. Disponibles: ${availableHours}, solicitadas: 24`
+        );
+        return null;
+      }
+      return 24; // Retorna 24 horas directamente
+    }
+
+    // Para otros casos, requiere hora de inicio y fin
     if (!horaIni || !horaFin) {
       setError('Debe especificar hora de inicio y fin para horas sindicales.');
       return null;
@@ -376,7 +401,7 @@ const CreateRequestPage = () => {
     formData.append('tipo', tipo);
     formData.append('motivo', motivo);
     formData.append('fecha_ini', fechaIni);
-    
+
     // CORREGIDO: 'compensacion grupos especiales' usa fecha_ini como fecha_fin (igual que asuntos propios)
     formData.append(
       'fecha_fin',
@@ -389,7 +414,7 @@ const CreateRequestPage = () => {
         ? fechaIni
         : fechaFin
     );
-    
+
     // CORREGIDO: 'compensacion grupos especiales' requiere turno (igual que asuntos propios)
     formData.append(
       'turno',
@@ -400,7 +425,7 @@ const CreateRequestPage = () => {
         ? turno
         : ''
     );
-    
+
     formData.append(
       'horas',
       tipo === 'salidas personales' || tipo === 'horas sindicales' ? horas : ''
@@ -450,7 +475,8 @@ const CreateRequestPage = () => {
   const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
   const inputBaseClass = `w-full rounded-2xl border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${darkMode ? 'border-slate-700 bg-slate-900/60 text-slate-100 placeholder-slate-400' : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'}`;
   const labelBaseClass = 'block text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200';
-
+  const dateInputClass = `${inputBaseClass} ${darkMode ? '[color-scheme:dark]' : ''
+    }`;
   // Validación de seguridad: Si no hay usuario, mostrar cargando
   if (!user) {
     return (
@@ -484,7 +510,8 @@ const CreateRequestPage = () => {
         </p>
       </div>
 
-      <div className="space-y-8 px-6 py-8 sm:px-10">
+      <div className={`space-y-8 px-6 py-8 sm:px-10 ${darkMode ? 'bg-slate-800/30' : 'bg-slate-200'
+        }`}>
         {error && (
           <div
             className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${darkMode ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'}`}
@@ -504,7 +531,7 @@ const CreateRequestPage = () => {
         <form onSubmit={handleSubmit} className="space-y-8">
           {user?.type === 'jefe' && (
             <section
-              className={`rounded-2xl border px-5 py-6 transition-colors ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50/70'}`}
+              className={`rounded-2xl border px-5 py-6 transition-colors ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-[#F5F5F5]'}`}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -542,7 +569,7 @@ const CreateRequestPage = () => {
           )}
 
           <section
-            className={`rounded-2xl border px-5 py-6 transition-colors ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50/60'}`}
+            className={`rounded-2xl border px-5 py-6 transition-colors ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-[#F5F5F5]'}`}
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -610,7 +637,7 @@ const CreateRequestPage = () => {
                   id="fechaIni"
                   value={fechaIni}
                   onChange={(e) => setFechaIni(e.target.value)}
-                  className={inputBaseClass}
+                  className={dateInputClass}
                   required
                 />
               </div>
@@ -627,13 +654,14 @@ const CreateRequestPage = () => {
                   id="fechaFin"
                   value={fechaFin}
                   onChange={(e) => setFechaFin(e.target.value)}
-                  className={inputBaseClass}
+                  className={dateInputClass}
                   required
                 />
               </div>
             )}
 
-            {(tipo === 'salidas personales' || tipo === 'horas sindicales') && (
+
+            {(tipo === 'salidas personales' || tipo === 'horas sindicales') && turno !== 'Día Completo' && (
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className={labelBaseClass} htmlFor="horaIni">
@@ -662,6 +690,18 @@ const CreateRequestPage = () => {
                     required
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Mensaje informativo cuando se selecciona Día Completo en horas sindicales */}
+            {tipo === 'horas sindicales' && turno === 'Día Completo' && (
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${darkMode
+                    ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
+                    : 'border-blue-200 bg-blue-50 text-blue-700'
+                  }`}
+              >
+                Se solicitarán automáticamente 24 horas sindicales para el día completo seleccionado.
               </div>
             )}
 
@@ -718,8 +758,8 @@ const CreateRequestPage = () => {
             <button
               type="submit"
               className={`w-full rounded-2xl px-5 py-3 text-base font-semibold shadow-lg transition-all duration-300 ${isLoading
-                  ? 'cursor-wait bg-primary-300 text-primary-950 dark:bg-primary-700/40 dark:text-primary-100'
-                  : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 text-white hover:shadow-xl'
+                ? 'cursor-wait bg-primary-300 text-primary-950 dark:bg-primary-700/40 dark:text-primary-100'
+                : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 text-white hover:shadow-xl'
                 } disabled:opacity-70 disabled:cursor-not-allowed`}
               disabled={isLoading}
             >

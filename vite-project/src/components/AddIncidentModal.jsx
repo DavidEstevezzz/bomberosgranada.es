@@ -220,6 +220,9 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
       ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
       : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
   }`;
+  const dateInputClass = `${inputClass} ${
+  darkMode ? '[color-scheme:dark]' : ''
+}`;
   const textareaClass = `min-h-[132px] w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
     darkMode
       ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
@@ -465,7 +468,7 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
                     id="fecha"
                     value={formValues.fecha}
                     onChange={handleChange}
-                    className={inputClass}
+                    className={dateInputClass}
                     required
                   />
                   {errorMessages.fecha && <p className={errorClass}>{errorMessages.fecha}</p>}

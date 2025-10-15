@@ -123,6 +123,10 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
   }`;
   const labelClass = 'text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-200';
 
+  const dateInputClass = `${inputBaseClass} ${
+  darkMode ? '[color-scheme:dark]' : ''
+}`;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-10 backdrop-blur"
@@ -181,7 +185,7 @@ const AddAssignmentModal = ({ show, onClose, onAdd }) => {
                   value={formData.fecha_ini}
                   onChange={handleChange}
                   required
-                  className={inputBaseClass}
+                  className={dateInputClass}
                 />
               </div>
 

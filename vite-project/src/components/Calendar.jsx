@@ -118,7 +118,7 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap, title = null }
   const containerClass = `w-full rounded-3xl border p-6 transition-colors duration-300 ${
     darkMode 
       ? 'border-slate-800 bg-slate-900/60' 
-      : 'border-slate-200 bg-white'
+      : 'border-slate-200 bg-salte-100'
   }`;
 
   const headerClass = `flex items-center justify-between mb-6 pb-4 border-b ${

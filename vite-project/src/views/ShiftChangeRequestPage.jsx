@@ -179,6 +179,9 @@ const ShiftChangeRequestPage = () => {
       ? 'border-slate-700 bg-slate-900/60 text-slate-100 placeholder-slate-400'
       : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
   }`;
+  const dateInputClass = `${inputBaseClass} ${
+  darkMode ? '[color-scheme:dark]' : ''
+}`;
   const sectionBaseClass = `rounded-2xl border px-5 py-6 transition-colors ${
     darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50/70'
   }`;
@@ -410,7 +413,7 @@ const ShiftChangeRequestPage = () => {
                     id="fecha"
                     value={fecha}
                     onChange={(e) => setFecha(e.target.value)}
-                    className={inputBaseClass}
+                    className={dateInputClass}
                     required
                   />
                 </div>
@@ -424,7 +427,7 @@ const ShiftChangeRequestPage = () => {
                       id="fecha2"
                       value={fecha2}
                       onChange={(e) => setFecha2(e.target.value)}
-                      className={inputBaseClass}
+                      className={dateInputClass}
                       required
                     />
                   </div>

@@ -116,6 +116,9 @@ const EditAssignmentModal = ({ assignment, show, onClose, onEdit }) => {
       ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
       : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
   }`;
+  const dateInputClass = `${inputClass} ${
+  darkMode ? '[color-scheme:dark]' : ''
+}`;
   const cancelButtonClass = `inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
     darkMode
       ? 'border-slate-700 text-slate-200 hover:border-slate-500 hover:text-white focus:ring-primary-500 focus:ring-offset-slate-900'
@@ -168,7 +171,7 @@ const EditAssignmentModal = ({ assignment, show, onClose, onEdit }) => {
                 name="id_asignacion"
                 value={formData.id_asignacion || ''}
                 onChange={handleChange}
-                className={inputClass}
+                className={dateInputClass}
                 required
                 disabled={isSubmitting}
               />
@@ -181,7 +184,7 @@ const EditAssignmentModal = ({ assignment, show, onClose, onEdit }) => {
                 name="fecha_ini"
                 value={formData.fecha_ini || ''}
                 onChange={handleChange}
-                className={inputClass}
+                className={dateInputClass}
                 required
                 disabled={isSubmitting}
               />

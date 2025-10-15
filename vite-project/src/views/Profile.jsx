@@ -175,12 +175,13 @@ const Profile = () => {
   ];
 
   const permissionStats = [
-    { label: 'Vacaciones', value: `${user.vacaciones ?? 0} días`, helper: user.mes_vacaciones ? `Mes: ${user.mes_vacaciones}` : null },
-    { label: 'Asuntos Propios', value: `${user.AP ?? 0} jornadas` },
-    { label: 'Salidas Personales', value: `${user.SP ?? 0} horas` },
-    { label: 'Módulos', value: `${user.modulo ?? 0} días` },
-    { label: 'Compensación grupos', value: `${user.compensacion_grupos ?? 0} jornadas` },
-  ];
+  { label: 'Vacaciones', value: `${user.vacaciones ?? 0} días`, helper: user.mes_vacaciones ? `Mes: ${user.mes_vacaciones}` : null },
+  { label: 'Asuntos Propios', value: `${user.AP ?? 0} jornadas` },
+  { label: 'Salidas Personales', value: `${user.SP ?? 0} horas` },
+  { label: 'Horas Sindicales', value: `${user.horas_sindicales ?? 0} horas` },
+  { label: 'Módulos', value: `${user.modulo ?? 0} días` },
+  { label: 'Compensación grupos', value: `${user.compensacion_grupos ?? 0} jornadas` },
+];
 
   return (
       <div className={cardContainerClass}>

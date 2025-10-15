@@ -209,6 +209,9 @@ const AssignFirefighterModal = ({
       ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
       : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
   }`;
+  const dateInputClass = `${inputClass} ${
+  darkMode ? '[color-scheme:dark]' : ''
+}`;
   const selectClass = inputClass;
   const messageClass = (type) =>
     `rounded-2xl border px-4 py-3 text-sm font-medium ${
@@ -295,7 +298,7 @@ const AssignFirefighterModal = ({
                 type="date"
                 value={fecha}
                 onChange={(event) => setFecha(event.target.value)}
-                className={inputClass}
+                className={dateInputClass}
                 required
               />
               <p className={helperClass}>La fecha inicial determina cuándo comienza la asignación de ida.</p>

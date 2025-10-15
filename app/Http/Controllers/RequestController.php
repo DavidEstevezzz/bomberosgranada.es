@@ -378,7 +378,7 @@ class RequestController extends Controller
                 Log::error("PHP Version: " . PHP_VERSION);
                 Log::error("Laravel Version: " . app()->version());
                 Log::error("Environment: " . config('app.env'));
-                Log::error("Mailer usado: " . $mailMailer);
+                Log::error("Mailer. usado: " . $mailMailer);
             } finally {
                 Log::info("=== FIN PROCESO ENVÍO CORREO ===");
             }

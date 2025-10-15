@@ -155,7 +155,7 @@ class RequestController extends Controller
 
             Log::info("🔥 UPDATE LLAMADO - ID: {$id}, Datos recibidos:", $request->all());
 
-            
+
         $miRequest = MiRequest::findOrFail($id);
 
         $rules = [
@@ -263,7 +263,7 @@ class RequestController extends Controller
                 $this->deleteAssignments($miRequest);
                 Log::info("Asignaciones eliminadas para solicitud ID: {$miRequest->id}");
             }
-
+        }
             // Enviar correo de notificación
 
             // Enviar correo de notificación
@@ -384,7 +384,7 @@ class RequestController extends Controller
             }
 
             return response()->json($miRequest, 200);
-        }
+        
     }
 
     /**

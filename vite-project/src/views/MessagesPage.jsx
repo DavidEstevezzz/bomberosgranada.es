@@ -64,19 +64,17 @@ const MessageThread = ({ message, onReply, users }) => {
     ? 'bg-slate-900/80 text-slate-100 ring-slate-700'
     : 'bg-white text-slate-700 ring-slate-200';
   const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-500';
-  const actionButtonClass = `mt-3 inline-flex items-center justify-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-    darkMode
+  const actionButtonClass = `mt-3 inline-flex items-center justify-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${darkMode
       ? 'bg-primary-500/20 text-primary-100 hover:bg-primary-500/30 focus:ring-primary-400/50 focus:ring-offset-slate-900'
       : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/50 focus:ring-offset-white'
-  }`;
+    }`;
 
   return (
     <div className="flex flex-col w-full">
       <div className={`flex w-full py-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
         <div
-          className={`${baseBubbleClass} ${
-            isOwnMessage ? ownMessageClass : incomingMessageClass
-          }`}
+          className={`${baseBubbleClass} ${isOwnMessage ? ownMessageClass : incomingMessageClass
+            }`}
           style={{ alignSelf: isOwnMessage ? 'flex-end' : 'flex-start' }}
         >
           {!isOwnMessage && (
@@ -91,11 +89,10 @@ const MessageThread = ({ message, onReply, users }) => {
           {message.attachment && (
             <button
               onClick={handleDownloadAttachment}
-              className={`mt-3 inline-flex items-center gap-2 text-[11px] font-semibold transition-colors ${
-                darkMode
+              className={`mt-3 inline-flex items-center gap-2 text-[11px] font-semibold transition-colors ${darkMode
                   ? 'text-primary-200 hover:text-primary-100'
                   : 'text-primary-600 hover:text-primary-700'
-              }`}
+                }`}
             >
               <FontAwesomeIcon icon={faFilePdf} className="h-3.5 w-3.5" />
               Descargar adjunto
@@ -133,83 +130,72 @@ const MessagesPage = () => {
   const [replyMessage, setReplyMessage] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(dayjs());
 
-  const pageWrapperClass = `min-h-[calc(100vh-6rem)] w-full px-4 py-10 transition-colors duration-300 ${
-    darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
-  }`;
-  const cardContainerClass = `mx-auto max-w-6xl overflow-hidden rounded-3xl border shadow-xl backdrop-blur ${
-    darkMode ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-white/90'
-  }`;
+  const pageWrapperClass = `min-h-[calc(100vh-6rem)] w-full px-4 py-10 transition-colors duration-300 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
+    }`;
+  const cardContainerClass = `mx-auto max-w-6xl overflow-hidden rounded-3xl border shadow-xl backdrop-blur ${darkMode ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-white/90'
+    }`;
   const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
-  const statsCardClass = `rounded-2xl border px-5 py-4 transition-colors duration-200 ${
-    darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/80'
-  }`;
+  const statsCardClass = `rounded-2xl border px-5 py-4 transition-colors duration-200 ${darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/80'
+    }`;
   const statsLabelClass =
     'text-sm font-semibold uppercase tracking-[0.28em] text-primary-600 dark:text-primary-100';
   const statsValueClass = 'mt-2 text-3xl font-semibold';
-  const toggleWrapperClass = `inline-flex flex-wrap gap-2 rounded-full border px-3 py-3 transition-colors duration-200 ${
-    darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50'
-  }`;
+  const toggleWrapperClass = `inline-flex flex-wrap gap-2 rounded-full border px-3 py-3 transition-colors duration-200 ${darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50'
+    }`;
   const toggleButtonClass = (isActive) =>
-    `inline-flex items-center justify-center rounded-full px-5 py-2.5 text-base font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-      isActive
-        ? darkMode
-          ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/40 focus:ring-primary-500/60 focus:ring-offset-slate-900'
-          : 'bg-primary-500 text-white shadow-lg shadow-primary-500/30 focus:ring-primary-500/50 focus:ring-offset-slate-50'
-        : darkMode
+    `inline-flex items-center justify-center rounded-full px-5 py-2.5 text-base font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${isActive
+      ? darkMode
+        ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/40 focus:ring-primary-500/60 focus:ring-offset-slate-900'
+        : 'bg-primary-500 text-white shadow-lg shadow-primary-500/30 focus:ring-primary-500/50 focus:ring-offset-slate-50'
+      : darkMode
         ? 'border border-slate-700 bg-transparent text-slate-300 hover:border-primary-400 hover:text-primary-100 focus:ring-primary-400/40 focus:ring-offset-slate-900'
         : 'border border-slate-200 bg-white text-slate-600 hover:border-primary-400 hover:text-primary-600 focus:ring-primary-400/40 focus:ring-offset-slate-50'
     }`;
   const baseButtonClass =
     'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-base font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
-  const primaryButtonClass = `${baseButtonClass} ${
-    darkMode
+  const primaryButtonClass = `${baseButtonClass} ${darkMode
       ? 'bg-primary-500 text-white hover:bg-primary-400 focus:ring-primary-500/60 focus:ring-offset-slate-900'
       : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/50 focus:ring-offset-slate-50'
-  }`;
-  const monthButtonClass = `${baseButtonClass} ${
-    darkMode
+    }`;
+  const monthButtonClass = `${baseButtonClass} ${darkMode
       ? 'border border-slate-700 bg-slate-900/70 text-slate-100 hover:border-primary-400 hover:text-primary-100 focus:ring-primary-500/50 focus:ring-offset-slate-900'
       : 'border border-slate-200 bg-white text-slate-700 hover:border-primary-400 hover:text-primary-600 focus:ring-primary-400/40 focus:ring-offset-slate-50'
-  }`;
+    }`;
   const actionPillClass = (variant) => {
     const base =
       'inline-flex items-center justify-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1';
     if (variant === 'primary') {
-      return `${base} ${
-        darkMode
+      return `${base} ${darkMode
           ? 'bg-primary-500/25 text-primary-50 hover:bg-primary-500/35 focus:ring-primary-300/40 focus:ring-offset-slate-900'
           : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/40 focus:ring-offset-white'
-      }`;
+        }`;
     }
     if (variant === 'success') {
-      return `${base} ${
-        darkMode
+      return `${base} ${darkMode
           ? 'bg-emerald-500/25 text-emerald-100 hover:bg-emerald-500/35 focus:ring-emerald-400/40 focus:ring-offset-slate-900'
           : 'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500/40 focus:ring-offset-white'
-      }`;
+        }`;
     }
     if (variant === 'danger') {
-      return `${base} ${
-        darkMode
+      return `${base} ${darkMode
           ? 'bg-red-500/25 text-red-100 hover:bg-red-500/35 focus:ring-red-400/40 focus:ring-offset-slate-900'
           : 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500/40 focus:ring-offset-white'
-      }`;
+        }`;
     }
     return base;
   };
   const badgeClass = (variant) =>
-    `inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
-      variant === 'unread'
-        ? darkMode
-          ? 'bg-primary-500/30 text-primary-50'
-          : 'bg-primary-100 text-primary-600'
-        : variant === 'attachment'
+    `inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${variant === 'unread'
+      ? darkMode
+        ? 'bg-primary-500/30 text-primary-50'
+        : 'bg-primary-100 text-primary-600'
+      : variant === 'attachment'
         ? darkMode
           ? 'bg-amber-500/25 text-amber-100'
           : 'bg-amber-100 text-amber-600'
         : darkMode
-        ? 'bg-slate-800 text-slate-100'
-        : 'bg-slate-100 text-slate-600'
+          ? 'bg-slate-800 text-slate-100'
+          : 'bg-slate-100 text-slate-600'
     }`;
 
   // Verificar si el usuario es jefe
@@ -329,23 +315,31 @@ const MessagesPage = () => {
   };
 
   // NUEVA FUNCIÓN: Marcar mensaje masivo como leído
-  const handleMarkMassiveAsRead = async (messageId) => {
-    try {
-      await MessagesApiService.markMassiveAsRead(messageId);
+  // FUNCIÓN: Marcar mensaje masivo como leído
+const handleMarkMassiveAsRead = async (messageId) => {
+  try {
+    const response = await MessagesApiService.markMassiveAsRead(messageId);
 
-      // Actualizar la UI localmente
-      setInbox((prevInbox) =>
-        prevInbox.map((msg) =>
-          msg.id === messageId ? { ...msg, is_read: true, read_by_admin: true } : msg
-        )
-      );
+    // Actualizar la UI localmente en ambas bandejas
+    setInbox((prevInbox) =>
+      prevInbox.map((msg) =>
+        msg.id === messageId ? { ...msg, is_read: true, read_by_admin: true } : msg
+      )
+    );
 
-      alert('Mensaje masivo marcado como leído para todos los usuarios correspondientes.');
-    } catch (error) {
-      console.error('Error al marcar mensaje masivo como leído:', error);
-      alert('Error al marcar el mensaje como leído. Verifique que tenga permisos de jefe.');
-    }
-  };
+    setSent((prevSent) =>
+      prevSent.map((msg) =>
+        msg.id === messageId ? { ...msg, is_read: true, read_by_admin: true } : msg
+      )
+    );
+
+    const markedFrom = response.data.marked_from === 'sent' ? 'enviado' : 'recibido';
+    alert(`Mensaje masivo ${markedFrom} marcado como leído para todos los usuarios correspondientes.`);
+  } catch (error) {
+    console.error('Error al marcar mensaje masivo como leído:', error);
+    alert('Error al marcar el mensaje como leído. Verifique que tenga permisos de jefe.');
+  }
+};
 
   const handleDelete = async (id) => {
     if (!window.confirm('¿Está seguro de que desea eliminar este mensaje?')) {
@@ -420,21 +414,18 @@ const MessagesPage = () => {
     <div className={pageWrapperClass}>
       <div className={cardContainerClass}>
         <div
-          className={`bg-gradient-to-r px-8 py-10 transition-colors duration-300 ${
-            darkMode
+          className={`bg-gradient-to-r px-8 py-10 transition-colors duration-300 ${darkMode
               ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80 text-white'
               : 'from-primary-200 via-primary-300 to-primary-400 text-slate-900'
-          }`}
+            }`}
         >
-          <p className={`text-sm font-semibold uppercase tracking-[0.28em] ${
-            darkMode ? 'text-white/90' : 'text-slate-800/90'
-          }`}>
+          <p className={`text-sm font-semibold uppercase tracking-[0.28em] ${darkMode ? 'text-white/90' : 'text-slate-800/90'
+            }`}>
             Centro de comunicaciones
           </p>
           <h1 className="mt-2 text-3xl font-semibold">Mensajes internos</h1>
-          <p className={`mt-3 max-w-3xl text-sm ${
-            darkMode ? 'text-white/90' : 'text-slate-700/90'
-          }`}>
+          <p className={`mt-3 max-w-3xl text-sm ${darkMode ? 'text-white/90' : 'text-slate-700/90'
+            }`}>
             Consulta, responde y gestiona los mensajes de tu equipo.
           </p>
         </div>
@@ -482,18 +473,16 @@ const MessagesPage = () => {
           </div>
 
           <div
-            className={`overflow-hidden rounded-2xl border shadow-lg transition-colors duration-200 ${
-              darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'
-            }`}
+            className={`overflow-hidden rounded-2xl border shadow-lg transition-colors duration-200 ${darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'
+              }`}
           >
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200 text-left text-base dark:divide-slate-800">
                 <thead
-                  className={`${
-                    darkMode
+                  className={`${darkMode
                       ? 'bg-slate-900/90 text-slate-100'
                       : 'bg-slate-50 text-slate-700'
-                  } text-sm font-semibold uppercase tracking-[0.18em]`}
+                    } text-sm font-semibold uppercase tracking-[0.18em]`}
                 >
                   <tr>
                     <th className="px-6 py-5">Fecha</th>
@@ -511,26 +500,23 @@ const MessagesPage = () => {
                       return (
                         <tr
                           key={message.id}
-                          className={`transition-colors duration-200 ${
-                            isUnread
+                          className={`transition-colors duration-200 ${isUnread
                               ? darkMode
                                 ? 'bg-primary-500/10 hover:bg-primary-500/20'
                                 : 'bg-primary-50 hover:bg-primary-100/60'
                               : darkMode
-                              ? 'hover:bg-slate-900/50'
-                              : 'hover:bg-slate-50'
-                          }`}
+                                ? 'hover:bg-slate-900/50'
+                                : 'hover:bg-slate-50'
+                            }`}
                         >
-                          <td className={`px-6 py-4 align-top text-base font-semibold ${
-                            darkMode ? 'text-slate-100' : 'text-slate-800'
-                          }`}>
+                          <td className={`px-6 py-4 align-top text-base font-semibold ${darkMode ? 'text-slate-100' : 'text-slate-800'
+                            }`}>
                             {new Date(message.created_at).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4 align-top">
                             <div className="flex flex-col gap-2">
-                              <p className={`text-base font-semibold ${
-                                darkMode ? 'text-slate-100' : 'text-slate-800'
-                              }`}>
+                              <p className={`text-base font-semibold ${darkMode ? 'text-slate-100' : 'text-slate-800'
+                                }`}>
                                 {message.subject || 'Sin asunto'}
                               </p>
                               <div className="flex flex-wrap items-center gap-2">
@@ -542,9 +528,8 @@ const MessagesPage = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 align-top">
-                            <p className={`text-base font-medium ${
-                              darkMode ? 'text-slate-100' : 'text-slate-700'
-                            }`}>
+                            <p className={`text-base font-medium ${darkMode ? 'text-slate-100' : 'text-slate-700'
+                              }`}>
                               {view === 'inbox'
                                 ? getUserName(message.sender_id)
                                 : getUserName(message.receiver_id)}
@@ -562,6 +547,7 @@ const MessagesPage = () => {
                               {isMassive ? `Masivo (${message.massive})` : 'Individual'}
                             </span>
                           </td>
+                          // En la sección donde se renderizan los botones de acción, modifica así:
                           <td className="px-6 py-4 align-top">
                             <div className="flex flex-wrap items-center justify-center gap-2 text-base">
                               <button
@@ -570,15 +556,22 @@ const MessagesPage = () => {
                               >
                                 Abrir
                               </button>
-                              {isJefe && isMassive && !message.is_read && view === 'inbox' && (
+
+                              {/* Mostrar botón de marcar como leído si:
+        - El usuario es jefe
+        - El mensaje es masivo
+        - El mensaje NO está marcado como leído
+        - Están en bandeja de entrada O en bandeja de salida */}
+                              {isJefe && isMassive && !message.is_read && (
                                 <button
                                   onClick={() => handleMarkMassiveAsRead(message.id)}
                                   className={actionPillClass('success')}
-                                  title="Marcar como leído para todos"
+                                  title="Marcar como leído para todos los destinatarios"
                                 >
                                   <FontAwesomeIcon icon={faCheckDouble} className="h-3.5 w-3.5" />
                                 </button>
                               )}
+
                               {canDeleteMessage(message) && (
                                 <button
                                   onClick={() => handleDelete(message.id)}
@@ -619,25 +612,22 @@ const MessagesPage = () => {
       {selectedMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6 backdrop-blur">
           <div
-            className={`w-full max-w-3xl overflow-hidden rounded-3xl border shadow-2xl transition-all duration-300 ${
-              darkMode
+            className={`w-full max-w-3xl overflow-hidden rounded-3xl border shadow-2xl transition-all duration-300 ${darkMode
                 ? 'border-slate-800 bg-slate-950/95'
                 : 'border-slate-200 bg-white/95'
-            }`}
+              }`}
           >
             <div
-              className={`flex items-center justify-between border-b px-6 py-4 ${
-                darkMode ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-slate-100'
-              }`}
+              className={`flex items-center justify-between border-b px-6 py-4 ${darkMode ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-slate-100'
+                }`}
             >
               <h2 className="text-lg font-semibold">Conversación</h2>
               <button
                 onClick={() => setSelectedMessage(null)}
-                className={`rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  darkMode
+                className={`rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${darkMode
                     ? 'text-slate-300 hover:bg-slate-800 focus:ring-slate-700 focus:ring-offset-slate-900'
                     : 'text-slate-500 hover:bg-slate-200 focus:ring-slate-200 focus:ring-offset-white'
-                }`}
+                  }`}
                 aria-label="Cerrar conversación"
               >
                 <FontAwesomeIcon icon={faTimes} />

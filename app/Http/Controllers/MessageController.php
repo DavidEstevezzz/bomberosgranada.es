@@ -78,15 +78,40 @@ class MessageController extends Controller
      * Bandeja de salida:
      * Muestra mensajes enviados por el usuario.
      */
-    public function sent()
-    {
-        $userId = auth()->id();
-        $messages = UserMessage::where('sender_id', $userId)
-            ->orderBy('created_at', 'desc')
-            ->get();
+    /**
+ * Bandeja de salida:
+ * Muestra mensajes enviados por el usuario.
+ */
+public function sent()
+{
+    $userId = auth()->id();
+    $messages = UserMessage::where('sender_id', $userId)
+        ->orderBy('created_at', 'desc')
+        ->get();
 
-        return response()->json($messages);
-    }
+    // Procesar mensajes masivos para incluir estado de lectura correcto
+    $messages->transform(function ($message) {
+        // Para mensajes individuales, usar is_read normal
+        if (!$message->massive || $message->massive === 'false') {
+            return $message;
+        }
+        
+        // Para mensajes masivos: verificar si fue marcado como leído por admin
+        if ($message->marked_as_read_by_admin) {
+            $message->is_read = true;
+            $message->read_by_admin = true;
+            Log::debug("Mensaje masivo enviado {$message->id} marcado como leído por admin");
+        } else {
+            // Si no fue marcado por admin, mantener como no leído
+            $message->is_read = false;
+            $message->read_by_admin = false;
+        }
+        
+        return $message;
+    });
+
+    return response()->json($messages);
+}
 
     /**
      * Mostrar detalle de un mensaje.

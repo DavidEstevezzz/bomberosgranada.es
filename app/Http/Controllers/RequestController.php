@@ -152,6 +152,10 @@ class RequestController extends Controller
 
     public function update(Request $request, $id)
     {
+
+            Log::info("🔥 UPDATE LLAMADO - ID: {$id}, Datos recibidos:", $request->all());
+
+            
         $miRequest = MiRequest::findOrFail($id);
 
         $rules = [

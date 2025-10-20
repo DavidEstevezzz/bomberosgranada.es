@@ -42,20 +42,32 @@ const ShiftChangeRequestPage = () => {
   const isJefe = user?.type === 'jefe';
 
   useEffect(() => {
-    const fetchAndFilterEmployees = async () => {
-      if (!user?.puesto) return;
-      try {
+  const fetchAndFilterEmployees = async () => {
+    try {
+      let allEmployees = [];
+      
+      if (isJefe) {
+        // Si es jefe, cargar TODOS los empleados
+        const response = await UsuariosApiService.getUsuarios();
+        allEmployees = response.data || [];
+      } else {
+        // Si no es jefe, cargar solo del mismo puesto
+        if (!user?.puesto) return;
         const response = await UsuariosApiService.bomberosPorPuesto(user.puesto);
-        const allEmployees = response.data || [];
-        setEmployees(allEmployees);
-      } catch (err) {
-        console.error('Error fetching employees by puesto:', err);
-        setError('Error al obtener los empleados por puesto.');
+        allEmployees = response.data || [];
       }
-    };
+      
+      setEmployees(allEmployees);
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+      setError('Error al obtener los empleados.');
+    }
+  };
 
-    fetchAndFilterEmployees();
-  }, [user]);
+  fetchAndFilterEmployees();
+}, [user, isJefe]);
+
+
 
   useEffect(() => {
     if (changeType === 'espejo') {

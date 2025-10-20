@@ -547,7 +547,6 @@ const handleMarkMassiveAsRead = async (messageId) => {
                               {isMassive ? `Masivo (${message.massive})` : 'Individual'}
                             </span>
                           </td>
-                          // En la sección donde se renderizan los botones de acción, modifica así:
                           <td className="px-6 py-4 align-top">
                             <div className="flex flex-wrap items-center justify-center gap-2 text-base">
                               <button

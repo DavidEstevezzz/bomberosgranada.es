@@ -272,10 +272,6 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('/firefighters-assignments/{id}/move-to-top/{column}', [FirefighterAssignmentController::class, 'moveToTop']);
     Route::post('/firefighters-assignments/{id}/move-to-bottom/{column}', [FirefighterAssignmentController::class, 'moveToBottom']);
     Route::post('firefighters-assignments/require-firefighter', [FirefighterAssignmentController::class, 'requireFirefighter']);
-    Route::post('/firefighters-assignments/create-practices', [FirefighterAssignmentController::class, 'createPracticesAssigments']);
-    Route::post('/firefighters-assignments/create-rt', [FirefighterAssignmentController::class, 'createRTAssigments']);
-    Route::post('/firefighters-assignments/delete-practices', [FirefighterAssignmentController::class, 'deletePracticesAssignments']);
-    Route::post('/firefighters-assignments/delete-rt', [FirefighterAssignmentController::class, 'deleteRTAssignments']);
     Route::get('/firefighters-assignments/check-especial-brigade', [FirefighterAssignmentController::class, 'getEspecialAssigment']);
     Route::post('/firefighters-assignments/extend-working-day', [FirefighterAssignmentController::class, 'extendWorkingDay']);
 
@@ -289,4 +285,9 @@ Route::middleware(['auth:sanctum', 'auth.special.command'])->group(function () {
     Route::post('/guards', [GuardController::class, 'store']);
     Route::put('/guards/{id}', [GuardController::class, 'update']);
     Route::delete('/guards/{id}', [GuardController::class, 'destroy']);
+    Route::post('/firefighters-assignments/create-practices', [FirefighterAssignmentController::class, 'createPracticesAssigments']);
+    Route::post('/firefighters-assignments/create-rt', [FirefighterAssignmentController::class, 'createRTAssigments']);
+    Route::post('/firefighters-assignments/delete-practices', [FirefighterAssignmentController::class, 'deletePracticesAssignments']);
+    Route::post('/firefighters-assignments/delete-rt', [FirefighterAssignmentController::class, 'deleteRTAssignments']);
+    
 });

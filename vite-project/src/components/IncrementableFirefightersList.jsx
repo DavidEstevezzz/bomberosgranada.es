@@ -1,3 +1,4 @@
+// vite-project/src/components/IncrementableFirefightersList.jsx
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
@@ -17,6 +18,9 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
   const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
   // Mapeo de los incrementos introducidos para cada usuario (id_empleado)
   const [increments, setIncrements] = useState({});
+
+  // DETERMINAR SI ES LA LISTA DE TRASLADOS
+  const isTransfersList = orderColumn === 'traslado' || orderColumn === 'traslados';
 
   // Función para cargar la lista de bomberos
   const fetchFirefighters = async () => {
@@ -108,6 +112,19 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
     <div className={`p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}>
       <h2 className="text-2xl font-bold mb-4 text-center">{title}</h2>
 
+      {/* MENSAJE INFORMATIVO PARA TRASLADOS */}
+      {isTransfersList && (
+        <div className={`mb-4 rounded-lg border p-4 ${
+          darkMode 
+            ? 'border-blue-500/40 bg-blue-500/10 text-blue-200' 
+            : 'border-blue-300 bg-blue-50 text-blue-700'
+        }`}>
+          <p className="text-sm font-medium">
+            ℹ️ Las horas de traslado se incrementan automáticamente al crear una asignación de traslado desde la guardia.
+          </p>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-4">
         <button
           onClick={handlePreviousDay}
@@ -142,8 +159,9 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
               <th className="py-3 px-6">Teléfono</th>
               <th className="py-3 px-6">Puesto</th>
               <th className="py-3 px-6">Horas</th>
-              <th className="py-3 px-6">Ultima</th>
-              {user?.type === 'jefe' && <th className="py-3 px-6">Acción</th>}
+              <th className="py-3 px-6">Última</th>
+              {/* OCULTAR COLUMNA DE ACCIÓN SI ES LISTA DE TRASLADOS */}
+              {user?.type === 'jefe' && !isTransfersList && <th className="py-3 px-6">Acción</th>}
             </tr>
           </thead>
           <tbody>
@@ -158,18 +176,26 @@ const IncrementableFirefightersList = ({ title, fetchData, listType, orderColumn
                 <td className="py-4 px-6">{firefighter.telefono}</td>
                 <td className="py-4 px-6">{firefighter.puesto}</td>
                 <td className="py-4 px-6">{firefighter[orderColumn]}</td>
-                <td className="py-4 px-6">{firefighter[orderColumn2]}</td>
-                {(user?.type === 'jefe' || user?.type === 'mando') && (
+                <td className="py-4 px-6">
+                  {firefighter[orderColumn2] 
+                    ? dayjs(firefighter[orderColumn2]).format('DD/MM/YYYY HH:mm')
+                    : '—'
+                  }
+                </td>
+                {/* OCULTAR BOTONES DE INCREMENTO SI ES LISTA DE TRASLADOS */}
+                {(user?.type === 'jefe' || user?.type === 'mando') && !isTransfersList && (
                   <td className="py-4 px-6 flex items-center space-x-2">
                     <input
                       type="number"
                       value={increments[firefighter.id_empleado] || ''}
                       onChange={(e) => handleIncrementChange(firefighter.id_empleado, e.target.value)}
                       className="w-16 p-1 border rounded bg-gray-800 text-gray-200"
+                      placeholder="0"
                     />
                     <button
                       onClick={() => handleIncrementSubmit(firefighter.id_empleado)}
                       className={`px-3 py-1 rounded ${darkMode ? 'bg-green-600 text-white' : 'bg-green-500 text-white'}`}
+                      title="Incrementar horas"
                     >
                       <FontAwesomeIcon icon={faPlus} />
                     </button>

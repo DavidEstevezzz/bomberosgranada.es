@@ -1,3 +1,4 @@
+// vite-project/src/components/AssignFirefighterModal.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { useDarkMode } from '../contexts/DarkModeContext';
@@ -43,6 +44,7 @@ const AssignFirefighterModal = ({
   const [selectedFirefighterId, setSelectedFirefighterId] = useState('');
   const [turno, setTurno] = useState('Mañana');
   const [fecha, setFecha] = useState(guardDate);
+  const [horasTraslado, setHorasTraslado] = useState(''); // NUEVO CAMPO
   const [assignmentDetails, setAssignmentDetails] = useState(() => computeAssignment('Mañana'));
   const [brigades, setBrigades] = useState([]);
   const [destinationBrigade, setDestinationBrigade] = useState('');
@@ -50,8 +52,9 @@ const AssignFirefighterModal = ({
   const [submitSuccess, setSubmitSuccess] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-   const brigadeSummary = useMemo(() => {
-    const originName = currentBrigade?.nombre ? `${currentBrigade.nombre} · Parque ${currentBrigade.park?.nombre ?? ''}` : '—';
+  const brigadeSummary = useMemo(() => {
+    const originName = currentBrigade?.nombre ? 
+      `${currentBrigade.nombre} · Parque ${currentBrigade.park?.nombre ?? ''}` : '—';
     const destinationName = brigades.find((brigade) => brigade.id_brigada === destinationBrigade)?.nombre;
 
     return {
@@ -68,6 +71,7 @@ const AssignFirefighterModal = ({
     setSelectedFirefighterId('');
     setTurno('Mañana');
     setFecha(guardDate);
+    setHorasTraslado(''); // RESETEAR HORAS
     setAssignmentDetails(computeAssignment('Mañana'));
     setDestinationBrigade('');
     setSubmitError(null);
@@ -140,6 +144,12 @@ const AssignFirefighterModal = ({
       return;
     }
 
+    // VALIDACIÓN DE HORAS
+    if (!horasTraslado || parseFloat(horasTraslado) <= 0) {
+      setSubmitError('Ingresa las horas de traslado (debe ser mayor a 0).');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const fechaIda = fecha;
@@ -155,6 +165,7 @@ const AssignFirefighterModal = ({
       fecha_ini: fechaIda,
       turno: assignmentDetails.ida,
       tipo_asignacion: 'ida',
+      horas_traslado: parseFloat(horasTraslado), // AÑADIR HORAS AL PAYLOAD
     };
 
     const payloadVuelta = {
@@ -169,10 +180,11 @@ const AssignFirefighterModal = ({
     try {
       await AssignmentsApiService.createAssignment(payloadIda);
       await AssignmentsApiService.createAssignment(payloadVuelta);
-      setSubmitSuccess('Asignación creada con éxito.');
+      setSubmitSuccess('Asignación creada con éxito y horas de traslado incrementadas.');
       setSelectedFirefighterId('');
       setTurno('Mañana');
       setFecha(guardDate);
+      setHorasTraslado(''); // RESETEAR HORAS
       setAssignmentDetails(computeAssignment('Mañana'));
     } catch (error) {
       console.error('Error creando la asignación:', error);
@@ -209,10 +221,8 @@ const AssignFirefighterModal = ({
       ? 'border-slate-800 bg-slate-900/70 text-slate-100 placeholder-slate-400'
       : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
   }`;
-  const dateInputClass = `${inputClass} ${
-  darkMode ? '[color-scheme:dark]' : ''
-}`;
   const selectClass = inputClass;
+  const dateInputClass = `${inputClass} ${darkMode ? '[color-scheme:dark]' : ''}`;
   const messageClass = (type) =>
     `rounded-2xl border px-4 py-3 text-sm font-medium ${
       type === 'error'
@@ -234,8 +244,6 @@ const AssignFirefighterModal = ({
       : 'bg-primary-600 hover:bg-primary-500 focus:ring-primary-400 focus:ring-offset-white'
   }`;
 
- 
-
   return (
     <div className={overlayClass} onMouseDown={handleClose}>
       <div className={modalClass} onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
@@ -254,111 +262,136 @@ const AssignFirefighterModal = ({
             aria-label="Cerrar"
             disabled={isSubmitting}
           >
-            <span className="text-2xl leading-none">×</span>
+            ×
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6 sm:px-8">
-          <div
-            className={`grid gap-3 rounded-3xl border px-5 py-4 sm:grid-cols-2 ${
-              darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50'
-            }`}
-          >
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-500 dark:text-primary-200">
-                Brigada origen
-              </p>
-              <p className="mt-1 text-sm font-medium">{brigadeSummary.origin}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-500 dark:text-primary-200">
-                Brigada destino
-              </p>
-              <p className="mt-1 text-sm font-medium">{brigadeSummary.destination}</p>
-            </div>
-            <div className="sm:col-span-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary-500 dark:text-primary-200">
-                Turnos vinculados
-              </p>
-              <p className="mt-1 text-sm font-medium">
-                Ida: <span className="font-semibold text-primary-600 dark:text-primary-300">{assignmentDetails.ida || '—'}</span>
-                <span className="mx-2 text-xs uppercase tracking-[0.3em] text-slate-400">/</span>
-                Vuelta: <span className="font-semibold text-primary-600 dark:text-primary-300">{assignmentDetails.vuelta || '—'}</span>
-              </p>
-            </div>
-          </div>
-
+        <form onSubmit={handleSubmit} className="max-h-[75vh] space-y-6 overflow-y-auto px-6 py-6 sm:px-8">
           {submitError && <div className={messageClass('error')}>{submitError}</div>}
           {submitSuccess && <div className={messageClass('success')}>{submitSuccess}</div>}
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-2">
-              <span className={labelClass}>Fecha</span>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(event) => setFecha(event.target.value)}
-                className={dateInputClass}
-                required
-              />
-              <p className={helperClass}>La fecha inicial determina cuándo comienza la asignación de ida.</p>
-            </div>
+          <div className="space-y-1.5">
+            <label className={labelClass}>Bombero</label>
+            <select
+              className={selectClass}
+              value={selectedFirefighterId}
+              onChange={(event) => setSelectedFirefighterId(event.target.value)}
+              disabled={isSubmitting}
+            >
+              <option value="">Seleccionar…</option>
+              {firefighters.map((firefighter) => (
+                <option key={firefighter.id_empleado} value={firefighter.id_empleado}>
+                  {firefighter.nombre} {firefighter.apellido} – {firefighter.puesto}
+                </option>
+              ))}
+            </select>
+            <p className={helperClass}>Personal disponible para cubrir el refuerzo en el parque alterno.</p>
+          </div>
 
-            <div className="space-y-2">
-              <span className={labelClass}>Turno</span>
-              <select
-                value={turno}
-                onChange={(event) => setTurno(event.target.value)}
-                className={selectClass}
-                required
-              >
-                {TURN_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
+          <div className="space-y-1.5">
+            <label className={labelClass}>Turno</label>
+            <select
+              className={selectClass}
+              value={turno}
+              onChange={(event) => setTurno(event.target.value)}
+              disabled={isSubmitting}
+            >
+              {TURN_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+            <p className={helperClass}>Define el turno de ida. La vuelta se calcula automáticamente.</p>
+          </div>
+
+          {/* NUEVO CAMPO DE HORAS */}
+          <div className="space-y-1.5">
+            <label className={labelClass}>Horas de traslado</label>
+            <input
+              type="number"
+              step="0.5"
+              min="0"
+              className={inputClass}
+              value={horasTraslado}
+              onChange={(e) => setHorasTraslado(e.target.value)}
+              placeholder="Ej: 8 o 10"
+              disabled={isSubmitting}
+            />
+            <p className={helperClass}>
+              Número de horas que se incrementarán automáticamente en el contador de traslados del bombero.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelClass}>Fecha</label>
+            <input
+              type="date"
+              className={dateInputClass}
+              value={fecha}
+              onChange={(event) => setFecha(event.target.value)}
+              disabled={isSubmitting}
+            />
+            <p className={helperClass}>Fecha de inicio del traslado temporal.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelClass}>Asignación calculada</label>
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm ${
+                darkMode
+                  ? 'border-slate-800 bg-slate-900/50 text-slate-300'
+                  : 'border-slate-200 bg-slate-50 text-slate-700'
+              }`}
+            >
+              <p>
+                <strong>Ida:</strong> {assignmentDetails.ida}
+              </p>
+              <p>
+                <strong>Vuelta:</strong> {assignmentDetails.vuelta}
+              </p>
+            </div>
+            <p className={helperClass}>Resumen de turnos para ida y vuelta según la elección.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelClass}>Trayecto</label>
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm ${
+                darkMode
+                  ? 'border-slate-800 bg-slate-900/50 text-slate-300'
+                  : 'border-slate-200 bg-slate-50 text-slate-700'
+              }`}
+            >
+              <p>
+                <strong>Origen:</strong> {brigadeSummary.origin}
+              </p>
+              <p>
+                <strong>Destino:</strong> {brigadeSummary.destination}
+              </p>
+            </div>
+            <p className={helperClass}>Muestra las brigadas involucradas en el traslado.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className={labelClass}>Brigada destino</label>
+            <select
+              className={selectClass}
+              value={destinationBrigade}
+              onChange={(event) => setDestinationBrigade(event.target.value)}
+              disabled={isSubmitting}
+            >
+              {brigades.length > 0 ? (
+                brigades.map((brigade) => (
+                  <option key={brigade.id_brigada} value={brigade.id_brigada}>
+                    {brigade.nombre} (Parque {brigade.id_parque})
                   </option>
-                ))}
-              </select>
-              <p className={helperClass}>Se calcularán automáticamente los turnos de regreso según la selección.</p>
-            </div>
-
-            <div className="space-y-2">
-              <span className={labelClass}>Bombero</span>
-              <select
-                value={selectedFirefighterId}
-                onChange={(event) => setSelectedFirefighterId(event.target.value)}
-                className={selectClass}
-                required
-              >
-                <option value="">Selecciona un miembro</option>
-                {firefighters.map((firefighter) => (
-                  <option key={firefighter.id_empleado} value={firefighter.id_empleado}>
-                    {firefighter.nombre} {firefighter.apellido}
-                  </option>
-                ))}
-              </select>
-              <p className={helperClass}>Solo aparecen miembros disponibles del parque de origen.</p>
-            </div>
-
-            <div className="space-y-2">
-              <span className={labelClass}>Brigada destino</span>
-              <select
-                value={destinationBrigade}
-                onChange={(event) => setDestinationBrigade(event.target.value)}
-                className={selectClass}
-                required
-              >
-                {brigades.length > 0 ? (
-                  brigades.map((brigade) => (
-                    <option key={brigade.id_brigada} value={brigade.id_brigada}>
-                      {brigade.nombre} (Parque {brigade.id_parque})
-                    </option>
-                  ))
-                ) : (
-                  <option value="">Sin brigada disponible</option>
-                )}
-              </select>
-              <p className={helperClass}>Selecciona el parque alterno que recibirá el apoyo temporal.</p>
-            </div>
+                ))
+              ) : (
+                <option value="">Sin brigada disponible</option>
+              )}
+            </select>
+            <p className={helperClass}>Selecciona el parque alterno que recibirá el apoyo temporal.</p>
           </div>
 
           <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">

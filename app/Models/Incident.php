@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Park;
+use App\Models\PersonalEquipment;
 
 class Incident extends Model
 {
@@ -67,5 +68,9 @@ class Incident extends Model
     public function clothing_item()
 {
     return $this->belongsTo(ClothingItem::class, 'id_vestuario');
+}
+public function equipment()
+{
+    return $this->belongsTo(PersonalEquipment::class, 'equipo', 'id');
 }
 }

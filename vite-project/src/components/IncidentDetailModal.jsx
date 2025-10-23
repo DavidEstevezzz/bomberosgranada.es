@@ -1,205 +1,289 @@
-import React, { useState, useEffect } from 'react';
+// IncidentDetailModal.jsx
+import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faTools, faUser, faTruck, faBuilding, faRadio } from '@fortawesome/free-solid-svg-icons';
+import {
+  faTimes, faTruck, faUser, faBuilding, faTools,
+  faShirt, faExclamationTriangle, faCalendar, faMapMarkerAlt,
+  faCheckCircle, faClock, faHammer, faUserCheck
+} from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
-import { useStateContext } from '../contexts/ContextProvider';
 import dayjs from 'dayjs';
+import 'dayjs/locale/es';
 
-// Función helper para detectar si es dispositivo móvil
-const isMobileDevice = () => window.innerWidth <= 768;
+dayjs.locale('es');
 
 const IncidentDetailModal = ({ incident, isOpen, onClose }) => {
-  const { user } = useStateContext();
   const { darkMode } = useDarkMode();
-  const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      setIsMobile(isMobileDevice());
-    }
-  }, [isOpen]);
+  if (!isOpen || !incident) return null;
 
-  if (!isOpen) return null;
-
-  // Clase condicional para forzar scroll vertical y altura completa en móvil
-  const modalContentClass = isMobile ? 'overflow-y-auto h-screen' : '';
-
+  // Helper functions
   const normalizeTypeName = (tipo) => {
-    switch (tipo?.toLowerCase()) {
-      case 'vehiculo':
-        return 'Vehículo';
-      case 'personal':
-        return 'Personal';
-      case 'instalacion':
-        return 'Instalación';
-      case 'equipo':
-        return 'Equipos Personales';
-      case 'vestuario':
-        return 'Vestuario';
-      case 'equipos_comunes':
-        return 'Equipos Comunes';
-      default:
-        return tipo?.charAt(0).toUpperCase() + tipo?.slice(1) || '';
-    }
-  };
-  
-  // Determinar el ícono y color basado en el nivel de incidencia
-  const getLevelColorClass = () => {
-    switch (incident.nivel?.toLowerCase()) {
-      case 'alto':
-        return 'bg-red-600';
-      case 'medio':
-        return 'bg-orange-500';
-      case 'bajo':
-        return 'bg-yellow-500';
-      default:
-        return 'bg-blue-600';
-    }
+    const types = {
+      vehiculo: 'Vehículo',
+      personal: 'Personal',
+      instalacion: 'Instalación',
+      equipo: 'Equipos Personales',
+      vestuario: 'Vestuario',
+      equipos_comunes: 'Equipos Comunes'
+    };
+    return types[tipo?.toLowerCase()] || tipo;
   };
 
-  // Función para obtener el ícono según el tipo de incidencia
   const getTypeIcon = () => {
+    const icons = {
+      vehiculo: faTruck,
+      personal: faUser,
+      instalacion: faBuilding,
+      equipo: faTools,
+      vestuario: faShirt,
+      equipos_comunes: faTools
+    };
+    return icons[incident.tipo?.toLowerCase()] || faTools;
+  };
+
+  const getLevelBadge = () => {
+    const levels = {
+      alto: { bg: 'bg-red-500', text: 'CRÍTICO', icon: faExclamationTriangle },
+      medio: { bg: 'bg-amber-500', text: 'MODERADO', icon: faExclamationTriangle },
+      bajo: { bg: 'bg-yellow-500', text: 'BAJO', icon: faExclamationTriangle }
+    };
+    return levels[incident.nivel?.toLowerCase()] || levels.medio;
+  };
+
+  const getStatusBadge = () => {
+    const estadoNormalizado = incident.estado?.toLowerCase().trim();
+
+    const estados = {
+      'pendiente': { bg: darkMode ? 'bg-slate-600' : 'bg-slate-500', text: 'Pendiente', icon: faClock },
+      'en proceso': { bg: darkMode ? 'bg-blue-600' : 'bg-blue-500', text: 'En Proceso', icon: faHammer },
+      'resuelta': { bg: darkMode ? 'bg-emerald-600' : 'bg-emerald-500', text: 'Resuelta', icon: faCheckCircle }
+    };
+
+    return estados[estadoNormalizado] || estados['pendiente'];
+  };
+
+  const getAffectedResource = () => {
     switch (incident.tipo?.toLowerCase()) {
       case 'vehiculo':
-        return faTruck;
+        return incident.vehicle?.nombre || incident.matricula || 'Sin especificar';
       case 'personal':
-        return faUser;
-      case 'instalacion':
-        return faBuilding;
+        return incident.employee2
+          ? `${incident.employee2.nombre} ${incident.employee2.apellido}`
+          : 'Sin especificar';
       case 'equipo':
-        return faRadio;
+        return incident.equipment?.nombre || 'Sin especificar';
+      case 'vestuario':
+        return incident.clothing_item?.name || 'Sin especificar';
       case 'equipos_comunes':
-        return faTools;
+        return incident.nombre_equipo || 'Sin especificar';
+      case 'instalacion':
+        return 'Infraestructura del parque';
       default:
-        return faTools;
+        return 'Sin especificar';
+    }
+  };
+
+  const levelBadge = getLevelBadge();
+  const statusBadge = getStatusBadge();
+  const isResolved = incident.estado?.toLowerCase().trim() === 'resuelta';
+  const hasResolvingInfo = incident.resolviendo && incident.resolviendo.trim() !== '';
+
+  // Classes
+  const overlayClass = 'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-10 backdrop-blur';
+
+  const modalClass = `relative flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 ${darkMode ? 'border-slate-800 bg-slate-950/95 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+    }`;
+
+  const headerClass = `flex items-start justify-between gap-4 px-6 py-5 text-white ${darkMode
+      ? 'bg-gradient-to-r from-primary-900/90 via-primary-700/90 to-primary-600/80'
+      : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700'
+    }`;
+
+  const sectionClass = `rounded-2xl border p-5 ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50'
+    }`;
+
+  const labelClass = 'text-xs font-semibold uppercase tracking-[0.2em] opacity-60';
+  const valueClass = 'text-sm font-medium mt-1';
+
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
     }
   };
 
   return (
-    <div className="fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-full bg-black bg-opacity-50">
-      <div
-        className={`p-6 w-full max-w-2xl rounded-lg shadow-lg ${modalContentClass} ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-          }`}
-      >
-        <div className="flex justify-between items-center border-b pb-3 mb-6">
-          <div className="flex items-center">
-            <div className={`p-2 rounded-full ${getLevelColorClass()} mr-3`}>
-              <FontAwesomeIcon icon={getTypeIcon()} className="w-5 h-5 text-white" />
+    <div className={overlayClass} onClick={handleOverlayClick}>
+      <div className={modalClass}>
+        {/* Header */}
+        <div className={headerClass}>
+          <div className="flex items-start gap-4">
+            <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${levelBadge.bg}`}>
+              <FontAwesomeIcon icon={getTypeIcon()} className="h-6 w-6" />
             </div>
-            <h3 className="text-xl font-bold">Detalle de la Incidencia</h3>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
+                Incidencia #{incident.id_incidencia}
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold">Detalles de la incidencia</h2>
+              <p className="mt-1 text-sm text-white/90">
+                {normalizeTypeName(incident.tipo)} · {incident.park?.nombre || 'Parque'}
+              </p>
+            </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/70"
+            aria-label="Cerrar"
           >
-            <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
+            <span className="text-2xl leading-none">×</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-            <h4 className="text-sm uppercase tracking-wider font-semibold mb-3 text-gray-500 dark:text-gray-400">Información General</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="font-medium">Creado por:</span>
-                <span>{incident.creator ? `${incident.creator.nombre} ${incident.creator.apellido}` : incident.id_empleado}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Fecha:</span>
-                <span>{dayjs(incident.fecha).format('DD/MM/YYYY')}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Estado:</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${incident.estado?.toLowerCase() === 'resuelta' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
-                  {incident.estado?.charAt(0).toUpperCase() + incident.estado?.slice(1).toLowerCase()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Nivel:</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${incident.nivel?.toLowerCase() === 'alto' ? 'bg-red-500 text-white' :
-                  incident.nivel?.toLowerCase() === 'medio' ? 'bg-orange-500 text-white' :
-                    'bg-yellow-500 text-white'}`}>
-                  {incident.nivel?.toUpperCase()}
-                </span>
-              </div>
+        {/* Content */}
+        <div className="max-h-[70vh] space-y-6 overflow-y-auto px-6 py-6 sm:px-8">
+
+          {/* Estado y Nivel */}
+          <div className="flex flex-wrap gap-3">
+            <div className={`inline-flex items-center gap-2 rounded-full ${statusBadge.bg} px-4 py-2 text-sm font-semibold text-white`}>
+              <FontAwesomeIcon icon={statusBadge.icon} />
+              {statusBadge.text}
+            </div>
+            <div className={`inline-flex items-center gap-2 rounded-full ${levelBadge.bg} px-4 py-2 text-sm font-semibold text-white`}>
+              <FontAwesomeIcon icon={levelBadge.icon} />
+              {levelBadge.text}
             </div>
           </div>
 
-          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-            <h4 className="text-sm uppercase tracking-wider font-semibold mb-3 text-gray-500 dark:text-gray-400">Ubicación y Tipo</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="font-medium">Tipo:</span>
-                <span>{normalizeTypeName(incident.tipo)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Parque:</span>
-                <span>{incident.park ? incident.park.nombre : incident.id_parque}</span>
-              </div>
-              {incident.tipo === 'vehiculo' && (
-                <div className="flex justify-between">
-                  <span className="font-medium">Vehículo:</span>
-                  <span>{incident.vehicle?.nombre}</span>
-                </div>
-              )}
-              {incident.tipo === 'personal' && (
-                <div className="flex justify-between">
-                  <span className="font-medium">Empleado:</span>
-                  <span>{incident.employee2 ? `${incident.employee2.nombre} ${incident.employee2.apellido}` : ''}</span>
-                </div>
-              )}
-              {incident.tipo === 'equipo' && (
-                <div className="flex justify-between">
-                  <span className="font-medium">Equipo:</span>
-                  <span>{incident.equipment ? incident.equipment.nombre : ''}</span>
-                </div>
-              )}
-              {incident.tipo === 'equipos_comunes' && (
-                <div className="flex justify-between">
-                  <span className="font-medium">Equipo Común:</span>
-                  <span>{incident.nombre_equipo || ''}</span>
-                </div>
-              )}
+          {/* Grid de información principal */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Información general */}
+            <div className={sectionClass}>
+              <p className={labelClass}>Fecha de registro</p>
+              <p className={valueClass}>
+                <FontAwesomeIcon icon={faCalendar} className="mr-2 opacity-50" />
+                {dayjs(incident.fecha).format('DD [de] MMMM [de] YYYY')}
+              </p>
+            </div>
+
+            <div className={sectionClass}>
+              <p className={labelClass}>Reportado por</p>
+              <p className={valueClass}>
+                <FontAwesomeIcon icon={faUser} className="mr-2 opacity-50" />
+                {incident.creator ? `${incident.creator.nombre} ${incident.creator.apellido}` : 'Usuario desconocido'}
+              </p>
+            </div>
+
+            <div className={sectionClass}>
+              <p className={labelClass}>Ubicación</p>
+              <p className={valueClass}>
+                <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-2 opacity-50" />
+                {incident.park?.nombre || 'Sin especificar'}
+              </p>
+            </div>
+
+            <div className={sectionClass}>
+              <p className={labelClass}>Recurso afectado</p>
+              <p className={valueClass}>
+                <FontAwesomeIcon icon={getTypeIcon()} className="mr-2 opacity-50" />
+                {getAffectedResource()}
+              </p>
             </div>
           </div>
-        </div>
 
-        <div className={`p-4 rounded-lg mb-6 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-          <h4 className="text-sm uppercase tracking-wider font-semibold mb-3 text-gray-500 dark:text-gray-400">Descripción</h4>
-          <p className="whitespace-pre-line">{incident.descripcion}</p>
-        </div>
-
-        {incident.resolviendo && (
-          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-            <h4 className="text-sm uppercase tracking-wider font-semibold mb-3 text-gray-500 dark:text-gray-400">Resolviendo:</h4>
-            <p className="whitespace-pre-line">{incident.resolviendo}</p>
+          {/* Descripción */}
+          <div className={sectionClass}>
+            <p className={labelClass}>Descripción del problema</p>
+            <p className={`${valueClass} whitespace-pre-line leading-relaxed`}>
+              {incident.descripcion || 'Sin descripción proporcionada.'}
+            </p>
           </div>
-        )}
 
-        {incident.resolver && (
-          <div className={`p-4 mt-6 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-            <h4 className="text-sm uppercase tracking-wider font-semibold mb-3 text-gray-500 dark:text-gray-400">Resolución</h4>
-            <div className="space-y-4">
-              {/* Información del resolvedor */}
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Resuelto por:</span>
-                <span className="text-right">{incident.resolver ? `${incident.resolver.nombre} ${incident.resolver.apellido}` : 'No resuelto'}</span>
-              </div>
-
-              {/* Descripción de la resolución */}
-              {incident.resolucion && (
-                <div>
-                  <span className="font-medium block mb-2">Descripción de la resolución:</span>
-                  <div className={`p-3 rounded-lg border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
-                    <p className="whitespace-pre-line text-sm leading-relaxed">
-                      {incident.resolucion}
+          {/* Seguimiento de resolución - Solo si existe */}
+          {hasResolvingInfo && (
+            <div className={`rounded-2xl border p-5 ${darkMode ? 'border-blue-500/40 bg-blue-500/10' : 'border-blue-200 bg-blue-50'
+              }`}>
+              <div className="flex items-start gap-3">
+                <FontAwesomeIcon icon={faHammer} className={`mt-1 h-5 w-5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                <div className="flex-1">
+                  <p className={`font-semibold ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                    Seguimiento de resolución
+                  </p>
+                  <p className={`text-xs uppercase tracking-wider mt-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                    Acciones en curso
+                  </p>
+                  <div className={`mt-3 rounded-xl border p-4 ${darkMode ? 'border-blue-700 bg-blue-900/30' : 'border-blue-300 bg-white'
+                    }`}>
+                    <p className={`whitespace-pre-line text-sm leading-relaxed ${darkMode ? 'text-blue-100' : 'text-blue-900'
+                      }`}>
+                      {incident.resolviendo}
                     </p>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Resolución final - Solo si está resuelto */}
+          {isResolved && (
+            <div className={`rounded-2xl border p-5 ${darkMode ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-emerald-200 bg-emerald-50'
+              }`}>
+              <div className="flex items-start gap-3">
+                <FontAwesomeIcon icon={faCheckCircle} className={`mt-1 h-5 w-5 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <p className={`font-semibold ${darkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                      Incidencia resuelta
+                    </p>
+                    <p className={`text-xs uppercase tracking-wider mt-1 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                      Resolución completada
+                    </p>
+                  </div>
+
+                  {/* Quien resolvió */}
+                  {incident.resolver && (
+                    <div className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={faUserCheck} className={`h-4 w-4 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                      <p className={`text-sm ${darkMode ? 'text-emerald-200' : 'text-emerald-700'}`}>
+                        Resuelto por: <span className="font-semibold">{incident.resolver.nombre} {incident.resolver.apellido}</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Descripción de la resolución */}
+                  {incident.resolucion && incident.resolucion.trim() !== '' && (
+                    <div className={`rounded-xl border p-4 ${darkMode ? 'border-emerald-700 bg-emerald-900/30' : 'border-emerald-300 bg-white'
+                      }`}>
+                      <p className={`text-xs uppercase tracking-wider font-semibold mb-2 ${darkMode ? 'text-emerald-400' : 'text-emerald-700'
+                        }`}>
+                        Detalles de la resolución
+                      </p>
+                      <p className={`whitespace-pre-line text-sm leading-relaxed ${darkMode ? 'text-emerald-100' : 'text-emerald-900'
+                        }`}>
+                        {incident.resolucion}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className={`border-t px-6 py-4 ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+          <button
+            type="button"
+            onClick={onClose}
+            className={`w-full rounded-2xl px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${darkMode
+                ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 focus:ring-primary-500 focus:ring-offset-slate-900'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-primary-500 focus:ring-offset-white'
+              }`}
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
   );

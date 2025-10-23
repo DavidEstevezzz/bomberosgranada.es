@@ -113,13 +113,13 @@ const PersonalEquipment = () => {
       return { key: column, direction: 'asc' };
     });
   };
+  
   const filteredEquipments = useMemo(() => {
-    const normalizedSearch = normalizeString(searchTerm);
-    return equipments.filter((equipment) =>
-      normalizeString(equipment.nombre).includes(normalizedSearch) ||
-      normalizeString(equipment.categoria).includes(normalizedSearch)
-    );
-  }, [equipments, searchTerm]);
+  const normalizedSearch = normalizeString(searchTerm);
+  return equipments.filter((equipment) =>
+    normalizeString(equipment.nombre).includes(normalizedSearch)  // ✅ SOLO BUSCAR POR NOMBRE
+  );
+}, [equipments, searchTerm]);
 
   const sortedEquipments = useMemo(() => {
     const items = [...filteredEquipments];

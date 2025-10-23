@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faEye, faEyeSlash, faTimes, faEdit, faPlus, faInfoCircle, 
-  faHammer, faStop, faBan, faArrowDown, faArrowUp, faFilePdf, 
-  faCheckCircle, faTrash, faExclamationTriangle 
+import {
+  faEye, faEyeSlash, faTimes, faEdit, faPlus, faInfoCircle,
+  faHammer, faStop, faBan, faArrowDown, faArrowUp, faFilePdf,
+  faCheckCircle, faTrash, faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
 import { useDarkMode } from '../contexts/DarkModeContext';
@@ -15,6 +15,8 @@ import AddIncidentModal from '../components/AddIncidentModal';
 import IncidentDetailModal from '../components/IncidentDetailModal';
 import EditIncidentModal from '../components/EditIncidentModal';
 import ResolveIncidentModal from '../components/ResolveIncidentModal';
+import MarkResolvingModal from '../components/MarkResolvingModal';
+
 
 const IncidentListPage = () => {
   // Estados generales
@@ -23,13 +25,13 @@ const IncidentListPage = () => {
   const [error, setError] = useState(null);
   const { darkMode } = useDarkMode();
   const { user } = useStateContext();
-  
+
   // Estados de ordenación
   const [pendingHighSortOrder, setPendingHighSortOrder] = useState('asc');
   const [pendingMediumSortOrder, setPendingMediumSortOrder] = useState('asc');
   const [pendingLowSortOrder, setPendingLowSortOrder] = useState('asc');
   const [resolvedSortOrder, setResolvedSortOrder] = useState('asc');
-  
+
   // Estados de modales
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [detailIncident, setDetailIncident] = useState(null);
@@ -39,33 +41,36 @@ const IncidentListPage = () => {
   const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [resolutionText, setResolutionText] = useState("");
-  
+
   // Filtros
   const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
   const [selectedTypeFilter, setSelectedTypeFilter] = useState("Todas");
-  
+
   // Estados para incidencias resueltas (filtradas por mes)
   const [currentMonth, setCurrentMonth] = useState(dayjs().month());
   const [resolvedCurrentPage, setResolvedCurrentPage] = useState(1);
   const resolvedItemsPerPage = 5;
-  
+
   // Estados para paginación de incidencias pendientes
   const pendingItemsPerPage = 10;
   const [pendingHighPage, setPendingHighPage] = useState(1);
   const [pendingMediumPage, setPendingMediumPage] = useState(1);
   const [pendingLowPage, setPendingLowPage] = useState(1);
-  
+
   // Estados para ordenación por extras
   const [pendingHighExtrasSortOrder, setPendingHighExtrasSortOrder] = useState('asc');
   const [pendingMediumExtrasSortOrder, setPendingMediumExtrasSortOrder] = useState('asc');
   const [pendingLowExtrasSortOrder, setPendingLowExtrasSortOrder] = useState('asc');
   const [resolvedExtrasSortOrder, setResolvedExtrasSortOrder] = useState('asc');
-  
+
   // Estados para controlar qué columna está activa para ordenar
   const [pendingHighSortBy, setPendingHighSortBy] = useState('fecha');
   const [pendingMediumSortBy, setPendingMediumSortBy] = useState('fecha');
   const [pendingLowSortBy, setPendingLowSortBy] = useState('fecha');
   const [resolvedSortBy, setResolvedSortBy] = useState('fecha');
+
+  const [isMarkResolvingModalOpen, setIsMarkResolvingModalOpen] = useState(false);
+  const [resolvingText, setResolvingText] = useState("");
 
   useEffect(() => {
     fetchIncidents();
@@ -102,7 +107,7 @@ const IncidentListPage = () => {
   // Funciones auxiliares
   const getCreatorName = (incident) =>
     incident.creator ? `${incident.creator.nombre} ${incident.creator.apellido}` : incident.id_empleado;
-  
+
   const getEmployee2Name = (incident) =>
     incident.employee2 ? `${incident.employee2.nombre} ${incident.employee2.apellido}` : '';
 
@@ -236,6 +241,22 @@ const IncidentListPage = () => {
     }
   };
 
+  const handleMarkResolvingSubmit = async () => {
+    try {
+      const updateData = {
+        ...selectedIncident,
+        resolviendo: resolvingText || "", // Acepta vacío
+        leido: true,
+      };
+      await IncidentApiService.updateIncident(selectedIncident.id_incidencia, updateData);
+      setIsMarkResolvingModalOpen(false);
+      setResolvingText("");
+      fetchIncidents();
+    } catch (err) {
+      console.error("Error al marcar incidencia como resolviendo: ", err);
+    }
+  };
+
   const openDetailModal = (incident) => {
     setDetailIncident(incident);
     setIsDetailModalOpen(true);
@@ -320,48 +341,43 @@ const IncidentListPage = () => {
   const currentPendingLow = sortedPendingLow.slice(lowIndexOfFirst, lowIndexOfLast);
 
   // ESTILOS MODERNOS
-const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-slate-100' : 'bg-gray-100 text-slate-900'}`;  
-  const headerClass = `rounded-3xl border p-8 ${
-    darkMode 
-      ? 'border-slate-800 bg-gradient-to-r from-primary-900/50 via-primary-800/50 to-primary-700/50' 
-      : 'border-slate-200 bg-gradient-to-r from-primary-50 via-primary-100 to-primary-50'
-  }`;
+  const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-slate-100' : 'bg-gray-100 text-slate-900'}`;
+  const headerClass = `rounded-3xl border p-8 ${darkMode
+    ? 'border-slate-800 bg-gradient-to-r from-primary-900/50 via-primary-800/50 to-primary-700/50'
+    : 'border-slate-200 bg-gradient-to-r from-primary-50 via-primary-100 to-primary-50'
+    }`;
 
-  const buttonPrimaryClass = `inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 shadow-lg ${
-    darkMode
-      ? 'bg-primary-600 text-white hover:bg-primary-500'
-      : 'bg-primary-600 text-white hover:bg-primary-500'
-  }`;
+  const buttonPrimaryClass = `inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 shadow-lg ${darkMode
+    ? 'bg-primary-600 text-white hover:bg-primary-500'
+    : 'bg-primary-600 text-white hover:bg-primary-500'
+    }`;
 
-  const buttonSecondaryClass = `inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
-    darkMode
-      ? 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-      : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-  }`;
+  const buttonSecondaryClass = `inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${darkMode
+    ? 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+    : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+    }`;
 
   const filterButtonClass = (isActive) => `
     px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200
-    ${isActive 
-      ? 'bg-primary-600 text-white shadow-lg scale-105' 
-      : darkMode 
-        ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' 
+    ${isActive
+      ? 'bg-primary-600 text-white shadow-lg scale-105'
+      : darkMode
+        ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
         : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
     }
   `;
 
-  const tableContainerClass = `rounded-3xl border overflow-hidden ${
-    darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'
-  }`;
+  const tableContainerClass = `rounded-3xl border overflow-hidden ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'
+    }`;
 
   const tableHeaderClass = (bgColor) => `
     px-6 py-4 text-white font-semibold text-lg ${bgColor}
   `;
 
   const tableClass = `w-full ${darkMode ? 'text-slate-200' : 'text-slate-900'}`;
-  
-  const thClass = `px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider ${
-    darkMode ? 'bg-slate-800/50 text-slate-300' : 'bg-slate-50 text-slate-600'
-  }`;
+
+  const thClass = `px-4 py-3 text-left text-sm font-semibold uppercase tracking-wider ${darkMode ? 'bg-slate-800/50 text-slate-300' : 'bg-slate-50 text-slate-600'
+    }`;
 
   const tdClass = `px-4 py-3 text-sm ${darkMode ? 'border-slate-800' : 'border-slate-200'} border-b`;
 
@@ -377,12 +393,12 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
   };
 
   const paginationClass = `flex items-center justify-center gap-4 mt-6 px-6 pb-6`;
-  
+
   const paginationButtonClass = (disabled) => `
     rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200
-    ${disabled 
-      ? darkMode 
-        ? 'bg-slate-800 text-slate-600 cursor-not-allowed' 
+    ${disabled
+      ? darkMode
+        ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
         : 'bg-slate-100 text-slate-400 cursor-not-allowed'
       : darkMode
         ? 'bg-primary-600 text-white hover:bg-primary-500'
@@ -406,9 +422,8 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className={`rounded-3xl border p-8 max-w-md ${
-          darkMode ? 'border-red-900 bg-red-950/50' : 'border-red-200 bg-red-50'
-        }`}>
+        <div className={`rounded-3xl border p-8 max-w-md ${darkMode ? 'border-red-900 bg-red-950/50' : 'border-red-200 bg-red-50'
+          }`}>
           <p className={`text-sm font-semibold ${darkMode ? 'text-red-200' : 'text-red-700'}`}>
             Error: {error}
           </p>
@@ -423,9 +438,8 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
       <div className={headerClass}>
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div>
-            <p className={`text-sm font-semibold uppercase tracking-[0.3em] ${
-              darkMode ? 'text-primary-300' : 'text-primary-600'
-            }`}>
+            <p className={`text-sm font-semibold uppercase tracking-[0.3em] ${darkMode ? 'text-primary-300' : 'text-primary-600'
+              }`}>
               Gestión de Incidencias
             </p>
             <h1 className={`mt-2 text-3xl font-bold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
@@ -446,14 +460,12 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
       </div>
 
       {/* Filtros */}
-      <div className={`rounded-3xl border p-6 space-y-6 ${
-        darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'
-      }`}>
+      <div className={`rounded-3xl border p-6 space-y-6 ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'
+        }`}>
         {/* Filtro por Parque */}
         <div>
-          <h3 className={`text-sm font-semibold uppercase tracking-wider mb-3 ${
-            darkMode ? 'text-slate-300' : 'text-slate-600'
-          }`}>
+          <h3 className={`text-sm font-semibold uppercase tracking-wider mb-3 ${darkMode ? 'text-slate-300' : 'text-slate-600'
+            }`}>
             Filtrar por Parque
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -480,9 +492,8 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
 
         {/* Filtro por Tipo */}
         <div>
-          <h3 className={`text-sm font-semibold uppercase tracking-wider mb-3 ${
-            darkMode ? 'text-slate-300' : 'text-slate-600'
-          }`}>
+          <h3 className={`text-sm font-semibold uppercase tracking-wider mb-3 ${darkMode ? 'text-slate-300' : 'text-slate-600'
+            }`}>
             Filtrar por Tipo
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -518,7 +529,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
               <tr>
                 <th className={thClass}>Creado por</th>
                 <th className={thClass}>Tipo</th>
-                <th 
+                <th
                   className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingHighSortBy === 'fecha') {
@@ -538,7 +549,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                 </th>
                 <th className={thClass}>Resolviendo</th>
                 <th className={thClass}>Parque</th>
-                <th 
+                <th
                   className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingHighSortBy === 'extras') {
@@ -565,7 +576,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                   <tr key={incident.id_incidencia} className={darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
                     <td className={tdClass}>{getCreatorName(incident)}</td>
                     <td className={tdClass}>
-                      <span className="inline-flex px-2 py-1 rounded-lg bg-slate-700 text-sm font-medium">
+                      <span className="inline-flex px-2 py-1 rounded-lg bg-slate-700 text-white text-sm font-medium">
                         {normalizeTypeName(incident.tipo)}
                       </span>
                     </td>
@@ -601,8 +612,14 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                           <FontAwesomeIcon icon={faInfoCircle} />
                           <span className="hidden sm:inline">Ver</span>
                         </button>
-                        {!incident.leido && (
-                          <button onClick={() => handleMarkAsRead(incident.id_incidencia)} className={actionButtonClass('warning')}>
+                        {!incident.resolviendo && (
+                          <button
+                            onClick={() => {
+                              setSelectedIncident(incident);
+                              setIsMarkResolvingModalOpen(true);
+                            }}
+                            className={actionButtonClass('warning')}
+                          >
                             <FontAwesomeIcon icon={faHammer} />
                             <span className="hidden sm:inline">Resolviendo</span>
                           </button>
@@ -612,11 +629,11 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                             <FontAwesomeIcon icon={faTrash} />
                           </button>
                         )}
-                        <button 
+                        <button
                           onClick={() => {
                             setEditIncident(incident);
                             setIsEditModalOpen(true);
-                          }} 
+                          }}
                           className={actionButtonClass('primary')}
                         >
                           <FontAwesomeIcon icon={faEdit} />
@@ -679,7 +696,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
               <tr>
                 <th className={thClass}>Creado por</th>
                 <th className={thClass}>Tipo</th>
-                <th 
+                <th
                   className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingMediumSortBy === 'fecha') {
@@ -699,7 +716,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                 </th>
                 <th className={thClass}>Resolviendo</th>
                 <th className={thClass}>Parque</th>
-                <th 
+                <th
                   className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingMediumSortBy === 'extras') {
@@ -726,7 +743,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                   <tr key={incident.id_incidencia} className={darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
                     <td className={tdClass}>{getCreatorName(incident)}</td>
                     <td className={tdClass}>
-                      <span className="inline-flex px-2 py-1 rounded-lg bg-slate-700 text-sm font-medium">
+                      <span className="inline-flex px-2 py-1 rounded-lg bg-slate-700 text-white text-sm font-medium">
                         {normalizeTypeName(incident.tipo)}
                       </span>
                     </td>
@@ -762,8 +779,14 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                           <FontAwesomeIcon icon={faInfoCircle} />
                           <span className="hidden sm:inline">Ver</span>
                         </button>
-                        {!incident.leido && (
-                          <button onClick={() => handleMarkAsRead(incident.id_incidencia)} className={actionButtonClass('warning')}>
+                        {!incident.resolviendo && (
+                          <button
+                            onClick={() => {
+                              setSelectedIncident(incident);
+                              setIsMarkResolvingModalOpen(true);
+                            }}
+                            className={actionButtonClass('warning')}
+                          >
                             <FontAwesomeIcon icon={faHammer} />
                             <span className="hidden sm:inline">Resolviendo</span>
                           </button>
@@ -773,11 +796,11 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                             <FontAwesomeIcon icon={faTrash} />
                           </button>
                         )}
-                        <button 
+                        <button
                           onClick={() => {
                             setEditIncident(incident);
                             setIsEditModalOpen(true);
-                          }} 
+                          }}
                           className={actionButtonClass('primary')}
                         >
                           <FontAwesomeIcon icon={faEdit} />
@@ -840,7 +863,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
               <tr>
                 <th className={thClass}>Creado por</th>
                 <th className={thClass}>Tipo</th>
-                <th 
+                <th
                   className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingLowSortBy === 'fecha') {
@@ -860,7 +883,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                 </th>
                 <th className={thClass}>Resolviendo</th>
                 <th className={thClass}>Parque</th>
-                <th 
+                <th
                   className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (pendingLowSortBy === 'extras') {
@@ -887,7 +910,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                   <tr key={incident.id_incidencia} className={darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}>
                     <td className={tdClass}>{getCreatorName(incident)}</td>
                     <td className={tdClass}>
-                      <span className="inline-flex px-2 py-1 rounded-lg bg-slate-700 text-sm font-medium">
+                      <span className="inline-flex px-2 py-1 rounded-lg bg-slate-700 text-white text-sm font-medium">
                         {normalizeTypeName(incident.tipo)}
                       </span>
                     </td>
@@ -923,8 +946,14 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                           <FontAwesomeIcon icon={faInfoCircle} />
                           <span className="hidden sm:inline">Ver</span>
                         </button>
-                        {!incident.leido && (
-                          <button onClick={() => handleMarkAsRead(incident.id_incidencia)} className={actionButtonClass('warning')}>
+                        {!incident.resolviendo && (
+                          <button
+                            onClick={() => {
+                              setSelectedIncident(incident);
+                              setIsMarkResolvingModalOpen(true);
+                            }}
+                            className={actionButtonClass('warning')}
+                          >
                             <FontAwesomeIcon icon={faHammer} />
                             <span className="hidden sm:inline">Resolviendo</span>
                           </button>
@@ -934,11 +963,11 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                             <FontAwesomeIcon icon={faTrash} />
                           </button>
                         )}
-                        <button 
+                        <button
                           onClick={() => {
                             setEditIncident(incident);
                             setIsEditModalOpen(true);
-                          }} 
+                          }}
                           className={actionButtonClass('primary')}
                         >
                           <FontAwesomeIcon icon={faEdit} />
@@ -1002,11 +1031,10 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                   setResolvedCurrentPage(1);
                 }}
                 disabled={currentMonth === 0}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  currentMonth === 0 
-                    ? 'bg-white/10 text-white/40 cursor-not-allowed' 
-                    : 'bg-white/20 hover:bg-white/30 text-white'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${currentMonth === 0
+                  ? 'bg-white/10 text-white/40 cursor-not-allowed'
+                  : 'bg-white/20 hover:bg-white/30 text-white'
+                  }`}
               >
                 ← Anterior
               </button>
@@ -1017,11 +1045,10 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                   setResolvedCurrentPage(1);
                 }}
                 disabled={currentMonth === 11}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  currentMonth === 11 
-                    ? 'bg-white/10 text-white/40 cursor-not-allowed' 
-                    : 'bg-white/20 hover:bg-white/30 text-white'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${currentMonth === 11
+                  ? 'bg-white/10 text-white/40 cursor-not-allowed'
+                  : 'bg-white/20 hover:bg-white/30 text-white'
+                  }`}
               >
                 Siguiente →
               </button>
@@ -1034,7 +1061,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
               <tr>
                 <th className={thClass}>Creado por</th>
                 <th className={thClass}>Tipo</th>
-                <th 
+                <th
                   className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (resolvedSortBy === 'fecha') {
@@ -1054,7 +1081,7 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                 </th>
                 <th className={thClass}>Resuelto por</th>
                 <th className={thClass}>Parque</th>
-                <th 
+                <th
                   className={`${thClass} cursor-pointer hover:bg-slate-700/50`}
                   onClick={() => {
                     if (resolvedSortBy === 'extras') {
@@ -1114,11 +1141,11 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
                             <FontAwesomeIcon icon={faTrash} />
                           </button>
                         )}
-                        <button 
+                        <button
                           onClick={() => {
                             setEditIncident(incident);
                             setIsEditModalOpen(true);
-                          }} 
+                          }}
                           className={actionButtonClass('primary')}
                         >
                           <FontAwesomeIcon icon={faEdit} />
@@ -1192,6 +1219,15 @@ const containerClass = `min-h-screen space-y-6 ${darkMode ? 'bg-gray-800 text-sl
           resolutionText={resolutionText}
           setResolutionText={setResolutionText}
           onSubmit={handleResolveSubmit}
+        />
+      )}
+      {isMarkResolvingModalOpen && (
+        <MarkResolvingModal
+          isOpen={isMarkResolvingModalOpen}
+          onClose={() => setIsMarkResolvingModalOpen(false)}
+          resolvingText={resolvingText}
+          setResolvingText={setResolvingText}
+          onSubmit={handleMarkResolvingSubmit}
         />
       )}
     </div>

@@ -13,7 +13,7 @@ class IncidentController extends Controller
      */
     public function index()
     {
-        $incidents = Incident::with(['creator', 'employee2', 'vehicle', 'park', 'resolver', 'clothing_item'])->get();
+        $incidents = Incident::with(['creator', 'employee2', 'vehicle', 'park', 'resolver', 'clothing_item', 'equipment'])->get();
         return response()->json($incidents);
     }
 
@@ -83,7 +83,7 @@ class IncidentController extends Controller
             'fecha'        => 'required|date',
             'id_empleado'  => 'required|exists:users,id_empleado',
             'tipo'         => 'required|in:vehiculo,personal,instalacion,equipo,vestuario,equipos_comunes', // Añade "equipos_comunes"
-            'estado'       => 'required|in:Pendiente,En proceso,Resuelto',
+            'estado'       => 'required|in:Pendiente,En proceso, resuelta',
             'descripcion'  => 'required|string',
             'nivel'        => 'required|in:alto,medio,bajo',
             'id_parque'    => 'required|exists:parks,id_parque',

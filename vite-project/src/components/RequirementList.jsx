@@ -64,35 +64,53 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
 
     // Función para cargar la lista de bomberos
     const fetchFirefighters = async () => {
-        setLoading(true);
-        try {
-            const response = await fetchData(selectedDate);
-            const fetchedFirefighters = response.data.available_firefighters;
-            const orderedFirefighters = fetchedFirefighters.sort((a, b) => {
-                const diff = a[orderColumn] - b[orderColumn];
-                if (diff === 0) {
-                    if (orderColumn2) {
-                        if (typeof a[orderColumn2] === 'string' && a[orderColumn2].includes('-')) {
-                            const dateA = new Date(a[orderColumn2]);
-                            const dateB = new Date(b[orderColumn2]);
-                            return dateA - dateB;
-                        } else {
-                            return a[orderColumn2] - b[orderColumn2];
-                        }
+    setLoading(true);
+    try {
+        const response = await fetchData(selectedDate);
+        const fetchedFirefighters = response.data.available_firefighters;
+        
+        const orderedFirefighters = fetchedFirefighters.sort((a, b) => {
+            // 1. Ordenar por columna principal (horas)
+            const diff = a[orderColumn] - b[orderColumn];
+            
+            if (diff === 0 && orderColumn2) {
+                // 2. Empate en horas: ordenar por fecha/hora (más antiguo primero)
+                const dateA = a[orderColumn2];
+                const dateB = b[orderColumn2];
+                
+                if (!dateA && !dateB) return Number(b.dni) - Number(a.dni);
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+                
+                if (typeof dateA === 'string' && dateA.includes('-')) {
+                    // Comparar timestamp completo (fecha + hora automáticamente)
+                    const timeA = new Date(dateA).getTime();
+                    const timeB = new Date(dateB).getTime();
+                    
+                    if (timeA !== timeB) {
+                        return timeA - timeB; // Antiguo primero (fecha→hora)
                     }
-                    return Number(b.dni) - Number(a.dni);
+                } else {
+                    // Si es numérico
+                    return dateA - dateB;
                 }
-                return diff;
-            });
-            setFirefighters(orderedFirefighters);
-            setError(null);
-        } catch (error) {
-            console.error(`Failed to fetch ${listType}:`, error);
-            setError(`Failed to load ${listType}`);
-        } finally {
-            setLoading(false);
-        }
-    };
+                
+                // 3. Empate total: DNI descendente
+                return Number(b.dni) - Number(a.dni);
+            }
+            
+            return diff;
+        });
+        
+        setFirefighters(orderedFirefighters);
+        setError(null);
+    } catch (error) {
+        console.error(`Failed to fetch ${listType}:`, error);
+        setError(`Failed to load ${listType}`);
+    } finally {
+        setLoading(false);
+    }
+};
 
     useEffect(() => {
         fetchFirefighters();

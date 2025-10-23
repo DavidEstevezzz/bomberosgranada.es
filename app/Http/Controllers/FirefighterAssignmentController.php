@@ -30,62 +30,65 @@ class FirefighterAssignmentController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+    // app/Http/Controllers/FirefighterAssignmentController.php
+
     public function store(Request $request)
-{
-    // Validación con el nuevo campo horas_traslado
-    $validator = Validator::make($request->all(), [
-        'id_empleado' => 'required|exists:users,id_empleado',
-        'id_brigada_origen' => 'required|exists:brigades,id_brigada',
-        'id_brigada_destino' => 'required|exists:brigades,id_brigada',
-        'fecha_ini' => 'required|date',
-        'turno' => 'required|string',
-        'tipo_asignacion' => 'nullable|string',
-        'requerimiento' => 'nullable|boolean',
-        'horas_traslado' => 'nullable|numeric|min:0', // NUEVO CAMPO
-    ]);
+    {
+        // Validación con el nuevo campo horas_traslado
+        $validator = Validator::make($request->all(), [
+            'id_empleado' => 'required|exists:users,id_empleado',
+            'id_brigada_origen' => 'required|exists:brigades,id_brigada',
+            'id_brigada_destino' => 'required|exists:brigades,id_brigada',
+            'fecha_ini' => 'required|date',
+            'turno' => 'required|string',
+            'tipo_asignacion' => 'nullable|string',
+            'requerimiento' => 'nullable|boolean',
+            'horas_traslado' => 'nullable|numeric|min:0',
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json($validator->errors(), 400);
-    }
-
-    try {
-        // Crear la asignación
-        $assignment = Firefighters_assignment::create($request->all());
-
-        // Si tiene horas_traslado y es tipo_asignacion 'ida', incrementar automáticamente
-        if ($request->has('horas_traslado') && 
-            $request->input('horas_traslado') > 0 && 
-            $request->input('tipo_asignacion') === 'ida') {
-            
-            $horasTraslado = $request->input('horas_traslado');
-            $idEmpleado = $request->input('id_empleado');
-            
-            $user = User::find($idEmpleado);
-            if ($user) {
-                // Incrementar la columna traslado
-                $user->traslado += $horasTraslado;
-                // Actualizar la fecha de traslado
-                $user->fecha_traslado = now();
-                $user->save();
-                
-                Log::info("Horas de traslado incrementadas automáticamente", [
-                    'id_empleado' => $idEmpleado,
-                    'horas_incrementadas' => $horasTraslado,
-                    'nuevo_total' => $user->traslado
-                ]);
-            }
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
         }
 
-        return response()->json($assignment, 201);
-        
-    } catch (\Exception $e) {
-        Log::error('Error creating assignment', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return response()->json(['error' => 'Error al crear la asignación'], 500);
+        try {
+            // Crear la asignación
+            $assignment = Firefighters_assignment::create($request->all());
+
+            // Si tiene horas_traslado y es tipo_asignacion 'ida', incrementar automáticamente
+            if (
+                $request->has('horas_traslado') &&
+                $request->input('horas_traslado') > 0 &&
+                $request->input('tipo_asignacion') === 'ida'
+            ) {
+
+                $horasTraslado = floatval($request->input('horas_traslado')); // Asegurar que sea float
+                $idEmpleado = $request->input('id_empleado');
+
+                $user = User::find($idEmpleado);
+                if ($user) {
+                    // Incrementar la columna traslados (PLURAL)
+                    $user->traslados += $horasTraslado;
+                    // Actualizar la fecha de traslado
+                    $user->fecha_traslado = now();
+                    $user->save();
+
+                    Log::info("Horas de traslado incrementadas automáticamente", [
+                        'id_empleado' => $idEmpleado,
+                        'horas_incrementadas' => $horasTraslado,
+                        'nuevo_total' => $user->traslados
+                    ]);
+                }
+            }
+
+            return response()->json($assignment, 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating assignment', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Error al crear la asignación'], 500);
+        }
     }
-}
 
 
     /**

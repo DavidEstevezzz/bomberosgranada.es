@@ -125,6 +125,20 @@ async checkEspecialBrigade(brigadeId, date) {
   async extendWorkingDay(payload) {
     return await BaseApiService.post(API_URL_EXTEND_WORKING_DAY, payload);
   }
+
+  async getActiveTransfers(idBrigada, fecha) {
+  return await BaseApiService.get(`${API_URL}/active-transfers`, { 
+    id_brigada: idBrigada, 
+    fecha: fecha 
+  });
+}
+
+async undoTransfer(idAsignacionIda) {
+  return await BaseApiService.post(`${API_URL}/undo-transfer`, { 
+    id_asignacion_ida: idAsignacionIda 
+  });
+}
+
 }
 
 

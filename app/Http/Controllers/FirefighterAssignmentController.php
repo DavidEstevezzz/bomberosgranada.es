@@ -153,6 +153,174 @@ class FirefighterAssignmentController extends Controller
         return response()->json(null, 204);
     }
 
+    /**
+     * Obtener traslados activos de una brigada en una fecha
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function getActiveTransfers(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id_brigada' => 'required|exists:brigades,id_brigada',
+            'fecha' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idBrigada = $request->input('id_brigada');
+        $fecha = $request->input('fecha');
+
+        try {
+            // Buscar todas las asignaciones de tipo "ida" con horas_traslado > 0
+            // que involucren a esta brigada (origen o destino) en esta fecha
+            $transfers = Firefighters_assignment::with([
+                'firefighter:id_empleado,nombre,apellido,puesto',
+                'brigadeOrigin:id_brigada,nombre,id_parque',
+                'brigadeDestination:id_brigada,nombre,id_parque'
+            ])
+                ->where('fecha_ini', $fecha)
+                ->where('tipo_asignacion', 'ida')
+                ->where(function ($query) {
+                    $query->whereNotNull('horas_traslado')
+                        ->where('horas_traslado', '>', 0);
+                })
+                ->where(function ($query) use ($idBrigada) {
+                    $query->where('id_brigada_origen', $idBrigada)
+                        ->orWhere('id_brigada_destino', $idBrigada);
+                })
+                ->orderBy('turno')
+                ->get();
+
+            Log::info("Traslados activos encontrados", [
+                'id_brigada' => $idBrigada,
+                'fecha' => $fecha,
+                'cantidad' => $transfers->count()
+            ]);
+
+            return response()->json([
+                'transfers' => $transfers,
+                'count' => $transfers->count()
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo traslados activos', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'error' => 'Error al obtener traslados activos'
+            ], 500);
+        }
+    }
+
+    /**
+     * Deshacer traslado - Elimina asignaciones de ida/vuelta y revierte horas
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function undoTransfer(Request $request)
+    {
+        Log::info("undoTransfer - Datos recibidos:", $request->all());
+
+        $validator = Validator::make($request->all(), [
+            'id_asignacion_ida' => 'required|exists:firefighters_assignments,id_asignacion',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idAsignacionIda = $request->input('id_asignacion_ida');
+
+        try {
+            // 1. Buscar la asignación de IDA
+            $asignacionIda = Firefighters_assignment::with(['firefighter', 'brigadeOrigin', 'brigadeDestination'])
+                ->where('id_asignacion', $idAsignacionIda)
+                ->where('tipo_asignacion', 'ida')
+                ->first();
+
+            if (!$asignacionIda) {
+                return response()->json([
+                    'error' => 'No se encontró la asignación de ida para deshacer'
+                ], 404);
+            }
+
+            $idEmpleado = $asignacionIda->id_empleado;
+            $fechaIni = $asignacionIda->fecha_ini;
+            $turnoIda = $asignacionIda->turno;
+            $idBrigadaOrigen = $asignacionIda->id_brigada_origen;
+            $idBrigadaDestino = $asignacionIda->id_brigada_destino;
+            $horasTraslado = $asignacionIda->horas_traslado ?? 0;
+
+            // 2. Determinar fecha y turno de vuelta
+            $fechaVuelta = $fechaIni;
+            if (in_array($turnoIda, ['Noche', 'Tarde y noche', 'Día Completo'])) {
+                $fechaVuelta = date('Y-m-d', strtotime($fechaIni . ' +1 day'));
+            }
+
+            $turnoVuelta = $this->calcularTurnoVuelta($turnoIda);
+
+            // 3. Buscar asignación de VUELTA
+            $asignacionVuelta = Firefighters_assignment::where('id_empleado', $idEmpleado)
+                ->where('fecha_ini', $fechaVuelta)
+                ->where('turno', $turnoVuelta)
+                ->where('id_brigada_origen', $idBrigadaDestino)
+                ->where('id_brigada_destino', $idBrigadaOrigen)
+                ->first();
+
+            // 4. Revertir las horas de traslado del usuario
+            if ($horasTraslado > 0) {
+                $user = User::find($idEmpleado);
+                if ($user) {
+                    $user->traslados = max(0, $user->traslados - $horasTraslado);
+                    $user->save();
+
+                    Log::info("Horas de traslado revertidas", [
+                        'id_empleado' => $idEmpleado,
+                        'horas_revertidas' => $horasTraslado,
+                        'nuevo_total' => $user->traslados
+                    ]);
+                }
+            }
+
+            // 5. Eliminar ambas asignaciones
+            $idsEliminados = [];
+
+            $idsEliminados[] = $asignacionIda->id_asignacion;
+            $asignacionIda->delete();
+
+            if ($asignacionVuelta) {
+                $idsEliminados[] = $asignacionVuelta->id_asignacion;
+                $asignacionVuelta->delete();
+            }
+
+            Log::info("Traslado deshecho exitosamente", [
+                'id_empleado' => $idEmpleado,
+                'fecha_ini' => $fechaIni,
+                'ids_eliminados' => $idsEliminados,
+                'horas_revertidas' => $horasTraslado
+            ]);
+
+            return response()->json([
+                'message' => 'Traslado deshecho exitosamente',
+                'deleted_count' => count($idsEliminados),
+                'deleted_ids' => $idsEliminados,
+                'horas_revertidas' => $horasTraslado
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deshaciendo traslado', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'error' => 'Error al deshacer el traslado: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function availableFirefighters(Request $request)
     {
         $date = $request->query('date', date('Y-m-d'));

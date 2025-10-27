@@ -15,6 +15,7 @@ import AssignFirefighterModal from './AssignFirefighterModal';
 import ExtendWorkingDayModal from './ExtendWorkingDayModal';
 import AssignFirefighterToBajasModal from './AssignFirefighterToBajasModal.jsx';
 import RequireFirefighterModal from './RequireFirefighterModal';
+import ActiveTransfersList from './ActiveTransfersList';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronLeft, faChevronRight, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
@@ -1667,9 +1668,8 @@ const BrigadeDetail = () => {
   if (error) {
     return (
       <div className={`flex items-center justify-center min-h-screen ${darkMode ? 'bg-slate-950' : 'bg-slate-100'}`}>
-        <div className={`rounded-2xl border p-6 ${
-          darkMode ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'
-        }`}>
+        <div className={`rounded-2xl border p-6 ${darkMode ? 'border-red-500/40 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'
+          }`}>
           <p className="font-semibold">Error: {error}</p>
         </div>
       </div>
@@ -1694,31 +1694,28 @@ const BrigadeDetail = () => {
   ];
 
   return (
-    <div className={`min-h-screen px-4 py-6 sm:px-6 lg:px-8 transition-colors duration-300 ${
-      darkMode ? 'bg-slate-950' : 'bg-slate-100'
-    }`}>
+    <div className={`min-h-screen px-4 py-6 sm:px-6 lg:px-8 transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-slate-100'
+      }`}>
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Botón Volver */}
-        <button 
-          onClick={() => navigate(-1)} 
-          className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
-            darkMode
+        <button
+          onClick={() => navigate(-1)}
+          className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${darkMode
               ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
               : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-          }`}
+            }`}
         >
           <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
           <span>Volver</span>
         </button>
 
-       
+
 
         {/* Card Principal */}
-        <div className={`rounded-3xl border transition-colors duration-300 overflow-hidden ${
-          darkMode 
-            ? 'border-slate-800 bg-slate-900/80' 
+        <div className={`rounded-3xl border transition-colors duration-300 overflow-hidden ${darkMode
+            ? 'border-slate-800 bg-slate-900/80'
             : 'border-slate-200 bg-white'
-        }`}>
+          }`}>
           {/* Header con gradiente de color de brigada */}
           <div className={`px-6 py-8 sm:px-8 ${brigadeColor}`}>
             <h1 className={`text-3xl font-bold text-center ${nameColor}`}>
@@ -1740,31 +1737,27 @@ const BrigadeDetail = () => {
             {/* Grid de Estadísticas por Turno */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {shifts.map(shift => (
-                <div 
-                  key={shift.key} 
-                  className={`rounded-2xl border p-5 transition-colors ${
-                    darkMode 
-                      ? 'border-slate-800 bg-slate-800/60' 
+                <div
+                  key={shift.key}
+                  className={`rounded-2xl border p-5 transition-colors ${darkMode
+                      ? 'border-slate-800 bg-slate-800/60'
                       : 'border-slate-200 bg-slate-50'
-                  }`}
+                    }`}
                 >
-                  <h3 className={`text-sm font-semibold uppercase tracking-[0.3em] mb-4 text-center ${
-                    darkMode ? 'text-primary-400' : 'text-primary-600'
-                  }`}>
+                  <h3 className={`text-sm font-semibold uppercase tracking-[0.3em] mb-4 text-center ${darkMode ? 'text-primary-400' : 'text-primary-600'
+                    }`}>
                     {shift.label}
                   </h3>
-                  
+
                   <table className="w-full text-sm $">
                     <thead>
                       <tr className={`border-b ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-                        <th className={`py-2 px-3 text-left text-xs font-semibold uppercase tracking-wider ${
-                          darkMode ? 'text-slate-400' : 'text-slate-600'
-                        }`}>
+                        <th className={`py-2 px-3 text-left text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
                           Categoría
                         </th>
-                        <th className={`py-2 px-3 text-right text-xs font-semibold uppercase tracking-wider ${
-                          darkMode ? 'text-slate-400' : 'text-slate-600'
-                        }`}>
+                        <th className={`py-2 px-3 text-right text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-600'
+                          }`}>
                           Conteo
                         </th>
                       </tr>
@@ -1773,19 +1766,18 @@ const BrigadeDetail = () => {
                       {categorizeFirefighters(shift.key).map((data, index) => {
                         const { isBelowMinimum, minimumCount } = checkMinimums(data.category, data.count);
                         return (
-                          <tr 
-                            key={index} 
+                          <tr
+                            key={index}
                             className={`border-b ${darkMode ? 'border-slate-800/50' : 'border-slate-200/50'}`}
                           >
                             <td className={`py-2 px-3 ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>
                               {data.category}
                             </td>
-                            <td className={`py-2 px-3 text-right font-medium ${
-                              isBelowMinimum 
-                                ? darkMode ? 'text-red-400' : 'text-red-600' 
+                            <td className={`py-2 px-3 text-right font-medium ${isBelowMinimum
+                                ? darkMode ? 'text-red-400' : 'text-red-600'
                                 : darkMode ? 'text-slate-200' : 'text-slate-900'
-                            }`}>
-                              {data.count} 
+                              }`}>
+                              {data.count}
                               {isBelowMinimum && (
                                 <span className="text-xs ml-1">(mín {minimumCount})</span>
                               )}
@@ -1801,12 +1793,11 @@ const BrigadeDetail = () => {
 
             {/* Tabla Principal de Bomberos */}
             <div>
-              <h2 className={`text-xl font-bold mb-6 ${
-                darkMode ? 'text-slate-100' : 'text-slate-900'
-              }`}>
+              <h2 className={`text-xl font-bold mb-6 ${darkMode ? 'text-slate-100' : 'text-slate-900'
+                }`}>
                 Bomberos Asignados
               </h2>
-              
+
               <div className="overflow-x-auto rounded-2xl border ${darkMode ? 'border-slate-800'  : 'border-slate-200'}">
                 <table className="w-full">
                   <thead className={`${brigadeColor} ${nameColor}`}>
@@ -1822,24 +1813,22 @@ const BrigadeDetail = () => {
                   <tbody>
                     {shifts.map(shift => (
                       <React.Fragment key={shift.key}>
-                        <tr className={`${
-                          darkMode 
-                            ? 'bg-slate-800/80 text-slate-100' 
+                        <tr className={`${darkMode
+                            ? 'bg-slate-800/80 text-slate-100'
                             : 'bg-slate-100 text-slate-900'
-                        }`}>
+                          }`}>
                           <td colSpan="4" className="py-3 px-4 text-center font-bold text-sm uppercase tracking-wider">
                             {shift.label}
                           </td>
                         </tr>
                         {filterFirefightersByShift(shift.key).length > 0 ? (
                           filterFirefightersByShift(shift.key).map((firefighter, index) => (
-                            <tr 
-                              key={`${firefighter.id_empleado}-${index}`} 
-                              className={`border-b transition-colors ${
-                                darkMode 
-                                  ? 'border-slate-800/50 hover:bg-slate-800/50' 
+                            <tr
+                              key={`${firefighter.id_empleado}-${index}`}
+                              className={`border-b transition-colors ${darkMode
+                                  ? 'border-slate-800/50 hover:bg-slate-800/50'
                                   : 'border-slate-200 hover:bg-slate-50'
-                              }`}
+                                }`}
                             >
                               <td className={`py-3 px-4 text-sm ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>
                                 {loadingPreviousAssignments ? (
@@ -1862,11 +1851,10 @@ const BrigadeDetail = () => {
                               {['mando', 'jefe'].includes(user.type) && (
                                 <td className="py-3 px-4">
                                   <select
-                                    className={`rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 w-full ${
-                                      darkMode
+                                    className={`rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 w-full ${darkMode
                                         ? 'border-slate-700 bg-slate-800 text-slate-100'
                                         : 'border-slate-300 bg-white text-slate-900'
-                                    }`}
+                                      }`}
                                     value={assignments[shift.key][firefighter.id_empleado] || ''}
                                     onChange={(e) =>
                                       handleAssignmentChange(shift.key, firefighter.id_empleado, e.target.value)
@@ -1887,11 +1875,10 @@ const BrigadeDetail = () => {
                           ))
                         ) : (
                           <tr>
-                            <td 
-                              colSpan="4" 
-                              className={`text-center py-4 text-sm ${
-                                darkMode ? 'text-slate-400' : 'text-slate-500'
-                              }`}
+                            <td
+                              colSpan="4"
+                              className={`text-center py-4 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'
+                                }`}
                             >
                               No hay bomberos asignados para este turno.
                             </td>
@@ -1905,17 +1892,28 @@ const BrigadeDetail = () => {
             </div>
 
             {/* Botón Exportar PDF */}
-            <button 
-              onClick={() => exportToPDF()} 
-              className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 ${
-                darkMode
+            <button
+              onClick={() => exportToPDF()}
+              className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 ${darkMode
                   ? 'bg-green-600 hover:bg-green-500'
                   : 'bg-green-600 hover:bg-green-700'
-              }`}
+                }`}
             >
               <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4" />
               Exportar a PDF
             </button>
+
+            {/* Lista de Traslados Activos */}
+            {['mando', 'jefe'].includes(user.type) && (
+              <ActiveTransfersList
+                brigadeId={brigade?.id_brigada}
+                selectedDate={selectedDate}
+                onTransferUndone={() => {
+                  // Refrescar los datos de la brigada cuando se deshace un traslado
+                  fetchBrigadeDetails();
+                }}
+              />
+            )}
 
             {/* Botones de Acción - Solo para Mandos y Jefes */}
             {['mando', 'jefe'].includes(user.type) && (
@@ -1932,8 +1930,8 @@ const BrigadeDetail = () => {
                 >
                   Actividades Diarias
                 </button>
-                <button 
-                  onClick={() => setShowAssignFirefighterModal(true)} 
+                <button
+                  onClick={() => setShowAssignFirefighterModal(true)}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-purple-600 hover:bg-purple-700 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200"
                 >
                   Trasladar bombero
@@ -1965,19 +1963,17 @@ const BrigadeDetail = () => {
                 <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                   Comentarios
                 </h2>
-                <div className={`rounded-2xl border p-6 transition-colors ${
-                  darkMode 
-                    ? 'border-slate-800 bg-slate-900/60' 
+                <div className={`rounded-2xl border p-6 transition-colors ${darkMode
+                    ? 'border-slate-800 bg-slate-900/60'
                     : 'border-slate-200 bg-slate-50'
-                }`}>
+                  }`}>
                   {user.type === 'jefe' ? (
                     <>
                       <textarea
-                        className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
-                          darkMode
+                        className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${darkMode
                             ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
                             : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
-                        }`}
+                          }`}
                         rows="4"
                         placeholder="Añadir comentarios..."
                         value={comentarios}
@@ -1985,11 +1981,10 @@ const BrigadeDetail = () => {
                       />
                       <button
                         onClick={handleCommentSubmit}
-                        className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${
-                          isUpdating 
-                            ? 'bg-slate-500 cursor-not-allowed' 
+                        className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${isUpdating
+                            ? 'bg-slate-500 cursor-not-allowed'
                             : 'bg-blue-600 hover:bg-blue-700'
-                        }`}
+                          }`}
                         disabled={isUpdating}
                       >
                         {isUpdating ? 'Guardando...' : 'Guardar Comentarios'}
@@ -2008,19 +2003,17 @@ const BrigadeDetail = () => {
                 <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                   Incidencias de Personal
                 </h2>
-                <div className={`rounded-2xl border p-6 transition-colors ${
-                  darkMode 
-                    ? 'border-slate-800 bg-slate-900/60' 
+                <div className={`rounded-2xl border p-6 transition-colors ${darkMode
+                    ? 'border-slate-800 bg-slate-900/60'
                     : 'border-slate-200 bg-slate-50'
-                }`}>
+                  }`}>
                   {['mando', 'jefe'].includes(user.type) ? (
                     <>
                       <textarea
-                        className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
-                          darkMode
+                        className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${darkMode
                             ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
                             : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
-                        }`}
+                          }`}
                         rows="4"
                         placeholder="Añadir incidencias de personal..."
                         value={incidenciasPersonal}
@@ -2028,11 +2021,10 @@ const BrigadeDetail = () => {
                       />
                       <button
                         onClick={handlePersonalIncidentsSubmit}
-                        className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${
-                          isUpdatingPersonal 
-                            ? 'bg-slate-500 cursor-not-allowed' 
+                        className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${isUpdatingPersonal
+                            ? 'bg-slate-500 cursor-not-allowed'
                             : 'bg-blue-600 hover:bg-blue-700'
-                        }`}
+                          }`}
                         disabled={isUpdatingPersonal}
                       >
                         {isUpdatingPersonal ? 'Guardando...' : 'Guardar Incidencias de Personal'}
@@ -2051,19 +2043,17 @@ const BrigadeDetail = () => {
                 <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                   Incidencias Generales y Propuestas
                 </h2>
-                <div className={`rounded-2xl border p-6 transition-colors ${
-                  darkMode 
-                    ? 'border-slate-800 bg-slate-900/60' 
+                <div className={`rounded-2xl border p-6 transition-colors ${darkMode
+                    ? 'border-slate-800 bg-slate-900/60'
                     : 'border-slate-200 bg-slate-50'
-                }`}>
+                  }`}>
                   {['mando', 'jefe'].includes(user.type) ? (
                     <>
                       <textarea
-                        className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${
-                          darkMode
+                        className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${darkMode
                             ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
                             : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
-                        }`}
+                          }`}
                         rows="4"
                         placeholder="Añadir incidencias generales y propuestas..."
                         value={incidenciasGenerales}
@@ -2071,11 +2061,10 @@ const BrigadeDetail = () => {
                       />
                       <button
                         onClick={handleGeneralIncidentsSubmit}
-                        className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${
-                          isUpdatingGenerales 
-                            ? 'bg-slate-500 cursor-not-allowed' 
+                        className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${isUpdatingGenerales
+                            ? 'bg-slate-500 cursor-not-allowed'
                             : 'bg-blue-600 hover:bg-blue-700'
-                        }`}
+                          }`}
                         disabled={isUpdatingGenerales}
                       >
                         {isUpdatingGenerales ? 'Guardando...' : 'Guardar Incidencias Generales'}
@@ -2104,11 +2093,10 @@ const BrigadeDetail = () => {
                         }
                         setShowAddInterventionModal(true);
                       }}
-                      className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 ${
-                        !guardDetails?.id
+                      className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 ${!guardDetails?.id
                           ? 'bg-slate-500 cursor-not-allowed'
                           : 'bg-green-600 hover:bg-green-700'
-                      }`}
+                        }`}
                       disabled={!guardDetails?.id}
                     >
                       Añadir Intervención
@@ -2120,7 +2108,7 @@ const BrigadeDetail = () => {
                     refreshTrigger={refreshInterventions}
                     onEditIntervention={handleEditIntervention}
                     onDeleteIntervention={handleDeleteIntervention}
-                    />
+                  />
                 </div>
               )}
             </div>

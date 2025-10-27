@@ -172,6 +172,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 
+
     Route::get('/guards', [GuardController::class, 'index']);
     Route::get('/guards/{id}', [GuardController::class, 'show']);
 
@@ -274,7 +275,9 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('firefighters-assignments/require-firefighter', [FirefighterAssignmentController::class, 'requireFirefighter']);
     Route::get('/firefighters-assignments/check-especial-brigade', [FirefighterAssignmentController::class, 'getEspecialAssigment']);
     Route::post('/firefighters-assignments/extend-working-day', [FirefighterAssignmentController::class, 'extendWorkingDay']);
-
+    // Traslados
+    Route::get('/firefighter-assignments/active-transfers', [FirefighterAssignmentController::class, 'getActiveTransfers']);
+    Route::post('/firefighter-assignments/undo-transfer', [FirefighterAssignmentController::class, 'undoTransfer']);
 
 
 
@@ -289,5 +292,4 @@ Route::middleware(['auth:sanctum', 'auth.special.command'])->group(function () {
     Route::post('/firefighters-assignments/create-rt', [FirefighterAssignmentController::class, 'createRTAssigments']);
     Route::post('/firefighters-assignments/delete-practices', [FirefighterAssignmentController::class, 'deletePracticesAssignments']);
     Route::post('/firefighters-assignments/delete-rt', [FirefighterAssignmentController::class, 'deleteRTAssignments']);
-    
 });

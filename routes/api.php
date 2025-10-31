@@ -265,7 +265,9 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
 
     // Restricción de Request y ShiftChangeRequest para update y delete
     Route::delete('/requests/{id}', [RequestController::class, 'destroy']);
-
+// Traslados
+    Route::get('/firefighters-assignments/active-transfers', [FirefighterAssignmentController::class, 'getActiveTransfers']);
+    Route::post('/firefighters-assignments/undo-transfer', [FirefighterAssignmentController::class, 'undoTransfer']);
     Route::put('/firefighters-assignments/{id_asignacion}/increment-user-column', [FirefighterAssignmentController::class, 'increaseUserColumnValue']);
     Route::put('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'update']);
     Route::delete('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'destroy']);
@@ -275,9 +277,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('firefighters-assignments/require-firefighter', [FirefighterAssignmentController::class, 'requireFirefighter']);
     Route::get('/firefighters-assignments/check-especial-brigade', [FirefighterAssignmentController::class, 'getEspecialAssigment']);
     Route::post('/firefighters-assignments/extend-working-day', [FirefighterAssignmentController::class, 'extendWorkingDay']);
-    // Traslados
-    Route::get('/firefighters-assignments/active-transfers', [FirefighterAssignmentController::class, 'getActiveTransfers']);
-    Route::post('/firefighters-assignments/undo-transfer', [FirefighterAssignmentController::class, 'undoTransfer']);
+    
 
 
 

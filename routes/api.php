@@ -276,8 +276,8 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::get('/firefighters-assignments/check-especial-brigade', [FirefighterAssignmentController::class, 'getEspecialAssigment']);
     Route::post('/firefighters-assignments/extend-working-day', [FirefighterAssignmentController::class, 'extendWorkingDay']);
     // Traslados
-    Route::get('/firefighter-assignments/active-transfers', [FirefighterAssignmentController::class, 'getActiveTransfers']);
-    Route::post('/firefighter-assignments/undo-transfer', [FirefighterAssignmentController::class, 'undoTransfer']);
+    Route::get('/firefighters-assignments/active-transfers', [FirefighterAssignmentController::class, 'getActiveTransfers']);
+    Route::post('/firefighters-assignments/undo-transfer', [FirefighterAssignmentController::class, 'undoTransfer']);
 
 
 

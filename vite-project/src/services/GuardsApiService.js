@@ -91,28 +91,46 @@ async updateGeneralIncidents(idBrigada, date, incidencias_generales) {
 async getPreviousGuards(id_brigada, currentDate, daysBack = [5, 10, 15]) {
   try {
     const guardPromises = daysBack.map(days => {
-      const date = new Date(currentDate);
+      // USAR STRING PARSING EN LUGAR DE new Date()
+      const [year, month, day] = currentDate.split('-').map(Number);
+      const date = new Date(year, month - 1, day); // month - 1 porque los meses en JS van de 0-11
       date.setDate(date.getDate() - days);
-      const formattedDate = date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      
+      // Formatear manualmente para evitar problemas de zona horaria
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
+      
+      console.log(`📅 Buscando guardia de hace ${days} días: ${formattedDate}`);
+      
       return this.getGuard(id_brigada, formattedDate);
     });
 
-    // Ejecutar todas las peticiones en paralelo
     const responses = await Promise.allSettled(guardPromises);
     
-    // Filtrar solo las respuestas exitosas y extraer los datos relevantes
+    // Filtrar solo las respuestas exitosas manteniendo el índice original
     const previousGuards = responses
-      .filter(response => response.status === 'fulfilled' && response.value.data.guard)
-      .map((response, index) => ({
-        guard: response.value.data.guard,
-        daysBack: daysBack[index],
-        date: (() => {
-          const date = new Date(currentDate);
-          date.setDate(date.getDate() - daysBack[index]);
-          return date.toISOString().split('T')[0];
-        })()
-      }));
+      .map((response, index) => ({ response, originalIndex: index }))
+      .filter(({ response }) => response.status === 'fulfilled' && response.value.data.guard)
+      .map(({ response, originalIndex }) => {
+        const [year, month, day] = currentDate.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        date.setDate(date.getDate() - daysBack[originalIndex]);
+        
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        const formattedDate = `${yyyy}-${mm}-${dd}`;
+        
+        return {
+          guard: response.value.data.guard,
+          daysBack: daysBack[originalIndex],
+          date: formattedDate
+        };
+      });
       
+    console.log(`✅ Guardias previas encontradas: ${previousGuards.length}`, previousGuards);
     return previousGuards;
   } catch (error) {
     console.error('Error obteniendo guardias anteriores:', error);

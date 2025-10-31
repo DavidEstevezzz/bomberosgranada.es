@@ -378,6 +378,11 @@ const BrigadeDetail = () => {
         // Agregar carga de guardias anteriores
         setLoadingPreviousAssignments(true);
         const previousGuardsData = await GuardsApiService.getPreviousGuards(id_brigada, selectedDate);
+        console.log('🔍 DEBUG 1 - previousGuards obtenidas:', {
+          cantidad: previousGuardsData.length,
+          fechas: previousGuardsData.map(g => g.date),
+          guardIds: previousGuardsData.map(g => g.guard?.id)
+        });
         setPreviousGuards(previousGuardsData);
 
         setError(null);
@@ -386,7 +391,6 @@ const BrigadeDetail = () => {
         setError('Failed to load brigade details');
       } finally {
         setLoading(false);
-        setLoadingPreviousAssignments(false);
       }
     };
 
@@ -448,62 +452,95 @@ const BrigadeDetail = () => {
   };
 
   useEffect(() => {
-    const loadAllPreviousAssignments = async () => {
-      if (!previousGuards || previousGuards.length === 0) {
-        setLoadingPreviousAssignments(false);
-        return;
-      }
+  console.log('🔍 DEBUG 2 - useEffect previousGuards ejecutado:', {
+    previousGuardsLength: previousGuards.length,
+    previousGuards: previousGuards
+  });
 
-      try {
-        // Obtener todas las asignaciones en una sola petición
-        const response = await GuardAssignmentApiService.getGuardAssignments();
-        const allAssignments = response.data;
-
-        // Crear un caché de asignaciones por bombero
-        const firefighterAssignments = {};
-
-        // Para cada guardia anterior, buscar asignaciones
-        for (const guardData of previousGuards) {
-          const guardId = guardData.guard.id;
-
-          // Filtrar asignaciones para esta guardia
-          const guardAssignments = allAssignments.filter(a => a.id_guard === guardId);
-
-          // Para cada asignación, guardarla en el caché
-          guardAssignments.forEach(assignment => {
-            const firefighterId = assignment.id_empleado;
-
-            // Solo guardar la primera asignación encontrada (la más reciente)
-            if (!firefighterAssignments[firefighterId]) {
-              const date = new Date(guardData.date);
-              const formattedDate = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-
-              firefighterAssignments[firefighterId] = {
-                asignacion: assignment.asignacion,
-                fecha: formattedDate,
-                turno: assignment.turno,
-                diasAtras: guardData.daysBack
-              };
-            }
-          });
-        }
-
-        setPreviousAssignmentsCache(firefighterAssignments);
-      } catch (error) {
-        console.error('Error cargando asignaciones previas:', error);
-      } finally {
-        setLoadingPreviousAssignments(false);
-      }
-    };
-
-    if (previousGuards.length > 0) {
-      loadAllPreviousAssignments();
+  const loadAllPreviousAssignments = async () => {
+    if (!previousGuards || previousGuards.length === 0) {
+      console.log('🔍 DEBUG 3 - No hay previousGuards, saltando carga');
+      setLoadingPreviousAssignments(false);
+      return;
     }
-  }, [previousGuards]);
+
+    try {
+      console.log('🔍 DEBUG 4 - Iniciando carga de asignaciones previas');
+      
+      // Obtener todas las asignaciones en una sola petición
+      const response = await GuardAssignmentApiService.getGuardAssignments();
+      const allAssignments = response.data;
+      
+      console.log('🔍 DEBUG 5 - Asignaciones obtenidas:', {
+        total: allAssignments.length,
+        primeras5: allAssignments.slice(0, 5)
+      });
+
+      // Crear un caché de asignaciones por bombero
+      const firefighterAssignments = {};
+
+      // Para cada guardia anterior, buscar asignaciones
+      for (const guardData of previousGuards) {
+        const guardId = guardData.guard.id;
+        console.log('🔍 DEBUG 6 - Procesando guardia:', {
+          guardId,
+          fecha: guardData.date,
+          diasAtras: guardData.daysBack
+        });
+
+        // Filtrar asignaciones para esta guardia
+        const guardAssignments = allAssignments.filter(a => a.id_guard === guardId);
+        console.log('🔍 DEBUG 7 - Asignaciones encontradas para guardia', guardId, ':', guardAssignments.length);
+
+        // Para cada asignación, guardarla en el caché
+        guardAssignments.forEach(assignment => {
+          const firefighterId = assignment.id_empleado;
+
+          // Solo guardar la primera asignación encontrada (la más reciente)
+          if (!firefighterAssignments[firefighterId]) {
+            const date = new Date(guardData.date);
+            const formattedDate = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+
+            firefighterAssignments[firefighterId] = {
+              asignacion: assignment.asignacion,
+              fecha: formattedDate,
+              turno: assignment.turno,
+              diasAtras: guardData.daysBack
+            };
+            
+            console.log('🔍 DEBUG 8 - Guardada asignación para bombero', firefighterId, ':', firefighterAssignments[firefighterId]);
+          }
+        });
+      }
+
+      console.log('🔍 DEBUG 9 - Cache completo de asignaciones:', {
+        totalBomberos: Object.keys(firefighterAssignments).length,
+        asignaciones: firefighterAssignments
+      });
+      
+      setPreviousAssignmentsCache(firefighterAssignments);
+    } catch (error) {
+      console.error('🔍 DEBUG 10 - Error cargando asignaciones previas:', error);
+    } finally {
+      console.log('🔍 DEBUG 11 - Finalizando carga, estableciendo loading en false');
+      setLoadingPreviousAssignments(false);
+    }
+  };
+
+  loadAllPreviousAssignments();
+}, [previousGuards]);
 
   const PreviousAssignmentDisplay = ({ firefighter }) => {
     // Obtener asignación del caché
     const prevAssignmentInfo = previousAssignmentsCache[firefighter.id_empleado];
+
+    console.log('🔍 DEBUG 12 - PreviousAssignmentDisplay renderizado:', {
+    bombero: `${firefighter.nombre} ${firefighter.apellido}`,
+    id_empleado: firefighter.id_empleado,
+    prevAssignmentInfo: prevAssignmentInfo,
+    loadingPreviousAssignments: loadingPreviousAssignments,
+    cacheCompleto: previousAssignmentsCache
+  });
 
     // 🔍 LOG GENERAL PARA TODOS LOS CAMBIOS DE GUARDIA
     if (firefighter.id_change_request) {
@@ -1701,8 +1738,8 @@ const BrigadeDetail = () => {
         <button
           onClick={() => navigate(-1)}
           className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${darkMode
-              ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
-              : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+            ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
+            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
             }`}
         >
           <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
@@ -1713,8 +1750,8 @@ const BrigadeDetail = () => {
 
         {/* Card Principal */}
         <div className={`rounded-3xl border transition-colors duration-300 overflow-hidden ${darkMode
-            ? 'border-slate-800 bg-slate-900/80'
-            : 'border-slate-200 bg-white'
+          ? 'border-slate-800 bg-slate-900/80'
+          : 'border-slate-200 bg-white'
           }`}>
           {/* Header con gradiente de color de brigada */}
           <div className={`px-6 py-8 sm:px-8 ${brigadeColor}`}>
@@ -1740,8 +1777,8 @@ const BrigadeDetail = () => {
                 <div
                   key={shift.key}
                   className={`rounded-2xl border p-5 transition-colors ${darkMode
-                      ? 'border-slate-800 bg-slate-800/60'
-                      : 'border-slate-200 bg-slate-50'
+                    ? 'border-slate-800 bg-slate-800/60'
+                    : 'border-slate-200 bg-slate-50'
                     }`}
                 >
                   <h3 className={`text-sm font-semibold uppercase tracking-[0.3em] mb-4 text-center ${darkMode ? 'text-primary-400' : 'text-primary-600'
@@ -1774,8 +1811,8 @@ const BrigadeDetail = () => {
                               {data.category}
                             </td>
                             <td className={`py-2 px-3 text-right font-medium ${isBelowMinimum
-                                ? darkMode ? 'text-red-400' : 'text-red-600'
-                                : darkMode ? 'text-slate-200' : 'text-slate-900'
+                              ? darkMode ? 'text-red-400' : 'text-red-600'
+                              : darkMode ? 'text-slate-200' : 'text-slate-900'
                               }`}>
                               {data.count}
                               {isBelowMinimum && (
@@ -1814,8 +1851,8 @@ const BrigadeDetail = () => {
                     {shifts.map(shift => (
                       <React.Fragment key={shift.key}>
                         <tr className={`${darkMode
-                            ? 'bg-slate-800/80 text-slate-100'
-                            : 'bg-slate-100 text-slate-900'
+                          ? 'bg-slate-800/80 text-slate-100'
+                          : 'bg-slate-100 text-slate-900'
                           }`}>
                           <td colSpan="4" className="py-3 px-4 text-center font-bold text-sm uppercase tracking-wider">
                             {shift.label}
@@ -1826,8 +1863,8 @@ const BrigadeDetail = () => {
                             <tr
                               key={`${firefighter.id_empleado}-${index}`}
                               className={`border-b transition-colors ${darkMode
-                                  ? 'border-slate-800/50 hover:bg-slate-800/50'
-                                  : 'border-slate-200 hover:bg-slate-50'
+                                ? 'border-slate-800/50 hover:bg-slate-800/50'
+                                : 'border-slate-200 hover:bg-slate-50'
                                 }`}
                             >
                               <td className={`py-3 px-4 text-sm ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>
@@ -1852,8 +1889,8 @@ const BrigadeDetail = () => {
                                 <td className="py-3 px-4">
                                   <select
                                     className={`rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 w-full ${darkMode
-                                        ? 'border-slate-700 bg-slate-800 text-slate-100'
-                                        : 'border-slate-300 bg-white text-slate-900'
+                                      ? 'border-slate-700 bg-slate-800 text-slate-100'
+                                      : 'border-slate-300 bg-white text-slate-900'
                                       }`}
                                     value={assignments[shift.key][firefighter.id_empleado] || ''}
                                     onChange={(e) =>
@@ -1895,8 +1932,8 @@ const BrigadeDetail = () => {
             <button
               onClick={() => exportToPDF()}
               className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 ${darkMode
-                  ? 'bg-green-600 hover:bg-green-500'
-                  : 'bg-green-600 hover:bg-green-700'
+                ? 'bg-green-600 hover:bg-green-500'
+                : 'bg-green-600 hover:bg-green-700'
                 }`}
             >
               <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4" />
@@ -1964,15 +2001,15 @@ const BrigadeDetail = () => {
                   Comentarios
                 </h2>
                 <div className={`rounded-2xl border p-6 transition-colors ${darkMode
-                    ? 'border-slate-800 bg-slate-900/60'
-                    : 'border-slate-200 bg-slate-50'
+                  ? 'border-slate-800 bg-slate-900/60'
+                  : 'border-slate-200 bg-slate-50'
                   }`}>
                   {user.type === 'jefe' ? (
                     <>
                       <textarea
                         className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${darkMode
-                            ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
-                            : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
+                          ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
+                          : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
                           }`}
                         rows="4"
                         placeholder="Añadir comentarios..."
@@ -1982,8 +2019,8 @@ const BrigadeDetail = () => {
                       <button
                         onClick={handleCommentSubmit}
                         className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${isUpdating
-                            ? 'bg-slate-500 cursor-not-allowed'
-                            : 'bg-blue-600 hover:bg-blue-700'
+                          ? 'bg-slate-500 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700'
                           }`}
                         disabled={isUpdating}
                       >
@@ -2004,15 +2041,15 @@ const BrigadeDetail = () => {
                   Incidencias de Personal
                 </h2>
                 <div className={`rounded-2xl border p-6 transition-colors ${darkMode
-                    ? 'border-slate-800 bg-slate-900/60'
-                    : 'border-slate-200 bg-slate-50'
+                  ? 'border-slate-800 bg-slate-900/60'
+                  : 'border-slate-200 bg-slate-50'
                   }`}>
                   {['mando', 'jefe'].includes(user.type) ? (
                     <>
                       <textarea
                         className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${darkMode
-                            ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
-                            : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
+                          ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
+                          : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
                           }`}
                         rows="4"
                         placeholder="Añadir incidencias de personal..."
@@ -2022,8 +2059,8 @@ const BrigadeDetail = () => {
                       <button
                         onClick={handlePersonalIncidentsSubmit}
                         className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${isUpdatingPersonal
-                            ? 'bg-slate-500 cursor-not-allowed'
-                            : 'bg-blue-600 hover:bg-blue-700'
+                          ? 'bg-slate-500 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700'
                           }`}
                         disabled={isUpdatingPersonal}
                       >
@@ -2044,15 +2081,15 @@ const BrigadeDetail = () => {
                   Incidencias Generales y Propuestas
                 </h2>
                 <div className={`rounded-2xl border p-6 transition-colors ${darkMode
-                    ? 'border-slate-800 bg-slate-900/60'
-                    : 'border-slate-200 bg-slate-50'
+                  ? 'border-slate-800 bg-slate-900/60'
+                  : 'border-slate-200 bg-slate-50'
                   }`}>
                   {['mando', 'jefe'].includes(user.type) ? (
                     <>
                       <textarea
                         className={`w-full rounded-2xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 ${darkMode
-                            ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
-                            : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
+                          ? 'border-slate-700 bg-slate-800 text-slate-100 placeholder-slate-400'
+                          : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'
                           }`}
                         rows="4"
                         placeholder="Añadir incidencias generales y propuestas..."
@@ -2062,8 +2099,8 @@ const BrigadeDetail = () => {
                       <button
                         onClick={handleGeneralIncidentsSubmit}
                         className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg ${isUpdatingGenerales
-                            ? 'bg-slate-500 cursor-not-allowed'
-                            : 'bg-blue-600 hover:bg-blue-700'
+                          ? 'bg-slate-500 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700'
                           }`}
                         disabled={isUpdatingGenerales}
                       >
@@ -2094,8 +2131,8 @@ const BrigadeDetail = () => {
                         setShowAddInterventionModal(true);
                       }}
                       className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 ${!guardDetails?.id
-                          ? 'bg-slate-500 cursor-not-allowed'
-                          : 'bg-green-600 hover:bg-green-700'
+                        ? 'bg-slate-500 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700'
                         }`}
                       disabled={!guardDetails?.id}
                     >

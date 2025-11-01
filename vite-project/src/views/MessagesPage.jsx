@@ -65,8 +65,8 @@ const MessageThread = ({ message, onReply, users }) => {
     : 'bg-white text-slate-700 ring-slate-200';
   const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-500';
   const actionButtonClass = `mt-3 inline-flex items-center justify-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${darkMode
-      ? 'bg-primary-500/20 text-primary-100 hover:bg-primary-500/30 focus:ring-primary-400/50 focus:ring-offset-slate-900'
-      : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/50 focus:ring-offset-white'
+    ? 'bg-primary-500/20 text-primary-100 hover:bg-primary-500/30 focus:ring-primary-400/50 focus:ring-offset-slate-900'
+    : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/50 focus:ring-offset-white'
     }`;
 
   return (
@@ -90,8 +90,8 @@ const MessageThread = ({ message, onReply, users }) => {
             <button
               onClick={handleDownloadAttachment}
               className={`mt-3 inline-flex items-center gap-2 text-[11px] font-semibold transition-colors ${darkMode
-                  ? 'text-primary-200 hover:text-primary-100'
-                  : 'text-primary-600 hover:text-primary-700'
+                ? 'text-primary-200 hover:text-primary-100'
+                : 'text-primary-600 hover:text-primary-700'
                 }`}
             >
               <FontAwesomeIcon icon={faFilePdf} className="h-3.5 w-3.5" />
@@ -154,32 +154,32 @@ const MessagesPage = () => {
   const baseButtonClass =
     'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-base font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
   const primaryButtonClass = `${baseButtonClass} ${darkMode
-      ? 'bg-primary-500 text-white hover:bg-primary-400 focus:ring-primary-500/60 focus:ring-offset-slate-900'
-      : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/50 focus:ring-offset-slate-50'
+    ? 'bg-primary-500 text-white hover:bg-primary-400 focus:ring-primary-500/60 focus:ring-offset-slate-900'
+    : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/50 focus:ring-offset-slate-50'
     }`;
   const monthButtonClass = `${baseButtonClass} ${darkMode
-      ? 'border border-slate-700 bg-slate-900/70 text-slate-100 hover:border-primary-400 hover:text-primary-100 focus:ring-primary-500/50 focus:ring-offset-slate-900'
-      : 'border border-slate-200 bg-white text-slate-700 hover:border-primary-400 hover:text-primary-600 focus:ring-primary-400/40 focus:ring-offset-slate-50'
+    ? 'border border-slate-700 bg-slate-900/70 text-slate-100 hover:border-primary-400 hover:text-primary-100 focus:ring-primary-500/50 focus:ring-offset-slate-900'
+    : 'border border-slate-200 bg-white text-slate-700 hover:border-primary-400 hover:text-primary-600 focus:ring-primary-400/40 focus:ring-offset-slate-50'
     }`;
   const actionPillClass = (variant) => {
     const base =
       'inline-flex items-center justify-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1';
     if (variant === 'primary') {
       return `${base} ${darkMode
-          ? 'bg-primary-500/25 text-primary-50 hover:bg-primary-500/35 focus:ring-primary-300/40 focus:ring-offset-slate-900'
-          : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/40 focus:ring-offset-white'
+        ? 'bg-primary-500/25 text-primary-50 hover:bg-primary-500/35 focus:ring-primary-300/40 focus:ring-offset-slate-900'
+        : 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/40 focus:ring-offset-white'
         }`;
     }
     if (variant === 'success') {
       return `${base} ${darkMode
-          ? 'bg-emerald-500/25 text-emerald-100 hover:bg-emerald-500/35 focus:ring-emerald-400/40 focus:ring-offset-slate-900'
-          : 'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500/40 focus:ring-offset-white'
+        ? 'bg-emerald-500/25 text-emerald-100 hover:bg-emerald-500/35 focus:ring-emerald-400/40 focus:ring-offset-slate-900'
+        : 'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500/40 focus:ring-offset-white'
         }`;
     }
     if (variant === 'danger') {
       return `${base} ${darkMode
-          ? 'bg-red-500/25 text-red-100 hover:bg-red-500/35 focus:ring-red-400/40 focus:ring-offset-slate-900'
-          : 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500/40 focus:ring-offset-white'
+        ? 'bg-red-500/25 text-red-100 hover:bg-red-500/35 focus:ring-red-400/40 focus:ring-offset-slate-900'
+        : 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500/40 focus:ring-offset-white'
         }`;
     }
     return base;
@@ -264,24 +264,40 @@ const MessagesPage = () => {
   };
 
   const handleOpenMessage = async (message) => {
-    if (!message.is_read && message.receiver_id === user.id_empleado) {
+    const userId = user.id_empleado;
+    const isMassive = message.massive && message.massive !== 'false';
+
+    // Marcar como leído si el usuario actual no lo ha leído aún
+    if (!message.is_read) {
       try {
         await MessagesApiService.markAsRead(message.id);
+
+        // Actualizar estado local en la bandeja de entrada
         setInbox((prevInbox) =>
           prevInbox.map((msg) =>
             msg.id === message.id ? { ...msg, is_read: true } : msg
           )
         );
-        setSent((prevSent) =>
-          prevSent.map((msg) =>
-            msg.id === message.id ? { ...msg, is_read: true } : msg
-          )
-        );
+
+        // Si es masivo y estamos en bandeja de salida, actualizar el contador
+        if (isMassive) {
+          setSent((prevSent) =>
+            prevSent.map((msg) =>
+              msg.id === message.id
+                ? {
+                  ...msg,
+                  read_count: (msg.read_count || 0) + 1
+                }
+                : msg
+            )
+          );
+        }
       } catch (error) {
         console.error("Error al marcar mensaje como leído:", error);
       }
     }
 
+    // Cargar el hilo completo del mensaje
     try {
       const fullMessage = await fetchRootMessage(message);
 
@@ -316,30 +332,30 @@ const MessagesPage = () => {
 
   // NUEVA FUNCIÓN: Marcar mensaje masivo como leído
   // FUNCIÓN: Marcar mensaje masivo como leído
-const handleMarkMassiveAsRead = async (messageId) => {
-  try {
-    const response = await MessagesApiService.markMassiveAsRead(messageId);
+  const handleMarkMassiveAsRead = async (messageId) => {
+    try {
+      const response = await MessagesApiService.markMassiveAsRead(messageId);
 
-    // Actualizar la UI localmente en ambas bandejas
-    setInbox((prevInbox) =>
-      prevInbox.map((msg) =>
-        msg.id === messageId ? { ...msg, is_read: true, read_by_admin: true } : msg
-      )
-    );
+      // Actualizar la UI localmente en ambas bandejas
+      setInbox((prevInbox) =>
+        prevInbox.map((msg) =>
+          msg.id === messageId ? { ...msg, is_read: true, read_by_admin: true } : msg
+        )
+      );
 
-    setSent((prevSent) =>
-      prevSent.map((msg) =>
-        msg.id === messageId ? { ...msg, is_read: true, read_by_admin: true } : msg
-      )
-    );
+      setSent((prevSent) =>
+        prevSent.map((msg) =>
+          msg.id === messageId ? { ...msg, is_read: true, read_by_admin: true } : msg
+        )
+      );
 
-    const markedFrom = response.data.marked_from === 'sent' ? 'enviado' : 'recibido';
-    alert(`Mensaje masivo ${markedFrom} marcado como leído para todos los usuarios correspondientes.`);
-  } catch (error) {
-    console.error('Error al marcar mensaje masivo como leído:', error);
-    alert('Error al marcar el mensaje como leído. Verifique que tenga permisos de jefe.');
-  }
-};
+      const markedFrom = response.data.marked_from === 'sent' ? 'enviado' : 'recibido';
+      alert(`Mensaje masivo ${markedFrom} marcado como leído para todos los usuarios correspondientes.`);
+    } catch (error) {
+      console.error('Error al marcar mensaje masivo como leído:', error);
+      alert('Error al marcar el mensaje como leído. Verifique que tenga permisos de jefe.');
+    }
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm('¿Está seguro de que desea eliminar este mensaje?')) {
@@ -415,8 +431,8 @@ const handleMarkMassiveAsRead = async (messageId) => {
       <div className={cardContainerClass}>
         <div
           className={`bg-gradient-to-r px-8 py-10 transition-colors duration-300 ${darkMode
-              ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80 text-white'
-              : 'from-primary-200 via-primary-300 to-primary-400 text-slate-900'
+            ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80 text-white'
+            : 'from-primary-200 via-primary-300 to-primary-400 text-slate-900'
             }`}
         >
           <p className={`text-sm font-semibold uppercase tracking-[0.28em] ${darkMode ? 'text-white/90' : 'text-slate-800/90'
@@ -480,8 +496,8 @@ const handleMarkMassiveAsRead = async (messageId) => {
               <table className="min-w-full divide-y divide-slate-200 text-left text-base dark:divide-slate-800">
                 <thead
                   className={`${darkMode
-                      ? 'bg-slate-900/90 text-slate-100'
-                      : 'bg-slate-50 text-slate-700'
+                    ? 'bg-slate-900/90 text-slate-100'
+                    : 'bg-slate-50 text-slate-700'
                     } text-sm font-semibold uppercase tracking-[0.18em]`}
                 >
                   <tr>
@@ -501,12 +517,12 @@ const handleMarkMassiveAsRead = async (messageId) => {
                         <tr
                           key={message.id}
                           className={`transition-colors duration-200 ${isUnread
-                              ? darkMode
-                                ? 'bg-primary-500/10 hover:bg-primary-500/20'
-                                : 'bg-primary-50 hover:bg-primary-100/60'
-                              : darkMode
-                                ? 'hover:bg-slate-900/50'
-                                : 'hover:bg-slate-50'
+                            ? darkMode
+                              ? 'bg-primary-500/10 hover:bg-primary-500/20'
+                              : 'bg-primary-50 hover:bg-primary-100/60'
+                            : darkMode
+                              ? 'hover:bg-slate-900/50'
+                              : 'hover:bg-slate-50'
                             }`}
                         >
                           <td className={`px-6 py-4 align-top text-base font-semibold ${darkMode ? 'text-slate-100' : 'text-slate-800'
@@ -525,6 +541,14 @@ const handleMarkMassiveAsRead = async (messageId) => {
                                   <span className={badgeClass('attachment')}>Adjunto</span>
                                 )}
                               </div>
+                              {view === 'sent' && isMassive && (
+                                <div className="mt-2 text-xs">
+                                  <span className={darkMode ? 'text-slate-400' : 'text-slate-600'}>
+                                    📊 Leído por: {message.read_count || 0} de {message.total_recipients || 0} usuarios
+                                    {message.read_percentage && ` (${message.read_percentage}%)`}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-4 align-top">
@@ -612,8 +636,8 @@ const handleMarkMassiveAsRead = async (messageId) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6 backdrop-blur">
           <div
             className={`w-full max-w-3xl overflow-hidden rounded-3xl border shadow-2xl transition-all duration-300 ${darkMode
-                ? 'border-slate-800 bg-slate-950/95'
-                : 'border-slate-200 bg-white/95'
+              ? 'border-slate-800 bg-slate-950/95'
+              : 'border-slate-200 bg-white/95'
               }`}
           >
             <div
@@ -624,8 +648,8 @@ const handleMarkMassiveAsRead = async (messageId) => {
               <button
                 onClick={() => setSelectedMessage(null)}
                 className={`rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${darkMode
-                    ? 'text-slate-300 hover:bg-slate-800 focus:ring-slate-700 focus:ring-offset-slate-900'
-                    : 'text-slate-500 hover:bg-slate-200 focus:ring-slate-200 focus:ring-offset-white'
+                  ? 'text-slate-300 hover:bg-slate-800 focus:ring-slate-700 focus:ring-offset-slate-900'
+                  : 'text-slate-500 hover:bg-slate-200 focus:ring-slate-200 focus:ring-offset-white'
                   }`}
                 aria-label="Cerrar conversación"
               >

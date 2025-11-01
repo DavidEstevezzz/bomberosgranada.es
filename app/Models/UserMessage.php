@@ -16,6 +16,7 @@ class UserMessage extends Model
         'subject',
         'body',
         'attachment',
+        'attachment_filename',
         'is_read',
         'massive',
         'parent_id',
@@ -26,40 +27,150 @@ class UserMessage extends Model
 
     protected $table = 'messages';
 
-    protected $dates = ['deleted_at'];
+    protected $dates = ['deleted_at', 'marked_as_read_at'];
 
-    // Quien envía el mensaje
+    /**
+     * Quien envía el mensaje
+     */
     public function sender()
     {
-        return $this->belongsTo(User::class, 'sender_id');
+        return $this->belongsTo(User::class, 'sender_id', 'id_empleado');
     }
 
-    // Quien recibe el mensaje (solo aplica si no es masivo)
+    /**
+     * Quien recibe el mensaje (solo aplica si no es masivo)
+     */
     public function receiver()
     {
-        return $this->belongsTo(User::class, 'receiver_id');
+        return $this->belongsTo(User::class, 'receiver_id', 'id_empleado');
     }
 
-    // Relación con el mensaje “padre” (si es una respuesta)
+    /**
+     * Relación con el mensaje "padre" (si es una respuesta)
+     */
     public function parent()
     {
         return $this->belongsTo(UserMessage::class, 'parent_id');
     }
 
     /**
-     * Relación recursiva para cargar todas las respuestas (hijos),
-     * y las respuestas de esas respuestas, etc.
+     * Relación recursiva para cargar todas las respuestas (hijos)
      */
     public function replies()
-{
-    return $this->hasMany(UserMessage::class, 'parent_id')->with('replies'); // Recursivo
-}
+    {
+        return $this->hasMany(UserMessage::class, 'parent_id')->with('replies');
+    }
 
-public function loadRecursive()
-{
-    return $this->load(['replies' => function ($query) {
-        $query->with('replies'); // Carga recursivamente todas las respuestas
-    }]);
-}
+    /**
+     * NUEVA: Relación con las lecturas individuales
+     */
+    public function reads()
+    {
+        return $this->hasMany(MessageRead::class, 'message_id');
+    }
 
+    /**
+     * Verifica si un usuario específico ha leído el mensaje
+     * 
+     * @param int $userId
+     * @return bool
+     */
+    public function isReadByUser($userId)
+    {
+        // Para mensajes individuales, usar el campo is_read tradicional
+        if (!$this->massive || $this->massive === 'false') {
+            return (bool) $this->is_read;
+        }
+
+        // Para mensajes masivos, verificar en la tabla de lecturas
+        return $this->reads()->where('user_id', $userId)->exists();
+    }
+
+    /**
+     * Marcar mensaje como leído por un usuario específico
+     * 
+     * @param int $userId
+     * @return void
+     */
+    public function markAsReadByUser($userId)
+    {
+        // Para mensajes individuales, actualizar el campo is_read
+        if (!$this->massive || $this->massive === 'false') {
+            $this->is_read = true;
+            $this->save();
+            return;
+        }
+
+        // Para mensajes masivos, crear registro en message_reads
+        // firstOrCreate evita duplicados
+        MessageRead::firstOrCreate([
+            'message_id' => $this->id,
+            'user_id' => $userId
+        ], [
+            'read_at' => now()
+        ]);
+    }
+
+    /**
+     * Obtener conteo de usuarios que han leído el mensaje masivo
+     * 
+     * @return int
+     */
+    public function getReadCount()
+    {
+        if (!$this->massive || $this->massive === 'false') {
+            return $this->is_read ? 1 : 0;
+        }
+
+        return $this->reads()->count();
+    }
+
+    /**
+     * Obtener total de destinatarios potenciales según el tipo de mensaje masivo
+     * 
+     * @return int
+     */
+    public function getTotalRecipients()
+    {
+        if (!$this->massive || $this->massive === 'false') {
+            return 1;
+        }
+
+        switch (strtolower($this->massive)) {
+            case 'toda':
+                return User::count();
+            case 'mandos':
+                return User::where('type', 'mando')->count();
+            case 'bomberos':
+                return User::where('type', 'bombero')->count();
+            default:
+                return 0;
+        }
+    }
+
+    /**
+     * Obtener porcentaje de lectura para mensajes masivos
+     * 
+     * @return float
+     */
+    public function getReadPercentage()
+    {
+        $total = $this->getTotalRecipients();
+        if ($total === 0) {
+            return 0;
+        }
+
+        $readCount = $this->getReadCount();
+        return round(($readCount / $total) * 100, 2);
+    }
+
+    /**
+     * Cargar recursivamente todas las respuestas
+     */
+    public function loadRecursive()
+    {
+        return $this->load(['replies' => function ($query) {
+            $query->with('replies');
+        }]);
+    }
 }

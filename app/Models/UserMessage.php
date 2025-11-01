@@ -75,15 +75,27 @@ class UserMessage extends Model
      * @param int $userId
      * @return bool
      */
-    public function isReadByUser($userId)
+     public function isReadByUser($userId)
     {
         // Para mensajes individuales, usar el campo is_read tradicional
         if (!$this->massive || $this->massive === 'false') {
             return (bool) $this->is_read;
         }
 
-        // Para mensajes masivos, verificar en la tabla de lecturas
-        return $this->reads()->where('user_id', $userId)->exists();
+        // Para mensajes masivos: primero verificar en la tabla de lecturas (sistema nuevo)
+        $hasIndividualRead = $this->reads()->where('user_id', $userId)->exists();
+        
+        if ($hasIndividualRead) {
+            return true;
+        }
+        
+        // COMPATIBILIDAD: Si no tiene lectura individual, verificar si fue marcado por admin (sistema antiguo)
+        // Esto mantiene la compatibilidad con mensajes antiguos
+        if ($this->marked_as_read_by_admin) {
+            return true;
+        }
+        
+        return false;
     }
 
     /**

@@ -134,7 +134,15 @@ class UserMessage extends Model
             return $this->is_read ? 1 : 0;
         }
 
-        return $this->reads()->count();
+        // Contar lecturas individuales en la tabla message_reads
+        $individualReads = $this->reads()->count();
+        
+        // Si fue marcado por admin (sistema antiguo), contar todos los destinatarios potenciales
+        if ($this->marked_as_read_by_admin && $individualReads === 0) {
+            return $this->getTotalRecipients();
+        }
+        
+        return $individualReads;
     }
 
     /**

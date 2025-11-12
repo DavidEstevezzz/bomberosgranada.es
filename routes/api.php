@@ -227,12 +227,13 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
 
     Route::prefix('pdf-documents')->group(function () {
         Route::get('/latest', [PdfDocumentController::class, 'getLatest']);
+                Route::post('/{id}/mark-as-viewed', [PdfDocumentController::class, 'markAsViewed']);
         Route::post('/upload', [PdfDocumentController::class, 'upload']);
-        Route::get('/{id}', [PdfDocumentController::class, 'show']);
-        Route::get('/{id}/secondary', [PdfDocumentController::class, 'show'])->defaults('type', 'secondary');
-        Route::get('/{id}/download', [PdfDocumentController::class, 'download']);
-        Route::get('/{id}/download/secondary', [PdfDocumentController::class, 'download'])->defaults('type', 'secondary');
-        Route::delete('/{id}', [PdfDocumentController::class, 'destroy']);
+        Route::get('/{pdfDocument}', [PdfDocumentController::class, 'show']);
+        Route::get('/{pdfDocument}/secondary', [PdfDocumentController::class, 'show'])->defaults('type', 'secondary');
+        Route::get('/{pdfDocument}/download', [PdfDocumentController::class, 'download']);
+        Route::get('/{pdfDocument}/download/secondary', [PdfDocumentController::class, 'download'])->defaults('type', 'secondary');
+        Route::delete('/{pdfDocument}', [PdfDocumentController::class, 'destroy']);
     });
 
     // CRUD de Parques

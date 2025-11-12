@@ -57,7 +57,7 @@ export default function Login() {
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
-                Email 
+                Email
               </label>
               <div className="mt-2">
                 <input
@@ -79,10 +79,10 @@ export default function Login() {
                   Contraseña
                 </label>
                 <div className="text-sm">
-  <a href="/forgot-password" className="font-semibold text-indigo-600 hover:text-indigo-500">
-    Olvidé mi contraseña
-  </a>
-</div>
+                  <a href="/forgot-password" className="font-semibold text-indigo-600 hover:text-indigo-500">
+                    Olvidé mi contraseña
+                  </a>
+                </div>
               </div>
               <div className="mt-2">
                 <input

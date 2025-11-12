@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\PdfDocument;
+use App\Models\PdfDocumentView;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Carbon;
+
 
 class PdfDocumentController extends Controller
 {
@@ -21,11 +24,57 @@ class PdfDocumentController extends Controller
         $document = PdfDocument::latest()->first();
 
         if (!$document) {
-            return response()->json(['message' => 'No hay documentos disponibles'], 404);
+            return response()->json([
+                'message' => 'No hay documentos disponibles',
+                'document' => null,
+                'has_new' => false,
+            ], 404);
         }
 
-        return response()->json($document);
+$userId = Auth::id();
+        $hasNew = false;
+
+        if ($userId) {
+            $hasNew = !PdfDocumentView::where('user_id', $userId)
+                ->where('pdf_document_id', $document->id)
+                ->exists();
+        }
+
+        return response()->json([
+            'document' => $document,
+            'has_new' => $hasNew,
+        ]);
     }
+
+    public function markAsViewed($id)
+    {
+        $userId = Auth::id();
+
+        if (!$userId) {
+            return response()->json(['message' => 'Usuario no autenticado'], 401);
+        }
+
+        $document = PdfDocument::find($id);
+
+        if (!$document) {
+            return response()->json(['message' => 'Documento no encontrado'], 404);
+        }
+
+        $view = PdfDocumentView::updateOrCreate(
+            [
+                'user_id' => $userId,
+                'pdf_document_id' => $document->id,
+            ],
+            [
+                'viewed_at' => Carbon::now(),
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Documento marcado como visto',
+            'is_new' => $view->wasRecentlyCreated,
+        ]);
+        }
 
     /**
      * Subir nuevos documentos PDF.
@@ -92,7 +141,7 @@ class PdfDocumentController extends Controller
                 } else {
                     Log::warning('Archivo no encontrado durante la eliminación: ' . $absolutePath);
                 }
-                
+
                 // Eliminar el segundo archivo si existe
                 if ($doc->file_path_second) {
                     $absolutePath_second = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $doc->file_path_second;
@@ -103,7 +152,7 @@ class PdfDocumentController extends Controller
                         Log::warning('Archivo secundario no encontrado durante la eliminación: ' . $absolutePath_second);
                     }
                 }
-                
+
                 $doc->delete();
                 Log::info('Registro de documento eliminado de la base de datos: ' . $doc->id);
             }
@@ -131,10 +180,10 @@ class PdfDocumentController extends Controller
             if ($file_second) {
                 $originalName_second = $file_second->getClientOriginalName();
                 $fileSize_second = $file_second->getSize();
-                
+
                 // Crear un nombre único para el segundo archivo
                 $filename_second = Str::random(40) . '.' . $file_second->getClientOriginalExtension();
-                
+
                 // Mover el segundo archivo a la carpeta de destino
                 $file_second->move($destinationDir, $filename_second);
                 $path_second = 'pdfs/' . $filename_second;
@@ -188,53 +237,53 @@ class PdfDocumentController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function show(Request $request, $id)
-{
-    // Obtener el tipo desde los valores por defecto de la ruta
-    $type = $request->route()->defaults['type'] ?? 'primary';
-    
-    Log::info('Mostrando documento', [
-        'id' => $id, 
-        'type' => $type,
-        'route_defaults' => $request->route()->defaults,
-        'URI' => $request->getRequestUri()
-    ]);
-    
-    $document = PdfDocument::findOrFail($id);
-    Log::info('Documento encontrado', [
-        'file_path' => $document->file_path,
-        'file_path_second' => $document->file_path_second
-    ]);
-    
-    // Determinar qué archivo mostrar
-    $filePath = null;
-    if ($type === 'secondary') {
-        if ($document->file_path_second) {
-            $filePath = $document->file_path_second;
-            Log::info('Usando archivo secundario');
-        } else {
-            Log::warning('Se solicitó archivo secundario pero no existe');
-            return response()->json(['message' => 'Documento secundario no disponible'], 404);
-        }
-    } else {
-        $filePath = $document->file_path;
-        Log::info('Usando archivo principal');
-    }
-    
-    Log::info('Ruta del archivo seleccionada', ['filePath' => $filePath]);
-    
-    // Construir la ruta absoluta del archivo
-    $fullPath = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $filePath;
-    
-    Log::info('Ruta completa', ['fullPath' => $fullPath]);
-    
-    if (!file_exists($fullPath)) {
-        Log::error('Archivo no encontrado', ['fullPath' => $fullPath]);
-        return response()->json(['message' => 'Archivo no encontrado'], 404);
-    }
+    {
+        // Obtener el tipo desde los valores por defecto de la ruta
+        $type = $request->route()->defaults['type'] ?? 'primary';
 
-    Log::info('Enviando archivo', ['size' => filesize($fullPath)]);
-    return response()->file($fullPath);
-}
+        Log::info('Mostrando documento', [
+            'id' => $id,
+            'type' => $type,
+            'route_defaults' => $request->route()->defaults,
+            'URI' => $request->getRequestUri()
+        ]);
+
+        $document = PdfDocument::findOrFail($id);
+        Log::info('Documento encontrado', [
+            'file_path' => $document->file_path,
+            'file_path_second' => $document->file_path_second
+        ]);
+
+        // Determinar qué archivo mostrar
+        $filePath = null;
+        if ($type === 'secondary') {
+            if ($document->file_path_second) {
+                $filePath = $document->file_path_second;
+                Log::info('Usando archivo secundario');
+            } else {
+                Log::warning('Se solicitó archivo secundario pero no existe');
+                return response()->json(['message' => 'Documento secundario no disponible'], 404);
+            }
+        } else {
+            $filePath = $document->file_path;
+            Log::info('Usando archivo principal');
+        }
+
+        Log::info('Ruta del archivo seleccionada', ['filePath' => $filePath]);
+
+        // Construir la ruta absoluta del archivo
+        $fullPath = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $filePath;
+
+        Log::info('Ruta completa', ['fullPath' => $fullPath]);
+
+        if (!file_exists($fullPath)) {
+            Log::error('Archivo no encontrado', ['fullPath' => $fullPath]);
+            return response()->json(['message' => 'Archivo no encontrado'], 404);
+        }
+
+        Log::info('Enviando archivo', ['size' => filesize($fullPath)]);
+        return response()->file($fullPath);
+    }
 
     /**
      * Descargar un documento PDF.
@@ -246,7 +295,7 @@ class PdfDocumentController extends Controller
     public function download($id, $type = 'primary')
     {
         $document = PdfDocument::findOrFail($id);
-        
+
         // Determinar qué archivo descargar
         if ($type === 'secondary' && $document->file_path_second) {
             $filePath = $document->file_path_second;
@@ -279,7 +328,7 @@ class PdfDocumentController extends Controller
         if (Storage::disk('public')->exists($document->file_path)) {
             Storage::disk('public')->delete($document->file_path);
         }
-        
+
         if ($document->file_path_second && Storage::disk('public')->exists($document->file_path_second)) {
             Storage::disk('public')->delete($document->file_path_second);
         }

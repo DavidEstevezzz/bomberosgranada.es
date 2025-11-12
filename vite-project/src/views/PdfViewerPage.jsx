@@ -27,6 +27,7 @@ const PdfViewerPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [uploadSuccess, setUploadSuccess] = useState(false);
+    const [showNewPdfNotice, setShowNewPdfNotice] = useState(false);
     const { darkMode } = useDarkMode();
     const { user } = useStateContext();
 
@@ -37,7 +38,6 @@ const PdfViewerPage = () => {
             console.log('Iniciando carga de documentos PDF con ID:', documentId);
             console.log('Datos del documento:', documentData);
 
-            // Obtener el PDF principal
             try {
                 console.log('Obteniendo PDF principal:', PdfDocumentApiService.getDocumentUrl(documentId));
                 const response = await axios.get(PdfDocumentApiService.getDocumentUrl(documentId), {
@@ -53,10 +53,9 @@ const PdfViewerPage = () => {
                 console.error('Error al cargar el PDF principal:', errPrimary);
                 setPdfUrl(null);
                 setError('Error al cargar el PDF principal');
-                return; // Terminar la función si no se puede cargar el PDF principal
+                return false;
             }
 
-            // Intentar obtener el PDF secundario si existe
             if (documentData && documentData.file_path_second) {
                 try {
                     console.log('Documento tiene PDF secundario, intentando cargarlo:', documentData.file_path_second);
@@ -77,17 +76,19 @@ const PdfViewerPage = () => {
                 } catch (errSecondary) {
                     console.error('Error al cargar el PDF secundario:', errSecondary);
                     setPdfSecondaryUrl(null);
-                    // No establecer error general para no interrumpir la visualización del PDF principal
                 }
             } else {
                 console.log('No hay PDF secundario disponible en los datos del documento');
                 setPdfSecondaryUrl(null);
             }
+
+            return true;
         } catch (err) {
             console.error('Error general en fetchPdfBlob:', err);
             setError('Error al cargar los documentos PDF');
             setPdfUrl(null);
             setPdfSecondaryUrl(null);
+            return false;
         }
     };
 
@@ -100,25 +101,32 @@ const PdfViewerPage = () => {
     const fetchLatestDocument = async () => {
         setLoading(true);
         try {
-            const response = await PdfDocumentApiService.getLatestDocument();
+            const response = await PdfDocumentApiService.getLatestStatus();
             console.log("Documento obtenido:", response.data);
 
-            // Guardar el documento en el estado
-            setCurrentDocument(response.data);
+            const { document, has_new: hasNewFlag } = response.data;
 
-            if (response.data && response.data.id) {
-                // Si hay un documento, cargar los PDFs pasando también los datos del documento
-                await fetchPdfBlob(response.data.id, response.data);
+            setCurrentDocument(document);
+            setShowNewPdfNotice(!!hasNewFlag);
+
+            if (document && document.id) {
+                const blobLoaded = await fetchPdfBlob(document.id, document);
+                if (blobLoaded) {
+                    await markDocumentAsViewed(document.id);
+                }
+            } else {
+                setPdfUrl(null);
+                setPdfSecondaryUrl(null);
             }
 
             setError(null);
         } catch (err) {
             console.error('Error al cargar el documento:', err);
             if (err.response && err.response.status === 404) {
-                // No hay documentos, es normal
                 setCurrentDocument(null);
                 setPdfUrl(null);
                 setPdfSecondaryUrl(null);
+                setShowNewPdfNotice(false);
                 setError(null);
             } else {
                 setError('Error al cargar el documento PDF');
@@ -126,6 +134,21 @@ const PdfViewerPage = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const markDocumentAsViewed = async (documentId) => {
+        try {
+            const response = await PdfDocumentApiService.markAsViewed(documentId);
+            if (response.data?.is_new) {
+                setShowNewPdfNotice(true);
+            }
+        } catch (error) {
+            console.error('Error al marcar el documento como visto:', error);
+        }
+    };
+
+    const handleCloseNewPdfNotice = () => {
+        setShowNewPdfNotice(false);
     };
 
     // Manejar cambio en el input del primer archivo
@@ -201,8 +224,11 @@ const PdfViewerPage = () => {
         try {
             const response = await PdfDocumentApiService.uploadDocument(formData);
             const documentData = response.data.document;
-             setCurrentDocument(documentData);
-            await fetchPdfBlob(documentData.id, documentData);
+            setCurrentDocument(documentData);
+            const blobLoaded = await fetchPdfBlob(documentData.id, documentData);
+            if (blobLoaded) {
+                await markDocumentAsViewed(documentData.id);
+            }
             setUploadSuccess(true);
 
             // Resetear formulario
@@ -236,6 +262,7 @@ const PdfViewerPage = () => {
             setCurrentDocument(null);
             setPdfUrl(null);
             setPdfSecondaryUrl(null);
+            setShowNewPdfNotice(false);
             setError(null);
         } catch (err) {
             console.error('Error al eliminar el documento:', err);
@@ -361,6 +388,35 @@ const PdfViewerPage = () => {
             </div>
 
             <div className="space-y-8 px-6 py-8 sm:px-10">
+                {showNewPdfNotice && currentDocument && (
+                    <div
+                        className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
+                            darkMode
+                                ? 'border-primary-500/40 bg-primary-500/10 text-primary-200'
+                                : 'border-primary-200 bg-primary-50 text-primary-700'
+                        }`}
+                    >
+                        <div>
+                            <p className="text-sm font-semibold uppercase tracking-[0.2em]">Nuevo parte disponible</p>
+                            <p className="mt-1 text-xs opacity-80">
+                                {currentDocument?.title
+                                    ? `Has recibido "${currentDocument.title}".`
+                                    : 'Hay documentación nueva para revisar.'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleCloseNewPdfNotice}
+                            className={`rounded-xl px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                                darkMode
+                                    ? 'bg-primary-600/90 text-white hover:bg-primary-500'
+                                    : 'bg-primary-500 text-white hover:bg-primary-600'
+                            }`}
+                        >
+                            Entendido
+                        </button>
+                    </div>
+                )}
+
                 {error && (
                     <div
                         className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
@@ -447,8 +503,8 @@ const PdfViewerPage = () => {
                                             ? 'bg-red-600/80 text-white hover:bg-red-500/80'
                                             : 'bg-red-500 text-white hover:bg-red-600'
                                         : darkMode
-                                          ? 'bg-primary-700/70 text-white hover:bg-primary-600/80'
-                                          : 'bg-primary-500 text-white hover:bg-primary-600'
+                                            ? 'bg-primary-700/70 text-white hover:bg-primary-600/80'
+                                            : 'bg-primary-500 text-white hover:bg-primary-600'
                                 }`}
                             >
                                 <FontAwesomeIcon icon={showSecondInput ? faTimes : faPlus} className="h-3.5 w-3.5" />

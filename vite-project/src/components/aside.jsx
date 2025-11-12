@@ -25,6 +25,7 @@ import { useStateContext } from '../contexts/ContextProvider';
 import MessagesApiService from '../services/MessagesApiService';
 import IncidentApiService from '../services/IncidentApiService';
 import UsuariosApiService from '../services/UsuariosApiService';
+import PdfDocumentApiService from '../services/PdfDocumentApiService';
 
 const Aside = ({ className }) => {
   const { user } = useStateContext();
@@ -48,6 +49,8 @@ const Aside = ({ className }) => {
       fetchUnreadMessages();
       fetchPendingIncidentsCount();
       checkMandoEspecial();
+      fetchLatestPdfStatus();
+
     }
   }, [user]);
 
@@ -80,6 +83,25 @@ const Aside = ({ className }) => {
     }
   };
 
+  const fetchLatestPdfStatus = async () => {
+    if (!user || (user.type !== 'jefe' && user.type !== 'mando')) {
+      setHasNewPdf(false);
+      return;
+    }
+
+    try {
+      const response = await PdfDocumentApiService.getLatestStatus();
+      setHasNewPdf(response.data?.has_new ?? false);
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        setHasNewPdf(false);
+      } else {
+        console.error('Error al obtener el estado del PDF más reciente:', error);
+      }
+    }
+  };
+
+
   const toggleDropdown = (dropdown) => {
     setDropdownOpen((prevState) => ({
       ...prevState,
@@ -100,43 +122,36 @@ const Aside = ({ className }) => {
   const userType = user.type;
 
   // Estilos base
-  const asideBaseClass = `w-64 h-screen overflow-y-auto transition-colors duration-300 ${
-    darkMode ? 'bg-slate-950 border-r border-slate-800' : 'bg-white border-r border-slate-200'
-  }`;
+  const asideBaseClass = `w-64 h-screen overflow-y-auto transition-colors duration-300 ${darkMode ? 'bg-slate-950 border-r border-slate-800' : 'bg-white border-r border-slate-200'
+    }`;
 
-  const linkClass = `group flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-xl mx-2 ${
-    darkMode
+  const linkClass = `group flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-xl mx-2 ${darkMode
       ? 'text-slate-300 hover:bg-slate-900 hover:text-primary-400'
       : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'
-  }`;
+    }`;
 
-  const dropdownButtonClass = `group flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left transition-all duration-200 rounded-xl mx-2 ${
-    darkMode
+  const dropdownButtonClass = `group flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left transition-all duration-200 rounded-xl mx-2 ${darkMode
       ? 'text-slate-300 hover:bg-slate-900 hover:text-primary-400'
       : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'
-  }`;
+    }`;
 
-  const dropdownItemClass = `block px-4 py-2.5 text-sm transition-all duration-200 rounded-lg mx-6 my-1 ${
-    darkMode
+  const dropdownItemClass = `block px-4 py-2.5 text-sm transition-all duration-200 rounded-lg mx-6 my-1 ${darkMode
       ? 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-  }`;
+    }`;
 
-  const iconClass = `w-5 h-5 mr-3 transition-colors ${
-    darkMode ? 'text-slate-400 group-hover:text-primary-400' : 'text-slate-500 group-hover:text-primary-600'
-  }`;
+  const iconClass = `w-5 h-5 mr-3 transition-colors ${darkMode ? 'text-slate-400 group-hover:text-primary-400' : 'text-slate-500 group-hover:text-primary-600'
+    }`;
 
-  const badgeClass = `ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full transition-all duration-200 ${
-    darkMode 
-      ? 'bg-primary-500/20 text-primary-300 ring-1 ring-primary-500/30' 
+  const badgeClass = `ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full transition-all duration-200 ${darkMode
+      ? 'bg-primary-500/20 text-primary-300 ring-1 ring-primary-500/30'
       : 'bg-primary-500 text-white shadow-sm'
-  }`;
+    }`;
 
-  const badgeRedClass = `ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full transition-all duration-200 ${
-    darkMode 
-      ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30' 
+  const badgeRedClass = `ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full transition-all duration-200 ${darkMode
+      ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30'
       : 'bg-red-500 text-white shadow-sm'
-  }`;
+    }`;
 
   return (
     <aside className={`${asideBaseClass} ${className}`}>
@@ -172,11 +187,10 @@ const Aside = ({ className }) => {
                 <FontAwesomeIcon icon={faRadio} className={iconClass} />
                 <span>Inventario</span>
               </span>
-              <FontAwesomeIcon 
-                icon={faChevronDown} 
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  dropdownOpen.equipment ? 'rotate-180' : ''
-                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              <FontAwesomeIcon
+                icon={faChevronDown}
+                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.equipment ? 'rotate-180' : ''
+                  } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
               />
             </button>
             {dropdownOpen.equipment && (
@@ -208,11 +222,10 @@ const Aside = ({ className }) => {
                 <FontAwesomeIcon icon={faPeopleGroup} className={iconClass} />
                 <span>Brigadas</span>
               </span>
-              <FontAwesomeIcon 
-                icon={faChevronDown} 
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  dropdownOpen.brigades ? 'rotate-180' : ''
-                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              <FontAwesomeIcon
+                icon={faChevronDown}
+                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.brigades ? 'rotate-180' : ''
+                  } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
               />
             </button>
             {dropdownOpen.brigades && (
@@ -236,11 +249,10 @@ const Aside = ({ className }) => {
                 <FontAwesomeIcon icon={faGear} className={iconClass} />
                 <span>Configuración</span>
               </span>
-              <FontAwesomeIcon 
-                icon={faChevronDown} 
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  dropdownOpen.settings ? 'rotate-180' : ''
-                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              <FontAwesomeIcon
+                icon={faChevronDown}
+                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.settings ? 'rotate-180' : ''
+                  } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
               />
             </button>
             {dropdownOpen.settings && (
@@ -260,11 +272,10 @@ const Aside = ({ className }) => {
               <FontAwesomeIcon icon={faClock} className={iconClass} />
               <span>Horas Extra</span>
             </span>
-            <FontAwesomeIcon 
-              icon={faChevronDown} 
-              className={`w-4 h-4 transition-transform duration-200 ${
-                dropdownOpen.extraHours ? 'rotate-180' : ''
-              } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+            <FontAwesomeIcon
+              icon={faChevronDown}
+              className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.extraHours ? 'rotate-180' : ''
+                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
             />
           </button>
           {dropdownOpen.extraHours && (
@@ -305,11 +316,10 @@ const Aside = ({ className }) => {
               <FontAwesomeIcon icon={faFile} className={iconClass} />
               <span>Solicitudes</span>
             </span>
-            <FontAwesomeIcon 
-              icon={faChevronDown} 
-              className={`w-4 h-4 transition-transform duration-200 ${
-                dropdownOpen.solicitudes ? 'rotate-180' : ''
-              } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+            <FontAwesomeIcon
+              icon={faChevronDown}
+              className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.solicitudes ? 'rotate-180' : ''
+                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
             />
           </button>
           {dropdownOpen.solicitudes && (
@@ -356,11 +366,10 @@ const Aside = ({ className }) => {
                 <FontAwesomeIcon icon={faCalendar} className={iconClass} />
                 <span>Calendarios</span>
               </span>
-              <FontAwesomeIcon 
-                icon={faChevronDown} 
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  dropdownOpen.calendars ? 'rotate-180' : ''
-                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              <FontAwesomeIcon
+                icon={faChevronDown}
+                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.calendars ? 'rotate-180' : ''
+                  } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
               />
             </button>
             {dropdownOpen.calendars && (
@@ -407,6 +416,8 @@ const Aside = ({ className }) => {
           <a href="/pdf" className={linkClass}>
             <FontAwesomeIcon icon={faFilePdf} className={iconClass} />
             <span>Parte Jefatura</span>
+            {hasNewPdf && <span className={badgeClass}>Nuevo</span>}
+
           </a>
         )}
       </nav>

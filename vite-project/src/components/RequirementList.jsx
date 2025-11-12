@@ -31,6 +31,11 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
     const statCardClass = `rounded-2xl border px-4 py-4 transition-colors ${
         darkMode ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-white text-slate-700'
     }`;
+        const headerDateInputClass = `w-full rounded-2xl border px-3 py-2 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-white/70 focus:border-white/70 ${
+        darkMode
+            ? 'border-white/30 bg-white/10 placeholder-white/60'
+            : 'border-white/60 bg-white/30 placeholder-white/60'
+    }`;
     const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
     const inputBaseClass = `w-full rounded-2xl border px-4 py-3 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${
         darkMode
@@ -126,6 +131,21 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
         const nextDay = dayjs(selectedDate).add(1, 'day').format('YYYY-MM-DD');
         setSelectedDate(nextDay);
     };
+
+    const handleDateSelect = (event) => {
+        const value = event.target.value;
+
+        if (!value) {
+            return;
+        }
+
+        const parsed = dayjs(value);
+
+        if (parsed.isValid()) {
+            setSelectedDate(parsed.format('YYYY-MM-DD'));
+        }
+    };
+
 
     // Funciones para gestionar filtros múltiples
     const handleAddFilter = (filterType) => {
@@ -326,19 +346,30 @@ const RequirementList = ({ title, fetchData, listType, orderColumn, orderColumn2
                             Consulta la disponibilidad del personal y gestiona rápidamente las horas ofrecidas y aceptadas en cada turno.
                         </p>
                     </div>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <div className="flex items-center justify-end gap-2">
-                            <button onClick={handlePreviousDay} className={secondaryButtonClass}>
-                                <FontAwesomeIcon icon={faChevronLeft} />
-                                <span>Anterior</span>
-                            </button>
-                            <span className="rounded-2xl border border-white/30 px-4 py-2 text-sm font-semibold uppercase tracking-wide">
-                                {dayjs(selectedDate).format('DD/MM/YYYY')}
-                            </span>
-                            <button onClick={handleNextDay} className={secondaryButtonClass}>
-                                <span>Siguiente</span>
-                                <FontAwesomeIcon icon={faChevronRight} />
-                            </button>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
+                            <div className="flex items-center justify-end gap-2">
+                                <button onClick={handlePreviousDay} className={secondaryButtonClass}>
+                                    <FontAwesomeIcon icon={faChevronLeft} />
+                                    <span>Anterior</span>
+                                </button>
+                                <span className="rounded-2xl border border-white/30 px-4 py-2 text-sm font-semibold uppercase tracking-wide">
+                                    {dayjs(selectedDate).format('DD/MM/YYYY')}
+                                </span>
+                                <button onClick={handleNextDay} className={secondaryButtonClass}>
+                                    <span>Siguiente</span>
+                                    <FontAwesomeIcon icon={faChevronRight} />
+                                </button>
+                            </div>
+                            <label className="flex flex-col items-end gap-1 text-[0.6rem] font-semibold uppercase tracking-[0.25em] text-white/70 sm:text-[0.65rem]">
+                                Seleccionar fecha
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={handleDateSelect}
+                                    className={`${headerDateInputClass} min-w-[180px] text-center sm:text-left`}
+                                />
+                            </label>
                         </div>
                         <span className="self-end text-xs font-medium uppercase tracking-[0.2em] text-white/70">
                             Actualizado al último cambio

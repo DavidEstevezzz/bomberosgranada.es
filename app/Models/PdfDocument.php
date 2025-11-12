@@ -34,4 +34,9 @@ class PdfDocument extends Model
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
+
+    public function views()
+    {
+        return $this->hasMany(PdfDocumentView::class);
+    }
 }

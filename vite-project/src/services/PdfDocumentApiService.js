@@ -8,6 +8,10 @@ class PdfDocumentApiService {
    * Obtener el documento PDF más reciente
    */
   async getLatestDocument() {
+    return await this.getLatestStatus();
+  }
+
+  async getLatestStatus() {
     return await BaseApiService.get(`${API_URL}/latest`);
   }
 

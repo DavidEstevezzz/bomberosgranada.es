@@ -26,6 +26,13 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // Obtener nombre del usuario al que se está respondiendo
+  const replyToUserName = useMemo(() => {
+    if (!replyMessage || !users.length) return '';
+    const user = users.find(u => u.id_empleado === replyMessage.receiver_id);
+    return user ? `${user.nombre} ${user.apellido}` : 'Usuario';
+  }, [replyMessage, users]);
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -166,11 +173,11 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
     []
   );
 
-  // CAMBIO AQUÍ: items-center → items-start, añadido pt-8 y overflow-y-auto
-  const overlayClass = 'fixed inset-0 z-50 flex items-start justify-center bg-slate-900/70 px-4 pt-8 pb-8 backdrop-blur overflow-y-auto';
+  // MEJORADO: Mejor posicionamiento en móvil, scroll desde arriba
+  const overlayClass = 'fixed inset-0 z-50 flex items-start justify-center bg-slate-900/70 px-4 py-4 sm:py-8 backdrop-blur overflow-y-auto';
   
-  // CAMBIO AQUÍ: añadido max-h-[calc(100vh-4rem)] para limitar altura
-  const modalClass = `relative flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 max-h-[calc(100vh-4rem)] ${
+  // MEJORADO: Modal se ajusta mejor en móvil
+  const modalClass = `relative my-auto flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl border shadow-2xl transition-colors duration-300 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] ${
     darkMode ? 'border-slate-800 bg-slate-950/90 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
   }`;
   
@@ -228,7 +235,6 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
           </button>
         </div>
 
-        {/* CAMBIO AQUÍ: Cambiado max-h-[75vh] por flex-1 overflow-y-auto para mejor manejo del scroll */}
         <form onSubmit={handleSubmit} className="flex-1 space-y-6 overflow-y-auto px-6 py-6 sm:px-8">
           {submitError && (
             <div
@@ -240,7 +246,29 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
             </div>
           )}
 
-          {isChief && (
+          {/* NUEVO: Mostrar a quién se está respondiendo si es una respuesta */}
+          {replyMessage && (
+            <div
+              className={`space-y-3 rounded-3xl border px-5 py-4 ${
+                darkMode ? 'border-primary-500/30 bg-primary-500/5' : 'border-primary-200 bg-primary-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">💬</span>
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-primary-200' : 'text-primary-700'}`}>
+                    Respondiendo a
+                  </p>
+                  <p className={`mt-1 text-sm font-semibold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+                    {replyToUserName}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Selector de alcance: SOLO si NO es respuesta Y el usuario es jefe */}
+          {isChief && !replyMessage && (
             <div
               className={`space-y-3 rounded-3xl border px-5 py-4 ${
                 darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50'
@@ -279,6 +307,7 @@ const CreateMessageModal = ({ isOpen, onClose, currentUserRole, replyMessage }) 
             </div>
           )}
 
+          {/* Selector de usuario: SOLO si es individual Y NO es respuesta */}
           {(!isChief || messageScope === 'individual') && !replyMessage && (
             <div className={`space-y-5 rounded-3xl border px-5 py-4 ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
               <div className="space-y-2">

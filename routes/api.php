@@ -227,7 +227,9 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
 
     Route::prefix('pdf-documents')->group(function () {
         Route::get('/latest', [PdfDocumentController::class, 'getLatest']);
-                Route::post('/{id}/mark-as-viewed', [PdfDocumentController::class, 'markAsViewed']);
+        Route::post('/{id}/mark-as-viewed', [PdfDocumentController::class, 'markAsViewed']);
+        Route::get('/{id}/embed', [PdfDocumentController::class, 'generateEmbedUrl']);
+
         Route::post('/upload', [PdfDocumentController::class, 'upload']);
         Route::get('/{pdfDocument}', [PdfDocumentController::class, 'show']);
         Route::get('/{pdfDocument}/secondary', [PdfDocumentController::class, 'show'])->defaults('type', 'secondary');
@@ -266,7 +268,7 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
 
     // Restricción de Request y ShiftChangeRequest para update y delete
     Route::delete('/requests/{id}', [RequestController::class, 'destroy']);
-// Traslados
+    // Traslados
     Route::get('/firefighters-assignments/active-transfers', [FirefighterAssignmentController::class, 'getActiveTransfers']);
     Route::post('/firefighters-assignments/undo-transfer', [FirefighterAssignmentController::class, 'undoTransfer']);
     Route::put('/firefighters-assignments/{id_asignacion}/increment-user-column', [FirefighterAssignmentController::class, 'increaseUserColumnValue']);
@@ -278,12 +280,13 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::post('firefighters-assignments/require-firefighter', [FirefighterAssignmentController::class, 'requireFirefighter']);
     Route::get('/firefighters-assignments/check-especial-brigade', [FirefighterAssignmentController::class, 'getEspecialAssigment']);
     Route::post('/firefighters-assignments/extend-working-day', [FirefighterAssignmentController::class, 'extendWorkingDay']);
-    
+
 
 
 
     Route::delete('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'destroy']);
 });
+Route::middleware('signed')->get('/pdf-documents/{id}/stream', [PdfDocumentController::class, 'stream'])->name('pdf-documents.stream');
 
 Route::middleware(['auth:sanctum', 'auth.special.command'])->group(function () {
     Route::post('/guards', [GuardController::class, 'store']);

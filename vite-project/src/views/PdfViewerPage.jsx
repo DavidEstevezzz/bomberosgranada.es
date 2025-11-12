@@ -104,15 +104,17 @@ const PdfViewerPage = () => {
             const response = await PdfDocumentApiService.getLatestStatus();
             console.log("Documento obtenido:", response.data);
 
-            const { document, has_new: hasNewFlag } = response.data;
+            
+            const documentData = response.data?.document ?? response.data ?? null;
+            const hasNewFlag = response.data?.has_new ?? response.data?.hasNew ?? false;
 
-            setCurrentDocument(document);
+            setCurrentDocument(documentData);
             setShowNewPdfNotice(!!hasNewFlag);
 
-            if (document && document.id) {
-                const blobLoaded = await fetchPdfBlob(document.id, document);
+            if (documentData && documentData.id) {
+                const blobLoaded = await fetchPdfBlob(documentData.id, documentData);
                 if (blobLoaded) {
-                    await markDocumentAsViewed(document.id);
+                    await markDocumentAsViewed(documentData.id);
                 }
             } else {
                 setPdfUrl(null);

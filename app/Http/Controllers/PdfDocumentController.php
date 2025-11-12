@@ -10,10 +10,14 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\URL;
 
 
 class PdfDocumentController extends Controller
 {
+
+    private const STORAGE_BASE_PATH = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/';
+
     /**
      * Obtener el documento PDF más reciente.
      *
@@ -31,7 +35,7 @@ class PdfDocumentController extends Controller
             ], 404);
         }
 
-$userId = Auth::id();
+        $userId = Auth::id();
         $hasNew = false;
 
         if ($userId) {
@@ -74,7 +78,74 @@ $userId = Auth::id();
             'message' => 'Documento marcado como visto',
             'is_new' => $view->wasRecentlyCreated,
         ]);
+    }
+    private function resolveFileInfo(PdfDocument $document, string $type = 'primary'): array
+    {
+        $normalizedType = $type === 'secondary' ? 'secondary' : 'primary';
+
+        if ($normalizedType === 'secondary') {
+            if (!$document->file_path_second) {
+                abort(404, 'Documento secundario no disponible');
+            }
+
+            $relativePath = $document->file_path_second;
+            $downloadName = $document->original_filename_second ?? basename($document->file_path_second);
+        } else {
+            if (!$document->file_path) {
+                abort(404, 'Documento no disponible');
+            }
+
+            $relativePath = $document->file_path;
+            $downloadName = $document->original_filename ?? basename($document->file_path);
         }
+
+        $fullPath = self::STORAGE_BASE_PATH . $relativePath;
+
+        if (!file_exists($fullPath)) {
+            abort(404, 'Archivo no encontrado');
+        }
+
+        return [$fullPath, $downloadName];
+    }
+
+    public function generateEmbedUrl(Request $request, $id)
+    {
+        $document = PdfDocument::findOrFail($id);
+        $requestedType = $request->query('type', 'primary');
+        $normalizedType = $requestedType === 'secondary' ? 'secondary' : 'primary';
+
+        if ($normalizedType === 'secondary' && !$document->file_path_second) {
+            return response()->json(['message' => 'Documento secundario no disponible'], 404);
+        }
+
+        $expiresAt = Carbon::now()->addMinutes(10);
+
+        $signedUrl = URL::temporarySignedRoute(
+            'pdf-documents.stream',
+            $expiresAt,
+            [
+                'id' => $document->id,
+                'type' => $normalizedType,
+            ]
+        );
+
+        return response()->json([
+            'url' => $signedUrl,
+            'expires_at' => $expiresAt->toIso8601String(),
+            'type' => $normalizedType,
+        ]);
+    }
+
+    public function stream(Request $request, $id)
+    {
+        $document = PdfDocument::findOrFail($id);
+        [$fullPath, $downloadName] = $this->resolveFileInfo($document, $request->query('type', 'primary'));
+
+        return response()->file($fullPath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $downloadName . '"',
+        ]);
+    }
 
     /**
      * Subir nuevos documentos PDF.
@@ -249,37 +320,7 @@ $userId = Auth::id();
         ]);
 
         $document = PdfDocument::findOrFail($id);
-        Log::info('Documento encontrado', [
-            'file_path' => $document->file_path,
-            'file_path_second' => $document->file_path_second
-        ]);
-
-        // Determinar qué archivo mostrar
-        $filePath = null;
-        if ($type === 'secondary') {
-            if ($document->file_path_second) {
-                $filePath = $document->file_path_second;
-                Log::info('Usando archivo secundario');
-            } else {
-                Log::warning('Se solicitó archivo secundario pero no existe');
-                return response()->json(['message' => 'Documento secundario no disponible'], 404);
-            }
-        } else {
-            $filePath = $document->file_path;
-            Log::info('Usando archivo principal');
-        }
-
-        Log::info('Ruta del archivo seleccionada', ['filePath' => $filePath]);
-
-        // Construir la ruta absoluta del archivo
-        $fullPath = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $filePath;
-
-        Log::info('Ruta completa', ['fullPath' => $fullPath]);
-
-        if (!file_exists($fullPath)) {
-            Log::error('Archivo no encontrado', ['fullPath' => $fullPath]);
-            return response()->json(['message' => 'Archivo no encontrado'], 404);
-        }
+        [$fullPath] = $this->resolveFileInfo($document, $type);
 
         Log::info('Enviando archivo', ['size' => filesize($fullPath)]);
         return response()->file($fullPath);
@@ -296,22 +337,10 @@ $userId = Auth::id();
     {
         $document = PdfDocument::findOrFail($id);
 
-        // Determinar qué archivo descargar
-        if ($type === 'secondary' && $document->file_path_second) {
-            $filePath = $document->file_path_second;
-            $originalName = $document->original_filename_second;
-        } else {
-            $filePath = $document->file_path;
-            $originalName = $document->original_filename;
-        }
+        [$fullPath, $downloadName] = $this->resolveFileInfo($document, $type);
 
-        // Construir la ruta absoluta del archivo
-        $fullPath = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $filePath;
-        if (!file_exists($fullPath)) {
-            return response()->json(['message' => 'Archivo no encontrado'], 404);
-        }
 
-        return response()->download($fullPath, $originalName);
+        return response()->download($fullPath, $downloadName);
     }
 
     /**

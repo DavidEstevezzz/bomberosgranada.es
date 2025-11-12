@@ -42,6 +42,7 @@ const Aside = ({ className }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingIncidentsCount, setPendingIncidentsCount] = useState(0);
   const [isMandoEspecial, setIsMandoEspecial] = useState(false);
+  const [hasNewPdf, setHasNewPdf] = useState(false);
   const { darkMode } = useDarkMode();
 
   useEffect(() => {
@@ -126,31 +127,31 @@ const Aside = ({ className }) => {
     }`;
 
   const linkClass = `group flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-xl mx-2 ${darkMode
-      ? 'text-slate-300 hover:bg-slate-900 hover:text-primary-400'
-      : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'
+    ? 'text-slate-300 hover:bg-slate-900 hover:text-primary-400'
+    : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'
     }`;
 
   const dropdownButtonClass = `group flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left transition-all duration-200 rounded-xl mx-2 ${darkMode
-      ? 'text-slate-300 hover:bg-slate-900 hover:text-primary-400'
-      : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'
+    ? 'text-slate-300 hover:bg-slate-900 hover:text-primary-400'
+    : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'
     }`;
 
   const dropdownItemClass = `block px-4 py-2.5 text-sm transition-all duration-200 rounded-lg mx-6 my-1 ${darkMode
-      ? 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+    ? 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
     }`;
 
   const iconClass = `w-5 h-5 mr-3 transition-colors ${darkMode ? 'text-slate-400 group-hover:text-primary-400' : 'text-slate-500 group-hover:text-primary-600'
     }`;
 
   const badgeClass = `ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full transition-all duration-200 ${darkMode
-      ? 'bg-primary-500/20 text-primary-300 ring-1 ring-primary-500/30'
-      : 'bg-primary-500 text-white shadow-sm'
+    ? 'bg-primary-500/20 text-primary-300 ring-1 ring-primary-500/30'
+    : 'bg-primary-500 text-white shadow-sm'
     }`;
 
   const badgeRedClass = `ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full transition-all duration-200 ${darkMode
-      ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30'
-      : 'bg-red-500 text-white shadow-sm'
+    ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30'
+    : 'bg-red-500 text-white shadow-sm'
     }`;
 
   return (

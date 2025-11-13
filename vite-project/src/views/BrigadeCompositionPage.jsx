@@ -24,8 +24,9 @@ const BrigadeCompositionPage = () => {
 
   // Estado de fecha
   const currentDate = new Date();
-  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  // Usar 2024 como año por defecto ya que los datos están en ese año
+  const [selectedYear, setSelectedYear] = useState(2024);
+  const [selectedMonth, setSelectedMonth] = useState(11); // Noviembre
 
   // Estado de brigadas
   const [brigades, setBrigades] = useState([]);

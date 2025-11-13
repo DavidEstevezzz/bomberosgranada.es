@@ -104,7 +104,7 @@ const PdfViewerPage = () => {
             const response = await PdfDocumentApiService.getLatestStatus();
             console.log("Documento obtenido:", response.data);
 
-            
+
             const documentData = response.data?.document ?? response.data ?? null;
             const hasNewFlag = response.data?.has_new ?? response.data?.hasNew ?? false;
 
@@ -326,45 +326,36 @@ const PdfViewerPage = () => {
 
     const containerStyles = useMemo(
         () => ({
-            card: `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-6xl overflow-hidden rounded-3xl border shadow-2xl backdrop-blur transition-colors duration-300 ${
-                darkMode ? 'border-slate-800 bg-slate-950/80 text-slate-100' : 'border-slate-200 bg-white/95 text-slate-900'
-            }`,
-            section: `rounded-2xl border px-5 py-6 transition-colors ${
-                darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50/80'
-            }`,
-            input: `w-full rounded-2xl border px-4 py-3 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${
-                darkMode
-                    ? 'border-slate-700 bg-slate-900/40 text-slate-100 placeholder-slate-400'
-                    : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
-            }`,
-            fileInput: `w-full rounded-2xl border px-3 py-3 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 file:mr-4 file:rounded-xl file:border-0 file:bg-primary-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white file:transition hover:file:bg-primary-600 ${
-                darkMode
-                    ? 'border-slate-700 bg-slate-900/40 text-slate-100 placeholder-slate-400 file:bg-primary-600 hover:file:bg-primary-500'
-                    : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
-            }`,
+            card: `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-6xl overflow-hidden rounded-3xl border shadow-2xl backdrop-blur transition-colors duration-300 ${darkMode ? 'border-slate-800 bg-slate-950/80 text-slate-100' : 'border-slate-200 bg-white/95 text-slate-900'
+                }`,
+            section: `rounded-2xl border px-5 py-6 transition-colors ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50/80'
+                }`,
+            input: `w-full rounded-2xl border px-4 py-3 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 ${darkMode
+                ? 'border-slate-700 bg-slate-900/40 text-slate-100 placeholder-slate-400'
+                : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+                }`,
+            fileInput: `w-full rounded-2xl border px-3 py-3 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 file:mr-4 file:rounded-xl file:border-0 file:bg-primary-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white file:transition hover:file:bg-primary-600 ${darkMode
+                ? 'border-slate-700 bg-slate-900/40 text-slate-100 placeholder-slate-400 file:bg-primary-600 hover:file:bg-primary-500'
+                : 'border-slate-200 bg-white text-slate-900 placeholder-slate-500'
+                }`,
             label: 'block text-xs font-semibold uppercase tracking-[0.25em] text-primary-500 dark:text-primary-200',
             subtle: darkMode ? 'text-slate-300' : 'text-slate-600',
-            primaryButton: `inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold shadow-lg transition-all duration-300 ${
-                darkMode
-                    ? 'bg-primary-600/80 text-white hover:bg-primary-500/80'
-                    : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 text-white hover:shadow-xl'
-            }`,
-            secondaryButton: `inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-xs font-semibold transition-colors ${
-                darkMode
-                    ? 'bg-red-600/80 text-white hover:bg-red-500/80'
-                    : 'bg-red-500 text-white hover:bg-red-600'
-            }`,
-            tertiaryButton: `inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-xs font-semibold transition-colors ${
-                darkMode
-                    ? 'bg-emerald-600/80 text-white hover:bg-emerald-500/80'
-                    : 'bg-emerald-500 text-white hover:bg-emerald-600'
-            }`,
-            viewerWrapper: `rounded-2xl border transition-colors ${
-                darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'
-            }`,
-            viewerHeader: `flex flex-wrap items-center justify-between gap-4 border-b px-6 py-4 text-sm font-semibold transition-colors ${
-                darkMode ? 'border-slate-800 text-slate-200' : 'border-slate-200 text-slate-700'
-            }`,
+            primaryButton: `inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold shadow-lg transition-all duration-300 ${darkMode
+                ? 'bg-primary-600/80 text-white hover:bg-primary-500/80'
+                : 'bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 text-white hover:shadow-xl'
+                }`,
+            secondaryButton: `inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-xs font-semibold transition-colors ${darkMode
+                ? 'bg-red-600/80 text-white hover:bg-red-500/80'
+                : 'bg-red-500 text-white hover:bg-red-600'
+                }`,
+            tertiaryButton: `inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-xs font-semibold transition-colors ${darkMode
+                ? 'bg-emerald-600/80 text-white hover:bg-emerald-500/80'
+                : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                }`,
+            viewerWrapper: `rounded-2xl border transition-colors ${darkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'
+                }`,
+            viewerHeader: `flex flex-wrap items-center justify-between gap-4 border-b px-6 py-4 text-sm font-semibold transition-colors ${darkMode ? 'border-slate-800 text-slate-200' : 'border-slate-200 text-slate-700'
+                }`,
             viewerBody: darkMode ? 'bg-slate-950/80' : 'bg-slate-100'
         }),
         [darkMode]
@@ -373,11 +364,10 @@ const PdfViewerPage = () => {
     return (
         <div className={containerStyles.card}>
             <div
-                className={`bg-gradient-to-r px-8 py-10 text-white transition-colors duration-300 ${
-                    darkMode
-                        ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80'
-                        : 'from-primary-400 via-primary-500 to-primary-600'
-                }`}
+                className={`bg-gradient-to-r px-8 py-10 text-white transition-colors duration-300 ${darkMode
+                    ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80'
+                    : 'from-primary-400 via-primary-500 to-primary-600'
+                    }`}
             >
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
                     Documentación corporativa
@@ -392,11 +382,10 @@ const PdfViewerPage = () => {
             <div className="space-y-8 px-6 py-8 sm:px-10">
                 {showNewPdfNotice && currentDocument && (
                     <div
-                        className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
-                            darkMode
-                                ? 'border-primary-500/40 bg-primary-500/10 text-primary-200'
-                                : 'border-primary-200 bg-primary-50 text-primary-700'
-                        }`}
+                        className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${darkMode
+                            ? 'border-primary-500/40 bg-primary-500/10 text-primary-200'
+                            : 'border-primary-200 bg-primary-50 text-primary-700'
+                            }`}
                     >
                         <div>
                             <p className="text-sm font-semibold uppercase tracking-[0.2em]">Nuevo parte disponible</p>
@@ -408,11 +397,10 @@ const PdfViewerPage = () => {
                         </div>
                         <button
                             onClick={handleCloseNewPdfNotice}
-                            className={`rounded-xl px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                                darkMode
-                                    ? 'bg-primary-600/90 text-white hover:bg-primary-500'
-                                    : 'bg-primary-500 text-white hover:bg-primary-600'
-                            }`}
+                            className={`rounded-xl px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${darkMode
+                                ? 'bg-primary-600/90 text-white hover:bg-primary-500'
+                                : 'bg-primary-500 text-white hover:bg-primary-600'
+                                }`}
                         >
                             Entendido
                         </button>
@@ -421,11 +409,10 @@ const PdfViewerPage = () => {
 
                 {error && (
                     <div
-                        className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
-                            darkMode
-                                ? 'border-red-500/40 bg-red-500/10 text-red-200'
-                                : 'border-red-200 bg-red-50 text-red-700'
-                        }`}
+                        className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${darkMode
+                            ? 'border-red-500/40 bg-red-500/10 text-red-200'
+                            : 'border-red-200 bg-red-50 text-red-700'
+                            }`}
                     >
                         <FontAwesomeIcon icon={faExclamationTriangle} className="h-4 w-4" />
                         {error}
@@ -434,11 +421,10 @@ const PdfViewerPage = () => {
 
                 {uploadSuccess && (
                     <div
-                        className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${
-                            darkMode
-                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                        }`}
+                        className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${darkMode
+                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                            : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            }`}
                     >
                         Documentos subidos correctamente.
                     </div>
@@ -456,9 +442,8 @@ const PdfViewerPage = () => {
                                 </p>
                             </div>
                             <div
-                                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary-500 dark:text-primary-200 ${
-                                    darkMode ? 'border-primary-700/60 bg-primary-900/40' : 'border-primary-100 bg-primary-50'
-                                }`}
+                                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary-500 dark:text-primary-200 ${darkMode ? 'border-primary-700/60 bg-primary-900/40' : 'border-primary-100 bg-primary-50'
+                                    }`}
                             >
                                 <FontAwesomeIcon icon={faUpload} className="h-3 w-3" />
                                 Última carga {currentDocument ? new Date(currentDocument.created_at).toLocaleDateString() : '—'}
@@ -499,15 +484,14 @@ const PdfViewerPage = () => {
                             <button
                                 type="button"
                                 onClick={toggleSecondFileInput}
-                                className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                                    showSecondInput
-                                        ? darkMode
-                                            ? 'bg-red-600/80 text-white hover:bg-red-500/80'
-                                            : 'bg-red-500 text-white hover:bg-red-600'
-                                        : darkMode
-                                            ? 'bg-primary-700/70 text-white hover:bg-primary-600/80'
-                                            : 'bg-primary-500 text-white hover:bg-primary-600'
-                                }`}
+                                className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${showSecondInput
+                                    ? darkMode
+                                        ? 'bg-red-600/80 text-white hover:bg-red-500/80'
+                                        : 'bg-red-500 text-white hover:bg-red-600'
+                                    : darkMode
+                                        ? 'bg-primary-700/70 text-white hover:bg-primary-600/80'
+                                        : 'bg-primary-500 text-white hover:bg-primary-600'
+                                    }`}
                             >
                                 <FontAwesomeIcon icon={showSecondInput ? faTimes : faPlus} className="h-3.5 w-3.5" />
                                 {showSecondInput ? 'Quitar segundo PDF' : 'Añadir segundo PDF'}
@@ -532,11 +516,10 @@ const PdfViewerPage = () => {
 
                         {(file || fileSecond) && (
                             <div
-                                className={`mt-6 grid gap-4 rounded-2xl border px-4 py-4 text-sm transition-colors ${
-                                    darkMode
-                                        ? 'border-slate-800 bg-slate-950/60 text-slate-200'
-                                        : 'border-slate-200 bg-white text-slate-700'
-                                }`}
+                                className={`mt-6 grid gap-4 rounded-2xl border px-4 py-4 text-sm transition-colors ${darkMode
+                                    ? 'border-slate-800 bg-slate-950/60 text-slate-200'
+                                    : 'border-slate-200 bg-white text-slate-700'
+                                    }`}
                             >
                                 {file && (
                                     <div className="flex items-center justify-between gap-3">
@@ -585,9 +568,8 @@ const PdfViewerPage = () => {
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-start gap-3">
                             <span
-                                className={`flex h-10 w-10 items-center justify-center rounded-2xl text-2xl ${
-                                    darkMode ? 'bg-primary-900/40 text-primary-200' : 'bg-primary-100 text-primary-600'
-                                }`}
+                                className={`flex h-10 w-10 items-center justify-center rounded-2xl text-2xl ${darkMode ? 'bg-primary-900/40 text-primary-200' : 'bg-primary-100 text-primary-600'
+                                    }`}
                             >
                                 <FontAwesomeIcon icon={faFilePdf} />
                             </span>
@@ -597,14 +579,12 @@ const PdfViewerPage = () => {
                                 </p>
                                 <p className={`mt-1 text-xs ${containerStyles.subtle}`}>
                                     {currentDocument
-                                        ? `Subido el ${new Date(currentDocument.created_at).toLocaleDateString()} · Principal: ${
-                                              (currentDocument.file_size /
-                                              1024 /
-                                              1024).toFixed(2)} MB${
-                                              currentDocument.file_size_second
-                                                  ? ` · Secundario: ${(currentDocument.file_size_second / 1024 / 1024).toFixed(2)} MB`
-                                                  : ''
-                                          }`
+                                        ? `Subido el ${new Date(currentDocument.created_at).toLocaleDateString()} · Principal: ${(currentDocument.file_size /
+                                            1024 /
+                                            1024).toFixed(2)} MB${currentDocument.file_size_second
+                                                ? ` · Secundario: ${(currentDocument.file_size_second / 1024 / 1024).toFixed(2)} MB`
+                                                : ''
+                                        }`
                                         : 'Cuando subas un documento aparecerá aquí su información resumida.'}
                                 </p>
                             </div>
@@ -642,7 +622,7 @@ const PdfViewerPage = () => {
                     <div className={`${containerStyles.viewerBody} rounded-b-2xl`}>
                         {pdfUrl ? (
                             <iframe
-                                src={`${pdfUrl}#toolbar=1&navpanes=1`}
+                                src={pdfUrl}
                                 className="h-[70vh] w-full border-none"
                                 title="PDF Viewer Principal"
                             />
@@ -675,7 +655,7 @@ const PdfViewerPage = () => {
                         <div className={`${containerStyles.viewerBody} rounded-b-2xl`}>
                             {pdfSecondaryUrl ? (
                                 <iframe
-                                    src={`${pdfSecondaryUrl}#toolbar=1&navpanes=1`}
+                                    src={pdfSecondaryUrl}
                                     className="h-[70vh] w-full border-none"
                                     title="PDF Viewer Secundario"
                                 />

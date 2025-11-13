@@ -75,8 +75,8 @@ const BrigadeCompositionPage = () => {
 
   const fetchUserRole = () => {
     const user = JSON.parse(localStorage.getItem('user'));
-    if (user && user.role_name) {
-      setUserRole(user.role_name);
+    if (user && user.type) {
+      setUserRole(user.type);
     }
   };
 
@@ -99,13 +99,9 @@ const BrigadeCompositionPage = () => {
   };
 
   const handleBrigadeClick = (brigadeConfig) => {
-    // Buscar la brigada en la lista de brigadas del API por nombre
-    const brigade = brigades.find((b) => b.nombre === brigadeConfig.name);
-    if (brigade) {
-      setSelectedBrigade({ ...brigadeConfig, id: brigade.id_brigada });
-    } else {
-      setSelectedBrigade(brigadeConfig);
-    }
+    // Solo guardamos el nombre de la brigada, no el ID todavía
+    // El ID se determinará cuando se seleccione el parque
+    setSelectedBrigade(brigadeConfig);
     setSelectedParque(null);
     setComposition(null);
     setFirefighters([]);
@@ -114,18 +110,34 @@ const BrigadeCompositionPage = () => {
 
   const handleParqueClick = async (parqueId) => {
     setSelectedParque(parqueId);
-    await fetchComposition(selectedBrigade.id, parqueId);
+
+    // Buscar la brigada específica con el nombre Y el parque correcto
+    const brigade = brigades.find(
+      (b) => b.nombre === selectedBrigade.name && b.id_parque === parqueId
+    );
+
+    if (brigade) {
+      // Actualizar el selectedBrigade con el ID correcto
+      setSelectedBrigade({ ...selectedBrigade, id: brigade.id_brigada });
+      await fetchComposition(brigade.id_brigada, parqueId);
+    } else {
+      setError(`No se encontró la brigada ${selectedBrigade.name} para el parque ${parqueId}`);
+    }
   };
 
-  const fetchComposition = async (brigadeId, parqueId) => {
+  const fetchComposition = async (brigadeId, parqueId, year = null, month = null) => {
     setLoading(true);
     setError(null);
+    // Usar los parámetros pasados o los valores del estado
+    const yearToUse = year !== null ? year : selectedYear;
+    const monthToUse = month !== null ? month : selectedMonth;
+ 
     try {
       const response = await BrigadeCompositionApiService.getComposition(
         brigadeId,
         parqueId,
-        selectedYear,
-        selectedMonth
+        yearToUse,
+        monthToUse
       );
 
       setComposition(response.data);
@@ -156,9 +168,9 @@ const BrigadeCompositionPage = () => {
     setSelectedMonth(newMonth);
     setSelectedYear(newYear);
 
-    // Si hay una brigada y parque seleccionado, recargar datos
+    // Pasar los nuevos valores directamente para evitar usar el estado desactualizado
     if (selectedBrigade && selectedParque) {
-      await fetchComposition(selectedBrigade.id, selectedParque);
+      await fetchComposition(selectedBrigade.id, selectedParque, newYear, newMonth);
     }
   };
 
@@ -240,7 +252,7 @@ const BrigadeCompositionPage = () => {
   };
 
   const isJefe = () => {
-    return userRole.includes('Jefe') || userRole.includes('Mando');
+    return userRole.includes('Jefe');
   };
 
   // Agrupar bomberos por puesto
@@ -257,8 +269,7 @@ const BrigadeCompositionPage = () => {
   };
 
   const groupedFirefighters = groupByPuesto(firefighters);
-  const puestoOrder = ['Conductor', 'Operador', 'Bombero', 'Cabo', 'Sargento', 'Sin puesto'];
-
+ const puestoOrder = ['Subinspector', 'Oficial', 'Sargento', 'Cabo', 'Conductor', 'Operador', 'Bombero', 'Sin puesto'];
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="container mx-auto px-4 py-8">

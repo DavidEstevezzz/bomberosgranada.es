@@ -215,8 +215,8 @@ const Aside = ({ className }) => {
           </a>
         )}
 
-        {/* Brigadas - Solo Jefe */}
-        {userType === 'jefe' && (
+        {/* Brigadas - Jefe y Mando */}
+        {(userType === 'jefe' || userType === 'mando') && (
           <div className="relative">
             <button onClick={() => toggleDropdown('brigades')} className={dropdownButtonClass}>
               <span className="flex items-center">
@@ -231,12 +231,18 @@ const Aside = ({ className }) => {
             </button>
             {dropdownOpen.brigades && (
               <div className="py-2">
-                <a href="/brigades" className={dropdownItemClass}>
-                  Ver Brigadas
-                </a>
-                <a href="/firefighter-assignments" className={dropdownItemClass}>
-                  Asignar Brigada
-                </a>
+                {/* Solo Jefes */}
+                {userType === 'jefe' && (
+                  <>
+                    <a href="/brigades" className={dropdownItemClass}>
+                      Ver Brigadas
+                    </a>
+                    <a href="/firefighter-assignments" className={dropdownItemClass}>
+                      Asignar Brigada
+                    </a>
+                  </>
+                )}
+                {/* Jefes y Mandos */}
                 <a href="/composicion-brigadas" className={dropdownItemClass}>
                   Composición de Brigadas
                 </a>

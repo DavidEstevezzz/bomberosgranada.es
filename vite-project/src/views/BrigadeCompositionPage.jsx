@@ -24,8 +24,7 @@ const BrigadeCompositionPage = () => {
 
   // Estado de fecha
   const currentDate = new Date();
-  // Usar 2024 como año por defecto ya que los datos están en ese año
-  const [selectedYear, setSelectedYear] = useState(2024);
+  const [selectedYear, setSelectedYear] = useState(2025);
   const [selectedMonth, setSelectedMonth] = useState(11); // Noviembre
 
   // Estado de brigadas
@@ -100,13 +99,9 @@ const BrigadeCompositionPage = () => {
   };
 
   const handleBrigadeClick = (brigadeConfig) => {
-    // Buscar la brigada en la lista de brigadas del API por nombre
-    const brigade = brigades.find((b) => b.nombre === brigadeConfig.name);
-    if (brigade) {
-      setSelectedBrigade({ ...brigadeConfig, id: brigade.id_brigada });
-    } else {
-      setSelectedBrigade(brigadeConfig);
-    }
+    // Solo guardamos el nombre de la brigada, no el ID todavía
+    // El ID se determinará cuando se seleccione el parque
+    setSelectedBrigade(brigadeConfig);
     setSelectedParque(null);
     setComposition(null);
     setFirefighters([]);
@@ -115,7 +110,19 @@ const BrigadeCompositionPage = () => {
 
   const handleParqueClick = async (parqueId) => {
     setSelectedParque(parqueId);
-    await fetchComposition(selectedBrigade.id, parqueId);
+
+    // Buscar la brigada específica con el nombre Y el parque correcto
+    const brigade = brigades.find(
+      (b) => b.nombre === selectedBrigade.name && b.id_parque === parqueId
+    );
+
+    if (brigade) {
+      // Actualizar el selectedBrigade con el ID correcto
+      setSelectedBrigade({ ...selectedBrigade, id: brigade.id_brigada });
+      await fetchComposition(brigade.id_brigada, parqueId);
+    } else {
+      setError(`No se encontró la brigada ${selectedBrigade.name} para el parque ${parqueId}`);
+    }
   };
 
   const fetchComposition = async (brigadeId, parqueId) => {

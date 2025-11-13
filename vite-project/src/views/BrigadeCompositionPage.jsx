@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDarkMode } from '../contexts/DarkModeContext';
+import { useStateContext } from '../contexts/ContextProvider';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCalendar,
@@ -16,11 +17,9 @@ import { es } from 'date-fns/locale';
 
 const BrigadeCompositionPage = () => {
   const { darkMode } = useDarkMode();
+  const { user } = useStateContext();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // Estado del usuario
-  const [userRole, setUserRole] = useState('');
 
   // Estado de fecha
   const currentDate = new Date();
@@ -69,20 +68,8 @@ const BrigadeCompositionPage = () => {
   };
 
   useEffect(() => {
-    fetchUserRole();
     fetchBrigades();
   }, []);
-
-  const fetchUserRole = () => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    console.log('Usuario completo:', user);
-    if (user && user.type) {
-      console.log('Tipo de usuario:', user.type);
-      setUserRole(user.type);
-    } else {
-      console.log('No se encontró type en el usuario');
-    }
-  };
 
   const fetchBrigades = async () => {
     try {
@@ -258,9 +245,7 @@ const BrigadeCompositionPage = () => {
 
   const isJefe = () => {
     // Solo los Jefes pueden copiar brigadas y trasladar bomberos
-    const esJefe = userRole === 'jefe';
-    console.log('¿Es Jefe?', esJefe, '- Tipo actual:', userRole);
-    return esJefe;
+    return user?.type === 'jefe';
   };
 
   // Agrupar bomberos por puesto

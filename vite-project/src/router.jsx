@@ -45,6 +45,7 @@ import GuardDetailCalendarPage from './views/GuardDetailCalendarPage.jsx';
 import GuardDetailPage from './views/GuardDetailPage.jsx';
 import BrigadePracticesPage from './views/BrigadePracticesPage.jsx';
 import ClothingItems from './views/ClothingItems.jsx';
+import BrigadeCompositionPage from './views/BrigadeCompositionPage.jsx';
 
 const router = createBrowserRouter([
   {
@@ -80,6 +81,7 @@ const router = createBrowserRouter([
       { path: '/brigades/:id_brigada', element: <BrigadeDetail /> },
       { path: '/messages', element: <MessagesPage /> },
       { path: 'brigade-practices', element: <BrigadePracticesPage /> },
+      { path: 'composicion-brigadas', element: <BrigadeCompositionPage /> },
       { path: 'calendario-norte', element: <CalendarPage /> },
       { path: 'calendario-sur', element: <CalendarPage2 /> },
       { path: 'requerimientos', element: <AvailableFirefighters /> },

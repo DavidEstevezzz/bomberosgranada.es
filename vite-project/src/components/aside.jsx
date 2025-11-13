@@ -237,6 +237,9 @@ const Aside = ({ className }) => {
                 <a href="/firefighter-assignments" className={dropdownItemClass}>
                   Asignar Brigada
                 </a>
+                <a href="/composicion-brigadas" className={dropdownItemClass}>
+                  Composición de Brigadas
+                </a>
               </div>
             )}
           </div>

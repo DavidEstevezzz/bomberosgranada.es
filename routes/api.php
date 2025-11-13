@@ -25,6 +25,7 @@ use App\Http\Controllers\PersonalEquipmentController;
 use App\Http\Controllers\PdfDocumentController;
 use App\Http\Controllers\BrigadeUserController;
 use App\Http\Controllers\ClothingItemController;
+use App\Http\Controllers\BrigadeCompositionController;
 
 
 
@@ -208,6 +209,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/clothing-items/{id}', [ClothingItemController::class, 'show']);
     Route::put('/clothing-items/{id}', [ClothingItemController::class, 'update']);
     Route::delete('/clothing-items/{id}', [ClothingItemController::class, 'destroy']);
+
+    // Rutas para composición de brigadas (lectura)
+    Route::get('/brigade-compositions/brigades', [BrigadeCompositionController::class, 'getBrigades']);
+    Route::get('/brigade-compositions/{brigadeId}/{idParque}/{year}/{month}', [BrigadeCompositionController::class, 'show']);
 });
 
 // Rutas de Login y Logout (abiertas)
@@ -285,6 +290,10 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
 
 
     Route::delete('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'destroy']);
+
+    // Rutas para composición de brigadas (modificación - solo Jefes)
+    Route::post('/brigade-compositions/copy-to-next-month', [BrigadeCompositionController::class, 'copyToNextMonth']);
+    Route::post('/brigade-compositions/transfer-firefighter', [BrigadeCompositionController::class, 'transferFirefighter']);
 });
 Route::middleware('signed')->get('/pdf-documents/{id}/stream', [PdfDocumentController::class, 'stream'])->name('pdf-documents.stream');
 

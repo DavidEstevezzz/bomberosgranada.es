@@ -253,7 +253,8 @@ const BrigadeCompositionPage = () => {
   };
 
   const isJefe = () => {
-    return userRole.includes('Jefe') || userRole.includes('Mando');
+    // Solo los Jefes pueden copiar brigadas y trasladar bomberos
+    return userRole.includes('Jefe');
   };
 
   // Agrupar bomberos por puesto

@@ -290,11 +290,15 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
 
 
     Route::delete('/shift-change-requests/{id}', [ShiftChangeRequestController::class, 'destroy']);
+});
 
+// Rutas protegidas SOLO para Jefes
+Route::middleware(['auth:sanctum', 'role:Jefe'])->group(function () {
     // Rutas para composición de brigadas (modificación - solo Jefes)
     Route::post('/brigade-compositions/copy-to-next-month', [BrigadeCompositionController::class, 'copyToNextMonth']);
     Route::post('/brigade-compositions/transfer-firefighter', [BrigadeCompositionController::class, 'transferFirefighter']);
 });
+
 Route::middleware('signed')->get('/pdf-documents/{id}/stream', [PdfDocumentController::class, 'stream'])->name('pdf-documents.stream');
 
 Route::middleware(['auth:sanctum', 'auth.special.command'])->group(function () {

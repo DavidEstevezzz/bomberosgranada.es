@@ -125,15 +125,19 @@ const BrigadeCompositionPage = () => {
     }
   };
 
-  const fetchComposition = async (brigadeId, parqueId) => {
+  const fetchComposition = async (brigadeId, parqueId, year = null, month = null) => {
     setLoading(true);
     setError(null);
+    // Usar los parámetros pasados o los valores del estado
+    const yearToUse = year !== null ? year : selectedYear;
+    const monthToUse = month !== null ? month : selectedMonth;
+
     try {
       const response = await BrigadeCompositionApiService.getComposition(
         brigadeId,
         parqueId,
-        selectedYear,
-        selectedMonth
+        yearToUse,
+        monthToUse
       );
 
       setComposition(response.data);
@@ -165,8 +169,9 @@ const BrigadeCompositionPage = () => {
     setSelectedYear(newYear);
 
     // Si hay una brigada y parque seleccionado, recargar datos
+    // Pasar los nuevos valores directamente para evitar usar el estado desactualizado
     if (selectedBrigade && selectedParque) {
-      await fetchComposition(selectedBrigade.id, selectedParque);
+      await fetchComposition(selectedBrigade.id, selectedParque, newYear, newMonth);
     }
   };
 
@@ -265,7 +270,8 @@ const BrigadeCompositionPage = () => {
   };
 
   const groupedFirefighters = groupByPuesto(firefighters);
-  const puestoOrder = ['Conductor', 'Operador', 'Bombero', 'Cabo', 'Sargento', 'Sin puesto'];
+  // Orden jerárquico de puestos (de mayor a menor rango)
+  const puestoOrder = ['Subinspector', 'Oficial', 'Sargento', 'Cabo', 'Conductor', 'Operador', 'Bombero', 'Sin puesto'];
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>

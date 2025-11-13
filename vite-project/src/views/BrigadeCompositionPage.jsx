@@ -75,8 +75,12 @@ const BrigadeCompositionPage = () => {
 
   const fetchUserRole = () => {
     const user = JSON.parse(localStorage.getItem('user'));
+    console.log('Usuario completo:', user);
     if (user && user.role_name) {
+      console.log('Rol del usuario:', user.role_name);
       setUserRole(user.role_name);
+    } else {
+      console.log('No se encontró role_name en el usuario');
     }
   };
 
@@ -254,7 +258,9 @@ const BrigadeCompositionPage = () => {
 
   const isJefe = () => {
     // Solo los Jefes pueden copiar brigadas y trasladar bomberos
-    return userRole.includes('Jefe');
+    const esJefe = userRole && userRole.toLowerCase().includes('jefe');
+    console.log('¿Es Jefe?', esJefe, '- Rol actual:', userRole);
+    return esJefe;
   };
 
   // Agrupar bomberos por puesto

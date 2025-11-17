@@ -152,50 +152,34 @@ const AssignFirefighterModal = ({
 
     setIsSubmitting(true);
 
-    const fechaIda = fecha;
-    let fechaVuelta = fecha;
-    if (turno === 'Noche' || turno === 'Tarde y noche' || turno === 'Día Completo') {
-      fechaVuelta = dayjs(fecha).add(1, 'day').format('YYYY-MM-DD');
-    }
-
-    const payloadIda = {
+    // Usar la nueva API de traslados
+    const transferPayload = {
       id_empleado: selectedFirefighterId,
       id_brigada_origen: currentBrigade?.id_brigada,
       id_brigada_destino: destinationBrigade,
-      fecha_ini: fechaIda,
-      turno: assignmentDetails.ida,
-      tipo_asignacion: 'ida',
-      horas_traslado: parseFloat(horasTraslado), // AÑADIR HORAS AL PAYLOAD
-    };
-
-    const payloadVuelta = {
-      id_empleado: selectedFirefighterId,
-      id_brigada_origen: destinationBrigade,
-      id_brigada_destino: currentBrigade?.id_brigada,
-      fecha_ini: fechaVuelta,
-      turno: assignmentDetails.vuelta,
-      tipo_asignacion: 'ida',
+      fecha_traslado: fecha,
+      turno_seleccionado: turno,
+      horas_traslado: parseFloat(horasTraslado),
     };
 
     try {
-      await AssignmentsApiService.createAssignment(payloadIda);
-      await AssignmentsApiService.createAssignment(payloadVuelta);
-      setSubmitSuccess('Asignación creada con éxito y horas de traslado incrementadas.');
+      await AssignmentsApiService.createTransfer(transferPayload);
+      setSubmitSuccess('Traslado creado con éxito. Las asignaciones y horas se han registrado correctamente.');
       setSelectedFirefighterId('');
       setTurno('Mañana');
       setFecha(guardDate);
-      setHorasTraslado(''); // RESETEAR HORAS
+      setHorasTraslado('');
       setAssignmentDetails(computeAssignment('Mañana'));
     } catch (error) {
-      console.error('Error creando la asignación:', error);
+      console.error('Error creando el traslado:', error);
       if (error.response?.data) {
         const backendMessage =
           typeof error.response.data === 'string'
             ? error.response.data
-            : error.response.data.error || 'No se pudo crear la asignación. Inténtalo nuevamente.';
+            : error.response.data.error || 'No se pudo crear el traslado. Inténtalo nuevamente.';
         setSubmitError(backendMessage);
       } else {
-        setSubmitError('No se pudo crear la asignación. Inténtalo nuevamente.');
+        setSubmitError('No se pudo crear el traslado. Inténtalo nuevamente.');
       }
     } finally {
       setIsSubmitting(false);

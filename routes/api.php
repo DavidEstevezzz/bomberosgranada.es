@@ -26,6 +26,7 @@ use App\Http\Controllers\PdfDocumentController;
 use App\Http\Controllers\BrigadeUserController;
 use App\Http\Controllers\ClothingItemController;
 use App\Http\Controllers\BrigadeCompositionController;
+use App\Http\Controllers\TransferController;
 
 
 
@@ -273,7 +274,14 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
 
     // Restricción de Request y ShiftChangeRequest para update y delete
     Route::delete('/requests/{id}', [RequestController::class, 'destroy']);
-    // Traslados
+    // Traslados (nueva estructura con tabla transfers)
+    Route::get('/transfers/by-brigade-and-date', [TransferController::class, 'getTransfersByBrigadeAndDate']);
+    Route::post('/transfers', [TransferController::class, 'store']);
+    Route::get('/transfers/{id_transfer}', [TransferController::class, 'show']);
+    Route::put('/transfers/{id_transfer}', [TransferController::class, 'update']);
+    Route::delete('/transfers/{id_transfer}', [TransferController::class, 'destroy']);
+
+    // Traslados legacy (mantener por compatibilidad)
     Route::get('/firefighters-assignments/active-transfers', [FirefighterAssignmentController::class, 'getActiveTransfers']);
     Route::post('/firefighters-assignments/undo-transfer', [FirefighterAssignmentController::class, 'undoTransfer']);
     Route::put('/firefighters-assignments/{id_asignacion}/increment-user-column', [FirefighterAssignmentController::class, 'increaseUserColumnValue']);

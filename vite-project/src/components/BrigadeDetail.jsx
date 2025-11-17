@@ -16,6 +16,7 @@ import ExtendWorkingDayModal from './ExtendWorkingDayModal';
 import AssignFirefighterToBajasModal from './AssignFirefighterToBajasModal.jsx';
 import RequireFirefighterModal from './RequireFirefighterModal';
 import ActiveTransfersList from './ActiveTransfersList';
+import ManageTransfersModal from './ManageTransfersModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronLeft, faChevronRight, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
@@ -45,6 +46,7 @@ const BrigadeDetail = () => {
   const [showAssignFirefighterToBajasModal, setShowAssignFirefighterToBajasModal] = useState(false);
   const [showRequireFirefighterModal, setShowRequireFirefighterModal] = useState(false);
   const [showAssignFirefighterModal, setShowAssignFirefighterModal] = useState(false);
+  const [showManageTransfersModal, setShowManageTransfersModal] = useState(false);
   const [isUpdatingPersonal, setIsUpdatingPersonal] = useState(false);
   const [isResettingEquipments, setIsResettingEquipments] = useState(false);
   const [showExtendWorkingDayModal, setShowExtendWorkingDayModal] = useState(false);
@@ -1974,6 +1976,12 @@ const BrigadeDetail = () => {
                   Trasladar bombero
                 </button>
                 <button
+                  onClick={() => setShowManageTransfersModal(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-600 hover:bg-amber-700 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200"
+                >
+                  Editar Traslados
+                </button>
+                <button
                   onClick={() => setShowRequireFirefighterModal(true)}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 hover:bg-orange-700 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200"
                 >
@@ -2207,6 +2215,14 @@ const BrigadeDetail = () => {
           firefighters={firefighters}
           currentBrigade={brigade}
           guardDate={selectedDate}
+        />
+
+        <ManageTransfersModal
+          isOpen={showManageTransfersModal}
+          onClose={() => setShowManageTransfersModal(false)}
+          brigadeId={id_brigada}
+          selectedDate={selectedDate}
+          onTransferUpdated={handleRefreshData}
         />
 
         <ExtendWorkingDayModal

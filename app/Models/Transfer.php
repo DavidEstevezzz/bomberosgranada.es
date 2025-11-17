@@ -5,23 +5,25 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Firefighters_assignment extends Model
+class Transfer extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'id_asignacion'; 
+    protected $table = 'transfers';
+    protected $primaryKey = 'id_transfer';
 
     protected $fillable = [
-        'fecha_ini',
         'id_empleado',
         'id_brigada_origen',
         'id_brigada_destino',
-        'turno',
-        'id_request',
-        'id_change_request',
-        'requerimiento',
-        'tipo_asignacion',
-        'id_transfer',
+        'fecha_traslado',
+        'turno_seleccionado',
+        'horas_traslado',
+    ];
+
+    protected $casts = [
+        'fecha_traslado' => 'date',
+        'horas_traslado' => 'float',
     ];
 
     public function firefighter()
@@ -39,8 +41,8 @@ class Firefighters_assignment extends Model
         return $this->belongsTo('App\Models\Brigade', 'id_brigada_destino', 'id_brigada');
     }
 
-    public function transfer()
+    public function assignments()
     {
-        return $this->belongsTo('App\Models\Transfer', 'id_transfer', 'id_transfer');
+        return $this->hasMany('App\Models\Firefighters_assignment', 'id_transfer', 'id_transfer');
     }
 }

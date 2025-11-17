@@ -14,6 +14,7 @@ const API_URL_CHECK_ESPECIAL_BRIGADE = `${API_BASE_URL}/firefighters-assignments
 const API_URL_DELETE_PRACTICES = `${API_BASE_URL}/firefighters-assignments/delete-practices`;
 const API_URL_DELETE_RT = `${API_BASE_URL}/firefighters-assignments/delete-rt`;
 const API_URL_EXTEND_WORKING_DAY = `${API_BASE_URL}/firefighters-assignments/extend-working-day`;
+const API_URL_TRANSFERS = `${API_BASE_URL}/transfers`;
 
 import BaseApiService from './BaseApiService';
 
@@ -134,9 +135,33 @@ async checkEspecialBrigade(brigadeId, date) {
 }
 
 async undoTransfer(idAsignacionIda) {
-  return await BaseApiService.post(`${API_URL}/undo-transfer`, { 
-    id_asignacion_ida: idAsignacionIda 
+  return await BaseApiService.post(`${API_URL}/undo-transfer`, {
+    id_asignacion_ida: idAsignacionIda
   });
+}
+
+// Nuevos métodos para la tabla de traslados
+async getTransfersByBrigadeAndDate(idBrigada, fecha) {
+  return await BaseApiService.get(`${API_URL_TRANSFERS}/by-brigade-and-date`, {
+    id_brigada: idBrigada,
+    fecha: fecha
+  });
+}
+
+async createTransfer(transferData) {
+  return await BaseApiService.post(API_URL_TRANSFERS, transferData);
+}
+
+async getTransfer(idTransfer) {
+  return await BaseApiService.get(`${API_URL_TRANSFERS}/${idTransfer}`);
+}
+
+async updateTransfer(idTransfer, transferData) {
+  return await BaseApiService.put(`${API_URL_TRANSFERS}/${idTransfer}`, transferData);
+}
+
+async deleteTransfer(idTransfer) {
+  return await BaseApiService.delete(`${API_URL_TRANSFERS}/${idTransfer}`);
 }
 
 }

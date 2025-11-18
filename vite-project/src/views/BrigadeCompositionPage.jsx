@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDarkMode } from '../contexts/DarkModeContext';
+import { useStateContext } from '../contexts/ContextProvider';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCalendar,
@@ -16,11 +17,9 @@ import { es } from 'date-fns/locale';
 
 const BrigadeCompositionPage = () => {
   const { darkMode } = useDarkMode();
+  const { user } = useStateContext();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // Estado del usuario
-  const [userRole, setUserRole] = useState('');
 
   // Estado de fecha
   const currentDate = new Date();
@@ -69,16 +68,8 @@ const BrigadeCompositionPage = () => {
   };
 
   useEffect(() => {
-    fetchUserRole();
     fetchBrigades();
   }, []);
-
-  const fetchUserRole = () => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (user && user.type) {
-      setUserRole(user.type);
-    }
-  };
 
   const fetchBrigades = async () => {
     try {
@@ -252,7 +243,7 @@ const BrigadeCompositionPage = () => {
   };
 
   const isJefe = () => {
-    return userRole.includes('Jefe');
+    return user?.type === 'jefe';
   };
 
   // Agrupar bomberos por puesto
@@ -522,25 +513,26 @@ const BrigadeCompositionPage = () => {
                 <h4 className="font-semibold text-lg">Brigadas disponibles:</h4>
                 {brigadesConfig.map((brigadeConfig) => {
                   const colorConfig = brigadesColorMap[brigadeConfig.short] || brigadesColorMap['A'];
-                  const brigadeFromApi = brigades.find((b) => b.nombre === brigadeConfig.name);
-                  const brigadeId = brigadeFromApi ? brigadeFromApi.id_brigada : null;
-
-                  if (!brigadeId) return null;
-
+                  // Buscar las brigadas por nombre Y parque
+                  const brigadeNorte = brigades.find((b) => b.nombre === brigadeConfig.name && b.id_parque === 1);
+                  const brigadeSur = brigades.find((b) => b.nombre === brigadeConfig.name && b.id_parque === 2);
+ 
+                  if (!brigadeNorte && !brigadeSur) return null;
+ 
                   return (
                     <div key={brigadeConfig.short} className="space-y-2">
                       <div className="font-semibold">{brigadeConfig.name}</div>
                       <div className="grid grid-cols-2 gap-4">
                         <button
-                          onClick={() => executeTransfer(brigadeId, 1)}
-                          disabled={selectedBrigade.id === brigadeId && selectedParque === 1}
+                          onClick={() => brigadeNorte && executeTransfer(brigadeNorte.id_brigada, 1)}
+                          disabled={!brigadeNorte || (selectedBrigade.id === brigadeNorte?.id_brigada && selectedParque === 1)}
                           className={`${colorConfig.color} ${colorConfig.hoverColor} ${colorConfig.textColor} font-bold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                           Parque Norte
                         </button>
                         <button
-                          onClick={() => executeTransfer(brigadeId, 2)}
-                          disabled={selectedBrigade.id === brigadeId && selectedParque === 2}
+                          onClick={() => brigadeSur && executeTransfer(brigadeSur.id_brigada, 2)}
+                          disabled={!brigadeSur || (selectedBrigade.id === brigadeSur?.id_brigada && selectedParque === 2)}
                           className={`${colorConfig.color} ${colorConfig.hoverColor} ${colorConfig.textColor} font-bold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                           Parque Sur

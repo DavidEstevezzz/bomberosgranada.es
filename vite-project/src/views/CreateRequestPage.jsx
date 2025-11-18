@@ -490,7 +490,7 @@ const CreateRequestPage = () => {
   const availabilityStats = [
     { label: 'Vacaciones', value: `${targetUser?.vacaciones || 0} días` },
     { label: 'Asuntos propios', value: `${targetUser?.AP || 0} días` },
-    { label: 'Salidas personales', value: `${targetUser?.SP || 0} h` },
+    //{ label: 'Salidas personales', value: `${targetUser?.SP || 0} h` },
     { label: 'Horas sindicales', value: `${targetUser?.horas_sindicales || 0} h` },
     { label: 'Módulo', value: `${targetUser?.modulo || 0} días` },
     { label: 'Compensación grupos especiales', value: `${targetUser?.compensacion_grupos || 0} días` },
@@ -617,7 +617,8 @@ const CreateRequestPage = () => {
                 >
                   <option value="vacaciones">Vacaciones</option>
                   <option value="asuntos propios">Asuntos Propios</option>
-                  <option value="salidas personales">Salidas Personales</option>
+                  {/*                  <option value="salidas personales">Salidas Personales</option>
+ */}
                   <option value="licencias por jornadas">Licencias por Jornadas</option>
                   <option value="licencias por dias">Licencias por Días</option>
                   <option value="modulo">Módulo</option>

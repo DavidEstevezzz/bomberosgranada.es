@@ -83,6 +83,28 @@ class RequestController extends Controller
             return response()->json($validator->errors(), 400);
         }
 
+        // Verificar si ya existe una solicitud igual activa
+        $duplicateQuery = MiRequest::where('id_empleado', $request->id_empleado)
+            ->where('tipo', $request->tipo)
+            ->whereDate('fecha_ini', $request->fecha_ini)
+            ->whereDate('fecha_fin', $request->fecha_fin);
+
+        if ($request->filled('turno')) {
+            $duplicateQuery->where('turno', $request->turno);
+        }
+
+        $duplicateExists = $duplicateQuery
+            ->whereNotIn('estado', ['Denegada', 'Cancelada'])
+            ->exists();
+
+        if ($duplicateExists) {
+            Log::warning('Solicitud duplicada detectada.', $request->only('id_empleado', 'tipo', 'fecha_ini', 'fecha_fin', 'turno'));
+            return response()->json([
+                'error' => 'Ya has realizado una solicitud para estas fechas y turno. Solo puedes volver a enviarla si la anterior fue rechazada o cancelada.',
+            ], 409);
+        }
+
+
         // Guardar el archivo si se proporciona
         $filePath = null;
         if ($request->hasFile('file')) {

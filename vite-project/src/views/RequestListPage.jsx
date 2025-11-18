@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { FaFilePdf, FaSortUp, FaSortDown } from 'react-icons/fa'; // Añadido íconos de ordenamiento
-import dayjs from 'dayjs'; // Manejo de fechas
+import { FaFilePdf, FaSortUp, FaSortDown } from 'react-icons/fa';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
 import RequestApiService from '../services/RequestApiService';
 import UsuariosApiService from '../services/UsuariosApiService';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
+
+dayjs.locale('es');
 
 const RequestListPage = () => {
   const [requests, setRequests] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [currentMonth, setCurrentMonth] = useState(dayjs()); // Estado para el mes actual
+  const [currentMonth, setCurrentMonth] = useState(dayjs());
   const [pagination, setPagination] = useState({
     Pendiente: 1,
     Confirmada: 1,
@@ -22,7 +25,7 @@ const RequestListPage = () => {
   const [sortField, setSortField] = useState('fecha_ini');
   const [sortDirection, setSortDirection] = useState('asc');
 
-  const itemsPerPage = 10; // Filas por página
+  const itemsPerPage = 10;
   const { darkMode } = useDarkMode();
   const { user } = useStateContext();
 
@@ -39,8 +42,7 @@ const RequestListPage = () => {
   const getCompensacionDaysRemaining = (userId) => {
     const user = users.find((user) => user.id_empleado === userId);
     return user ? user.compensacion_grupos : 0;
-  }
-
+  };
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -123,7 +125,6 @@ const RequestListPage = () => {
     }
   };
 
-
   const calcularJornadasPorTurno = (turno) => {
     if (turno === 'Día Completo') {
       return 3;
@@ -205,8 +206,9 @@ const RequestListPage = () => {
     ? ['Pendiente', 'Confirmada', 'Cancelada', 'Denegada']
     : ['Pendiente'];
 
-  const paginate = (data, status) => {
-    const startIndex = (pagination[status] - 1) * itemsPerPage;
+  const paginate = (data, status, pageOverride) => {
+    const currentPage = pageOverride ?? pagination[status];
+    const startIndex = (currentPage - 1) * itemsPerPage;
     return data.slice(startIndex, startIndex + itemsPerPage);
   };
 
@@ -219,157 +221,352 @@ const RequestListPage = () => {
     }));
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  const cardContainerClass = `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-full overflow-hidden rounded-3xl border shadow-xl backdrop-blur transition-colors duration-300 ${
+    darkMode ? 'border-slate-800 bg-slate-900/80 text-slate-100' : 'border-slate-200 bg-white/90 text-slate-900'
+  }`;
+  const contentSectionClass = `rounded-2xl border px-5 py-6 transition-colors ${
+    darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50/70'
+  }`;
+  const tableWrapperClass = `overflow-x-auto rounded-2xl border transition-colors ${
+    darkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-white/90'
+  }`;
+  const tableHeaderClass = darkMode
+    ? 'bg-slate-900/80 text-slate-100'
+    : 'bg-slate-100 text-slate-600';
+  const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
+  const navigationButtonClass = `rounded-2xl border px-4 py-2 text-sm font-semibold transition-all duration-300 ${
+    darkMode
+      ? 'border-slate-700 bg-slate-900/70 text-slate-100 hover:bg-slate-900'
+      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+  }`;
+  const actionButtonBase =
+    'rounded-xl border px-4 py-1 text-xs font-semibold text-white shadow-sm transition hover:shadow-md';
+
+  const getStatusBadgeClass = (status) => {
+    const baseClass =
+      'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold tracking-wide border';
+    const variants = {
+      Pendiente:
+        'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-100 border-primary-400/40',
+      Confirmada:
+        'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200 border-emerald-400/40',
+      Cancelada:
+        'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-200 border-slate-400/40',
+      Denegada:
+        'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200 border-rose-400/40',
+    };
+
+    return `${baseClass} ${
+      variants[status] ||
+      'bg-slate-100 text-slate-700 dark:bg-slate-600/30 dark:text-slate-200 border-slate-400/40'
+    }`;
+  };
+
+  const statusDescriptions = {
+    Pendiente: 'Solicitudes que están a la espera de una revisión por parte del mando o jefe.',
+    Confirmada: 'Permisos aprobados y asignados en el calendario oficial.',
+    Cancelada: 'Solicitudes canceladas por los empleados o administradores.',
+    Denegada: 'Peticiones rechazadas por no cumplir con los criterios establecidos.',
+  };
+
+  if (loading) {
+    return (
+      <div className={`${cardContainerClass} flex items-center justify-center py-16`}>
+        <p className="text-sm font-medium">Cargando solicitudes...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`${cardContainerClass} flex items-center justify-center py-16`}>
+        <p className="text-sm font-medium text-rose-500">Error: {error}</p>
+      </div>
+    );
+  }
 
   const filteredRequests = filterRequestsByMonth();
+  const currentMonthLabel = currentMonth.format('MMMM YYYY');
+
+  const stats = statusesToShow.map((status) => ({
+    status,
+    label: status,
+    value: filteredRequests.filter((request) => request.estado === status).length,
+  }));
 
   return (
-    <div className={`p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Solicitudes</h1>
-        <div className="flex space-x-4">
-          <button
-            onClick={handlePreviousMonth}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-          >
-            Mes Anterior
-          </button>
-          <span className="text-xl font-semibold">{currentMonth.format('MMMM YYYY').charAt(0).toUpperCase() + currentMonth.format('MMMM YYYY').slice(1)}</span>
-          <button
-            onClick={handleNextMonth}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-          >
-            Mes Siguiente
-          </button>
+    <div className={cardContainerClass}>
+      <div
+        className={`bg-gradient-to-r px-8 py-10 transition-colors duration-300 ${
+          darkMode
+            ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80 text-white'
+            : 'from-primary-200 via-primary-300 to-primary-400 text-slate-900'
+        }`}
+      >
+        <p
+          className={`text-xs font-semibold uppercase tracking-[0.3em] ${
+            darkMode ? 'text-white/80' : 'text-slate-800/90'
+          }`}
+        >
+          Seguimiento mensual
+        </p>
+        <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold">Gestión de solicitudes</h1>
+            <p
+              className={`mt-2 text-sm ${
+                darkMode ? 'text-white/80' : 'text-slate-700/90'
+              }`}
+            >
+              Controla las solicitudes de permisos correspondientes a {currentMonthLabel}.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={handlePreviousMonth} className={navigationButtonClass}>
+              Mes anterior
+            </button>
+            <div
+              className={`rounded-2xl border px-4 py-2 text-center text-sm font-semibold ${
+                darkMode
+                  ? 'border-white/20 bg-white/10 text-white'
+                  : 'border-white/70 bg-white/80 text-slate-900'
+              }`}
+            >
+              {currentMonthLabel}
+            </div>
+            <button onClick={handleNextMonth} className={navigationButtonClass}>
+              Mes siguiente
+            </button>
+          </div>
         </div>
       </div>
 
-      {statusesToShow.map((status) => {
-        const filteredByStatus = filteredRequests.filter((request) => request.estado === status);
-        const sortedRequests = sortData(filteredByStatus);
-        const paginatedRequests = paginate(sortedRequests, status);
-        const totalPages = getTotalPages(filteredByStatus);
-
-        return (
-          <div key={status} className={`p-4 rounded-lg mb-8 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <h2 className="text-xl font-semibold mb-4">{status}</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr>
-                    <th className="py-2 px-2">Empleado</th>
-                    <th className="py-2 px-2">Tipo</th>
-                    <th className="py-2 px-2">Motivo</th>
-                    <th
-                      className="py-2 px-2 cursor-pointer select-none flex items-center"
-                      onClick={() => handleSort('fecha_ini')}
-                    >
-                      Fecha Inicio
-                      {sortField === 'fecha_ini' && (
-                        <span className="ml-1">
-                          {sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />}
-                        </span>
-                      )}
-                    </th>
-                    <th className="py-2 px-2">Fecha Fin</th>
-                    <th className="py-2 px-2">Turno</th>
-                    <th className="py-2 px-2">Creación</th>
-                    <th className="py-2 px-2">Estado</th>
-                    <th className="py-2 px-2">Archivo</th>
-                    <th className="py-2 px-2">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedRequests.length > 0 ? (
-                    paginatedRequests.map((request) => (
-                      <tr key={request.id} className="border-b border-gray-700">
-                        <td className="py-2 px-2">{findUserById(request.id_empleado)}</td>
-                        <td className="py-2 px-2">{request.tipo.charAt(0).toUpperCase() + request.tipo.slice(1)}</td>
-                        <td className="py-2 px-2">{request.motivo}</td>
-                        <td className="py-2 px-2">{request.fecha_ini}</td>
-                        <td className="py-2 px-2">{request.fecha_fin}</td>
-                        <td className="py-2 px-2">{request.turno}</td>
-                        <td className="py-2 px-2">{request.creacion}</td>
-                        <td className="py-2 px-2">{request.estado}</td>
-                        <td className="py-2 px-2">
-                          {request.file ? (
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const response = await RequestApiService.downloadFile(request.id);
-                                  const url = window.URL.createObjectURL(new Blob([response.data]));
-                                  const link = document.createElement('a');
-                                  link.href = url;
-                                  link.setAttribute('download', `Solicitud_${request.id}.pdf`);
-                                  document.body.appendChild(link);
-                                  link.click();
-                                  link.remove();
-                                } catch (error) {
-                                  console.error('Error descargando el archivo:', error);
-                                }
-                              }}
-                              className="text-red-500 hover:text-red-700"
-                              title="Descargar archivo PDF"
-                            >
-                              <FaFilePdf size={24} />
-                            </button>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className="py-2 px-2 flex space-x-2">
-                          {canActOnRequest(request) ? (
-                            <>
-                              <button
-                                onClick={() => handleUpdateRequestStatus(request.id, 'Confirmada', request.tipo, request.id_empleado, request.turno)}
-                                className="bg-green-600 text-white px-4 py-1 rounded flex items-center space-x-1"
-                              >
-                                Aceptar
-                              </button>
-                              {request.estado !== 'Cancelada' && request.estado !== 'Denegada' && (
-                                <button
-                                  onClick={() => handleUpdateRequestStatus(request.id, 'Denegada', request.tipo, request.id_empleado, request.turno)}
-                                  className="bg-red-600 text-white px-4 py-1 rounded flex items-center space-x-1"
-                                >
-                                  Rechazar
-                                </button>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-gray-500 text-sm">Sin permisos</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="10" className="text-center py-4">No hay solicitudes para este estado este mes</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-              <div className="flex justify-between mt-4">
-                <button
-                  onClick={() => updatePage(status, Math.max(pagination[status] - 1, 1))}
-                  disabled={pagination[status] === 1}
-                  className="px-4 py-2 rounded bg-blue-500 text-white disabled:bg-gray-400"
-                >
-                  Anterior
-                </button>
-                <span className="text-center py-2">{`Página ${pagination[status]} de ${totalPages}`}</span>
-                <button
-                  onClick={() => updatePage(status, Math.min(pagination[status] + 1, totalPages))}
-                  disabled={pagination[status] === totalPages}
-                  className="px-4 py-2 rounded bg-blue-500 text-white disabled:bg-gray-400"
-                >
-                  Siguiente
-                </button>
+      <div className="space-y-8 px-6 py-8 sm:px-10">
+        <div className={contentSectionClass}>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary-600 dark:text-primary-200">
+            Resumen de estado
+          </p>
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            {stats.map((stat) => (
+              <div
+                key={stat.status}
+                className={`rounded-2xl border px-4 py-4 transition-colors ${
+                  darkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-white/80'
+                }`}
+              >
+                <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${subtleTextClass}`}>
+                  {stat.label}
+                </p>
+                <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
               </div>
-            </div>
+            ))}
           </div>
-        );
-      })}
+        </div>
+
+        {statusesToShow.map((status) => {
+          const filteredByStatus = filteredRequests.filter((request) => request.estado === status);
+          const sortedRequests = sortData(filteredByStatus);
+          const totalPages = Math.max(getTotalPages(filteredByStatus), 1);
+          const currentPage = Math.min(pagination[status], totalPages);
+          const paginatedRequests = paginate(sortedRequests, status, currentPage);
+
+          return (
+            <section key={status} className={contentSectionClass}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary-600 dark:text-primary-200">
+                    Estado
+                  </p>
+                  <h2 className="text-xl font-semibold">{status}</h2>
+                  <p className={`mt-1 text-xs ${subtleTextClass}`}>
+                    {statusDescriptions[status] || 'Detalle de solicitudes registradas.'}
+                  </p>
+                </div>
+              </div>
+
+              {paginatedRequests.length > 0 ? (
+                <div className="mt-6 space-y-4">
+                  <div className={tableWrapperClass}>
+                    <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+                      <thead className={tableHeaderClass}>
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em]">
+                            Empleado
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em]">Tipo</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em]">Motivo</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em]">
+                            <button
+                              type="button"
+                              onClick={() => handleSort('fecha_ini')}
+                              className="flex items-center gap-2"
+                            >
+                              Fecha inicio
+                              {sortField === 'fecha_ini' && (
+                                <span>
+                                  {sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />}
+                                </span>
+                              )}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em]">
+                            Fecha fin
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em]">
+                            Turno
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em]">
+                            Creación
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em]">
+                            Estado
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em]">
+                            Archivo
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em]">
+                            Acciones
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody
+                        className={`divide-y ${
+                          darkMode ? 'divide-slate-800 bg-slate-950/40' : 'divide-slate-100 bg-white/70'
+                        }`}
+                      >
+                        {paginatedRequests.map((request) => (
+                          <tr
+                            key={request.id}
+                            className="transition-colors hover:bg-primary-100/20 dark:hover:bg-primary-500/10"
+                          >
+                            <td className="px-4 py-4 text-sm font-medium">
+                              {findUserById(request.id_empleado)}
+                            </td>
+                            <td className="px-4 py-4 text-sm capitalize">{request.tipo}</td>
+                            <td className="px-4 py-4 text-sm">{request.motivo || '—'}</td>
+                            <td className="px-4 py-4 text-sm">{request.fecha_ini}</td>
+                            <td className="px-4 py-4 text-sm">{request.fecha_fin}</td>
+                            <td className="px-4 py-4 text-sm">{request.turno || '—'}</td>
+                            <td className="px-4 py-4 text-sm">{request.creacion}</td>
+                            <td className="px-4 py-4 text-sm">
+                              <span className={getStatusBadgeClass(request.estado)}>{request.estado}</span>
+                            </td>
+                            <td className="px-4 py-4 text-sm">
+                              {request.file ? (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const response = await RequestApiService.downloadFile(request.id);
+                                      const url = window.URL.createObjectURL(new Blob([response.data]));
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.setAttribute('download', `Solicitud_${request.id}.pdf`);
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      link.remove();
+                                    } catch (error) {
+                                      console.error('Error descargando el archivo:', error);
+                                    }
+                                  }}
+                                  className="text-rose-500 transition hover:text-rose-600"
+                                  title="Descargar archivo PDF"
+                                >
+                                  <FaFilePdf size={20} />
+                                </button>
+                              ) : (
+                                <span className={subtleTextClass}>—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-4 text-sm">
+                              {canActOnRequest(request) ? (
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    onClick={() =>
+                                      handleUpdateRequestStatus(
+                                        request.id,
+                                        'Confirmada',
+                                        request.tipo,
+                                        request.id_empleado,
+                                        request.turno
+                                      )
+                                    }
+                                    className={`${actionButtonBase} border-emerald-400/60 bg-emerald-500/90 hover:bg-emerald-500`}
+                                  >
+                                    Aceptar
+                                  </button>
+                                  {request.estado !== 'Cancelada' && request.estado !== 'Denegada' && (
+                                    <button
+                                      onClick={() =>
+                                        handleUpdateRequestStatus(
+                                          request.id,
+                                          'Denegada',
+                                          request.tipo,
+                                          request.id_empleado,
+                                          request.turno
+                                        )
+                                      }
+                                      className={`${actionButtonBase} border-rose-400/60 bg-rose-500/90 hover:bg-rose-500`}
+                                    >
+                                      Rechazar
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className={`${subtleTextClass} text-sm`}>Sin permisos</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <button
+                      onClick={() => updatePage(status, Math.max(currentPage - 1, 1))}
+                      disabled={currentPage === 1}
+                      className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition-all ${
+                        currentPage === 1
+                          ? 'cursor-not-allowed border-slate-400/40 text-slate-400'
+                          : darkMode
+                              ? 'border-slate-700 bg-slate-900/70 text-slate-100 hover:bg-slate-900'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      Anterior
+                    </button>
+                    <span className={`text-sm font-semibold ${subtleTextClass}`}>
+                      Página {currentPage} de {totalPages}
+                    </span>
+                    <button
+                      onClick={() => updatePage(status, Math.min(currentPage + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition-all ${
+                        currentPage === totalPages
+                          ? 'cursor-not-allowed border-slate-400/40 text-slate-400'
+                          : darkMode
+                              ? 'border-slate-700 bg-slate-900/70 text-slate-100 hover:bg-slate-900'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p
+                  className={`mt-6 rounded-2xl border px-4 py-4 text-sm ${
+                    darkMode
+                      ? 'border-slate-800 bg-slate-900/60 text-slate-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-600'
+                  }`}
+                >
+                  No hay solicitudes para este estado este mes.
+                </p>
+              )}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 };

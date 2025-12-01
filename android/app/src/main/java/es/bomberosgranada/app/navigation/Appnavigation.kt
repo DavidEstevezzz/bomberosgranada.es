@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -159,10 +160,13 @@ fun AppNavigation(
             val parkId = backStackEntry.arguments?.getInt("parkId") ?: 0
             val date = backStackEntry.arguments?.getString("date") ?: ""
 
-            val guardDetailViewModel = GuardDetailViewModel(
-                guardsRepository = guardsRepository,
-                brigadeCompositionRepository = brigadeCompositionRepository
-            )
+            val guardDetailViewModel = remember {
+                GuardDetailViewModel(
+                    guardsRepository = guardsRepository,
+                    brigadeCompositionRepository = brigadeCompositionRepository,
+                    brigadesRepository = brigadesRepository
+                )
+            }
 
             GuardDetailScreen(
                 guardId = guardId,

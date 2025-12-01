@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
+import java.util.Locale
+
 
 /**
  * ViewModel para el Dashboard principal
@@ -149,15 +151,41 @@ class DashboardViewModel(
     /**
      * Obtiene el color de la brigada para el calendario
      */
-    fun getBrigadeColor(brigadeId: Int): String {
-        // Colores según el nombre de la brigada
-        return when (_brigadeMap.value[brigadeId]) {
-            "A" -> "#DC2626" // Rojo
-            "B" -> "#2563EB" // Azul
-            "C" -> "#16A34A" // Verde
-            "D" -> "#F59E0B" // Ámbar
-            "E" -> "#9333EA" // Púrpura
-            else -> "#64748B" // Gris por defecto
+    fun getBrigadeColor(brigadeId: Int): String = getBrigadeDisplayInfo(brigadeId).colorHex
+
+    fun getBrigadeDisplayInfo(brigadeId: Int): BrigadeDisplayInfo {
+        val brigadeName = _brigadeMap.value[brigadeId] ?: "Brigada desconocida"
+        val normalized = brigadeName.lowercase(Locale.getDefault())
+
+        val label = when {
+            normalized.startsWith("brigada ") -> brigadeName.substringAfter("Brigada ").trim()
+            else -> brigadeName.take(2).trim()
+        }.ifBlank { "?" }.uppercase(Locale.getDefault())
+
+        return when {
+            normalized.contains("brigada a") || normalized == "a" ->
+                BrigadeDisplayInfo(brigadeName, "A", "#22C55E", "#FFFFFF")
+            normalized.contains("brigada b") || normalized == "b" ->
+                BrigadeDisplayInfo(brigadeName, "B", "#F8FAFC", "#0F172A", borderHex = "#CBD5E1")
+            normalized.contains("brigada c") || normalized == "c" ->
+                BrigadeDisplayInfo(brigadeName, "C", "#3B82F6", "#FFFFFF")
+            normalized.contains("brigada d") || normalized == "d" ->
+                BrigadeDisplayInfo(brigadeName, "D", "#DC2626", "#FFFFFF")
+            normalized.contains("brigada e") || normalized == "e" ->
+                BrigadeDisplayInfo(brigadeName, "E", "#FDE047", "#1F2937")
+            normalized.contains("brigada f") || normalized == "f" ->
+                BrigadeDisplayInfo(brigadeName, "F", "#D1D5DB", "#111827")
+            normalized.contains("greps") ->
+                BrigadeDisplayInfo(brigadeName, "GR", "#F97316", "#FFFFFF")
+            normalized.contains("grafor") ->
+                BrigadeDisplayInfo(brigadeName, "GF", "#16A34A", "#FFFFFF")
+            normalized.contains("unibul") ->
+                BrigadeDisplayInfo(brigadeName, "UB", "#6366F1", "#FFFFFF")
+            normalized.contains("riesgos") ->
+                BrigadeDisplayInfo(brigadeName, "RT", "#14B8A6", "#FFFFFF")
+            normalized.contains("rescate accidentes") ->
+                BrigadeDisplayInfo(brigadeName, "RAT", "#2563EB", "#FFFFFF")
+            else -> BrigadeDisplayInfo(brigadeName, label, "#E2E8F0", "#0F172A", borderHex = "#CBD5E1")
         }
     }
 

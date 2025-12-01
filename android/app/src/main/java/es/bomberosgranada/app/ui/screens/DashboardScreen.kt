@@ -1,5 +1,6 @@
 package es.bomberosgranada.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import es.bomberosgranada.app.ui.components.*
 import es.bomberosgranada.app.viewmodels.DashboardUiState
 import es.bomberosgranada.app.viewmodels.DashboardViewModel
+import es.bomberosgranada.app.viewmodels.BrigadeDisplayInfo
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
@@ -40,6 +42,9 @@ import java.util.*
  * - Espaciado generoso
  * - Tipografía clara y moderna
  */
+
+private fun parseHexColor(hex: String): Color = Color(android.graphics.Color.parseColor(hex))
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -300,9 +305,11 @@ fun MonthStatsCard(viewModel: DashboardViewModel) {
             Spacer(modifier = Modifier.height(16.dp))
 
             stats.brigadeStats.entries.sortedByDescending { it.value }.forEach { (brigadeId, count) ->
+                val displayInfo = viewModel.getBrigadeDisplayInfo(brigadeId)
+
                 BrigadeStatRow(
                     brigadeName = brigadeMap[brigadeId] ?: "?",
-                    brigadeColor = viewModel.getBrigadeColor(brigadeId),
+                    brigadeColor = parseHexColor(displayInfo.colorHex),
                     count = count
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -314,7 +321,7 @@ fun MonthStatsCard(viewModel: DashboardViewModel) {
 @Composable
 fun BrigadeStatRow(
     brigadeName: String,
-    brigadeColor: String,
+    brigadeColor: Color,
     count: Int
 ) {
     Row(
@@ -331,7 +338,7 @@ fun BrigadeStatRow(
                 modifier = Modifier
                     .size(16.dp)
                     .clip(CircleShape)
-                    .background(Color(android.graphics.Color.parseColor(brigadeColor)))
+                    .background(brigadeColor)
             )
             Text(
                 text = "Brigada $brigadeName",
@@ -460,16 +467,13 @@ fun CalendarGrid(
                     } else {
                         val date = yearMonth.atDay(currentDay)
                         val guard = viewModel.getGuardForDate(date)
-                        val brigadeColor = guard?.let {
-                            Color(android.graphics.Color.parseColor(
-                                viewModel.getBrigadeColor(it.id_brigada)
-                            ))
-                        }
+                        val brigadeInfo = guard?.let { viewModel.getBrigadeDisplayInfo(it.id_brigada) }
+
 
                         DayCell(
                             day = currentDay,
                             hasGuard = guard != null,
-                            brigadeColor = brigadeColor,
+                            brigadeInfo = brigadeInfo,
                             isToday = date == LocalDate.now(),
                             onClick = {
                                 guard?.let {
@@ -499,21 +503,24 @@ fun CalendarGrid(
 fun DayCell(
     day: Int,
     hasGuard: Boolean,
-    brigadeColor: Color?,
+    brigadeInfo: BrigadeDisplayInfo?,
     isToday: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = when {
-        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-        hasGuard -> brigadeColor?.copy(alpha = 0.2f) ?: Color.Transparent
-        else -> Color.Transparent
-    }
+    val brigadeColor = brigadeInfo?.colorHex?.let(::parseHexColor)
+    val onBrigadeColor = brigadeInfo?.onColorHex?.let(::parseHexColor)
+    val borderColor = brigadeInfo?.borderHex?.let(::parseHexColor)
+    val badgeBackground = onBrigadeColor?.copy(alpha = 0.16f) ?: Color.White.copy(alpha = 0.2f)
+    val badgeLabel = brigadeInfo?.label
+        ?.ifBlank { brigadeInfo.name.take(2) }
+        ?.ifBlank { "?" }
+        ?.uppercase(Locale.getDefault())
 
-    val borderColor = when {
-        isToday -> MaterialTheme.colorScheme.primary
-        hasGuard -> brigadeColor
-        else -> null
+    val backgroundColor = when {
+        brigadeColor != null -> brigadeColor
+        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
     }
 
     Box(
@@ -522,16 +529,16 @@ fun DayCell(
             .padding(4.dp)
             .shadow(
                 elevation = if (hasGuard) 2.dp else 0.dp,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp)
             )
             .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
             .then(
-                if (borderColor != null) {
+                if (borderColor != null || isToday || brigadeColor != null) {
                     Modifier.border(
                         width = if (isToday) 2.dp else 1.dp,
-                        color = borderColor,
-                        shape = RoundedCornerShape(12.dp)
+                        color = borderColor ?: brigadeColor ?: MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(14.dp)
                     )
                 } else Modifier
             )
@@ -551,21 +558,32 @@ fun DayCell(
                     else -> FontWeight.Normal
                 },
                 color = when {
+                    hasGuard && onBrigadeColor != null -> onBrigadeColor
                     isToday -> MaterialTheme.colorScheme.primary
                     hasGuard -> brigadeColor ?: MaterialTheme.colorScheme.onSurface
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
             )
 
             // Indicador visual si hay guardia
-            if (hasGuard && brigadeColor != null) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Box(
-                    modifier = Modifier
-                        .size(4.dp)
-                        .clip(CircleShape)
-                        .background(brigadeColor)
-                )
+            if (hasGuard && brigadeInfo != null && badgeLabel != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = badgeBackground,
+                    tonalElevation = 0.dp,
+                    border = borderColor?.let { BorderStroke(1.dp, it.copy(alpha = 0.6f)) }
+                ) {
+                    Text(
+                        text = badgeLabel,
+                        modifier = Modifier
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = onBrigadeColor?.copy(alpha = 1f)
+                            ?: MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
     }

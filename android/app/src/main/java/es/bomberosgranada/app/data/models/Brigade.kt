@@ -7,6 +7,7 @@ data class Brigade(
     val id_brigada: Int,
     val id_parque: Int,
     val nombre: String,
+    @JsonAdapter(BooleanAsIntAdapter::class)
     val especial: Boolean? = null,
     val created_at: String? = null,
     val updated_at: String? = null,
@@ -14,6 +15,7 @@ data class Brigade(
 )
 
 data class CheckEspecialResponse(
+    @JsonAdapter(BooleanAsIntAdapter::class)
     val especial: Boolean
 )
 
@@ -37,11 +39,13 @@ data class BrigadeFirefighter(
 data class CreateBrigadeRequest(
     val id_parque: Int,
     val nombre: String,
+    @JsonAdapter(BooleanAsIntAdapter::class)
     val especial: Boolean? = null
 )
 
 data class UpdateBrigadeRequest(
     val id_parque: Int,
     val nombre: String,
+    @JsonAdapter(BooleanAsIntAdapter::class)
     val especial: Boolean? = null
 )

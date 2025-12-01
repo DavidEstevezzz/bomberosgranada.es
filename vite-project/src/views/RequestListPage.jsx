@@ -342,26 +342,7 @@ const RequestListPage = () => {
       </div>
 
       <div className="space-y-8 px-6 py-8 sm:px-10">
-        <div className={contentSectionClass}>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary-600 dark:text-primary-200">
-            Resumen de estado
-          </p>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {stats.map((stat) => (
-              <div
-                key={stat.status}
-                className={`rounded-2xl border px-4 py-4 transition-colors ${
-                  darkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-white/80'
-                }`}
-              >
-                <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${subtleTextClass}`}>
-                  {stat.label}
-                </p>
-                <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        
 
         {statusesToShow.map((status) => {
           const filteredByStatus = filteredRequests.filter((request) => request.estado === status);

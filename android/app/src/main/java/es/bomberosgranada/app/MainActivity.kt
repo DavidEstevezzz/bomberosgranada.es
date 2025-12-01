@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import es.bomberosgranada.app.data.local.TokenManager
+import es.bomberosgranada.app.data.api.RetrofitClient
 import es.bomberosgranada.app.data.repositories.*
 import es.bomberosgranada.app.navigation.AppNavigation
 import es.bomberosgranada.app.ui.theme.BomberosGranadaTheme
@@ -21,8 +22,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)   // IMPORTANTE: llama al padre
 
-        // Inicializar TokenManager
-        val tokenManager = TokenManager(this)
+        // Inicializar TokenManager como singleton
+        val tokenManager = TokenManager.getInstance(applicationContext)
+
+        // Inicializar Retrofit con TokenManager para añadir Authorization
+        RetrofitClient.initialize(tokenManager)
 
         // Inicializar repositories
         val repositories = initializeRepositories()

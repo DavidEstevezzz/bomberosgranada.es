@@ -44,7 +44,7 @@ import java.util.*
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
-    onNavigateToBrigade: (brigadeId: Int, date: String) -> Unit
+    onNavigateToGuard: (guardId: Int, brigadeId: Int, parkId: Int, date: String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentMonth by viewModel.currentMonth.collectAsState()
@@ -82,7 +82,7 @@ fun DashboardScreen(
                     DashboardContent(
                         viewModel = viewModel,
                         currentMonth = currentMonth,
-                        onNavigateToBrigade = onNavigateToBrigade
+                        onNavigateToGuard = onNavigateToGuard
                     )
                 }
             }
@@ -173,7 +173,7 @@ fun DashboardTopBar(
 fun DashboardContent(
     viewModel: DashboardViewModel,
     currentMonth: YearMonth,
-    onNavigateToBrigade: (brigadeId: Int, date: String) -> Unit
+    onNavigateToGuard: (guardId: Int, brigadeId: Int, parkId: Int, date: String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -192,7 +192,7 @@ fun DashboardContent(
                 parkId = 1,
                 currentMonth = currentMonth,
                 viewModel = viewModel,
-                onNavigateToBrigade = onNavigateToBrigade
+                onNavigateToGuard = onNavigateToGuard
             )
         }
 
@@ -203,7 +203,7 @@ fun DashboardContent(
                 parkId = 2,
                 currentMonth = currentMonth,
                 viewModel = viewModel,
-                onNavigateToBrigade = onNavigateToBrigade
+                onNavigateToGuard = onNavigateToGuard
             )
         }
 
@@ -365,7 +365,7 @@ fun ParkCalendarCard(
     parkId: Int,
     currentMonth: YearMonth,
     viewModel: DashboardViewModel,
-    onNavigateToBrigade: (brigadeId: Int, date: String) -> Unit
+    onNavigateToGuard: (guardId: Int, brigadeId: Int, parkId: Int, date: String) -> Unit
 ) {
     ElegantCard(
         modifier = Modifier.fillMaxWidth()
@@ -402,7 +402,7 @@ fun ParkCalendarCard(
             yearMonth = currentMonth,
             parkId = parkId,
             viewModel = viewModel,
-            onNavigateToBrigade = onNavigateToBrigade
+            onNavigateToGuard = onNavigateToGuard
         )
     }
 }
@@ -416,7 +416,7 @@ fun CalendarGrid(
     yearMonth: YearMonth,
     parkId: Int,
     viewModel: DashboardViewModel,
-    onNavigateToBrigade: (brigadeId: Int, date: String) -> Unit
+    onNavigateToGuard: (guardId: Int, brigadeId: Int, parkId: Int, date: String) -> Unit
 ) {
     val firstDayOfMonth = yearMonth.atDay(1)
     val lastDayOfMonth = yearMonth.atEndOfMonth()
@@ -475,7 +475,7 @@ fun CalendarGrid(
                                 guard?.let {
                                     val brigade = viewModel.getBrigadeForGuard(it, parkId)
                                     brigade?.let { b ->
-                                        onNavigateToBrigade(b.id_brigada, date.toString())
+                                        onNavigateToGuard(it.id, b.id_brigada, parkId, date.toString())
                                     }
                                 }
                             },

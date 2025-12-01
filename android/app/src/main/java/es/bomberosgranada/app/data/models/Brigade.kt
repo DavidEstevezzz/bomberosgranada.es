@@ -1,5 +1,8 @@
 package es.bomberosgranada.app.data.models
 
+import com.google.gson.annotations.JsonAdapter
+import es.bomberosgranada.app.data.serialization.BooleanAsIntAdapter
+
 data class Brigade(
     val id_brigada: Int,
     val id_parque: Int,

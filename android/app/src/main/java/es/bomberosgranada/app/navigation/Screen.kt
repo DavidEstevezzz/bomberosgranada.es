@@ -1,5 +1,8 @@
 package es.bomberosgranada.app.navigation
 
+import android.net.Uri
+
+
 /**
  * Rutas de navegación de la aplicación
  */
@@ -12,6 +15,10 @@ sealed class Screen(val route: String) {
     object Guards : Screen("guards")
     object GuardDetail : Screen("guard/{guardId}") {
         fun createRoute(guardId: Int) = "guard/$guardId"
+    }
+    object GuardAttendance : Screen("guard-attendance/{guardId}/{brigadeId}/{parkId}/{date}") {
+        fun createRoute(guardId: Int, brigadeId: Int, parkId: Int, date: String) =
+            "guard-attendance/$guardId/$brigadeId/$parkId/${Uri.encode(date)}"
     }
     object Messages : Screen("messages")
     object MessageDetail : Screen("message/{messageId}") {

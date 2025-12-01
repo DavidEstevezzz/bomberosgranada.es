@@ -1,6 +1,5 @@
 package es.bomberosgranada.app.data.api
 
-import android.content.Context
 import es.bomberosgranada.app.data.local.TokenManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -23,15 +22,12 @@ import java.util.concurrent.TimeUnit
  * - Auth: Interceptor automático con token
  */
 object RetrofitClient {
-    private const val BASE_URL = "https://api.bomberosgranada.es/"
+    private const val BASE_URL = "https://api.bomberosgranada.es/api/"
 
     private var tokenManager: TokenManager? = null
 
-    /**
-     * Inicializar con contexto para acceder al TokenManager
-     */
-    fun initialize(context: Context) {
-        tokenManager = TokenManager(context)
+    fun initialize(tokenManager: TokenManager) {
+        this.tokenManager = tokenManager
     }
 
     /**

@@ -75,37 +75,10 @@ class DashboardViewModel(
             try {
                 Log.d(TAG, "Cargando datos del dashboard...")
 
-                // Cargar brigadas primero
-                val brigadesResult = brigadesRepository.getAllBrigades()
-                if (brigadesResult.isSuccess) {
-                    val brigadesData = brigadesResult.getOrNull() ?: emptyList<Brigade>()
-                    _brigades.value = brigadesData
+                loadBrigadesIfNeeded()
+                loadGuardsForMonth(_currentMonth.value)
 
-                    // Crear mapa de brigadas
-                    val map = brigadesData.associate {
-                        it.id_brigada to it.nombre
-                    }
-                    _brigadeMap.value = map
-
-                    Log.d(TAG, "✓ Brigadas cargadas: ${brigadesData.size}")
-                } else {
-                    Log.e(TAG, "Error al cargar brigadas: ${brigadesResult.exceptionOrNull()?.message}")
-                }
-
-                // Cargar guardias
-                val guardsResult = guardsRepository.getGuards()
-                if (guardsResult.isSuccess) {
-                    val guardsData = guardsResult.getOrNull() ?: emptyList<Guard>()
-                    _guards.value = guardsData
-                    Log.d(TAG, "✓ Guardias cargadas: ${guardsData.size}")
-
-                    _uiState.value = DashboardUiState.Success
-                } else {
-                    val error = guardsResult.exceptionOrNull()?.message ?: "Error desconocido"
-                    Log.e(TAG, "Error al cargar guardias: $error")
-                    _uiState.value = DashboardUiState.Error(error)
-                }
-
+                _uiState.value = DashboardUiState.Success
             } catch (e: Exception) {
                 val errorMessage = "Error al cargar el dashboard: ${e.message}"
                 Log.e(TAG, errorMessage, e)
@@ -126,8 +99,19 @@ class DashboardViewModel(
      * Cambia el mes actual del calendario
      */
     fun changeMonth(yearMonth: YearMonth) {
-        _currentMonth.value = yearMonth
-        Log.d(TAG, "Mes cambiado a: $yearMonth")
+        viewModelScope.launch {
+            _currentMonth.value = yearMonth
+            Log.d(TAG, "Mes cambiado a: $yearMonth")
+
+            _uiState.value = DashboardUiState.Loading
+            try {
+                loadGuardsForMonth(yearMonth)
+                _uiState.value = DashboardUiState.Success
+            } catch (e: Exception) {
+                val errorMessage = e.message ?: "Error al cambiar de mes"
+                _uiState.value = DashboardUiState.Error(errorMessage)
+            }
+        }
     }
 
     /**
@@ -144,8 +128,7 @@ class DashboardViewModel(
      */
     fun getBrigadeForGuard(guard: Guard, parkId: Int): Brigade? {
         return _brigades.value.find { brigade ->
-            brigade.nombre == _brigadeMap.value[guard.id_brigada] &&
-                    brigade.id_parque == parkId
+            brigade.id_brigada == guard.id_brigada && brigade.id_parque == parkId
         }
     }
 
@@ -196,6 +179,54 @@ class DashboardViewModel(
             brigadeStats = brigadeStats,
             month = _currentMonth.value
         )
+    }
+
+    private suspend fun loadBrigadesIfNeeded() {
+        if (_brigades.value.isNotEmpty()) return
+
+        val brigadesResult = brigadesRepository.getAllBrigades()
+        if (brigadesResult.isSuccess) {
+            val brigadesData = brigadesResult.getOrNull() ?: emptyList<Brigade>()
+            _brigades.value = brigadesData
+
+            val map = brigadesData.associate {
+                it.id_brigada to it.nombre
+            }
+            _brigadeMap.value = map
+
+            Log.d(TAG, "✓ Brigadas cargadas: ${brigadesData.size}")
+        } else {
+            val error = brigadesResult.exceptionOrNull()?.message ?: "Error desconocido"
+            Log.e(TAG, "Error al cargar brigadas: $error")
+            throw Exception(error)
+        }
+    }
+
+    private suspend fun loadGuardsForMonth(yearMonth: YearMonth) {
+        val brigades = _brigades.value
+        if (brigades.isEmpty()) {
+            throw Exception("No se pudieron cargar las brigadas")
+        }
+
+        val startDate = yearMonth.atDay(1).toString()
+        val endDate = yearMonth.atEndOfMonth().toString()
+
+        val guardsResult = guardsRepository.getGuardsByDateRange(
+            brigadeIds = brigades.map { it.id_brigada },
+            startDate = startDate,
+            endDate = endDate
+        )
+
+        if (guardsResult.isSuccess) {
+            val guardsData = guardsResult.getOrNull() ?: emptyList<Guard>()
+            _guards.value = guardsData
+            Log.d(TAG, "✓ Guardias cargadas (${guardsData.size}) para $yearMonth")
+        } else {
+            val error = guardsResult.exceptionOrNull()?.message ?: "Error desconocido"
+            Log.e(TAG, "Error al cargar guardias: $error")
+            _uiState.value = DashboardUiState.Error(error)
+            throw Exception(error)
+        }
     }
 }
 

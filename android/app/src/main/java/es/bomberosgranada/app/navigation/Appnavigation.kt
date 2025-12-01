@@ -16,9 +16,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import es.bomberosgranada.app.data.repositories.*
 import es.bomberosgranada.app.ui.screens.DashboardScreen
+import es.bomberosgranada.app.ui.screens.GuardDetailScreen
 import es.bomberosgranada.app.ui.screens.LoginScreen
 import es.bomberosgranada.app.viewmodels.AuthViewModel
 import es.bomberosgranada.app.viewmodels.DashboardViewModel
+import es.bomberosgranada.app.viewmodels.GuardDetailViewModel
 
 /**
  * Navigation Host principal de la aplicación
@@ -89,9 +91,9 @@ fun AppNavigation(
 
             DashboardScreen(
                 viewModel = dashboardViewModel,
-                onNavigateToBrigade = { brigadeId, date ->
+                onNavigateToGuard = { guardId, brigadeId, parkId, date ->
                     navController.navigate(
-                        Screen.BrigadeDetail.createRoute(brigadeId, date)
+                        Screen.GuardAttendance.createRoute(guardId, brigadeId, parkId, date)
                     )
                 }
             )
@@ -142,6 +144,36 @@ fun AppNavigation(
                 )
             }
         }
+
+        composable(
+            route = Screen.GuardAttendance.route,
+            arguments = listOf(
+                navArgument("guardId") { type = NavType.IntType },
+                navArgument("brigadeId") { type = NavType.IntType },
+                navArgument("parkId") { type = NavType.IntType },
+                navArgument("date") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val guardId = backStackEntry.arguments?.getInt("guardId") ?: 0
+            val brigadeId = backStackEntry.arguments?.getInt("brigadeId") ?: 0
+            val parkId = backStackEntry.arguments?.getInt("parkId") ?: 0
+            val date = backStackEntry.arguments?.getString("date") ?: ""
+
+            val guardDetailViewModel = GuardDetailViewModel(
+                guardsRepository = guardsRepository,
+                brigadeCompositionRepository = brigadeCompositionRepository
+            )
+
+            GuardDetailScreen(
+                guardId = guardId,
+                brigadeId = brigadeId,
+                parkId = parkId,
+                date = date,
+                viewModel = guardDetailViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
 
         composable(
             route = Screen.GuardDetail.route,

@@ -3,6 +3,8 @@ package es.bomberosgranada.app.data.repositories
 import android.util.Log
 import es.bomberosgranada.app.data.api.ApiClient
 import es.bomberosgranada.app.data.models.*
+import java.time.YearMonth
+
 
 class GuardsRepository {
     private val TAG = "GuardsRepository"
@@ -25,6 +27,51 @@ class GuardsRepository {
             Log.e(TAG, "❌ EXCEPCIÓN: ${e.message}", e)
             Result.failure(e)
         }
+    }
+
+    suspend fun getGuardsByDateRange(
+        brigadeIds: List<Int>,
+        startDate: String,
+        endDate: String
+    ): Result<List<Guard>> {
+        return try {
+            Log.d(TAG, "=== OBTENIENDO GUARDIAS POR RANGO: $startDate - $endDate ===")
+            val brigadesParam = brigadeIds.joinToString(",")
+            val response = guardsService.getGuardsByBrigades(
+                brigades = brigadesParam,
+                startDate = startDate,
+                endDate = endDate
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                Log.d(TAG, "✅ ${response.body()!!.size} guardias obtenidas")
+                Result.success(response.body()!!)
+            } else {
+                val errorMsg = "Error: ${response.code()}"
+                Log.e(TAG, "❌ $errorMsg")
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ EXCEPCIÓN: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Obtiene las guardias solo para el mes indicado (rango primer día - último día).
+     */
+    suspend fun getGuardsForMonth(
+        brigadeIds: List<Int>,
+        month: YearMonth
+    ): Result<List<Guard>> {
+        val startDate = month.atDay(1).toString()
+        val endDate = month.atEndOfMonth().toString()
+
+        return getGuardsByDateRange(
+            brigadeIds = brigadeIds,
+            startDate = startDate,
+            endDate = endDate
+        )
     }
 
     suspend fun getGuard(id: Int): Result<Guard> {

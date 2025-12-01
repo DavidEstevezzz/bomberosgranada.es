@@ -44,7 +44,7 @@ class apiController extends Controller
             'token' => $token->plainTextToken,
         ];
 
-        return response($response, 201);
+        return response()->json($response,200);
     }
 
     public function logout(Request $request)

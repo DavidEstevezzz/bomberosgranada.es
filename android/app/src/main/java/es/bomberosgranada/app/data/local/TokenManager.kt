@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /**
@@ -25,13 +26,17 @@ class TokenManager(private val context: Context) {
     )
 
     /**
+     * Propiedad para acceder al token como Flow
+     * (Compatible con RetrofitClient)
+     */
+    val tokenFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[TOKEN_KEY]
+    }
+
+    /**
      * Obtener el token como Flow
      */
-    fun getToken(): Flow<String?> {
-        return context.dataStore.data.map { preferences ->
-            preferences[TOKEN_KEY]
-        }
-    }
+    fun getToken(): Flow<String?> = tokenFlow
 
     /**
      * Guardar el token
@@ -51,14 +56,6 @@ class TokenManager(private val context: Context) {
         }
     }
 
-    /**
-     * Obtener el token de forma síncrona (para el Interceptor)
-     */
-    suspend fun getTokenSync(): String? {
-        var token: String? = null
-        context.dataStore.data.map { preferences ->
-            token = preferences[TOKEN_KEY]
-        }.collect { }
-        return token
-    }
+    suspend fun getTokenSync(): String? = context.dataStore.data.first()[TOKEN_KEY]
+
 }

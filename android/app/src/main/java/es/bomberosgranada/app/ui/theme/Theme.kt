@@ -2,6 +2,7 @@ package es.bomberosgranada.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -237,36 +238,11 @@ private val AppTypography = Typography(
 // ============================================
 
 private val AppShapes = Shapes(
-    extraSmall = MaterialTheme.shapes.extraSmall.copy(
-        topStart = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        topEnd = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        bottomStart = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        bottomEnd = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-    ),
-    small = MaterialTheme.shapes.small.copy(
-        topStart = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        topEnd = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        bottomStart = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        bottomEnd = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-    ),
-    medium = MaterialTheme.shapes.medium.copy(
-        topStart = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-        topEnd = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-        bottomStart = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-        bottomEnd = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
-    ),
-    large = MaterialTheme.shapes.large.copy(
-        topStart = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-        topEnd = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-        bottomStart = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-        bottomEnd = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
-    ),
-    extraLarge = MaterialTheme.shapes.extraLarge.copy(
-        topStart = androidx.compose.foundation.shape.RoundedCornerShape(32.dp),
-        topEnd = androidx.compose.foundation.shape.RoundedCornerShape(32.dp),
-        bottomStart = androidx.compose.foundation.shape.RoundedCornerShape(32.dp),
-        bottomEnd = androidx.compose.foundation.shape.RoundedCornerShape(32.dp)
-    )
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp)
 )
 
 // ============================================

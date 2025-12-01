@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import es.bomberosgranada.app.ui.theme.ExtendedColors
 
@@ -171,6 +172,28 @@ fun PrimaryButton(
 }
 
 // ============================================
+// BOTÓN ELEGANTE (alias del primario con loading)
+// ============================================
+
+@Composable
+fun ElegantButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false
+) {
+    PrimaryButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        loading = loading
+    )
+}
+
+
+// ============================================
 // BOTÓN SECUNDARIO (Outline)
 // ============================================
 
@@ -281,6 +304,7 @@ fun ElegantTextField(
     label: String,
     modifier: Modifier = Modifier,
     placeholder: String = "",
+    visualTransformation: VisualTransformation = VisualTransformation.None,
     enabled: Boolean = true,
     readOnly: Boolean = false,
     singleLine: Boolean = true,
@@ -314,6 +338,7 @@ fun ElegantTextField(
             readOnly = readOnly,
             singleLine = singleLine,
             maxLines = maxLines,
+            visualTransformation = visualTransformation,
             leadingIcon = if (leadingIcon != null) {
                 {
                     Icon(

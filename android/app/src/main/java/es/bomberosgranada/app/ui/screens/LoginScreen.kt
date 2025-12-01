@@ -18,10 +18,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import es.bomberosgranada.app.ui.components.*
-import es.bomberosgranada.app.ui.theme.*
-import es.bomberosgranada.app.ui.viewmodels.AuthState
-import es.bomberosgranada.app.ui.viewmodels.AuthViewModel
+import es.bomberosgranada.app.ui.components.ElegantButton
+import es.bomberosgranada.app.ui.components.ElegantTextField
+import es.bomberosgranada.app.viewmodels.AuthState
+import es.bomberosgranada.app.viewmodels.AuthViewModel
 
 @Composable
 fun LoginScreen(
@@ -57,46 +57,51 @@ fun LoginScreen(
         }
     }
 
+    val spacingSm = 8.dp
+    val spacingLg = 16.dp
+    val spacingXl = 24.dp
+    val spacingXxl = 32.dp
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(AppColors.Background)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = AppSpacing.xl.dp)
-                .padding(top = AppSpacing.xxl.dp * 2),
+                .padding(horizontal = spacingXl)
+                .padding(top = spacingXl * 2),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Logo y título
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(bottom = AppSpacing.xxl.dp)
+                modifier = Modifier.padding(bottom = spacingXxl)
             ) {
                 Text(
                     text = "Bomberos",
-                    fontSize = AppTypography.displayMedium.sp,
+                    fontSize = MaterialTheme.typography.displayMedium.fontSize,
                     fontWeight = FontWeight.Bold,
-                    color = AppColors.TextPrimary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     letterSpacing = (-0.5).sp
                 )
 
                 Text(
                     text = "Granada",
-                    fontSize = AppTypography.displayMedium.sp,
+                    fontSize = MaterialTheme.typography.displayMedium.fontSize,
                     fontWeight = FontWeight.Light,
-                    color = AppColors.Primary,
+                    color = MaterialTheme.colorScheme.primary,
                     letterSpacing = 2.sp
                 )
 
-                Spacer(modifier = Modifier.height(AppSpacing.sm.dp))
+                Spacer(modifier = Modifier.height(spacingSm))
 
                 Text(
                     text = "Accede a tu cuenta",
-                    fontSize = AppTypography.bodyMedium.sp,
-                    color = AppColors.TextSecondary,
+                    fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Normal
                 )
             }
@@ -104,7 +109,7 @@ fun LoginScreen(
             // Formulario
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(AppSpacing.lg.dp)
+                verticalArrangement = Arrangement.spacedBy(spacingLg)
             ) {
                 // Email
                 ElegantTextField(
@@ -150,7 +155,7 @@ fun LoginScreen(
                                 } else {
                                     "Mostrar contraseña"
                                 },
-                                tint = AppColors.TextTertiary,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -160,7 +165,7 @@ fun LoginScreen(
                     enabled = authState !is AuthState.Loading
                 )
 
-                Spacer(modifier = Modifier.height(AppSpacing.sm.dp))
+                Spacer(modifier = Modifier.height(spacingSm))
 
                 // Botón de login
                 ElegantButton(
@@ -180,8 +185,8 @@ fun LoginScreen(
                 ) {
                     Text(
                         text = "¿Olvidaste tu contraseña?",
-                        fontSize = AppTypography.bodySmall.sp,
-                        color = AppColors.TextSecondary,
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Normal
                     )
                 }

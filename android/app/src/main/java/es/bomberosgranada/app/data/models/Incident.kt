@@ -70,9 +70,5 @@ data class CountResponseIncident(
     val pending: Int
 )
 
-data class Vehicle(
-    val id: Int,
-    val matricula: String,
-    val tipo: String? = null
-)
+
 

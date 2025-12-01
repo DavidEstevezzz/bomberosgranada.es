@@ -1,4 +1,4 @@
-package es.bomberosgranada.app.ui.viewmodels
+package es.bomberosgranada.app.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider

@@ -69,6 +69,10 @@ object ApiClient {
         RetrofitClient.retrofit.create(PdfDocumentsService::class.java)
     }
 
+    val guardAssignments: GuardAssignmentsService by lazy {
+        RetrofitClient.retrofit.create(GuardAssignmentsService::class.java)
+    }
+
     val clothingItems: ClothingItemsService by lazy {
         RetrofitClient.retrofit.create(ClothingItemsService::class.java)
     }

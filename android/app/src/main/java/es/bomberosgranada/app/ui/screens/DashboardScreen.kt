@@ -1,15 +1,19 @@
 package es.bomberosgranada.app.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,11 +22,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import es.bomberosgranada.app.ui.components.*
+import androidx.core.graphics.toColorInt
+import es.bomberosgranada.app.ui.components.LoadingIndicator
 import es.bomberosgranada.app.viewmodels.DashboardUiState
 import es.bomberosgranada.app.viewmodels.DashboardViewModel
 import es.bomberosgranada.app.viewmodels.BrigadeDisplayInfo
@@ -30,21 +36,25 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.*
-import androidx.core.graphics.toColorInt
 
-/**
- * 🔥 DASHBOARD PRINCIPAL - BOMBEROS GRANADA
- *
- * Diseño elegante estilo Apple/Nike/Adidas:
- * - Minimalismo y precisión
- * - Gradientes sutiles
- * - Bordes redondeados (24dp)
- * - Animaciones fluidas
- * - Espaciado generoso
- * - Tipografía clara y moderna
- */
+// ============================================
+// COLORES DEL DISEÑO
+// ============================================
+private val GradientStart = Color(0xFF1E3A5F)
+private val GradientEnd = Color(0xFF2D5A87)
+private val GradientNorte = listOf(Color(0xFF1E3A5F), Color(0xFF2D5A87))
+private val GradientSur = listOf(Color(0xFFB91C1C), Color(0xFFDC2626))
+private val SurfaceCard = Color(0xFFFFFFFF)
+private val BackgroundColor = Color(0xFFF1F5F9)
+private val TextPrimary = Color(0xFF1A1A2E)
+private val TextSecondary = Color(0xFF64748B)
+private val AccentOrange = Color(0xFFFF6B35)
 
 private fun parseHexColor(hex: String): Color = Color(hex.toColorInt())
+
+// ============================================
+// DASHBOARD SCREEN PRINCIPAL
+// ============================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,16 +67,15 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            DashboardTopBar(
+            ModernDashboardTopBar(
                 currentMonth = currentMonth,
                 onPreviousMonth = { viewModel.changeMonth(currentMonth.minusMonths(1)) },
                 onNextMonth = { viewModel.changeMonth(currentMonth.plusMonths(1)) },
                 onRefresh = { viewModel.refresh() }
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = BackgroundColor
     ) { paddingValues ->
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -74,18 +83,18 @@ fun DashboardScreen(
         ) {
             when (uiState) {
                 is DashboardUiState.Loading -> {
-                    LoadingScreen(message = "Cargando calendarios...")
+                    LoadingIndicator(message = "Cargando calendarios...")
                 }
 
                 is DashboardUiState.Error -> {
-                    ErrorScreen(
+                    ModernErrorScreen(
                         message = (uiState as DashboardUiState.Error).message,
                         onRetry = { viewModel.refresh() }
                     )
                 }
 
                 is DashboardUiState.Success -> {
-                    DashboardContent(
+                    ModernDashboardContent(
                         viewModel = viewModel,
                         currentMonth = currentMonth,
                         onNavigateToGuard = onNavigateToGuard
@@ -97,12 +106,12 @@ fun DashboardScreen(
 }
 
 // ============================================
-// TOP BAR ELEGANTE
+// TOP BAR MODERNO
 // ============================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardTopBar(
+private fun ModernDashboardTopBar(
     currentMonth: YearMonth,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
@@ -111,64 +120,103 @@ fun DashboardTopBar(
     val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es", "ES"))
         .replaceFirstChar { it.uppercase() }
 
-    TopAppBar(
-        title = {
-            Column {
-                Text(
-                    text = "Bomberos Granada",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = "$monthName ${currentMonth.year}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
-            }
-        },
-        actions = {
-            // Botón mes anterior
-            IconButton(onClick = onPreviousMonth) {
-                Icon(
-                    imageVector = Icons.Default.ChevronLeft,
-                    contentDescription = "Mes anterior",
-                    tint = Color.White
-                )
-            }
-
-            // Botón mes siguiente
-            IconButton(onClick = onNextMonth) {
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "Mes siguiente",
-                    tint = Color.White
-                )
-            }
-
-            // Botón refrescar
-            IconButton(onClick = onRefresh) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refrescar",
-                    tint = Color.White
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent
-        ),
-        modifier = Modifier
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color(0xFFDC2626), // Rojo bomberos
-                        Color(0xFFEF4444),
-                        Color(0xFFF87171)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.White,
+        shadowElevation = 4.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            // Título y botón refresh
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Calendario",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
                     )
-                )
-            )
-    )
+                    Text(
+                        text = "Guardias de bomberos",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(BackgroundColor)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = "Actualizar",
+                        tint = TextPrimary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Selector de mes
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onPreviousMonth,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(BackgroundColor)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronLeft,
+                        contentDescription = "Mes anterior",
+                        tint = TextPrimary
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = monthName,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "${currentMonth.year}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                }
+
+                IconButton(
+                    onClick = onNextMonth,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(BackgroundColor)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = "Mes siguiente",
+                        tint = TextPrimary
+                    )
+                }
+            }
+        }
+    }
 }
 
 // ============================================
@@ -176,251 +224,137 @@ fun DashboardTopBar(
 // ============================================
 
 @Composable
-fun DashboardContent(
+private fun ModernDashboardContent(
     viewModel: DashboardViewModel,
     currentMonth: YearMonth,
     onNavigateToGuard: (guardId: Int, brigadeId: Int, parkId: Int, date: String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Estadísticas del mes
-        item {
-            MonthStatsCard(viewModel = viewModel)
-        }
-
         // Calendario Parque Norte
         item {
-            ParkCalendarCard(
+            ModernParkCalendarCard(
                 title = "Parque Norte",
                 parkId = 1,
                 currentMonth = currentMonth,
                 viewModel = viewModel,
+                gradient = GradientNorte,
+                icon = Icons.Default.North,
                 onNavigateToGuard = onNavigateToGuard
             )
         }
 
         // Calendario Parque Sur
         item {
-            ParkCalendarCard(
+            ModernParkCalendarCard(
                 title = "Parque Sur",
                 parkId = 2,
                 currentMonth = currentMonth,
                 viewModel = viewModel,
+                gradient = GradientSur,
+                icon = Icons.Default.South,
                 onNavigateToGuard = onNavigateToGuard
             )
         }
 
         // Espacio al final
         item {
-            Spacer(modifier = Modifier.height(20.dp))
-        }
-    }
-}
-
-// ============================================
-// CARD DE ESTADÍSTICAS (ELEGANTE)
-// ============================================
-
-@Composable
-fun MonthStatsCard(viewModel: DashboardViewModel) {
-    val stats = viewModel.getMonthStats()
-    val brigadeMap by viewModel.brigadeMap.collectAsState()
-
-    ElegantCard(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        // Header con icono
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Analytics,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
-            )
-            Text(
-                text = "Resumen del Mes",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Total de guardias (destacado)
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Total de Guardias",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Este mes",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                }
-                Text(
-                    text = "${stats.totalGuards}",
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-
-        // Solo mostrar brigadas si hay datos
-        if (stats.brigadeStats.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Divider elegante
-            ElegantDivider()
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Guardias por brigada
-            Text(
-                text = "Por Brigada",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            stats.brigadeStats.entries.sortedByDescending { it.value }.forEach { (brigadeId, count) ->
-                val displayInfo = viewModel.getBrigadeDisplayInfo(brigadeId)
-
-                BrigadeStatRow(
-                    brigadeName = brigadeMap[brigadeId] ?: "?",
-                    brigadeColor = parseHexColor(displayInfo.colorHex),
-                    count = count
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun BrigadeStatRow(
-    brigadeName: String,
-    brigadeColor: Color,
-    count: Int
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Indicador de color
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .clip(CircleShape)
-                    .background(brigadeColor)
-            )
-            Text(
-                text = "Brigada $brigadeName",
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
-
-        // Badge con número
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer
-        ) {
-            Text(
-                text = "$count",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
         }
     }
 }
 
 // ============================================
-// CARD DE CALENDARIO DE PARQUE
+// CARD DE CALENDARIO DE PARQUE (MODERNA)
 // ============================================
 
 @Composable
-fun ParkCalendarCard(
+private fun ModernParkCalendarCard(
     title: String,
     parkId: Int,
     currentMonth: YearMonth,
     viewModel: DashboardViewModel,
+    gradient: List<Color>,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     onNavigateToGuard: (guardId: Int, brigadeId: Int, parkId: Int, date: String) -> Unit
 ) {
-    ElegantCard(
-        modifier = Modifier.fillMaxWidth()
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(24.dp),
+                spotColor = gradient.first().copy(alpha = 0.25f)
+            ),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        // Header del parque
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.LocalFireDepartment,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
-            )
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Calendario mensual",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        Column {
+            // Header con gradiente
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(colors = gradient)
+                    )
+                    .padding(16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Icono en círculo
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Calendario de guardias",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                }
             }
+
+            // Calendario
+            ModernCalendarGrid(
+                yearMonth = currentMonth,
+                parkId = parkId,
+                viewModel = viewModel,
+                onNavigateToGuard = onNavigateToGuard
+            )
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Grid del calendario
-        CalendarGrid(
-            yearMonth = currentMonth,
-            parkId = parkId,
-            viewModel = viewModel,
-            onNavigateToGuard = onNavigateToGuard
-        )
     }
 }
 
 // ============================================
-// GRID DEL CALENDARIO
+// GRID DEL CALENDARIO (MODERNO)
 // ============================================
 
 @Composable
-fun CalendarGrid(
+private fun ModernCalendarGrid(
     yearMonth: YearMonth,
     parkId: Int,
     viewModel: DashboardViewModel,
@@ -431,7 +365,9 @@ fun CalendarGrid(
     val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
 
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
     ) {
         // Días de la semana
         Row(
@@ -439,19 +375,22 @@ fun CalendarGrid(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             listOf("D", "L", "M", "X", "J", "V", "S").forEach { day ->
-                Text(
-                    text = day,
+                Box(
                     modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 1.sp
-                )
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = day,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextSecondary,
+                        letterSpacing = 1.sp
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Días del mes
         var currentDay = 1
@@ -470,8 +409,7 @@ fun CalendarGrid(
                         val guard = viewModel.getGuardForDate(date)
                         val brigadeInfo = guard?.let { viewModel.getBrigadeDisplayInfo(it.id_brigada) }
 
-
-                        DayCell(
+                        ModernDayCell(
                             day = currentDay,
                             hasGuard = guard != null,
                             brigadeInfo = brigadeInfo,
@@ -491,17 +429,17 @@ fun CalendarGrid(
                 }
                 currentWeekDay = 0
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
 
 // ============================================
-// CELDA DE DÍA (ELEGANTE) - Sin parámetro date innecesario
+// CELDA DE DÍA (MODERNA)
 // ============================================
 
 @Composable
-fun DayCell(
+private fun ModernDayCell(
     day: Int,
     hasGuard: Boolean,
     brigadeInfo: BrigadeDisplayInfo?,
@@ -510,39 +448,50 @@ fun DayCell(
     modifier: Modifier = Modifier
 ) {
     val brigadeColor = brigadeInfo?.colorHex?.let(::parseHexColor)
-    val onBrigadeColor = brigadeInfo?.onColorHex?.let(::parseHexColor)
-    val borderColor = brigadeInfo?.borderHex?.let(::parseHexColor)
-    val badgeBackground = brigadeColor?.copy(alpha = 0.22f)
-        ?: onBrigadeColor?.copy(alpha = 0.18f)
-        ?: MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-    val badgeTextColor = onBrigadeColor ?: borderColor ?: MaterialTheme.colorScheme.onSurface
-    val badgeLabel = brigadeInfo?.label
-        ?.ifBlank { brigadeInfo.name.take(2) }
+    val brigadeLabel = brigadeInfo?.label
+        ?.ifBlank { brigadeInfo.name.take(1) }
         ?.ifBlank { "?" }
         ?.uppercase(Locale.getDefault())
 
     val backgroundColor = when {
         brigadeColor != null -> brigadeColor
         isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
+        else -> Color.Transparent
+    }
+
+    val textColor = when {
+        brigadeColor != null -> {
+            if (brigadeColor.luminance() < 0.5f) {
+                Color.White      // fondo oscuro → texto blanco
+            } else {
+                Color.Black      // fondo claro → texto negro
+            }
+        }
+        isToday -> MaterialTheme.colorScheme.primary
+        else -> TextPrimary
     }
 
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .padding(4.dp)
-            .shadow(
-                elevation = if (hasGuard) 2.dp else 0.dp,
-                shape = RoundedCornerShape(14.dp)
+            .padding(2.dp)
+            .then(
+                if (hasGuard && brigadeColor != null) {
+                    Modifier.shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(10.dp),
+                        spotColor = brigadeColor.copy(alpha = 0.4f)
+                    )
+                } else Modifier
             )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(backgroundColor)
             .then(
-                if (borderColor != null || isToday || brigadeColor != null) {
+                if (isToday && !hasGuard) {
                     Modifier.border(
-                        width = if (isToday) 2.dp else 1.dp,
-                        color = borderColor ?: brigadeColor ?: MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(14.dp)
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(10.dp)
                     )
                 } else Modifier
             )
@@ -553,38 +502,111 @@ fun DayCell(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Número del día
             Text(
                 text = "$day",
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = when {
                     isToday -> FontWeight.ExtraBold
                     hasGuard -> FontWeight.Bold
                     else -> FontWeight.Normal
                 },
-                color = when {
-                    hasGuard && onBrigadeColor != null -> onBrigadeColor
-                    isToday -> MaterialTheme.colorScheme.primary
-                    hasGuard -> brigadeColor ?: MaterialTheme.colorScheme.onSurface
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                color = textColor,
+                fontSize = 13.sp
             )
 
-            // Indicador visual si hay guardia
-            if (hasGuard && brigadeInfo != null && badgeLabel != null) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = brigadeColor ?: Color.Gray,
-                    tonalElevation = 0.dp
+            // Letra de brigada
+            if (hasGuard && brigadeLabel != null) {
+                Text(
+                    text = brigadeLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor.copy(alpha = 0.9f),
+                    fontSize = 9.sp
+                )
+            }
+        }
+    }
+}
+
+// ============================================
+// PANTALLA DE ERROR (MODERNA)
+// ============================================
+
+@Composable
+private fun ModernErrorScreen(
+    message: String,
+    onRetry: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(24.dp)
+                ),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.errorContainer),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = badgeLabel,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 9.sp,
-                        color = onBrigadeColor ?: Color.White  // El color de texto sobre la brigada
+                    Icon(
+                        imageVector = Icons.Default.ErrorOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(32.dp)
                     )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = "Error al cargar",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onRetry,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GradientStart
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Reintentar")
                 }
             }
         }

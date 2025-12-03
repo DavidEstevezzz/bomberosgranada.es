@@ -24,16 +24,24 @@ data class BrigadeFirefightersResponse(
     val firefighters: List<BrigadeFirefighter>
 )
 
+/**
+ * Modelo de bombero asignado a una brigada
+ * Incluye información de requerimiento y cambio de guardia.
+ */
 data class BrigadeFirefighter(
     val id_empleado: Int,
     val nombre: String,
     val apellido: String,
     val puesto: String?,
     val orden: Int?,
-    val id_change_request: Int? = null,
     val type: String? = null,
     val turno: String? = null,
-    val tipo_asignacion: String? = null
+    val tipo_asignacion: String? = null,
+    // Campos para indicadores de R y CG
+    val id_change_request: Int? = null,      // ID del cambio de guardia (si existe)
+    @JsonAdapter(BooleanAsIntAdapter::class)
+    val requerimiento: Boolean? = null,       // True si viene por requerimiento
+    val cambio_con: String? = null            // Nombre completo del otro bombero en CG
 )
 
 data class CreateBrigadeRequest(

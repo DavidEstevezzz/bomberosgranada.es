@@ -66,7 +66,8 @@ class MainActivity : ComponentActivity() {
                         clothingItemsRepository = repositories.clothingItemsRepository,
                         brigadeCompositionRepository = repositories.brigadeCompositionRepository,
                         brigadeUsersRepository = repositories.brigadeUsersRepository,
-                        extraHoursRepository = repositories.extraHoursRepository
+                        extraHoursRepository = repositories.extraHoursRepository,
+                        guardAssignmentsRepository = repositories.guardAssignmentsRepository
                     )
                 }
             }
@@ -83,6 +84,7 @@ class MainActivity : ComponentActivity() {
             requestsRepository = RequestsRepository(),
             shiftChangeRepository = ShiftChangeRequestsRepository(),
             incidentsRepository = IncidentsRepository(),
+            guardAssignmentsRepository = GuardAssignmentsRepository(),
             interventionsRepository = InterventionsRepository(),
             vehiclesRepository = VehiclesRepository(),
             parksRepository = ParksRepository(),
@@ -107,6 +109,7 @@ data class AppRepositories(
     val requestsRepository: RequestsRepository,
     val shiftChangeRepository: ShiftChangeRequestsRepository,
     val incidentsRepository: IncidentsRepository,
+    val guardAssignmentsRepository : GuardAssignmentsRepository,
     val interventionsRepository: InterventionsRepository,
     val vehiclesRepository: VehiclesRepository,
     val parksRepository: ParksRepository,

@@ -22,6 +22,8 @@ import es.bomberosgranada.app.ui.screens.LoginScreen
 import es.bomberosgranada.app.viewmodels.AuthViewModel
 import es.bomberosgranada.app.viewmodels.DashboardViewModel
 import es.bomberosgranada.app.viewmodels.GuardDetailViewModel
+import es.bomberosgranada.app.data.repositories.GuardAssignmentsRepository
+
 
 /**
  * Navigation Host principal de la aplicación
@@ -50,6 +52,7 @@ fun AppNavigation(
     clothingItemsRepository: ClothingItemsRepository,
     brigadeCompositionRepository: BrigadeCompositionRepository,
     brigadeUsersRepository: BrigadeUsersRepository,
+    guardAssignmentsRepository: GuardAssignmentsRepository,
     extraHoursRepository: ExtraHoursRepository
 ) {
     val isAuthenticated by authViewModel.isAuthenticated.collectAsState()
@@ -160,11 +163,15 @@ fun AppNavigation(
             val parkId = backStackEntry.arguments?.getInt("parkId") ?: 0
             val date = backStackEntry.arguments?.getString("date") ?: ""
 
+            // Obtener el usuario actual del AuthViewModel
+            val currentUser by authViewModel.currentUser.collectAsState()
+
             val guardDetailViewModel = remember {
                 GuardDetailViewModel(
                     guardsRepository = guardsRepository,
                     brigadeCompositionRepository = brigadeCompositionRepository,
-                    brigadesRepository = brigadesRepository
+                    brigadesRepository = brigadesRepository,
+                    guardAssignmentsRepository = guardAssignmentsRepository  // NUEVO
                 )
             }
 
@@ -174,6 +181,7 @@ fun AppNavigation(
                 parkId = parkId,
                 date = date,
                 viewModel = guardDetailViewModel,
+                currentUser = currentUser,  // NUEVO - para verificar permisos
                 onBack = { navController.popBackStack() }
             )
         }

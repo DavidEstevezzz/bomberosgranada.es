@@ -174,7 +174,7 @@ class DashboardViewModel(
             normalized.contains("brigada e") || normalized == "e" ->
                 BrigadeDisplayInfo(brigadeName, "E", "#FDE047", "#1F2937")
             normalized.contains("brigada f") || normalized == "f" ->
-                BrigadeDisplayInfo(brigadeName, "F", "#D1D5DB", "#111827")
+                BrigadeDisplayInfo(brigadeName, "F", "#000000", "#FFFFFF")
             normalized.contains("greps") ->
                 BrigadeDisplayInfo(brigadeName, "GR", "#F97316", "#FFFFFF")
             normalized.contains("grafor") ->

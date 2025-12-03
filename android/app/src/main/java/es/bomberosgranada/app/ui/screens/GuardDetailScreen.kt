@@ -1,50 +1,62 @@
 package es.bomberosgranada.app.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import es.bomberosgranada.app.ui.components.ElegantCard
-import es.bomberosgranada.app.ui.components.LoadingScreen
-import es.bomberosgranada.app.viewmodels.Attendee
-import es.bomberosgranada.app.viewmodels.GuardDetailUiState
+import androidx.compose.ui.unit.sp
+import es.bomberosgranada.app.data.models.User
+import es.bomberosgranada.app.ui.components.LoadingIndicator
 import es.bomberosgranada.app.viewmodels.GuardDetailViewModel
+import es.bomberosgranada.app.viewmodels.GuardDetailViewModel.*
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
+// ============================================
+// COLORES DEL DISEÑO
+// ============================================
+private val GradientStart = Color(0xFF1E3A5F)
+private val GradientEnd = Color(0xFF2D5A87)
+private val AccentOrange = Color(0xFFFF6B35)
+private val AccentGreen = Color(0xFF4CAF50)
+private val AccentPurple = Color(0xFF7C3AED)  // Para Requerimiento
+private val AccentAmber = Color(0xFFF59E0B)   // Para Cambio de Guardia
+private val SurfaceElevated = Color(0xFFF8FAFC)
+private val TextPrimary = Color(0xFF1A1A2E)
+private val TextSecondary = Color(0xFF64748B)
+
+/**
+ * Tipo de asignación especial del bombero
+ */
+enum class SpecialAssignmentType {
+    NONE,           // Normal
+    REQUERIMIENTO,  // Viene por requerimiento (R)
+    CAMBIO_GUARDIA  // Viene por cambio de guardia (CG)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GuardDetailScreen(
     guardId: Int,
@@ -52,49 +64,49 @@ fun GuardDetailScreen(
     parkId: Int,
     date: String,
     viewModel: GuardDetailViewModel,
+    currentUser: User?,
     onBack: () -> Unit
 ) {
-    LaunchedEffect(key1 = guardId, key2 = date) {
-        viewModel.loadGuardDetails(
-            guardId = guardId,
-            brigadeId = brigadeId,
-            parkId = parkId,
-            date = date
-        )
+    val uiState by viewModel.uiState.collectAsState()
+    val assignments by viewModel.assignments.collectAsState()
+    val savingState by viewModel.savingAssignment.collectAsState()
+
+    val canEdit = currentUser?.let { user ->
+        user.type.lowercase() in listOf("jefe", "mando") || user.mando_especial == true
+    } ?: false
+
+    LaunchedEffect(guardId, brigadeId, parkId, date) {
+        viewModel.loadGuardDetails(guardId, brigadeId, parkId, date)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
-
     Scaffold(
-        topBar = {
-            GuardDetailTopBar(onBack = onBack)
-        }
+        topBar = { ModernTopBar(onBack = onBack) },
+        containerColor = Color(0xFFF1F5F9)
     ) { paddingValues ->
-        when (uiState) {
-            GuardDetailUiState.Loading -> LoadingScreen(message = "Cargando guardia...")
-            is GuardDetailUiState.Error -> {
-                val message = (uiState as GuardDetailUiState.Error).message
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
+        when (val state = uiState) {
+            is GuardDetailUiState.Loading -> {
+                LoadingIndicator()
             }
+
+            is GuardDetailUiState.Error -> {
+                ErrorState(message = state.message)
+            }
+
             is GuardDetailUiState.Success -> {
-                val detail = uiState as GuardDetailUiState.Success
-                GuardDetailContent(
+                val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", Locale("es", "ES"))
+                val dateLabel = state.date.format(dateFormatter).replaceFirstChar { it.uppercase() }
+
+                ModernGuardDetailContent(
                     paddingValues = paddingValues,
-                    dateLabel = detail.date.format(DateTimeFormatter.ofPattern("d 'de' MMMM yyyy")),
-                    brigadeName = detail.brigadeName,
-                    guardType = detail.guard.tipo,
-                    attendees = detail.attendees
+                    dateLabel = dateLabel,
+                    brigadeName = state.brigadeName,
+                    parkName = state.parkName,
+                    guardType = state.guard.tipo,
+                    attendees = state.attendees,
+                    assignments = assignments,
+                    canEdit = canEdit,
+                    savingState = savingState,
+                    viewModel = viewModel
                 )
             }
         }
@@ -103,87 +115,97 @@ fun GuardDetailScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GuardDetailTopBar(onBack: () -> Unit) {
+private fun ModernTopBar(onBack: () -> Unit) {
     TopAppBar(
         title = {
-            Column {
-                Text(
-                    text = "Guardia",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Detalle y asistentes",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = "Detalle de Guardia",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.Rounded.ArrowBack,
                     contentDescription = "Volver"
                 )
             }
-        }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.White,
+            titleContentColor = TextPrimary
+        )
     )
 }
 
 @Composable
-private fun GuardDetailContent(
+private fun ErrorState(message: String) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ErrorOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(56.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModernGuardDetailContent(
     paddingValues: PaddingValues,
     dateLabel: String,
     brigadeName: String,
+    parkName: String,
     guardType: String,
-    attendees: List<Attendee>
+    attendees: List<Attendee>,
+    assignments: Map<String, Map<Int, String>>,
+    canEdit: Boolean,
+    savingState: SavingState,
+    viewModel: GuardDetailViewModel
 ) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues),
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Header Card con gradiente
         item {
-            ElegantCard(modifier = Modifier.fillMaxWidth()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = brigadeName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    InfoRow(
-                        icon = Icons.Default.CalendarMonth,
-                        label = "Fecha",
-                        value = dateLabel
-                    )
-                    InfoRow(
-                        icon = Icons.Default.Group,
-                        label = "Tipo",
-                        value = guardType
-                    )
-                }
-            }
-        }
-
-        item {
-            Text(
-                text = "Asistentes",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+            HeaderCard(
+                brigadeName = brigadeName,
+                dateLabel = dateLabel,
+                parkName = parkName,
+                guardType = guardType,
+                canEdit = canEdit
             )
         }
 
-        val shifts = listOf(
-            "Mañana" to "Mañana",
-            "Tarde" to "Tarde",
-            "Noche" to "Noche"
-        )
+        // Leyenda de badges
+        item {
+            BadgeLegend()
+        }
 
+        // Turnos
+        val shifts = listOf("Mañana", "Tarde", "Noche")
         val positionOrder = listOf("Subinspector", "Oficial", "Operador", "Conductor", "Bombero")
 
-        shifts.forEach { (shiftKey, shiftLabel) ->
+        shifts.forEach { shiftKey ->
             val shiftAttendees = attendees.filter { it.matchesShift(shiftKey) }
                 .sortedWith(
                     compareBy<Attendee> {
@@ -192,162 +214,107 @@ private fun GuardDetailContent(
                     }.thenBy { it.name }
                 )
 
-            item {
-                ShiftHeader(label = shiftLabel)
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            if (shiftAttendees.isEmpty()) {
+            if (shiftAttendees.isNotEmpty()) {
                 item {
-                    Text(
-                        text = "Sin asignaciones",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ShiftSection(
+                        shiftName = shiftKey,
+                        attendees = shiftAttendees,
+                        assignments = assignments[shiftKey] ?: emptyMap(),
+                        canEdit = canEdit,
+                        savingState = savingState,
+                        viewModel = viewModel
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-            } else {
-                val groupedByPosition = shiftAttendees.groupBy { attendee ->
-                    positionOrder.find { it.equals(attendee.position, ignoreCase = true) }
-                        ?: attendee.position
-                }
-
-                positionOrder.forEach { position ->
-                    val attendeesByPosition = groupedByPosition[position].orEmpty()
-
-                    if (attendeesByPosition.isNotEmpty()) {
-                        item {
-                            PositionHeader(position = position)
-                        }
-
-                        items(attendeesByPosition) { attendee ->
-                            AttendeeCard(attendee = attendee)
-                        }
-                    }
-                }
-
-                val remainingPositions = groupedByPosition.keys.filterNot { positionOrder.contains(it) }
-                remainingPositions.forEach { position ->
-                    val attendeesByPosition = groupedByPosition[position].orEmpty()
-
-                    item {
-                        PositionHeader(position = position)
-                    }
-
-                    items(attendeesByPosition) { attendee ->
-                        AttendeeCard(attendee = attendee)
-                    }
                 }
             }
         }
+
+        // Espaciado final
+        item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
 
 @Composable
-private fun ShiftHeader(label: String) {
-    Box(
+private fun HeaderCard(
+    brigadeName: String,
+    dateLabel: String,
+    parkName: String,
+    guardType: String,
+    canEdit: Boolean
+) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.horizontalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f)
-                    )
-                )
-            )
-            .padding(vertical = 12.dp, horizontal = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-private fun PositionHeader(position: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(20.dp),
+                spotColor = GradientStart.copy(alpha = 0.25f)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp, 4.dp)
-                .clip(RoundedCornerShape(percent = 50))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-        )
-        Text(
-            text = position,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-    }
-}
-
-@Composable
-private fun AttendeeCard(attendee: Attendee) {
-    ElegantCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1.6f)) {
-                                    Text(
-                                        text = attendee.name,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                    Text(
-                        text = attendee.position,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(GradientStart, GradientEnd)
                     )
-                    if (!attendee.available && !attendee.reason.isNullOrBlank()) {
-                        Text(
-                            text = attendee.reason,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            fontStyle = FontStyle.Italic,
-                            modifier = Modifier
-                                .padding(top = 6.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f))
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                        )
-                                    }
-                                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                )
+                .padding(20.dp)
+        ) {
+            Column {
+                Text(
+                    text = brigadeName,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                                    Text(
-                                        text = "Turno asignado",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    InfoChip(
+                        icon = Icons.Default.CalendarMonth,
+                        text = dateLabel,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    InfoChip(
+                        icon = Icons.Default.LocationOn,
+                        text = parkName.ifEmpty { "Sin especificar" }
+                    )
+                    InfoChip(
+                        icon = Icons.Default.Groups,
+                        text = guardType
+                    )
+                }
+
+                if (canEdit) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = AccentOrange,
+                            modifier = Modifier.size(14.dp)
+                        )
                         Text(
-                            text = attendee.shift.ifBlank { "Sin turno" },
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            text = "Modo edición activo",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AccentOrange,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -356,7 +323,462 @@ private fun AttendeeCard(attendee: Attendee) {
     }
 }
 
+/**
+ * Leyenda explicativa de los badges R y CG
+ */
+@Composable
+private fun BadgeLegend() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Badge R
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            SpecialBadge(type = SpecialAssignmentType.REQUERIMIENTO)
+            Text(
+                text = "Requerimiento",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary
+            )
+        }
 
+        // Badge CG
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            SpecialBadge(type = SpecialAssignmentType.CAMBIO_GUARDIA)
+            Text(
+                text = "Cambio guardia",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun InfoChip(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = Color.White.copy(alpha = 0.15f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.9f),
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.95f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun ShiftSection(
+    shiftName: String,
+    attendees: List<Attendee>,
+    assignments: Map<Int, String>,
+    canEdit: Boolean,
+    savingState: SavingState,
+    viewModel: GuardDetailViewModel
+) {
+    val shiftColor = when (shiftName) {
+        "Mañana" -> Color(0xFFFFB74D)
+        "Tarde" -> Color(0xFF64B5F6)
+        "Noche" -> Color(0xFF9575CD)
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(4.dp, 24.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(shiftColor)
+            )
+            Text(
+                text = shiftName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Text(
+                text = "(${attendees.size})",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
+            )
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    spotColor = Color.Black.copy(alpha = 0.08f)
+                ),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                attendees.forEachIndexed { index, attendee ->
+                    CompactAttendeeRow(
+                        attendee = attendee,
+                        shift = shiftName,
+                        currentAssignment = assignments[attendee.id] ?: "",
+                        canEdit = canEdit,
+                        isSaving = savingState is SavingState.Saving &&
+                                savingState.employeeId == attendee.id &&
+                                savingState.shift == shiftName,
+                        options = viewModel.getFilteredOptions(attendee.position),
+                        onAssignmentChange = { newAssignment ->
+                            viewModel.updateAssignment(shiftName, attendee.id, newAssignment)
+                        }
+                    )
+
+                    if (index < attendees.size - 1) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 6.dp),
+                            thickness = 1.dp,
+                            color = Color(0xFFE2E8F0)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Badge especial para indicar Requerimiento (R) o Cambio de Guardia (CG)
+ */
+@Composable
+private fun SpecialBadge(
+    type: SpecialAssignmentType,
+    modifier: Modifier = Modifier
+) {
+    if (type == SpecialAssignmentType.NONE) return
+
+    val (backgroundColor, text) = when (type) {
+        SpecialAssignmentType.REQUERIMIENTO -> AccentPurple to "R"
+        SpecialAssignmentType.CAMBIO_GUARDIA -> AccentAmber to "CG"
+        else -> return
+    }
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(4.dp),
+        color = backgroundColor,
+        shadowElevation = 2.dp
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            fontSize = 9.sp
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CompactAttendeeRow(
+    attendee: Attendee,
+    shift: String,
+    currentAssignment: String,
+    canEdit: Boolean,
+    isSaving: Boolean,
+    options: List<String>,
+    onAssignmentChange: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    // Determinar tipo de asignación especial
+    val specialType = attendee.getSpecialAssignmentType()
+
+    // Color del badge de turno
+    val shiftBadgeColor = when {
+        attendee.shift.contains("Mañana", ignoreCase = true) -> Color(0xFFFFB74D)
+        attendee.shift.contains("Tarde", ignoreCase = true) -> Color(0xFF64B5F6)
+        attendee.shift.contains("Noche", ignoreCase = true) -> Color(0xFF9575CD)
+        attendee.shift == "Día completo" -> Color(0xFF4CAF50)
+        else -> Color(0xFF78909C)
+    }
+
+    // Color del badge de puesto
+    val positionColor = when (attendee.position) {
+        "Subinspector", "Oficial" -> Color(0xFFE53935)
+        "Conductor" -> Color(0xFF1E88E5)
+        "Operador" -> Color(0xFF43A047)
+        "Bombero" -> Color(0xFFFF9800)
+        else -> Color(0xFF78909C)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Avatar con inicial
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .shadow(2.dp, CircleShape)
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            positionColor,
+                            positionColor.copy(alpha = 0.7f)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = attendee.name.take(1).uppercase(),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        // Nombre, puesto y badge especial
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = attendee.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Puesto
+                Text(
+                    text = attendee.position,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = positionColor,
+                    fontWeight = FontWeight.Medium
+                )
+
+                // Badge R o CG si aplica
+                SpecialBadge(type = specialType)
+
+                // Indicador si no está disponible
+                if (!attendee.available) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.error)
+                    )
+                }
+            }
+        }
+
+        // Badge de turno compacto
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = shiftBadgeColor,
+            shadowElevation = 2.dp
+        ) {
+            Text(
+                text = getShortShiftLabel(attendee.shift),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                fontSize = 10.sp
+            )
+        }
+
+        // Asignación (dropdown o texto)
+        if (canEdit) {
+            Box {
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { if (!isSaving) expanded = !expanded }
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .menuAnchor()
+                            .width(72.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (currentAssignment.isNotEmpty())
+                            AccentGreen.copy(alpha = 0.1f)
+                        else
+                            Color(0xFFF1F5F9),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (currentAssignment.isNotEmpty())
+                                AccentGreen.copy(alpha = 0.3f)
+                            else
+                                Color(0xFFE2E8F0)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = currentAssignment.ifEmpty { "—" },
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (currentAssignment.isNotEmpty())
+                                    AccentGreen
+                                else
+                                    TextSecondary,
+                                maxLines = 1
+                            )
+                            if (isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(12.dp),
+                                    strokeWidth = 1.5.dp,
+                                    color = AccentGreen
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.ExpandMore,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = TextSecondary
+                                )
+                            }
+                        }
+                    }
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        options.forEach { option ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = option,
+                                        fontWeight = if (option == currentAssignment)
+                                            FontWeight.Bold
+                                        else
+                                            FontWeight.Normal,
+                                        fontSize = 13.sp
+                                    )
+                                },
+                                onClick = {
+                                    expanded = false
+                                    if (option != currentAssignment) {
+                                        onAssignmentChange(option)
+                                    }
+                                },
+                                leadingIcon = if (option == currentAssignment) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = AccentGreen,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                } else null,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (currentAssignment.isNotEmpty())
+                    AccentGreen.copy(alpha = 0.1f)
+                else
+                    Color(0xFFF1F5F9)
+            ) {
+                Text(
+                    text = currentAssignment.ifEmpty { "—" },
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (currentAssignment.isNotEmpty())
+                        AccentGreen
+                    else
+                        TextSecondary
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Determina el tipo de asignación especial del bombero
+ */
+private fun Attendee.getSpecialAssignmentType(): SpecialAssignmentType {
+    return when {
+        isRequerimiento == true -> SpecialAssignmentType.REQUERIMIENTO
+        hasChangeRequest && tipoAsignacion == "ida" -> SpecialAssignmentType.CAMBIO_GUARDIA
+        else -> SpecialAssignmentType.NONE
+    }
+}
+
+private fun getShortShiftLabel(shift: String): String {
+    return when {
+        shift == "Día completo" -> "DÍA"
+        shift == "Mañana y tarde" -> "M+T"
+        shift == "Mañana y noche" -> "M+N"
+        shift == "Tarde y noche" -> "T+N"
+        shift == "Mañana" -> "MAÑ"
+        shift == "Tarde" -> "TAR"
+        shift == "Noche" -> "NOC"
+        else -> shift.take(3).uppercase()
+    }
+}
 
 private fun Attendee.matchesShift(targetShift: String): Boolean {
     return shift == targetShift ||
@@ -364,31 +786,4 @@ private fun Attendee.matchesShift(targetShift: String): Boolean {
             (targetShift == "Mañana" && (shift == "Mañana y tarde" || shift == "Mañana y noche")) ||
             (targetShift == "Tarde" && (shift == "Mañana y tarde" || shift == "Tarde y noche")) ||
             (targetShift == "Noche" && (shift == "Tarde y noche" || shift == "Mañana y noche"))
-}
-
-@Composable
-private fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Column {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
 }

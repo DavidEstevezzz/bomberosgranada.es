@@ -405,6 +405,38 @@ fun LoadingScreen(
 }
 
 // ============================================
+// LOADING INDICATOR - Indicador de carga elegante
+// ============================================
+
+@Composable
+fun LoadingIndicator(
+    modifier: Modifier = Modifier,
+    message: String = "Cargando..."
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 4.dp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// ============================================
 // ERROR SCREEN ELEGANTE
 // ============================================
 

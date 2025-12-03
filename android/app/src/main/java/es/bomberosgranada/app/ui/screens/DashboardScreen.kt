@@ -30,6 +30,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.*
+import androidx.core.graphics.toColorInt
 
 /**
  * 🔥 DASHBOARD PRINCIPAL - BOMBEROS GRANADA
@@ -43,7 +44,7 @@ import java.util.*
  * - Tipografía clara y moderna
  */
 
-private fun parseHexColor(hex: String): Color = Color(android.graphics.Color.parseColor(hex))
+private fun parseHexColor(hex: String): Color = Color(hex.toColorInt())
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -511,7 +512,10 @@ fun DayCell(
     val brigadeColor = brigadeInfo?.colorHex?.let(::parseHexColor)
     val onBrigadeColor = brigadeInfo?.onColorHex?.let(::parseHexColor)
     val borderColor = brigadeInfo?.borderHex?.let(::parseHexColor)
-    val badgeBackground = onBrigadeColor?.copy(alpha = 0.16f) ?: Color.White.copy(alpha = 0.2f)
+    val badgeBackground = brigadeColor?.copy(alpha = 0.22f)
+        ?: onBrigadeColor?.copy(alpha = 0.18f)
+        ?: MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    val badgeTextColor = onBrigadeColor ?: borderColor ?: MaterialTheme.colorScheme.onSurface
     val badgeLabel = brigadeInfo?.label
         ?.ifBlank { brigadeInfo.name.take(2) }
         ?.ifBlank { "?" }
@@ -567,21 +571,19 @@ fun DayCell(
 
             // Indicador visual si hay guardia
             if (hasGuard && brigadeInfo != null && badgeLabel != null) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = badgeBackground,
-                    tonalElevation = 0.dp,
-                    border = borderColor?.let { BorderStroke(1.dp, it.copy(alpha = 0.6f)) }
+                    shape = RoundedCornerShape(6.dp),
+                    color = brigadeColor ?: Color.Gray,
+                    tonalElevation = 0.dp
                 ) {
                     Text(
                         text = badgeLabel,
-                        modifier = Modifier
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = onBrigadeColor?.copy(alpha = 1f)
-                            ?: MaterialTheme.colorScheme.onSurface
+                        fontSize = 9.sp,
+                        color = onBrigadeColor ?: Color.White  // El color de texto sobre la brigada
                     )
                 }
             }

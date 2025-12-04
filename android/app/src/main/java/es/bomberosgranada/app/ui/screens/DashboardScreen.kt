@@ -406,7 +406,7 @@ private fun ModernCalendarGrid(
                         Spacer(modifier = Modifier.weight(1f))
                     } else {
                         val date = yearMonth.atDay(currentDay)
-                        val guard = viewModel.getGuardForDate(date)
+                        val guard = viewModel.getGuardForDate(date, parkId)
                         val brigadeInfo = guard?.let { viewModel.getBrigadeDisplayInfo(it.id_brigada) }
 
                         ModernDayCell(

@@ -119,9 +119,16 @@ class DashboardViewModel(
     /**
      * Obtiene la guardia para una fecha específica
      */
-    fun getGuardForDate(date: LocalDate): Guard? {
+    fun getGuardForDate(date: LocalDate, parkId: Int? = null): Guard? {
+        val brigadeIdsForPark = parkId?.let { id ->
+            _brigades.value
+                .filter { it.id_parque == id }
+                .map { it.id_brigada }
+                .toSet()
+        }
         return _guards.value.find { guard ->
-            guard.date == date.toString()
+            guard.date == date.toString() &&
+                    (brigadeIdsForPark == null || brigadeIdsForPark.contains(guard.id_brigada))
         }
     }
 

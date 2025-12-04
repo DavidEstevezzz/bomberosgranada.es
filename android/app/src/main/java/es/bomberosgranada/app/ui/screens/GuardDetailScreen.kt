@@ -33,6 +33,7 @@ import es.bomberosgranada.app.viewmodels.GuardDetailViewModel
 import es.bomberosgranada.app.viewmodels.GuardDetailViewModel.*
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.foundation.clickable
 
 // ============================================
 // COLORES DEL DISEÑO
@@ -496,7 +497,7 @@ private fun SpecialBadge(
     if (type == SpecialAssignmentType.NONE) return
 
     val (backgroundColor, text) = when (type) {
-        SpecialAssignmentType.REQUERIMIENTO -> AccentPurple to "R"
+        SpecialAssignmentType.REQUERIMIENTO -> AccentAmber to "R"
         SpecialAssignmentType.CAMBIO_GUARDIA -> AccentAmber to "CG"
         else -> return
     }
@@ -530,9 +531,11 @@ private fun CompactAttendeeRow(
     onAssignmentChange: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showCgDialog by remember { mutableStateOf(false) }
 
     // Determinar tipo de asignación especial
     val specialType = attendee.getSpecialAssignmentType()
+    val isCambioGuardia = specialType == SpecialAssignmentType.CAMBIO_GUARDIA
 
     // Color del badge de turno
     val shiftBadgeColor = when {
@@ -609,7 +612,14 @@ private fun CompactAttendeeRow(
                 )
 
                 // Badge R o CG si aplica
-                SpecialBadge(type = specialType)
+                SpecialBadge(
+                    type = specialType,
+                    modifier = if (isCambioGuardia) {
+                        Modifier.clickable { showCgDialog = true }
+                    } else {
+                        Modifier
+                    }
+                )
 
                 // Indicador si no está disponible
                 if (!attendee.available) {
@@ -753,6 +763,55 @@ private fun CompactAttendeeRow(
                 )
             }
         }
+    }
+    if (showCgDialog && isCambioGuardia) {
+        AlertDialog(
+            onDismissRequest = { showCgDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.CompareArrows,
+                    contentDescription = null,
+                    tint = AccentAmber
+                )
+            },
+            title = {
+                Text(
+                    text = "Cambio de guardia",
+                    color = AccentAmber,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Acude: ${attendee.name}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Pide cambio: ${attendee.cambioConNombre?.takeIf { it.isNotBlank() } ?: "Sin especificar"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Turno intercambiado: ${attendee.shift}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary
+                    )
+
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCgDialog = false }) {
+                    Text(
+                        text = "Cerrar",
+                        color = AccentAmber,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        )
     }
 }
 

@@ -1,14 +1,6 @@
 package es.bomberosgranada.app.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -16,19 +8,28 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import es.bomberosgranada.app.data.repositories.*
+import es.bomberosgranada.app.ui.screens.CreateRequestScreen
 import es.bomberosgranada.app.ui.screens.DashboardScreen
 import es.bomberosgranada.app.ui.screens.GuardDetailScreen
 import es.bomberosgranada.app.ui.screens.LoginScreen
 import es.bomberosgranada.app.viewmodels.AuthViewModel
+import es.bomberosgranada.app.viewmodels.CreateRequestViewModel
 import es.bomberosgranada.app.viewmodels.DashboardViewModel
 import es.bomberosgranada.app.viewmodels.GuardDetailViewModel
-import es.bomberosgranada.app.data.repositories.GuardAssignmentsRepository
-
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Construction
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 
 /**
  * Navigation Host principal de la aplicación
  *
- * Maneja todas las rutas y la navegación entre pantallas
+ * Maneja todas las rutas y la navegación entre pantallas.
+ * Ahora con soporte para navegación por drawer lateral.
  */
 @Composable
 fun AppNavigation(
@@ -56,12 +57,42 @@ fun AppNavigation(
     extraHoursRepository: ExtraHoursRepository
 ) {
     val isAuthenticated by authViewModel.isAuthenticated.collectAsState()
+    val currentUser by authViewModel.currentUser.collectAsState()
+
+    // Estado para mensajes no leídos (ejemplo, conectar con repo real)
+    var unreadMessagesCount by remember { mutableStateOf(0) }
+
+    // Cargar conteo de mensajes no leídos
+    LaunchedEffect(currentUser) {
+        currentUser?.let {
+            // TODO: Conectar con messagesRepository.getUnreadCount()
+            // unreadMessagesCount = messagesRepository.getUnreadCount()
+        }
+    }
 
     // Determinar ruta inicial
     val startDestination = if (isAuthenticated) {
         Screen.Dashboard.route
     } else {
         Screen.Login.route
+    }
+
+    // Función de navegación común
+    val onNavigate: (String) -> Unit = { route ->
+        navController.navigate(route) {
+            // Evitar múltiples copias en el back stack
+            launchSingleTop = true
+            // Restaurar estado si existe
+            restoreState = true
+        }
+    }
+
+    // Función de logout
+    val onLogout: () -> Unit = {
+        authViewModel.logout()
+        navController.navigate(Screen.Login.route) {
+            popUpTo(0) { inclusive = true }
+        }
     }
 
     NavHost(
@@ -84,70 +115,57 @@ fun AppNavigation(
         }
 
         // ==========================================
-        // DASHBOARD
+        // DASHBOARD (INICIO)
         // ==========================================
 
         composable(route = Screen.Dashboard.route) {
-            val dashboardViewModel = DashboardViewModel(
-                guardsRepository = guardsRepository,
-                brigadesRepository = brigadesRepository
-            )
+            val dashboardViewModel = remember {
+                DashboardViewModel(
+                    guardsRepository = guardsRepository,
+                    brigadesRepository = brigadesRepository
+                )
+            }
 
             DashboardScreen(
                 viewModel = dashboardViewModel,
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
                 onNavigateToGuard = { guardId, brigadeId, parkId, date ->
                     navController.navigate(
                         Screen.GuardAttendance.createRoute(guardId, brigadeId, parkId, date)
                     )
-                }
+                },
+                unreadMessagesCount = unreadMessagesCount
             )
         }
 
         // ==========================================
-        // DETALLE DE BRIGADA
+        // CREAR SOLICITUD
         // ==========================================
 
-        composable(
-            route = Screen.BrigadeDetail.route,
-            arguments = listOf(
-                navArgument("brigadeId") { type = NavType.IntType },
-                navArgument("date") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                }
+        composable(route = Screen.CreateRequest.route) {
+            val createRequestViewModel = remember {
+                CreateRequestViewModel(
+                    requestsRepository = requestsRepository,
+                    guardsRepository = guardsRepository,
+                    assignmentsRepository = assignmentsRepository
+                )
+            }
+
+            CreateRequestScreen(
+                viewModel = createRequestViewModel,
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                onBack = { navController.popBackStack() },
+                unreadMessagesCount = unreadMessagesCount
             )
-        ) { backStackEntry ->
-            val brigadeId = backStackEntry.arguments?.getInt("brigadeId") ?: 0
-            val date = backStackEntry.arguments?.getString("date")
-
-            // TODO: Crear BrigadeDetailScreen cuando tengamos el ViewModel
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Detalle de Brigada $brigadeId\nFecha: $date",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
         }
 
         // ==========================================
-        // GUARDIAS
+        // DETALLE DE GUARDIA
         // ==========================================
-
-        composable(route = Screen.Guards.route) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Pantalla de Guardias",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
-        }
 
         composable(
             route = Screen.GuardAttendance.route,
@@ -163,15 +181,12 @@ fun AppNavigation(
             val parkId = backStackEntry.arguments?.getInt("parkId") ?: 0
             val date = backStackEntry.arguments?.getString("date") ?: ""
 
-            // Obtener el usuario actual del AuthViewModel
-            val currentUser by authViewModel.currentUser.collectAsState()
-
             val guardDetailViewModel = remember {
                 GuardDetailViewModel(
                     guardsRepository = guardsRepository,
                     brigadeCompositionRepository = brigadeCompositionRepository,
                     brigadesRepository = brigadesRepository,
-                    guardAssignmentsRepository = guardAssignmentsRepository  // NUEVO
+                    guardAssignmentsRepository = guardAssignmentsRepository
                 )
             }
 
@@ -181,80 +196,39 @@ fun AppNavigation(
                 parkId = parkId,
                 date = date,
                 viewModel = guardDetailViewModel,
-                currentUser = currentUser,  // NUEVO - para verificar permisos
+                currentUser = currentUser,
                 onBack = { navController.popBackStack() }
             )
         }
 
-
-        composable(
-            route = Screen.GuardDetail.route,
-            arguments = listOf(
-                navArgument("guardId") { type = NavType.IntType }
-            )
-        ) { backStackEntry ->
-            val guardId = backStackEntry.arguments?.getInt("guardId") ?: 0
-
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Detalle de Guardia $guardId",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
-        }
-
         // ==========================================
-        // MENSAJES
+        // MENSAJES (Placeholder)
         // ==========================================
 
         composable(route = Screen.Messages.route) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Pantalla de Mensajes",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
-        }
-
-        composable(
-            route = Screen.MessageDetail.route,
-            arguments = listOf(
-                navArgument("messageId") { type = NavType.IntType }
+            // TODO: Implementar MessagesScreen con AppScaffold
+            PlaceholderScreen(
+                title = "Mensajes",
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                unreadMessagesCount = unreadMessagesCount
             )
-        ) { backStackEntry ->
-            val messageId = backStackEntry.arguments?.getInt("messageId") ?: 0
-
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Detalle de Mensaje $messageId",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
         }
 
         // ==========================================
-        // SOLICITUDES
+        // SOLICITUDES (Lista)
         // ==========================================
 
         composable(route = Screen.Requests.route) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Pantalla de Solicitudes",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
+            // TODO: Implementar RequestsListScreen con AppScaffold
+            PlaceholderScreen(
+                title = "Mis Solicitudes",
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                unreadMessagesCount = unreadMessagesCount
+            )
         }
 
         // ==========================================
@@ -262,63 +236,29 @@ fun AppNavigation(
         // ==========================================
 
         composable(route = Screen.ShiftChanges.route) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Pantalla de Cambios de Turno",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
+            // TODO: Implementar ShiftChangesScreen con AppScaffold
+            PlaceholderScreen(
+                title = "Cambios de Guardia",
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                unreadMessagesCount = unreadMessagesCount
+            )
         }
 
         // ==========================================
-        // INCIDENCIAS
+        // SUGERENCIAS
         // ==========================================
 
-        composable(route = Screen.Incidents.route) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Pantalla de Incidencias",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
-        }
-
-        // ==========================================
-        // INTERVENCIONES
-        // ==========================================
-
-        composable(route = Screen.Interventions.route) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Pantalla de Intervenciones",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
-        }
-
-        // ==========================================
-        // USUARIOS
-        // ==========================================
-
-        composable(route = Screen.Users.route) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Pantalla de Usuarios",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
+        composable(route = "suggestions") {
+            // TODO: Implementar SuggestionsScreen con AppScaffold
+            PlaceholderScreen(
+                title = "Sugerencias",
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                unreadMessagesCount = unreadMessagesCount
+            )
         }
 
         // ==========================================
@@ -326,31 +266,83 @@ fun AppNavigation(
         // ==========================================
 
         composable(route = Screen.Profile.route) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Pantalla de Perfil",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
+            // TODO: Implementar ProfileScreen con AppScaffold
+            PlaceholderScreen(
+                title = "Mi Perfil",
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                unreadMessagesCount = unreadMessagesCount
+            )
         }
 
         // ==========================================
-        // CONFIGURACIÓN
+        // AJUSTES
         // ==========================================
 
         composable(route = Screen.Settings.route) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+            // TODO: Implementar SettingsScreen con AppScaffold
+            PlaceholderScreen(
+                title = "Ajustes",
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                unreadMessagesCount = unreadMessagesCount
+            )
+        }
+    }
+}
+
+// ==========================================
+// PLACEHOLDER SCREEN
+// ==========================================
+
+@Composable
+private fun PlaceholderScreen(
+    title: String,
+    currentUser: es.bomberosgranada.app.data.models.User?,
+    onNavigate: (String) -> Unit,
+    onLogout: () -> Unit,
+    unreadMessagesCount: Int
+) {
+    es.bomberosgranada.app.ui.components.AppScaffold(
+        currentRoute = title.lowercase().replace(" ", "-"),
+        title = title,
+        currentUser = currentUser,
+        onNavigate = onNavigate,
+        onLogout = onLogout,
+        unreadMessagesCount = unreadMessagesCount
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                Icon(
+                    imageVector = Icons.Filled.Construction,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = androidx.compose.ui.graphics.Color(0xFF64748B)
+                )
                 Text(
-                    text = "Pantalla de Configuración",
-                    style = MaterialTheme.typography.titleLarge
+                    text = "Próximamente",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = androidx.compose.ui.graphics.Color(0xFF1A1A2E)
+                )
+                Text(
+                    text = "Esta sección está en desarrollo",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = androidx.compose.ui.graphics.Color(0xFF64748B)
                 )
             }
         }
     }
 }
+
+

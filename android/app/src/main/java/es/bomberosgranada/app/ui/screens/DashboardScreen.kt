@@ -5,8 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,11 +21,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
+import es.bomberosgranada.app.data.models.User
+import es.bomberosgranada.app.ui.components.AppScaffold
 import es.bomberosgranada.app.ui.components.LoadingIndicator
 import es.bomberosgranada.app.viewmodels.DashboardUiState
 import es.bomberosgranada.app.viewmodels.DashboardViewModel
@@ -60,21 +61,22 @@ private fun parseHexColor(hex: String): Color = Color(hex.toColorInt())
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
-    onNavigateToGuard: (guardId: Int, brigadeId: Int, parkId: Int, date: String) -> Unit
+    currentUser: User?,
+    onNavigate: (String) -> Unit,
+    onLogout: () -> Unit,
+    onNavigateToGuard: (guardId: Int, brigadeId: Int, parkId: Int, date: String) -> Unit,
+    unreadMessagesCount: Int = 0
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentMonth by viewModel.currentMonth.collectAsState()
 
-    Scaffold(
-        topBar = {
-            ModernDashboardTopBar(
-                currentMonth = currentMonth,
-                onPreviousMonth = { viewModel.changeMonth(currentMonth.minusMonths(1)) },
-                onNextMonth = { viewModel.changeMonth(currentMonth.plusMonths(1)) },
-                onRefresh = { viewModel.refresh() }
-            )
-        },
-        containerColor = BackgroundColor
+    AppScaffold(
+        currentRoute = "dashboard",
+        title = "Calendario",
+        currentUser = currentUser,
+        onNavigate = onNavigate,
+        onLogout = onLogout,
+        unreadMessagesCount = unreadMessagesCount
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -106,114 +108,43 @@ fun DashboardScreen(
 }
 
 // ============================================
-// TOP BAR MODERNO
+// PANTALLA DE ERROR
 // ============================================
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ModernDashboardTopBar(
-    currentMonth: YearMonth,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    onRefresh: () -> Unit
+fun ModernErrorScreen(
+    message: String,
+    onRetry: () -> Unit
 ) {
-    val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es", "ES"))
-        .replaceFirstChar { it.uppercase() }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        shadowElevation = 4.dp
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp)
         ) {
-            // Título y botón refresh
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Calendario",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "Guardias de bomberos",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
-                    )
-                }
-
-                IconButton(
-                    onClick = onRefresh,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(BackgroundColor)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Refresh,
-                        contentDescription = "Actualizar",
-                        tint = TextPrimary
-                    )
-                }
-            }
-
+            Icon(
+                imageVector = Icons.Default.ErrorOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(64.dp)
+            )
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Selector de mes
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentOrange)
             ) {
-                IconButton(
-                    onClick = onPreviousMonth,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(BackgroundColor)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronLeft,
-                        contentDescription = "Mes anterior",
-                        tint = TextPrimary
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = monthName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "${currentMonth.year}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
-                }
-
-                IconButton(
-                    onClick = onNextMonth,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(BackgroundColor)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
-                        contentDescription = "Mes siguiente",
-                        tint = TextPrimary
-                    )
-                }
+                Icon(Icons.Rounded.Refresh, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Reintentar")
             }
         }
     }
@@ -234,6 +165,15 @@ private fun ModernDashboardContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Navegación de mes
+        item {
+            MonthNavigator(
+                currentMonth = currentMonth,
+                onPreviousMonth = { viewModel.changeMonth(currentMonth.minusMonths(1)) },
+                onNextMonth = { viewModel.changeMonth(currentMonth.plusMonths(1)) }
+            )
+        }
+
         // Calendario Parque Norte
         item {
             ModernParkCalendarCard(
@@ -260,15 +200,87 @@ private fun ModernDashboardContent(
             )
         }
 
-        // Espacio al final
+        // Espaciado inferior
         item {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
 // ============================================
-// CARD DE CALENDARIO DE PARQUE (MODERNA)
+// NAVEGADOR DE MES
+// ============================================
+
+@Composable
+private fun MonthNavigator(
+    currentMonth: YearMonth,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit
+) {
+    val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es", "ES"))
+        .replaceFirstChar { it.uppercase() }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceCard)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onPreviousMonth,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(BackgroundColor)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.ChevronLeft,
+                    contentDescription = "Mes anterior",
+                    tint = TextPrimary
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = monthName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "${currentMonth.year}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            }
+
+            IconButton(
+                onClick = onNextMonth,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(BackgroundColor)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = "Mes siguiente",
+                    tint = TextPrimary
+                )
+            }
+        }
+    }
+}
+
+// ============================================
+// CARD DE CALENDARIO POR PARQUE
 // ============================================
 
 @Composable
@@ -278,19 +290,15 @@ private fun ModernParkCalendarCard(
     currentMonth: YearMonth,
     viewModel: DashboardViewModel,
     gradient: List<Color>,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     onNavigateToGuard: (guardId: Int, brigadeId: Int, parkId: Int, date: String) -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 12.dp,
-                shape = RoundedCornerShape(24.dp),
-                spotColor = gradient.first().copy(alpha = 0.25f)
-            ),
+            .shadow(8.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = SurfaceCard)
     ) {
         Column {
             // Header con gradiente
@@ -298,15 +306,14 @@ private fun ModernParkCalendarCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        Brush.linearGradient(colors = gradient)
+                        brush = Brush.horizontalGradient(colors = gradient)
                     )
-                    .padding(16.dp)
+                    .padding(20.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Icono en círculo
                     Box(
                         modifier = Modifier
                             .size(44.dp)
@@ -350,7 +357,7 @@ private fun ModernParkCalendarCard(
 }
 
 // ============================================
-// GRID DEL CALENDARIO (MODERNO)
+// GRID DEL CALENDARIO
 // ============================================
 
 @Composable
@@ -435,7 +442,7 @@ private fun ModernCalendarGrid(
 }
 
 // ============================================
-// CELDA DE DÍA (MODERNA)
+// CELDA DE DÍA
 // ============================================
 
 @Composable
@@ -451,163 +458,54 @@ private fun ModernDayCell(
     val brigadeLabel = brigadeInfo?.label
         ?.ifBlank { brigadeInfo.name.take(1) }
         ?.ifBlank { "?" }
-        ?.uppercase(Locale.getDefault())
-
-    val backgroundColor = when {
-        brigadeColor != null -> brigadeColor
-        isToday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-        else -> Color.Transparent
-    }
-
-    val textColor = when {
-        brigadeColor != null -> {
-            if (brigadeColor.luminance() < 0.5f) {
-                Color.White      // fondo oscuro → texto blanco
-            } else {
-                Color.Black      // fondo claro → texto negro
-            }
-        }
-        isToday -> MaterialTheme.colorScheme.primary
-        else -> TextPrimary
-    }
 
     Box(
         modifier = modifier
             .aspectRatio(1f)
             .padding(2.dp)
+            .clip(RoundedCornerShape(12.dp))
             .then(
                 if (hasGuard && brigadeColor != null) {
-                    Modifier.shadow(
-                        elevation = 4.dp,
-                        shape = RoundedCornerShape(10.dp),
-                        spotColor = brigadeColor.copy(alpha = 0.4f)
-                    )
-                } else Modifier
+                    Modifier
+                        .background(brigadeColor)
+                        .clickable(onClick = onClick)
+                } else {
+                    Modifier.background(BackgroundColor)
+                }
             )
-            .clip(RoundedCornerShape(10.dp))
-            .background(backgroundColor)
             .then(
-                if (isToday && !hasGuard) {
-                    Modifier.border(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(10.dp)
-                    )
+                if (isToday) {
+                    Modifier.border(2.dp, AccentOrange, RoundedCornerShape(12.dp))
                 } else Modifier
-            )
-            .clickable(enabled = hasGuard) { onClick() },
+            ),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Número del día
             Text(
-                text = "$day",
+                text = day.toString(),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = when {
-                    isToday -> FontWeight.ExtraBold
-                    hasGuard -> FontWeight.Bold
-                    else -> FontWeight.Normal
-                },
-                color = textColor,
-                fontSize = 13.sp
+                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium,
+                color = when {
+                    hasGuard && brigadeColor != null -> {
+                        if (brigadeColor.luminance() > 0.5f) TextPrimary else Color.White
+                    }
+                    else -> TextPrimary
+                }
             )
 
-            // Letra de brigada
             if (hasGuard && brigadeLabel != null) {
                 Text(
                     text = brigadeLabel,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = textColor.copy(alpha = 0.9f),
-                    fontSize = 9.sp
+                    color = when {
+                        brigadeColor != null && brigadeColor.luminance() > 0.5f -> TextPrimary
+                        else -> Color.White.copy(alpha = 0.9f)
+                    }
                 )
-            }
-        }
-    }
-}
-
-// ============================================
-// PANTALLA DE ERROR (MODERNA)
-// ============================================
-
-@Composable
-private fun ModernErrorScreen(
-    message: String,
-    onRetry: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(
-                    elevation = 8.dp,
-                    shape = RoundedCornerShape(24.dp)
-                ),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column(
-                modifier = Modifier.padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.errorContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ErrorOutline,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(
-                    text = "Error al cargar",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onRetry,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = GradientStart
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Reintentar")
-                }
             }
         }
     }

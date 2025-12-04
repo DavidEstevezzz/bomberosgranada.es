@@ -104,7 +104,7 @@ object NavigationItems {
                     id = "cambio_guardia",
                     title = "Cambio de Guardia",
                     icon = Icons.Outlined.SwapHoriz,
-                    route = "shift-changes"
+                    route = "create-shift-change"
                 ),
                 NavigationItem(
                     id = "mis_solicitudes",

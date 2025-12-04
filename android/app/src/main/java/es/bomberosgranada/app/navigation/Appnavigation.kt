@@ -24,6 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Construction
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import es.bomberosgranada.app.ui.screens.CreateShiftChangeScreen
+import es.bomberosgranada.app.viewmodels.CreateShiftChangeViewModel
 
 /**
  * Navigation Host principal de la aplicación
@@ -235,13 +237,19 @@ fun AppNavigation(
         // CAMBIOS DE TURNO
         // ==========================================
 
-        composable(route = Screen.ShiftChanges.route) {
-            // TODO: Implementar ShiftChangesScreen con AppScaffold
-            PlaceholderScreen(
-                title = "Cambios de Guardia",
+        composable(route = Screen.CreateShiftChange.route) {
+            val viewModel = remember {
+                CreateShiftChangeViewModel(
+                    shiftChangeRepository = shiftChangeRepository,
+                    usersRepository = usersRepository
+                )
+            }
+            CreateShiftChangeScreen(
+                viewModel = viewModel,
                 currentUser = currentUser,
                 onNavigate = onNavigate,
                 onLogout = onLogout,
+                onBack = { navController.popBackStack() },
                 unreadMessagesCount = unreadMessagesCount
             )
         }

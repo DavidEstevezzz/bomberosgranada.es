@@ -136,7 +136,7 @@ class MessagesViewModel(
 
             try {
                 // Cargar usuarios para el selector de destinatarios
-                val usersResult = usersRepository.getUsers()
+                val usersResult = usersRepository.getAllUsers()
                 usersResult.onSuccess { usersList ->
                     _users.value = usersList
                     Log.d(TAG, "✅ ${usersList.size} usuarios cargados")
@@ -228,7 +228,7 @@ class MessagesViewModel(
             )
 
             // Marcar como leído si no lo está
-            if (message.is_read != true && _currentView.value == MessageView.INBOX) {
+            if (!message.isReadBoolean && _currentView.value == MessageView.INBOX) {
                 markAsRead(message.id)
             }
 
@@ -265,7 +265,7 @@ class MessagesViewModel(
             result.onSuccess {
                 // Actualizar el mensaje en la lista local
                 _inboxMessages.value = _inboxMessages.value.map { msg ->
-                    if (msg.id == messageId) msg.copy(is_read = true) else msg
+                    if (msg.id == messageId) msg.copy(is_read = 1) else msg
                 }
                 filterMessagesByMonth()
                 Log.d(TAG, "✅ Mensaje $messageId marcado como leído")
@@ -491,7 +491,7 @@ class MessagesViewModel(
     fun getStats(): Stats {
         val messages = _filteredMessages.value
         val unreadCount = if (_currentView.value == MessageView.INBOX) {
-            messages.count { it.is_read != true }
+            messages.count { !it.isReadBoolean }
         } else 0
 
         return Stats(
@@ -513,8 +513,17 @@ class MessagesViewModel(
     fun getUserName(userId: Int?): String {
         if (userId == null) return "Desconocido"
         val user = _users.value.find { it.id_empleado == userId }
-        return user?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido"
-    }
+        if (user != null) return "${user.nombre} ${user.apellido}"
+
+        val relatedUser = (_inboxMessages.value + _sentMessages.value).firstNotNullOfOrNull { message ->
+            when (userId) {
+                message.sender?.id_empleado -> message.sender
+                message.receiver?.id_empleado -> message.receiver
+                else -> null
+            }
+        }
+
+        return relatedUser?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido"    }
 
     /**
      * Formatea una fecha para mostrar

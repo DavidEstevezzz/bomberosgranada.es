@@ -448,7 +448,7 @@ private fun MessageCard(
     isInbox: Boolean,
     onClick: () -> Unit
 ) {
-    val isRead = message.is_read == true
+    val isRead = message.isReadBoolean
     val isMassive = message.massive != null && message.massive != "false"
     val massiveLabel = viewModel.getMassiveLabel(message.massive)
 

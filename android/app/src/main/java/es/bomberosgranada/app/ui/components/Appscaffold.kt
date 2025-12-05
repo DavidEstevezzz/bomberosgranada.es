@@ -85,8 +85,7 @@ object NavigationItems {
             title = "Mensajes",
             icon = Icons.Outlined.Email,
             selectedIcon = Icons.Filled.Email,
-            route = "messages",
-            badgeCount = unreadMessagesCount
+            route = "messages"
         ),
         NavigationItem(
             id = "solicitudes",
@@ -236,7 +235,7 @@ fun AppScaffold(
     // Actualizar badges
     val itemsWithBadges = remember(navigationItems, unreadMessagesCount) {
         navigationItems.map { item ->
-            if (item.id == "mensajes" && unreadMessagesCount > 0) {
+            if (item.id == "messages" && unreadMessagesCount > 0) {
                 item.copy(badge = unreadMessagesCount)
             } else item
         }

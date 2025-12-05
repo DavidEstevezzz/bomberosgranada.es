@@ -15,7 +15,7 @@ data class Message(
     val parent_id: Int? = null,
     val massive: String? = null,
     // Campos calculados para mensajes masivos
-    val is_read: Boolean? = null,
+    val is_read: Int? = null,
     val read_count: Int? = null,
     val total_recipients: Int? = null,
     val read_percentage: Double? = null,
@@ -24,7 +24,11 @@ data class Message(
     val receiver: User? = null,
     val parent: Message? = null,
     val replies: List<Message>? = null
-)
+
+) {
+    val isReadBoolean: Boolean
+    get() = is_read == 1
+}
 
 data class MessageThread(
     val message: Message
@@ -39,8 +43,11 @@ data class UserInfo(
 
 data class MarkAsReadResponse(
     val message: String,
-    val is_read: Boolean
-)
+    val is_read: Int
+) {
+    val isReadBoolean: Boolean
+        get() = is_read == 1
+}
 
 data class MarkMassiveAsReadResponse(
     val message: String,

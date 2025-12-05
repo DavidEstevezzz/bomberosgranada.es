@@ -26,6 +26,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import es.bomberosgranada.app.ui.screens.CreateShiftChangeScreen
 import es.bomberosgranada.app.viewmodels.CreateShiftChangeViewModel
+import es.bomberosgranada.app.ui.screens.MyRequestsScreen
+import es.bomberosgranada.app.viewmodels.MyRequestsViewModel
+import es.bomberosgranada.app.ui.screens.RequirementListScreen
+import es.bomberosgranada.app.viewmodels.RequirementListViewModel
+import es.bomberosgranada.app.viewmodels.RequirementListViewModel.ListType
+import es.bomberosgranada.app.ui.screens.MessagesScreen
+import es.bomberosgranada.app.viewmodels.MessagesViewModel
 
 /**
  * Navigation Host principal de la aplicación
@@ -204,16 +211,22 @@ fun AppNavigation(
         }
 
         // ==========================================
-        // MENSAJES (Placeholder)
+        // MENSAJES
         // ==========================================
 
-        composable(route = Screen.Messages.route) {
-            // TODO: Implementar MessagesScreen con AppScaffold
-            PlaceholderScreen(
-                title = "Mensajes",
+        composable(route = "messages") {
+            val messagesViewModel = remember {
+                MessagesViewModel(
+                    messagesRepository = messagesRepository,
+                    usersRepository = usersRepository
+                )
+            }
+            MessagesScreen(
+                viewModel = messagesViewModel,
                 currentUser = currentUser,
                 onNavigate = onNavigate,
                 onLogout = onLogout,
+                onBack = { navController.popBackStack() },
                 unreadMessagesCount = unreadMessagesCount
             )
         }
@@ -222,13 +235,40 @@ fun AppNavigation(
         // SOLICITUDES (Lista)
         // ==========================================
 
-        composable(route = Screen.Requests.route) {
-            // TODO: Implementar RequestsListScreen con AppScaffold
-            PlaceholderScreen(
-                title = "Mis Solicitudes",
+        composable(route = Screen.MyRequests.route) {
+            val myRequestsViewModel = remember {
+                MyRequestsViewModel(
+                    requestsRepository = requestsRepository,
+                    shiftChangeRepository = shiftChangeRepository
+                )
+            }
+
+            MyRequestsScreen(
+                viewModel = myRequestsViewModel,
                 currentUser = currentUser,
                 onNavigate = onNavigate,
                 onLogout = onLogout,
+                onBack = { navController.popBackStack() },
+                unreadMessagesCount = unreadMessagesCount
+            )
+        }
+
+        // También mantén el composable de Requests si lo necesitas para otra cosa:
+        composable(route = Screen.Requests.route) {
+            // Redirigir a MyRequests o mantener como placeholder
+            val myRequestsViewModel = remember {
+                MyRequestsViewModel(
+                    requestsRepository = requestsRepository,
+                    shiftChangeRepository = shiftChangeRepository
+                )
+            }
+
+            MyRequestsScreen(
+                viewModel = myRequestsViewModel,
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                onBack = { navController.popBackStack() },
                 unreadMessagesCount = unreadMessagesCount
             )
         }
@@ -245,6 +285,66 @@ fun AppNavigation(
                 )
             }
             CreateShiftChangeScreen(
+                viewModel = viewModel,
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                onBack = { navController.popBackStack() },
+                unreadMessagesCount = unreadMessagesCount
+            )
+        }
+
+        // ==========================================
+        // LISTAS DE REQUERIMIENTOS
+        // ==========================================
+
+        // Lista 24h
+        composable(route = "requirement-list-24h") {
+            val viewModel = remember { RequirementListViewModel(assignmentsRepository) }
+            RequirementListScreen(
+                listType = ListType.HOURS_24,
+                viewModel = viewModel,
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                onBack = { navController.popBackStack() },
+                unreadMessagesCount = unreadMessagesCount
+            )
+        }
+
+        // Lista 10h
+        composable(route = "requirement-list-10h") {
+            val viewModel = remember { RequirementListViewModel(assignmentsRepository) }
+            RequirementListScreen(
+                listType = ListType.HOURS_10,
+                viewModel = viewModel,
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                onBack = { navController.popBackStack() },
+                unreadMessagesCount = unreadMessagesCount
+            )
+        }
+
+        // Operadores Noche
+        composable(route = "requirement-list-operators-night") {
+            val viewModel = remember { RequirementListViewModel(assignmentsRepository) }
+            RequirementListScreen(
+                listType = ListType.OPERATORS_NIGHT,
+                viewModel = viewModel,
+                currentUser = currentUser,
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                onBack = { navController.popBackStack() },
+                unreadMessagesCount = unreadMessagesCount
+            )
+        }
+
+        // Operadores Mañana
+        composable(route = "requirement-list-operators-morning") {
+            val viewModel = remember { RequirementListViewModel(assignmentsRepository) }
+            RequirementListScreen(
+                listType = ListType.OPERATORS_MORNING,
                 viewModel = viewModel,
                 currentUser = currentUser,
                 onNavigate = onNavigate,

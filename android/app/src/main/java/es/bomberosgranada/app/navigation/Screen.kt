@@ -35,6 +35,7 @@ sealed class Screen(val route: String) {
     object Requests : Screen("requests")
 
     object CreateRequest : Screen("create-request")
+    object MyRequests : Screen("my-requests")
 
     object RequestDetail : Screen("request/{requestId}") {
         fun createRoute(requestId: Int) = "request/$requestId"
@@ -72,6 +73,16 @@ sealed class Screen(val route: String) {
             }
         }
     }
+
+    // ==========================================
+    // LISTAS DE REQUERIMIENTOS
+    // ==========================================
+
+    object RequirementList24h : Screen("requirement-list-24h")
+    object RequirementList10h : Screen("requirement-list-10h")
+    object RequirementListOperatorsNight : Screen("requirement-list-operators-night")
+    object RequirementListOperatorsMorning : Screen("requirement-list-operators-morning")
+
 
     // ==========================================
     // CALENDARIO

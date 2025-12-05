@@ -27,6 +27,12 @@ data class User(
     val practicas: Int? = null,
     val mando_especial: Boolean? = null,
     val id_parque: Int? = null,
+
+    // Campos para listas de requerimientos
+    val horas_ofrecidas: Double? = null,
+    val horas_aceptadas: Double? = null,
+    val fecha_req: String? = null,  // Timestamp de última actualización en lista de requerimientos
+
     val created_at: String? = null,
     val updated_at: String? = null,
     val email_verified_at: String? = null,
@@ -34,7 +40,19 @@ data class User(
     // Relaciones (cuando Laravel las incluye con ->with())
     val roles: List<Role>? = null,
     val role_name: String? = null  // Laravel appends esto
-)
+) {
+    /**
+     * Nombre completo del usuario
+     */
+    val nombreCompleto: String
+        get() = "$nombre $apellido"
+
+    /**
+     * Iniciales del usuario (para avatares)
+     */
+    val iniciales: String
+        get() = "${nombre.firstOrNull()?.uppercase() ?: ""}${apellido.firstOrNull()?.uppercase() ?: ""}"
+}
 
 /**
  * Modelo Role - Para Spatie Permissions

@@ -81,11 +81,12 @@ object NavigationItems {
             route = "dashboard"
         ),
         NavigationItem(
-            id = "mensajes",
+            id = "messages",
             title = "Mensajes",
             icon = Icons.Outlined.Email,
             selectedIcon = Icons.Filled.Email,
-            route = "messages"
+            route = "messages",
+            badgeCount = unreadMessagesCount
         ),
         NavigationItem(
             id = "solicitudes",
@@ -111,6 +112,39 @@ object NavigationItems {
                     title = "Mis Solicitudes",
                     icon = Icons.Outlined.List,
                     route = "my-requests"
+                )
+            )
+        ),
+        NavigationItem(
+            id = "listas_requerimientos",
+            title = "Listas de Requerimientos",
+            icon = Icons.Outlined.FormatListNumbered,
+            selectedIcon = Icons.Filled.FormatListNumbered,
+            route = "requirement-lists",
+            children = listOf(
+                NavigationItem(
+                    id = "req_24h",
+                    title = "24 Horas",
+                    icon = Icons.Outlined.Schedule,
+                    route = "requirement-list-24h"
+                ),
+                NavigationItem(
+                    id = "req_10h",
+                    title = "10 Horas",
+                    icon = Icons.Outlined.Timer,
+                    route = "requirement-list-10h"
+                ),
+                NavigationItem(
+                    id = "req_op_noche",
+                    title = "Operadores Noche",
+                    icon = Icons.Outlined.NightsStay,
+                    route = "requirement-list-operators-night"
+                ),
+                NavigationItem(
+                    id = "req_op_manana",
+                    title = "Operadores Mañana",
+                    icon = Icons.Outlined.WbSunny,
+                    route = "requirement-list-operators-morning"
                 )
             )
         ),

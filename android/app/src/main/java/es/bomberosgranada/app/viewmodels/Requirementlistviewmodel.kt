@@ -42,25 +42,25 @@ class RequirementListViewModel(
         HOURS_24(
             id = "24h",
             title = "Lista de Requerimientos 24h",
-            subtitle = "Bomberos disponibles para turnos de 24 horas",
+            subtitle = "",
             route = "requirement-list-24h"
         ),
         HOURS_10(
             id = "10h",
             title = "Lista de Requerimientos 10h",
-            subtitle = "Bomberos disponibles para turnos de 10 horas",
+            subtitle = "",
             route = "requirement-list-10h"
         ),
         OPERATORS_NIGHT(
             id = "operators_night",
             title = "Operadores Noche",
-            subtitle = "Operadores disponibles para turno de noche",
+            subtitle = "",
             route = "requirement-list-operators-night"
         ),
         OPERATORS_MORNING(
             id = "operators_morning",
             title = "Operadores Mañana",
-            subtitle = "Operadores disponibles para turno de mañana",
+            subtitle = "",
             route = "requirement-list-operators-morning"
         )
     }

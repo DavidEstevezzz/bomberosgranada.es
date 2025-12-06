@@ -87,6 +87,26 @@ class AssignmentsRepository {
         }
     }
 
+    suspend fun getUserAssignments(userId: Int): Result<List<FirefighterAssignment>> {
+        return try {
+            Log.d(TAG, "=== OBTENIENDO ASIGNACIONES DEL USUARIO $userId ===")
+
+            // O filtrar de todas las asignaciones:
+            val response = assignmentsService.getAssignments()
+
+            if (response.isSuccessful && response.body() != null) {
+                val userAssignments = response.body()!!.filter { it.id_empleado == userId }
+                Log.d(TAG, "✅ ${userAssignments.size} asignaciones encontradas")
+                Result.success(userAssignments)
+            } else {
+                Result.failure(Exception("Error: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Excepción: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
     suspend fun updateAssignment(id: Int, request: UpdateAssignmentRequest): Result<FirefighterAssignment> {
         return try {
             Log.d(TAG, "=== ACTUALIZANDO ASIGNACIÓN $id ===")

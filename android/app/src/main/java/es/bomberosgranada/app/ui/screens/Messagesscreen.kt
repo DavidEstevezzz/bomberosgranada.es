@@ -233,26 +233,29 @@ private fun MessagesHeader(
                     )
                     .padding(24.dp)
             ) {
-                Column {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
                         text = "CENTRO DE COMUNICACIONES",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White.copy(alpha = 0.7f),
-                        letterSpacing = 2.sp
+                        letterSpacing = 2.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Mensajes internos",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Text(
-                        text = "Consulta, responde y gestiona los mensajes de tu equipo",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
+
                 }
             }
 
@@ -487,9 +490,9 @@ private fun MessageCard(
                     )
                 } else {
                     val name = if (isInbox) {
-                        message.sender?.nombre ?: "?"
+                        viewModel.getUserName(message.sender_id)
                     } else {
-                        message.receiver?.nombre ?: "?"
+                        viewModel.getUserName(message.receiver_id)
                     }
                     Text(
                         text = name.firstOrNull()?.uppercase() ?: "?",
@@ -508,12 +511,17 @@ private fun MessageCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val receiverName = viewModel.getUserName(message.receiver_id)
+                    val displayName = if (!isInbox && massiveLabel != null && receiverName == "Desconocido") {
+                        massiveLabel
+                    } else if (!isInbox) {
+                        receiverName
+                    } else {
+                        viewModel.getUserName(message.sender_id)
+                    }
+
                     Text(
-                        text = if (isInbox) {
-                            message.sender?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido"
-                        } else {
-                            message.receiver?.let { "${it.nombre} ${it.apellido}" } ?: massiveLabel ?: "Desconocido"
-                        },
+                        text = displayName,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = if (!isRead && isInbox) FontWeight.Bold else FontWeight.SemiBold,
                         color = TextPrimary,
@@ -801,7 +809,7 @@ private fun ComposeMessageDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "COMUNICACIONES",
                                 style = MaterialTheme.typography.labelSmall,

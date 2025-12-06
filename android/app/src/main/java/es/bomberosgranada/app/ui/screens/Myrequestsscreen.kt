@@ -345,11 +345,7 @@ private fun MonthHeader(
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
-                    Text(
-                        text = "Consulta y gestiona tus solicitudes del mes",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
+
                 }
             }
 

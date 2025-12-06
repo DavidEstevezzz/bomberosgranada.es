@@ -266,7 +266,7 @@ private fun HeaderCard(
                     )
                     .padding(24.dp)
             ) {
-                Column {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "GESTIÓN DE DISPONIBILIDAD",
                         style = MaterialTheme.typography.labelSmall,

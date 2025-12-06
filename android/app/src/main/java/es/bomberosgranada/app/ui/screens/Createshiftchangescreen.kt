@@ -312,11 +312,7 @@ private fun ShiftChangeHeader() {
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
-                    Text(
-                        text = "Intercambia una guardia con un compañero",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
+
                 }
             }
         }

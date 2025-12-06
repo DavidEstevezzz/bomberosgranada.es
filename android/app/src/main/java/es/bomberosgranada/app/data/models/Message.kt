@@ -1,5 +1,7 @@
 package es.bomberosgranada.app.data.models
 
+import com.google.gson.annotations.JsonAdapter
+import es.bomberosgranada.app.data.api.adapters.BooleanIntAdapter
 data class Message(
     val id: Int,
     val subject: String,
@@ -15,6 +17,7 @@ data class Message(
     val parent_id: Int? = null,
     val massive: String? = null,
     // Campos calculados para mensajes masivos
+    @JsonAdapter(BooleanIntAdapter::class)
     val is_read: Int? = null,
     val read_count: Int? = null,
     val total_recipients: Int? = null,
@@ -43,6 +46,7 @@ data class UserInfo(
 
 data class MarkAsReadResponse(
     val message: String,
+    @JsonAdapter(BooleanIntAdapter::class)
     val is_read: Int
 ) {
     val isReadBoolean: Boolean

@@ -33,6 +33,11 @@ import es.bomberosgranada.app.viewmodels.RequirementListViewModel
 import es.bomberosgranada.app.viewmodels.RequirementListViewModel.ListType
 import es.bomberosgranada.app.ui.screens.MessagesScreen
 import es.bomberosgranada.app.viewmodels.MessagesViewModel
+import es.bomberosgranada.app.ui.screens.ProfileScreen
+import es.bomberosgranada.app.viewmodels.ProfileViewModel
+import es.bomberosgranada.app.data.repositories.ShiftChangeRequestsRepository
+
+
 
 /**
  * Navigation Host principal de la aplicación
@@ -373,13 +378,24 @@ fun AppNavigation(
         // PERFIL
         // ==========================================
 
-        composable(route = Screen.Profile.route) {
-            // TODO: Implementar ProfileScreen con AppScaffold
-            PlaceholderScreen(
-                title = "Mi Perfil",
+        composable(route = "profile") {
+            val profileViewModel = remember {
+                ProfileViewModel(
+                    usersRepository = usersRepository,
+                    brigadesRepository = brigadesRepository,
+                    assignmentsRepository = assignmentsRepository,
+                    guardsRepository = guardsRepository,
+                    requestsRepository = requestsRepository,
+                    shiftChangeRepository = shiftChangeRepository,
+                    extraHoursRepository = extraHoursRepository
+                )
+            }
+            ProfileScreen(
+                viewModel = profileViewModel,
                 currentUser = currentUser,
                 onNavigate = onNavigate,
                 onLogout = onLogout,
+                onBack = { navController.popBackStack() },
                 unreadMessagesCount = unreadMessagesCount
             )
         }

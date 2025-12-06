@@ -210,4 +210,34 @@ class UsersRepository {
             Result.failure(e)
         }
     }
+    suspend fun changePassword(
+        userId: Int,
+        currentPassword: String,
+        newPassword: String,
+        confirmPassword: String
+    ): Result<Unit> {
+        return try {
+            Log.d(TAG, "=== CAMBIANDO CONTRASEÑA ===")
+
+            val request = UpdateUserRequest(
+                current_password = currentPassword,
+                password = newPassword,
+                password_confirmation = confirmPassword
+            )
+
+            val response = usersService.updateUser(userId, request)
+
+            if (response.isSuccessful) {
+                Log.d(TAG, "✅ Contraseña actualizada")
+                Result.success(Unit)
+            } else {
+                val errorMsg = response.errorBody()?.string() ?: "Error al cambiar contraseña"
+                Log.e(TAG, "❌ Error: $errorMsg")
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Excepción: ${e.message}")
+            Result.failure(e)
+        }
+    }
 }

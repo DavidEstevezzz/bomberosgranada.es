@@ -135,17 +135,24 @@ class MessagesViewModel(
             Log.d(TAG, "=== CARGANDO MENSAJES ===")
 
             try {
+                var usersLoaded = false
+
                 // Cargar usuarios para el selector de destinatarios
                 val usersResult = usersRepository.getAllUsers()
                 usersResult.onSuccess { usersList ->
                     _users.value = usersList
+                    usersLoaded = true
                     Log.d(TAG, "✅ ${usersList.size} usuarios cargados")
+                }.onFailure { error ->
+                    val errorMessage = error.message ?: "Error al cargar usuarios"
+                    Log.e(TAG, "❌ Error cargando usuarios: $errorMessage")
+                    _errorMessage.value = errorMessage
                 }
 
                 // Cargar mensajes de entrada
                 val inboxResult = messagesRepository.getInboxMessages()
                 inboxResult.onSuccess { messages ->
-                    _inboxMessages.value = messages
+                    _inboxMessages.value = enrichMessagesWithRelations(messages)
                     Log.d(TAG, "✅ ${messages.size} mensajes en bandeja de entrada")
                 }.onFailure { error ->
                     Log.e(TAG, "❌ Error cargando bandeja de entrada: ${error.message}")
@@ -154,15 +161,26 @@ class MessagesViewModel(
                 // Cargar mensajes enviados
                 val sentResult = messagesRepository.getSentMessages()
                 sentResult.onSuccess { messages ->
-                    _sentMessages.value = messages
+                    _sentMessages.value = enrichMessagesWithRelations(messages)
                     Log.d(TAG, "✅ ${messages.size} mensajes enviados")
                 }.onFailure { error ->
                     Log.e(TAG, "❌ Error cargando bandeja de salida: ${error.message}")
                 }
 
-                filterMessagesByMonth()
-                _uiState.value = MessagesUiState.Success
+                if (!usersLoaded && _users.value.isEmpty()) {
+                    val derivedUsers = deriveUsersFromMessages(_inboxMessages.value + _sentMessages.value)
+                    if (derivedUsers.isNotEmpty()) {
+                        _users.value = derivedUsers
+                        Log.d(TAG, "ℹ️ Usuarios derivados de mensajes: ${derivedUsers.size}")
+                    }
+                }
 
+                filterMessagesByMonth()
+                _uiState.value = if (_users.value.isEmpty() && !usersLoaded) {
+                    MessagesUiState.Error("No se pudieron cargar los usuarios")
+                } else {
+                    MessagesUiState.Success
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Error general: ${e.message}")
                 _uiState.value = MessagesUiState.Error(e.message ?: "Error desconocido")
@@ -515,16 +533,50 @@ class MessagesViewModel(
         val user = _users.value.find { it.id_empleado == userId }
         if (user != null) return "${user.nombre} ${user.apellido}"
 
-        val relatedUser = (_inboxMessages.value + _sentMessages.value).firstNotNullOfOrNull { message ->
-            when (userId) {
-                message.sender?.id_empleado -> message.sender
-                message.receiver?.id_empleado -> message.receiver
-                else -> null
-            }
+        _messageDetailState.value.message?.let { detailMessage ->
+            val detailUser = findRelatedUser(detailMessage, userId)
+            if (detailUser != null) return "${detailUser.nombre} ${detailUser.apellido}"
         }
 
-        return relatedUser?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido"    }
+        val relatedUser = (_inboxMessages.value + _sentMessages.value).firstNotNullOfOrNull { message ->
+            findRelatedUser(message, userId)
+        }
 
+        return relatedUser?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido"
+    }
+
+    private fun findRelatedUser(message: Message, userId: Int): User? {
+        if (message.sender?.id_empleado == userId) return message.sender
+        if (message.receiver?.id_empleado == userId) return message.receiver
+
+        message.replies?.forEach { reply ->
+            findRelatedUser(reply, userId)?.let { return it }
+        }
+
+        return null
+    }
+
+    private fun deriveUsersFromMessages(messages: List<Message>): List<User> {
+        return messages.flatMap { message ->
+            listOfNotNull(message.sender, message.receiver) + (message.replies ?: emptyList()).flatMap { reply ->
+                listOfNotNull(reply.sender, reply.receiver)
+
+            }
+        }
+            .distinctBy { it.id_empleado }
+    }
+
+
+    private fun enrichMessagesWithRelations(messages: List<Message>): List<Message> {
+        return messages.map { message ->
+            val sender = message.sender ?: _users.value.find { it.id_empleado == message.sender_id }
+            val receiver = message.receiver ?: _users.value.find { it.id_empleado == message.receiver_id }
+            message.copy(
+                sender = sender,
+                receiver = receiver
+            )
+        }
+    }
     /**
      * Formatea una fecha para mostrar
      */

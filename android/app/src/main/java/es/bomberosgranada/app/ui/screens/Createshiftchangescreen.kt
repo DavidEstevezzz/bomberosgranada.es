@@ -38,28 +38,12 @@ import androidx.compose.ui.unit.dp
 import es.bomberosgranada.app.data.models.User
 import es.bomberosgranada.app.ui.components.AppScaffold
 import es.bomberosgranada.app.ui.components.LoadingIndicator
+import es.bomberosgranada.app.ui.theme.AppColors
 import es.bomberosgranada.app.viewmodels.CreateShiftChangeViewModel
 import es.bomberosgranada.app.viewmodels.CreateShiftChangeViewModel.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
-
-// ============================================
-// COLORES DEL DISEÑO
-// ============================================
-private val GradientStart = Color(0xFF1E3A5F)
-private val GradientEnd = Color(0xFF2D5A87)
-private val AccentOrange = Color(0xFFFF6B35)
-private val AccentBlue = Color(0xFF3B82F6)
-private val AccentPurple = Color(0xFF8B5CF6)
-private val AccentGreen = Color(0xFF10B981)
-private val SurfaceElevated = Color(0xFFF8FAFC)
-private val BackgroundColor = Color(0xFFF1F5F9)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF64748B)
-private val CardBackground = Color(0xFFFFFFFF)
-private val ErrorRed = Color(0xFFEF4444)
-private val SuccessGreen = Color(0xFF22C55E)
 
 // ============================================
 // PANTALLA PRINCIPAL
@@ -183,7 +167,7 @@ fun CreateShiftChangeScreen(
                                     selectedEmployee = selectedEmployee1,
                                     onEmployeeSelected = { viewModel.selectEmployee1(it) },
                                     filteredEmployees = viewModel.getFilteredEmployees1(),
-                                    accentColor = AccentBlue,
+                                    accentColor = AppColors.accentBlue,
                                     icon = Icons.Default.Person
                                 )
                             }
@@ -204,7 +188,7 @@ fun CreateShiftChangeScreen(
                                 selectedEmployee = selectedEmployee2,
                                 onEmployeeSelected = { viewModel.selectEmployee2(it) },
                                 filteredEmployees = viewModel.getFilteredEmployees2(),
-                                accentColor = AccentPurple,
+                                accentColor = AppColors.accentPurple,
                                 icon = Icons.Default.PersonAdd
                             )
                         }
@@ -254,7 +238,7 @@ fun CreateShiftChangeScreen(
             ) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = if (errorMessage != null) ErrorRed else SuccessGreen,
+                    containerColor = if (errorMessage != null) AppColors.error else AppColors.success,
                     contentColor = Color.White,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.padding(16.dp)
@@ -282,7 +266,7 @@ private fun ShiftChangeHeader() {
                 .fillMaxWidth()
                 .background(
                     brush = Brush.horizontalGradient(
-                        colors = listOf(GradientStart, GradientEnd)
+                        colors = AppColors.gradientPrimary
                     )
                 )
                 .padding(24.dp)
@@ -295,7 +279,7 @@ private fun ShiftChangeHeader() {
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
+                        .background(AppColors.surface.copy(alpha = 0.25f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -333,7 +317,7 @@ private fun ChangeTypeSelector(
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -343,7 +327,7 @@ private fun ChangeTypeSelector(
                 text = "Tipo de Cambio",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = AppColors.textPrimary
             )
 
             ChangeType.entries.forEach { type ->
@@ -364,13 +348,13 @@ private fun ChangeTypeOption(
     onClick: () -> Unit
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) AccentBlue.copy(alpha = 0.1f) else SurfaceElevated,
+        targetValue = if (isSelected) AppColors.accentBlue.copy(alpha = 0.1f) else AppColors.surfaceElevated,
         animationSpec = tween(200),
         label = "typeBackground"
     )
 
     val borderColor by animateColorAsState(
-        targetValue = if (isSelected) AccentBlue else Color.Transparent,
+        targetValue = if (isSelected) AppColors.accentBlue else Color.Transparent,
         animationSpec = tween(200),
         label = "typeBorder"
     )
@@ -395,8 +379,8 @@ private fun ChangeTypeOption(
                 selected = isSelected,
                 onClick = onClick,
                 colors = RadioButtonDefaults.colors(
-                    selectedColor = AccentBlue,
-                    unselectedColor = TextSecondary
+                    selectedColor = AppColors.accentBlue,
+                    unselectedColor = AppColors.textSecondary
                 )
             )
             Column(modifier = Modifier.weight(1f)) {
@@ -404,12 +388,12 @@ private fun ChangeTypeOption(
                     text = type.displayName,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isSelected) AccentBlue else TextPrimary
+                    color = if (isSelected) AppColors.accentBlue else AppColors.textPrimary
                 )
                 Text(
                     text = type.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = AppColors.textSecondary
                 )
             }
         }
@@ -427,7 +411,7 @@ private fun CurrentUserCard(user: User) {
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Column(
             modifier = Modifier.padding(20.dp)
@@ -440,13 +424,13 @@ private fun CurrentUserCard(user: User) {
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(AccentBlue.copy(alpha = 0.1f)),
+                        .background(AppColors.accentBlue.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
-                        tint = AccentBlue,
+                        tint = AppColors.accentBlue,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -454,7 +438,7 @@ private fun CurrentUserCard(user: User) {
                     text = "Tu Solicitud",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = AppColors.textPrimary
                 )
             }
 
@@ -464,7 +448,7 @@ private fun CurrentUserCard(user: User) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = AccentBlue.copy(alpha = 0.08f)
+                color = AppColors.accentBlue.copy(alpha = 0.08f)
             ) {
                 Row(
                     modifier = Modifier
@@ -477,7 +461,7 @@ private fun CurrentUserCard(user: User) {
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(AccentBlue),
+                            .background(AppColors.accentBlue),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -492,12 +476,12 @@ private fun CurrentUserCard(user: User) {
                             text = "${user.nombre} ${user.apellido}",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                            color = AppColors.textPrimary
                         )
                         Text(
                             text = user.puesto ?: "Bombero",
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
+                            color = AppColors.textSecondary
                         )
                     }
                 }
@@ -530,12 +514,11 @@ private fun EmployeeSelector(
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Column(
             modifier = Modifier.padding(20.dp)
         ) {
-            // Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -559,28 +542,25 @@ private fun EmployeeSelector(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = AppColors.textPrimary
                     )
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = AppColors.textSecondary
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Empleado seleccionado o buscador
+            // Empleado seleccionado
             if (selectedEmployee != null) {
-                // Mostrar empleado seleccionado
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable { onEmployeeSelected(null) },
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    color = accentColor.copy(alpha = 0.1f)
+                    color = accentColor.copy(alpha = 0.08f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
                 ) {
                     Row(
                         modifier = Modifier
@@ -595,29 +575,29 @@ private fun EmployeeSelector(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(44.dp)
+                                    .size(40.dp)
                                     .clip(CircleShape)
-                                    .background(accentColor),
+                                    .background(accentColor.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "${selectedEmployee.nombre.first()}${selectedEmployee.apellido.first()}",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = accentColor
                                 )
                             }
                             Column {
                                 Text(
                                     text = "${selectedEmployee.nombre} ${selectedEmployee.apellido}",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.textPrimary
                                 )
                                 Text(
                                     text = selectedEmployee.puesto ?: "Bombero",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary
+                                    color = AppColors.textSecondary
                                 )
                             }
                         }
@@ -628,7 +608,7 @@ private fun EmployeeSelector(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Cambiar",
-                                tint = TextSecondary
+                                tint = AppColors.textSecondary
                             )
                         }
                     }
@@ -649,7 +629,7 @@ private fun EmployeeSelector(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = null,
-                            tint = TextSecondary
+                            tint = AppColors.textSecondary
                         )
                     },
                     trailingIcon = {
@@ -658,7 +638,7 @@ private fun EmployeeSelector(
                                 Icon(
                                     imageVector = Icons.Default.Clear,
                                     contentDescription = "Limpiar",
-                                    tint = TextSecondary
+                                    tint = AppColors.textSecondary
                                 )
                             }
                         }
@@ -667,7 +647,15 @@ private fun EmployeeSelector(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = accentColor,
                         focusedLabelColor = accentColor,
-                        cursorColor = accentColor
+                        cursorColor = accentColor,
+                        unfocusedBorderColor = AppColors.outline,
+                        focusedContainerColor = AppColors.surface,
+                        unfocusedContainerColor = AppColors.surface,
+                        focusedTextColor = AppColors.textPrimary,
+                        unfocusedTextColor = AppColors.textPrimary,
+                        unfocusedLabelColor = AppColors.textSecondary,
+                        focusedPlaceholderColor = AppColors.textSecondary,
+                        unfocusedPlaceholderColor = AppColors.textSecondary
                     ),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -687,7 +675,7 @@ private fun EmployeeSelector(
                             .fillMaxWidth()
                             .padding(top = 8.dp),
                         shape = RoundedCornerShape(16.dp),
-                        color = SurfaceElevated
+                        color = AppColors.surfaceElevated
                     ) {
                         Column(
                             modifier = Modifier.padding(8.dp)
@@ -716,7 +704,7 @@ private fun EmployeeSelector(
                     Text(
                         text = "No se encontraron compañeros",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
+                        color = AppColors.textSecondary,
                         modifier = Modifier.padding(top = 12.dp)
                     )
                 }
@@ -765,14 +753,14 @@ private fun EmployeeListItem(
                     text = "${employee.nombre} ${employee.apellido}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    color = TextPrimary,
+                    color = AppColors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = employee.puesto ?: "Bombero",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = AppColors.textSecondary
                 )
             }
         }
@@ -803,7 +791,7 @@ private fun DatesAndTurnoCard(
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -818,13 +806,13 @@ private fun DatesAndTurnoCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(AccentGreen.copy(alpha = 0.1f)),
+                        .background(AppColors.accentGreen.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.CalendarMonth,
                         contentDescription = null,
-                        tint = AccentGreen,
+                        tint = AppColors.accentGreen,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -832,18 +820,18 @@ private fun DatesAndTurnoCard(
                     text = "Fechas del Cambio",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = AppColors.textPrimary
                 )
             }
 
-            HorizontalDivider(color = SurfaceElevated)
+            HorizontalDivider(color = AppColors.divider)
 
             // Fecha 1
             DateField(
                 label = if (changeType == ChangeType.ESPEJO) "Primera Fecha" else "Fecha del Cambio",
                 value = fecha1,
                 formatter = dateFormatter,
-                accentColor = AccentGreen,
+                accentColor = AppColors.accentGreen,
                 context = context,
                 calendar = calendar,
                 onDateSelected = onFecha1Selected
@@ -859,7 +847,7 @@ private fun DatesAndTurnoCard(
                     label = "Segunda Fecha",
                     value = fecha2,
                     formatter = dateFormatter,
-                    accentColor = AccentPurple,
+                    accentColor = AppColors.accentPurple,
                     context = context,
                     calendar = calendar,
                     onDateSelected = onFecha2Selected
@@ -876,7 +864,7 @@ private fun DatesAndTurnoCard(
                     Text(
                         text = "Turno",
                         style = MaterialTheme.typography.labelMedium,
-                        color = TextSecondary,
+                        color = AppColors.textSecondary,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -922,7 +910,7 @@ private fun DateField(
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = TextSecondary,
+            color = AppColors.textSecondary,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -942,7 +930,7 @@ private fun DateField(
                     ).show()
                 },
             shape = RoundedCornerShape(16.dp),
-            color = SurfaceElevated,
+            color = AppColors.surfaceElevated,
             border = if (value != null) {
                 androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.5f))
             } else null
@@ -961,19 +949,19 @@ private fun DateField(
                     Icon(
                         imageVector = Icons.Default.CalendarToday,
                         contentDescription = null,
-                        tint = if (value != null) accentColor else TextSecondary,
+                        tint = if (value != null) accentColor else AppColors.textSecondary,
                         modifier = Modifier.size(22.dp)
                     )
                     Text(
                         text = value?.format(formatter) ?: "Seleccionar fecha",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = if (value != null) TextPrimary else TextSecondary
+                        color = if (value != null) AppColors.textPrimary else AppColors.textSecondary
                     )
                 }
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = null,
-                    tint = TextSecondary
+                    tint = AppColors.textSecondary
                 )
             }
         }
@@ -988,13 +976,13 @@ private fun TurnoChip(
     modifier: Modifier = Modifier
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) AccentGreen else SurfaceElevated,
+        targetValue = if (isSelected) AppColors.accentGreen else AppColors.surfaceElevated,
         animationSpec = tween(200),
         label = "turnoBackground"
     )
 
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) Color.White else TextPrimary,
+        targetValue = if (isSelected) Color.White else AppColors.textPrimary,
         animationSpec = tween(200),
         label = "turnoContent"
     )
@@ -1038,7 +1026,7 @@ private fun MotivoCard(
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Column(
             modifier = Modifier.padding(20.dp)
@@ -1051,13 +1039,13 @@ private fun MotivoCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(AccentOrange.copy(alpha = 0.1f)),
+                        .background(AppColors.accentOrange.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = null,
-                        tint = AccentOrange,
+                        tint = AppColors.accentOrange,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -1065,7 +1053,7 @@ private fun MotivoCard(
                     text = "Motivo (Opcional)",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = AppColors.textPrimary
                 )
             }
 
@@ -1078,9 +1066,17 @@ private fun MotivoCard(
                 placeholder = { Text("Describe el motivo del cambio...") },
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentOrange,
-                    focusedLabelColor = AccentOrange,
-                    cursorColor = AccentOrange
+                    focusedBorderColor = AppColors.accentOrange,
+                    focusedLabelColor = AppColors.accentOrange,
+                    cursorColor = AppColors.accentOrange,
+                    unfocusedBorderColor = AppColors.outline,
+                    focusedContainerColor = AppColors.surface,
+                    unfocusedContainerColor = AppColors.surface,
+                    focusedTextColor = AppColors.textPrimary,
+                    unfocusedTextColor = AppColors.textPrimary,
+                    unfocusedLabelColor = AppColors.textSecondary,
+                    focusedPlaceholderColor = AppColors.textSecondary,
+                    unfocusedPlaceholderColor = AppColors.textSecondary
                 ),
                 minLines = 3,
                 maxLines = 5
@@ -1109,8 +1105,8 @@ private fun SubmitButton(
         shape = RoundedCornerShape(16.dp),
         enabled = !isLoading,
         colors = ButtonDefaults.buttonColors(
-            containerColor = AccentOrange,
-            disabledContainerColor = AccentOrange.copy(alpha = 0.5f)
+            containerColor = AppColors.accentOrange,
+            disabledContainerColor = AppColors.accentOrange.copy(alpha = 0.5f)
         )
     ) {
         AnimatedContent(

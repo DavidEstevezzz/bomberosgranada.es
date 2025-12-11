@@ -36,19 +36,61 @@ import java.util.Locale
 // COLORES
 // ==========================================
 
-private val GradientStart = Color(0xFF1E3A5F)
-private val GradientEnd = Color(0xFF2D5A87)
-private val AccentBlue = Color(0xFF3B82F6)
-private val AccentPurple = Color(0xFF8B5CF6)
-private val AccentGreen = Color(0xFF10B981)
-private val AccentOrange = Color(0xFFFF6B35)
-private val AccentAmber = Color(0xFFF59E0B)
-private val AccentRose = Color(0xFFEF4444)
-private val SurfaceElevated = Color(0xFFF8FAFC)
-private val CardBackground = Color(0xFFFFFFFF)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF64748B)
-private val DividerColor = Color(0xFFE2E8F0)
+private data class ProfilePalette(
+    val gradientStart: Color,
+    val gradientEnd: Color,
+    val accentBlue: Color,
+    val accentPurple: Color,
+    val accentGreen: Color,
+    val accentOrange: Color,
+    val accentAmber: Color,
+    val accentRose: Color,
+    val surfaceElevated: Color,
+    val cardBackground: Color,
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val dividerColor: Color
+)
+
+private val LocalProfilePalette = compositionLocalOf {
+    ProfilePalette(
+        gradientStart = Color(0xFFDC2626),
+        gradientEnd = Color(0xFFB91C1C),
+        accentBlue = Color(0xFFDC2626),
+        accentPurple = Color(0xFF8B5CF6),
+        accentGreen = Color(0xFF10B981),
+        accentOrange = Color(0xFFFF6B35),
+        accentAmber = Color(0xFFF59E0B),
+        accentRose = Color(0xFFEF4444),
+        surfaceElevated = Color(0xFFF8FAFC),
+        cardBackground = Color(0xFFFFFFFF),
+        textPrimary = Color(0xFF1A1A2E),
+        textSecondary = Color(0xFF64748B),
+        dividerColor = Color(0xFFE2E8F0)
+    )
+}
+
+@Composable
+private fun rememberProfilePalette(): ProfilePalette {
+    val colorScheme = MaterialTheme.colorScheme
+    return remember(colorScheme) {
+        ProfilePalette(
+            gradientStart = colorScheme.primary,
+            gradientEnd = colorScheme.primaryContainer,
+            accentBlue = colorScheme.primary,
+            accentPurple = colorScheme.secondary,
+            accentGreen = colorScheme.tertiary,
+            accentOrange = colorScheme.secondaryContainer,
+            accentAmber = colorScheme.tertiaryContainer,
+            accentRose = colorScheme.error,
+            surfaceElevated = colorScheme.surfaceVariant,
+            cardBackground = colorScheme.surface,
+            textPrimary = colorScheme.onSurface,
+            textSecondary = colorScheme.onSurfaceVariant,
+            dividerColor = colorScheme.outline
+        )
+    }
+}
 
 // ==========================================
 // PANTALLA PRINCIPAL
@@ -61,7 +103,8 @@ fun ProfileScreen(
     onNavigate: (String) -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit,
-    unreadMessagesCount: Int
+    unreadMessagesCount: Int,
+    themeViewModel: ThemeViewModel? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val user by viewModel.user.collectAsState()
@@ -113,122 +156,144 @@ fun ProfileScreen(
         }
     }
 
-    AppScaffold(
-        currentRoute = "profile",
-        title = "Mi Perfil",
-        currentUser = currentUser,
-        onNavigate = onNavigate,
-        onLogout = onLogout,
-        showBackButton = true,
-        onBack = onBack,
-        unreadMessagesCount = unreadMessagesCount
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                currentUser == null -> {
-                    LoadingContent(modifier = Modifier.padding(paddingValues))
-                }
+    CompositionLocalProvider(LocalProfilePalette provides rememberProfilePalette()) {
+        val palette = LocalProfilePalette.current
 
-                uiState is ProfileUiState.Loading -> {
-                    LoadingContent(modifier = Modifier.padding(paddingValues))
-                }
+        AppScaffold(
+            currentRoute = "profile",
+            title = "Mi Perfil",
+            currentUser = currentUser,
+            onNavigate = onNavigate,
+            onLogout = onLogout,
+            showBackButton = true,
+            onBack = onBack,
+            unreadMessagesCount = unreadMessagesCount,
+            themeViewModel = themeViewModel
+        ) { paddingValues ->
+            Box(modifier = Modifier.fillMaxSize()) {
+                when {
+                    currentUser == null -> {
+                        LoadingContent(modifier = Modifier.padding(paddingValues))
+                    }
 
-                uiState is ProfileUiState.Error -> {
-                    ErrorContent(
-                        message = (uiState as ProfileUiState.Error).message,
-                        onRetry = { viewModel.loadProfile(currentUser) },
-                        modifier = Modifier.padding(paddingValues)
-                    )
-                }
+                    uiState is ProfileUiState.Loading -> {
+                        LoadingContent(modifier = Modifier.padding(paddingValues))
+                    }
 
-                uiState is ProfileUiState.Success -> {
-                    val displayUser = user ?: currentUser
-
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues)
-                            .background(SurfaceElevated),
-                        contentPadding = PaddingValues(bottom = 24.dp)
-                    ) {
-                        // Header con avatar y nombre
-                        item { ProfileHeader(user = displayUser) }
-
-                        // Información personal
-                        item { PersonalInfoSection(user = displayUser) }
-
-                        // Permisos restantes
-                        item { PermissionsSection(stats = viewModel.getPermissionStats(displayUser)) }
-
-                        // Calendario de guardias
-                        item {
-                            CalendarSection(
-                                month = calendarMonth,
-                                viewModel = viewModel,
-                                currentUser = currentUser,
-                                onPreviousMonth = { viewModel.previousCalendarMonth(currentUser) },
-                                onNextMonth = { viewModel.nextCalendarMonth(currentUser) }
-                            )
-                        }
-
-                        // Solicitudes del mes
-                        item {
-                            RequestsSummarySection(
-                                month = requestsMonth,
-                                requests = monthRequests,
-                                stats = viewModel.getRequestsStats(),
-                                viewModel = viewModel,
-                                onPreviousMonth = { viewModel.previousRequestsMonth(currentUser) },
-                                onNextMonth = { viewModel.nextRequestsMonth(currentUser) }
-                            )
-                        }
-
-                        // Cambios de guardia del mes
-                        item {
-                            ShiftChangesSummarySection(
-                                month = shiftChangesMonth,
-                                shiftChanges = monthShiftChanges,
-                                stats = viewModel.getShiftChangesStats(),
-                                viewModel = viewModel,
-                                currentUser = currentUser,
-                                onPreviousMonth = { viewModel.previousShiftChangesMonth(currentUser) },
-                                onNextMonth = { viewModel.nextShiftChangesMonth(currentUser) }
-                            )
-                        }
-
-                        // Horas extra del mes
-                        item {
-                            ExtraHoursSummarySection(
-                                month = extraHoursMonth,
-                                extraHours = monthExtraHours,
-                                totalDiurnas = viewModel.getTotalDiurnas(),
-                                totalNocturnas = viewModel.getTotalNocturnas(),
-                                totalSalary = viewModel.getTotalExtraHoursSalary(),
-                                onPreviousMonth = { viewModel.previousExtraHoursMonth(currentUser) },
-                                onNextMonth = { viewModel.nextExtraHoursMonth(currentUser) }
-                            )
-                        }
+                    uiState is ProfileUiState.Error -> {
+                        ErrorContent(
+                            message = (uiState as ProfileUiState.Error).message,
+                            onRetry = { viewModel.loadProfile(currentUser) },
+                            modifier = Modifier.padding(paddingValues)
+                        )
+                    }
 
                         // Cambio de contraseña
-                        item {
-                            ChangePasswordSection(
-                                isLoading = isChangingPassword,
-                                error = passwordChangeError,
-                                success = passwordChangeSuccess,
-                                onChangePassword = { current, new, confirm ->
-                                    viewModel.changePassword(currentUser, current, new, confirm)
-                                }
-                            )
+                    uiState is ProfileUiState.Success -> {
+                        val displayUser = user ?: currentUser
+
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues)
+                                .background(palette.surfaceElevated),
+                            contentPadding = PaddingValues(bottom = 24.dp)
+                        ) {
+                            // Header con avatar y nombre
+                            item { ProfileHeader(user = displayUser) }
+
+                            // Información personal
+                            item { PersonalInfoSection(user = displayUser) }
+
+                            // Permisos restantes
+                            item {
+                                PermissionsSection(
+                                    stats = viewModel.getPermissionStats(
+                                        displayUser
+                                    )
+                                )
+                            }
+
+                            // Calendario de guardias
+                            item {
+                                CalendarSection(
+                                    month = calendarMonth,
+                                    viewModel = viewModel,
+                                    currentUser = currentUser,
+                                    onPreviousMonth = { viewModel.previousCalendarMonth(currentUser) },
+                                    onNextMonth = { viewModel.nextCalendarMonth(currentUser) }
+                                )
+                            }
+
+                            // Solicitudes del mes
+                            item {
+                                RequestsSummarySection(
+                                    month = requestsMonth,
+                                    requests = monthRequests,
+                                    stats = viewModel.getRequestsStats(),
+                                    viewModel = viewModel,
+                                    onPreviousMonth = { viewModel.previousRequestsMonth(currentUser) },
+                                    onNextMonth = { viewModel.nextRequestsMonth(currentUser) }
+                                )
+                            }
+
+                            // Cambios de guardia del mes
+                            item {
+                                ShiftChangesSummarySection(
+                                    month = shiftChangesMonth,
+                                    shiftChanges = monthShiftChanges,
+                                    stats = viewModel.getShiftChangesStats(),
+                                    viewModel = viewModel,
+                                    currentUser = currentUser,
+                                    onPreviousMonth = {
+                                        viewModel.previousShiftChangesMonth(
+                                            currentUser
+                                        )
+                                    },
+                                    onNextMonth = { viewModel.nextShiftChangesMonth(currentUser) }
+                                )
+                            }
+
+                            // Horas extra del mes
+                            item {
+                                ExtraHoursSummarySection(
+                                    month = extraHoursMonth,
+                                    extraHours = monthExtraHours,
+                                    totalDiurnas = viewModel.getTotalDiurnas(),
+                                    totalNocturnas = viewModel.getTotalNocturnas(),
+                                    totalSalary = viewModel.getTotalExtraHoursSalary(),
+                                    onPreviousMonth = {
+                                        viewModel.previousExtraHoursMonth(
+                                            currentUser
+                                        )
+                                    },
+                                    onNextMonth = { viewModel.nextExtraHoursMonth(currentUser) }
+                                )
+                            }
+
+                            // Cambio de contraseña
+                            item {
+                                ChangePasswordSection(
+                                    isLoading = isChangingPassword,
+                                    error = passwordChangeError,
+                                    success = passwordChangeSuccess,
+                                    onChangePassword = { current, new, confirm ->
+                                        viewModel.changePassword(currentUser, current, new, confirm)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
-            }
+
 
             // SnackbarHost para mensajes
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
+            // SnackbarHost para mensajes
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
         }
     }
 }
@@ -239,10 +304,11 @@ fun ProfileScreen(
 
 @Composable
 private fun ProfileHeader(user: User) {
+    val palette = LocalProfilePalette.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Brush.horizontalGradient(listOf(GradientStart, GradientEnd)))
+            .background(Brush.horizontalGradient(listOf(palette.gradientStart, palette.gradientEnd)))
             .padding(24.dp)
     ) {
         Row(
@@ -303,6 +369,7 @@ private fun ProfileHeader(user: User) {
 
 @Composable
 private fun PersonalInfoSection(user: User) {
+    val palette = LocalProfilePalette.current
     SectionCard(title = "INFORMACIÓN PERSONAL", subtitle = "Datos de contacto y puesto") {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(
@@ -325,20 +392,21 @@ private fun PersonalInfoSection(user: User) {
 
 @Composable
 private fun InfoCard(icon: ImageVector, label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = SurfaceElevated) {
+    val palette = LocalProfilePalette.current
+    Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = palette.surfaceElevated) {
         Row(
             modifier = Modifier.padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, null, tint = AccentBlue, modifier = Modifier.size(20.dp))
+            Icon(icon, null, tint = palette.accentBlue, modifier = Modifier.size(20.dp))
             Column {
-                Text(label, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                Text(label, style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
                 Text(
                     value,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    color = TextPrimary,
+                    color = palette.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -353,6 +421,7 @@ private fun InfoCard(icon: ImageVector, label: String, value: String, modifier: 
 
 @Composable
 private fun PermissionsSection(stats: List<PermissionStat>) {
+    val palette = LocalProfilePalette.current
     SectionCard(title = "PERMISOS RESTANTES", subtitle = "Saldo disponible de permisos") {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             for (rowIndex in 0 until 2) {
@@ -376,19 +445,20 @@ private fun PermissionsSection(stats: List<PermissionStat>) {
 
 @Composable
 private fun PermissionCard(stat: PermissionStat, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = SurfaceElevated) {
+    val palette = LocalProfilePalette.current
+    Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = palette.surfaceElevated) {
         Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 stat.label,
                 style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(stat.value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = AccentBlue)
-            Text(stat.unit, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+            Text(stat.value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = palette.accentBlue)
+            Text(stat.unit, style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
         }
     }
 }
@@ -405,6 +475,7 @@ private fun CalendarSection(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
+    val palette = LocalProfilePalette.current
     SectionCard(title = "CALENDARIO DE GUARDIAS", subtitle = "Guardias y permisos del mes") {
         Column {
             MonthNavigator(month, onPreviousMonth, onNextMonth)
@@ -417,7 +488,7 @@ private fun CalendarSection(
                         day,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary,
+                        color = palette.textSecondary,
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Center
                     )
@@ -456,6 +527,7 @@ private fun CalendarSection(
 
 @Composable
 private fun CalendarDayCell(dayInfo: CalendarDayInfo, event: CalendarEvent?, isToday: Boolean, modifier: Modifier = Modifier) {
+    val palette = LocalProfilePalette.current
     val backgroundColor = if (event != null) {
         Color(android.graphics.Color.parseColor(event.color.hex))
     } else Color.Transparent
@@ -464,14 +536,14 @@ private fun CalendarDayCell(dayInfo: CalendarDayInfo, event: CalendarEvent?, isT
         event != null -> {
             // Asegurar contraste: texto oscuro sobre fondos claros y blanco sobre fondos oscuros
             val luminance = backgroundColor.luminance()
-            if (luminance > 0.6f) TextPrimary else Color.White
+            if (luminance > 0.6f) palette.textPrimary else Color.White
         }
-        dayInfo.monthOffset != 0 -> TextSecondary.copy(alpha = 0.4f)
-        else -> TextPrimary
+        dayInfo.monthOffset != 0 -> palette.textSecondary.copy(alpha = 0.4f)
+        else -> palette.textPrimary
     }
 
     val borderModifier = if (isToday && event == null) {
-        Modifier.border(2.dp, AccentBlue, RoundedCornerShape(8.dp))
+        Modifier.border(2.dp, palette.accentBlue, RoundedCornerShape(8.dp))
     } else Modifier
 
     Box(
@@ -499,9 +571,10 @@ private fun CalendarDayCell(dayInfo: CalendarDayInfo, event: CalendarEvent?, isT
 
 @Composable
 private fun CalendarLegend(items: List<LegendItem>) {
-    Surface(shape = RoundedCornerShape(12.dp), color = SurfaceElevated) {
+    val palette = LocalProfilePalette.current
+    Surface(shape = RoundedCornerShape(12.dp), color = palette.surfaceElevated) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-            Text("Leyenda", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+            Text("Leyenda", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = palette.textSecondary)
             Spacer(modifier = Modifier.height(8.dp))
 
             val chunked = items.chunked(3)
@@ -520,9 +593,10 @@ private fun CalendarLegend(items: List<LegendItem>) {
 
 @Composable
 private fun LegendChip(item: LegendItem, modifier: Modifier = Modifier) {
+    val palette = LocalProfilePalette.current
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(Color(android.graphics.Color.parseColor(item.color.hex))))
-        Text(item.label, style = MaterialTheme.typography.labelSmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(item.label, style = MaterialTheme.typography.labelSmall, color = palette.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -539,6 +613,7 @@ private fun RequestsSummarySection(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
+    val palette = LocalProfilePalette.current
     SectionCard(title = "SOLICITUDES DEL MES", subtitle = "Resumen de permisos solicitados") {
         Column {
             MonthNavigator(month, onPreviousMonth, onNextMonth)
@@ -546,9 +621,9 @@ private fun RequestsSummarySection(
 
             // Estadísticas
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard("Confirmadas", stats.confirmed.toString(), AccentGreen, Modifier.weight(1f))
-                StatCard("Pendientes", stats.pending.toString(), AccentAmber, Modifier.weight(1f))
-                StatCard("Total", stats.total.toString(), AccentBlue, Modifier.weight(1f))
+                StatCard("Confirmadas", stats.confirmed.toString(), palette.accentGreen, Modifier.weight(1f))
+                StatCard("Pendientes", stats.pending.toString(), palette.accentAmber, Modifier.weight(1f))
+                StatCard("Total", stats.total.toString(), palette.accentBlue, Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -569,7 +644,7 @@ private fun RequestsSummarySection(
                             Text(
                                 request.tipo.replaceFirstChar { it.uppercase() },
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
+                                color = palette.textPrimary,
                                 modifier = Modifier.weight(1.5f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -577,7 +652,7 @@ private fun RequestsSummarySection(
                             Text(
                                 formatDate(request.fecha_ini),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
+                                color = palette.textSecondary,
                                 modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.Center
                             )
@@ -608,6 +683,7 @@ private fun ShiftChangesSummarySection(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
+    val palette = LocalProfilePalette.current
     SectionCard(title = "CAMBIOS DE GUARDIA", subtitle = "Intercambios de turno del mes") {
         Column {
             MonthNavigator(month, onPreviousMonth, onNextMonth)
@@ -615,10 +691,10 @@ private fun ShiftChangesSummarySection(
 
             // Estadísticas
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCard("Aceptados", stats.accepted.toString(), AccentGreen, Modifier.weight(1.1f))
-                StatCard("Pendientes", stats.pending.toString(), AccentAmber, Modifier.weight(1.2f))
-                StatCard("Simples", stats.simple.toString(), AccentPurple, Modifier.weight(1f))
-                StatCard("Espejo", stats.mirror.toString(), AccentOrange, Modifier.weight(1f))
+                StatCard("Aceptados", stats.accepted.toString(), palette.accentGreen, Modifier.weight(1.1f))
+                StatCard("Pendientes", stats.pending.toString(), palette.accentAmber, Modifier.weight(1.2f))
+                StatCard("Simples", stats.simple.toString(), palette.accentPurple, Modifier.weight(1f))
+                StatCard("Espejo", stats.mirror.toString(), palette.accentOrange, Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -647,7 +723,7 @@ private fun ShiftChangesSummarySection(
                             Text(
                                 companionName,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
+                                color = palette.textPrimary,
                                 modifier = Modifier.weight(1.2f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -655,7 +731,7 @@ private fun ShiftChangesSummarySection(
                             Text(
                                 formatDate(change.fecha),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
+                                color = palette.textSecondary,
                                 modifier = Modifier.weight(0.8f),
                                 textAlign = TextAlign.Center
                             )
@@ -687,6 +763,7 @@ private fun ExtraHoursSummarySection(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
+    val palette = LocalProfilePalette.current
     SectionCard(title = "HORAS EXTRA", subtitle = "Horas extra realizadas en el mes") {
         Column {
             MonthNavigator(month, onPreviousMonth, onNextMonth)
@@ -694,9 +771,9 @@ private fun ExtraHoursSummarySection(
 
             // Estadísticas
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard("Diurnas", String.format("%.1f h", totalDiurnas), AccentAmber, Modifier.weight(1f))
-                StatCard("Nocturnas", String.format("%.1f h", totalNocturnas), AccentPurple, Modifier.weight(1f))
-                StatCard("Total €", String.format("%.2f €", totalSalary), AccentGreen, Modifier.weight(1f))
+                StatCard("Diurnas", String.format("%.1f h", totalDiurnas), palette.accentAmber, Modifier.weight(1f))
+                StatCard("Nocturnas", String.format("%.1f h", totalNocturnas), palette.accentPurple, Modifier.weight(1f))
+                StatCard("Total €", String.format("%.2f €", totalSalary), palette.accentGreen, Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -724,20 +801,20 @@ private fun ExtraHoursSummarySection(
                             Text(
                                 formatDate(hour.date),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
+                                color = palette.textPrimary,
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
                                 String.format("%.1f", diurnas),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
+                                color = palette.textSecondary,
                                 modifier = Modifier.weight(0.8f),
                                 textAlign = TextAlign.Center
                             )
                             Text(
                                 String.format("%.1f", nocturnas),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
+                                color = palette.textSecondary,
                                 modifier = Modifier.weight(0.8f),
                                 textAlign = TextAlign.Center
                             )
@@ -745,7 +822,7 @@ private fun ExtraHoursSummarySection(
                                 String.format("%.2f €", retribucion),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
-                                color = AccentGreen,
+                                color = palette.accentGreen,
                                 modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.End
                             )
@@ -772,6 +849,7 @@ private fun ChangePasswordSection(
     success: String?,
     onChangePassword: (current: String, new: String, confirm: String) -> Unit
 ) {
+    val palette = LocalProfilePalette.current
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -808,8 +886,8 @@ private fun ChangePasswordSection(
                 errorText = if (confirmPassword.isNotEmpty() && confirmPassword != newPassword) "Las contraseñas no coinciden" else null
             )
 
-            error?.let { MessageBox(it, AccentRose) }
-            success?.let { MessageBox(it, AccentGreen) }
+            error?.let { MessageBox(it, palette.accentRose) }
+            success?.let { MessageBox(it, palette.accentGreen) }
 
             Button(
                 onClick = {
@@ -823,7 +901,7 @@ private fun ChangePasswordSection(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading && currentPassword.isNotBlank() && newPassword.length >= 6 && newPassword == confirmPassword,
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                colors = ButtonDefaults.buttonColors(containerColor = palette.accentBlue)
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
@@ -846,6 +924,7 @@ private fun PasswordTextField(
     isError: Boolean = false,
     errorText: String? = null
 ) {
+    val palette = LocalProfilePalette.current
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -868,11 +947,23 @@ private fun PasswordTextField(
         isError = isError,
         supportingText = {
             when {
-                errorText != null -> Text(errorText, color = AccentRose)
+                errorText != null -> Text(errorText, color = palette.accentRose)
                 supportingText != null -> Text(supportingText)
             }
         },
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            disabledContainerColor = MaterialTheme.colorScheme.surface,
+            focusedIndicatorColor = palette.accentBlue,
+            unfocusedIndicatorColor = palette.textSecondary.copy(alpha = 0.5f),
+            focusedLabelColor = palette.accentBlue,
+            unfocusedLabelColor = palette.textSecondary,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedTextColor = palette.textPrimary,
+            unfocusedTextColor = palette.textPrimary
+        )
     )
 }
 
@@ -882,15 +973,16 @@ private fun PasswordTextField(
 
 @Composable
 private fun SectionCard(title: String, subtitle: String, content: @Composable () -> Unit) {
+    val palette = LocalProfilePalette.current
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
-        color = CardBackground,
+        color = palette.cardBackground,
         shadowElevation = 2.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = AccentBlue, letterSpacing = 1.sp)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = palette.accentBlue, letterSpacing = 1.sp)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = palette.textSecondary)
             Spacer(modifier = Modifier.height(16.dp))
             content()
         }
@@ -899,42 +991,45 @@ private fun SectionCard(title: String, subtitle: String, content: @Composable ()
 
 @Composable
 private fun MonthNavigator(month: YearMonth, onPrevious: () -> Unit, onNext: () -> Unit) {
+    val palette = LocalProfilePalette.current
     val monthName = month.month.getDisplayName(TextStyle.FULL, Locale("es", "ES")).replaceFirstChar { it.uppercase() }
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onPrevious, modifier = Modifier.size(40.dp).clip(CircleShape).background(SurfaceElevated)) {
-            Icon(Icons.Rounded.ChevronLeft, "Mes anterior", tint = TextPrimary)
+        IconButton(onClick = onPrevious, modifier = Modifier.size(40.dp).clip(CircleShape).background(palette.surfaceElevated)) {
+            Icon(Icons.Rounded.ChevronLeft, "Mes anterior", tint = palette.textPrimary)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(monthName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
-            Text("${month.year}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(monthName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = palette.textPrimary)
+            Text("${month.year}", style = MaterialTheme.typography.bodySmall, color = palette.textSecondary)
         }
-        IconButton(onClick = onNext, modifier = Modifier.size(40.dp).clip(CircleShape).background(SurfaceElevated)) {
-            Icon(Icons.Rounded.ChevronRight, "Mes siguiente", tint = TextPrimary)
+        IconButton(onClick = onNext, modifier = Modifier.size(40.dp).clip(CircleShape).background(palette.surfaceElevated)) {
+            Icon(Icons.Rounded.ChevronRight, "Mes siguiente", tint = palette.textPrimary)
         }
     }
 }
 
 @Composable
 private fun StatCard(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    val palette = LocalProfilePalette.current
     Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = color.copy(alpha = 0.1f)) {
         Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
-            Text(label, style = MaterialTheme.typography.labelSmall, color = TextSecondary, textAlign = TextAlign.Center)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = palette.textSecondary, textAlign = TextAlign.Center)
         }
     }
 }
 
 @Composable
 private fun TableHeader(columns: List<Pair<String, Float>>) {
-    Surface(shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp), color = SurfaceElevated) {
+    val palette = LocalProfilePalette.current
+    Surface(shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp), color = palette.surfaceElevated) {
         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             columns.forEach { (title, weight) ->
                 Text(
                     title,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextSecondary,
+                    color = palette.textSecondary,
                     modifier = Modifier.weight(weight),
                     textAlign = if (title == columns.last().first) TextAlign.End else TextAlign.Start
                 )
@@ -945,9 +1040,10 @@ private fun TableHeader(columns: List<Pair<String, Float>>) {
 
 @Composable
 private fun TableRow(isLast: Boolean, content: @Composable RowScope.() -> Unit) {
+    val palette = LocalProfilePalette.current
     Surface(
         shape = if (isLast) RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp) else RoundedCornerShape(0.dp),
-        color = CardBackground
+        color = palette.cardBackground
     ) {
         Column {
             Row(
@@ -956,7 +1052,7 @@ private fun TableRow(isLast: Boolean, content: @Composable RowScope.() -> Unit) 
                 verticalAlignment = Alignment.CenterVertically,
                 content = content
             )
-            if (!isLast) HorizontalDivider(color = DividerColor)
+            if (!isLast) HorizontalDivider(color = palette.dividerColor)
         }
     }
 }
@@ -978,7 +1074,8 @@ private fun StatusBadge(status: String, color: StatusColor, modifier: Modifier =
 
 @Composable
 private fun TypeBadge(isMirror: Boolean, modifier: Modifier = Modifier) {
-    val color = if (isMirror) AccentOrange else AccentPurple
+    val palette = LocalProfilePalette.current
+    val color = if (isMirror) palette.accentOrange else palette.accentPurple
     Surface(modifier = modifier, shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.1f)) {
         Text(
             if (isMirror) "Espejo" else "Simple",
@@ -992,19 +1089,21 @@ private fun TypeBadge(isMirror: Boolean, modifier: Modifier = Modifier) {
 
 @Composable
 private fun MoreItemsIndicator(count: Int) {
-    Surface(shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp), color = SurfaceElevated) {
-        Text("+$count más", style = MaterialTheme.typography.labelMedium, color = AccentBlue, modifier = Modifier.fillMaxWidth().padding(12.dp), textAlign = TextAlign.Center)
+    val palette = LocalProfilePalette.current
+    Surface(shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp), color = palette.surfaceElevated) {
+        Text("+$count más", style = MaterialTheme.typography.labelMedium, color = palette.accentBlue, modifier = Modifier.fillMaxWidth().padding(12.dp), textAlign = TextAlign.Center)
     }
 }
 
 @Composable
 private fun EmptyStateBox(message: String) {
-    Surface(shape = RoundedCornerShape(12.dp), color = SurfaceElevated) {
+    val palette = LocalProfilePalette.current
+    Surface(shape = RoundedCornerShape(12.dp), color = palette.surfaceElevated) {
         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Rounded.EventBusy, null, tint = TextSecondary, modifier = Modifier.size(48.dp))
+                Icon(Icons.Rounded.EventBusy, null, tint = palette.textSecondary, modifier = Modifier.size(48.dp))
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(message, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center)
+                Text(message, style = MaterialTheme.typography.bodyMedium, color = palette.textSecondary, textAlign = TextAlign.Center)
             }
         }
     }
@@ -1019,24 +1118,26 @@ private fun MessageBox(message: String, color: Color) {
 
 @Composable
 private fun LoadingContent(modifier: Modifier = Modifier) {
+    val palette = LocalProfilePalette.current
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(color = AccentBlue, modifier = Modifier.size(48.dp))
+            CircularProgressIndicator(color = palette.accentBlue, modifier = Modifier.size(48.dp))
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Cargando perfil...", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+            Text("Cargando perfil...", style = MaterialTheme.typography.bodyMedium, color = palette.textSecondary)
         }
     }
 }
 
 @Composable
 private fun ErrorContent(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    val palette = LocalProfilePalette.current
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Rounded.Error, null, tint = AccentRose, modifier = Modifier.size(64.dp))
+            Icon(Icons.Rounded.Error, null, tint = palette.accentRose, modifier = Modifier.size(64.dp))
             Spacer(modifier = Modifier.height(16.dp))
-            Text(message, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center)
+            Text(message, style = MaterialTheme.typography.bodyMedium, color = palette.textSecondary, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRetry, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) {
+            Button(onClick = onRetry, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = palette.accentBlue)) {
                 Text("Reintentar")
             }
         }

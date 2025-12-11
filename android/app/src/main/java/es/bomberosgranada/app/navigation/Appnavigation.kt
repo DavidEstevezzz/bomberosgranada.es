@@ -398,7 +398,8 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel
             )
         }
 

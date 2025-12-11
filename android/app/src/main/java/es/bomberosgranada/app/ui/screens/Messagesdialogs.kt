@@ -37,23 +37,48 @@ import es.bomberosgranada.app.data.models.Message
 import es.bomberosgranada.app.data.models.User
 import es.bomberosgranada.app.viewmodels.MessagesViewModel
 import es.bomberosgranada.app.viewmodels.MessagesViewModel.*
+import androidx.compose.material3.surfaceColorAtElevation
 
 // ============================================
-// COLORES
+// PALETA DEPENDIENTE DEL TEMA
 // ============================================
-private val GradientStart = Color(0xFF1E3A5F)
-private val GradientEnd = Color(0xFF2D5A87)
-private val AccentBlue = Color(0xFF3B82F6)
-private val AccentPurple = Color(0xFF8B5CF6)
-private val AccentGreen = Color(0xFF10B981)
-private val AccentOrange = Color(0xFFFF6B35)
-private val AccentAmber = Color(0xFFF59E0B)
-private val AccentRose = Color(0xFFEF4444)
-private val SurfaceElevated = Color(0xFFF8FAFC)
-private val CardBackground = Color(0xFFFFFFFF)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF64748B)
-private val DividerColor = Color(0xFFE2E8F0)
+private data class MessageColors(
+    val gradientStart: Color,
+    val gradientEnd: Color,
+    val onGradient: Color,
+    val accentBlue: Color,
+    val accentPurple: Color,
+    val accentGreen: Color,
+    val accentOrange: Color,
+    val accentAmber: Color,
+    val accentRose: Color,
+    val surfaceElevated: Color,
+    val cardBackground: Color,
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val dividerColor: Color
+)
+
+@Composable
+private fun messageColors(): MessageColors {
+    val colorScheme = MaterialTheme.colorScheme
+    return MessageColors(
+        gradientStart = colorScheme.primary,
+        gradientEnd = colorScheme.primaryContainer,
+        onGradient = colorScheme.onPrimary,
+        accentBlue = colorScheme.primary,
+        accentPurple = colorScheme.secondary,
+        accentGreen = colorScheme.tertiary,
+        accentOrange = colorScheme.secondaryContainer,
+        accentAmber = colorScheme.tertiaryContainer,
+        accentRose = colorScheme.error,
+        surfaceElevated = colorScheme.surfaceColorAtElevation(6.dp),
+        cardBackground = colorScheme.surface,
+        textPrimary = colorScheme.onSurface,
+        textSecondary = colorScheme.onSurfaceVariant,
+        dividerColor = colorScheme.outlineVariant
+    )
+}
 
 // ============================================
 // DIÁLOGO DE COMPOSICIÓN DE MENSAJE
@@ -67,6 +92,7 @@ fun ComposeMessageDialog(
     isJefe: Boolean,
     users: List<User>
 ) {
+    val colors = messageColors()
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var showUserDropdown by remember { mutableStateOf(false) }
@@ -109,7 +135,7 @@ fun ComposeMessageDialog(
                 .fillMaxWidth(0.95f)
                 .fillMaxHeight(0.9f),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBackground)
+            colors = CardDefaults.cardColors(containerColor = colors.cardBackground)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Header con gradiente
@@ -118,7 +144,7 @@ fun ComposeMessageDialog(
                         .fillMaxWidth()
                         .background(
                             brush = Brush.horizontalGradient(
-                                colors = listOf(GradientStart, GradientEnd)
+                                colors = listOf(colors.gradientStart, colors.gradientEnd)
                             )
                         )
                         .padding(20.dp)
@@ -132,14 +158,14 @@ fun ComposeMessageDialog(
                             Text(
                                 text = "COMUNICACIONES",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = colors.onGradient.copy(alpha = 0.7f),
                                 letterSpacing = 2.sp
                             )
                             Text(
                                 text = if (composeState.isReply) "Responder mensaje" else "Nuevo mensaje",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = colors.onGradient
                             )
                         }
 
@@ -149,12 +175,12 @@ fun ComposeMessageDialog(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f))
+                                .background(colors.onGradient.copy(alpha = 0.15f))
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Cerrar",
-                                tint = Color.White
+                                tint = colors.onGradient
                             )
                         }
                     }
@@ -172,7 +198,7 @@ fun ComposeMessageDialog(
                     composeState.error?.let { error ->
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = AccentRose.copy(alpha = 0.1f)
+                            color = colors.accentRose.copy(alpha = 0.1f)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -184,13 +210,13 @@ fun ComposeMessageDialog(
                                 Icon(
                                     imageVector = Icons.Default.Error,
                                     contentDescription = null,
-                                    tint = AccentRose,
+                                    tint = colors.accentRose,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
                                     text = error,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = AccentRose
+                                    color = colors.accentRose
                                 )
                             }
                         }
@@ -200,7 +226,7 @@ fun ComposeMessageDialog(
                     if (composeState.isReply && composeState.replyToMessage != null) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = AccentBlue.copy(alpha = 0.08f)
+                            color = colors.accentBlue.copy(alpha = 0.08f)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -212,7 +238,7 @@ fun ComposeMessageDialog(
                                 Icon(
                                     imageVector = Icons.Default.Reply,
                                     contentDescription = null,
-                                    tint = AccentBlue,
+                                    tint = colors.accentBlue,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Column {
@@ -220,12 +246,12 @@ fun ComposeMessageDialog(
                                         text = "Respondiendo a ${composeState.receiverName}",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = AccentBlue
+                                        color = colors.accentBlue
                                     )
                                     Text(
                                         text = composeState.replyToMessage.subject,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary,
+                                        color = colors.textSecondary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -240,7 +266,7 @@ fun ComposeMessageDialog(
                             text = "Alcance del mensaje",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                            color = colors.textPrimary
                         )
 
                         Row(
@@ -267,8 +293,8 @@ fun ComposeMessageDialog(
                                         }
                                     } else null,
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = AccentPurple.copy(alpha = 0.15f),
-                                        selectedLabelColor = AccentPurple
+                                        selectedContainerColor = colors.accentPurple.copy(alpha = 0.15f),
+                                        selectedLabelColor = colors.accentPurple
                                     )
                                 )
                             }
@@ -281,7 +307,7 @@ fun ComposeMessageDialog(
                             text = "Destinatario",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                            color = colors.textPrimary
                         )
 
                         ExposedDropdownMenuBox(
@@ -305,7 +331,7 @@ fun ComposeMessageDialog(
                                     Icon(
                                         imageVector = Icons.Default.Person,
                                         contentDescription = null,
-                                        tint = TextSecondary
+                                        tint = colors.textSecondary
                                     )
                                 },
                                 trailingIcon = {
@@ -342,7 +368,7 @@ fun ComposeMessageDialog(
                                                 Text(
                                                     text = user.puesto ?: user.type,
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    color = TextSecondary
+                                                    color = colors.textSecondary
                                                 )
                                             }
                                         },
@@ -359,14 +385,14 @@ fun ComposeMessageDialog(
                                                 modifier = Modifier
                                                     .size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(AccentBlue.copy(alpha = 0.1f)),
+                                                    .background(colors.accentBlue.copy(alpha = 0.1f)),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
                                                     text = user.nombre.firstOrNull()?.uppercase() ?: "?",
                                                     style = MaterialTheme.typography.labelMedium,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = AccentBlue
+                                                    color = colors.accentBlue
                                                 )
                                             }
                                         }
@@ -381,7 +407,7 @@ fun ComposeMessageDialog(
                         text = "Asunto",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
 
                     OutlinedTextField(
@@ -399,7 +425,7 @@ fun ComposeMessageDialog(
                         text = "Mensaje",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
 
                     OutlinedTextField(
@@ -419,13 +445,13 @@ fun ComposeMessageDialog(
                         text = "Archivo adjunto (opcional)",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
 
                     if (composeState.attachmentUri != null) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = AccentAmber.copy(alpha = 0.1f)
+                            color = colors.accentAmber.copy(alpha = 0.1f)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -441,13 +467,13 @@ fun ComposeMessageDialog(
                                     Icon(
                                         imageVector = Icons.Default.AttachFile,
                                         contentDescription = null,
-                                        tint = AccentAmber,
+                                        tint = colors.accentAmber,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
                                         text = composeState.attachmentName ?: "Archivo",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = TextPrimary,
+                                        color = colors.textPrimary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f, fill = false)
@@ -461,7 +487,7 @@ fun ComposeMessageDialog(
                                     Icon(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = "Eliminar adjunto",
-                                        tint = AccentRose,
+                                        tint = colors.accentRose,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -486,7 +512,7 @@ fun ComposeMessageDialog(
                         Text(
                             text = "PDF, JPG o PNG. Máximo 2 MB",
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary
+                            color = colors.textSecondary
                         )
                     }
                 }
@@ -494,7 +520,7 @@ fun ComposeMessageDialog(
                 // Botón enviar
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = SurfaceElevated,
+                    color = colors.surfaceElevated,
                     shadowElevation = 8.dp
                 ) {
                     Row(
@@ -517,7 +543,7 @@ fun ComposeMessageDialog(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             enabled = !composeState.isSending,
-                            colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.accentBlue)
                         ) {
                             if (composeState.isSending) {
                                 CircularProgressIndicator(
@@ -552,6 +578,7 @@ fun MessageDetailDialog(
     state: MessageDetailState,
     currentUserId: Int
 ) {
+    val colors = messageColors()
     val context = LocalContext.current
     val message = state.message ?: return
 
@@ -566,7 +593,7 @@ fun MessageDetailDialog(
                 .fillMaxWidth(0.95f)
                 .fillMaxHeight(0.9f),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBackground)
+            colors = CardDefaults.cardColors(containerColor = colors.cardBackground)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Header
@@ -575,7 +602,7 @@ fun MessageDetailDialog(
                         .fillMaxWidth()
                         .background(
                             brush = Brush.horizontalGradient(
-                                colors = listOf(GradientStart, GradientEnd)
+                                colors = listOf(colors.gradientStart, colors.gradientEnd)
                             )
                         )
                         .padding(20.dp)
@@ -589,14 +616,14 @@ fun MessageDetailDialog(
                             Text(
                                 text = "MENSAJE",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = colors.onGradient.copy(alpha = 0.7f),
                                 letterSpacing = 2.sp
                             )
                             Text(
                                 text = message.subject,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = colors.onGradient,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -604,12 +631,12 @@ fun MessageDetailDialog(
                             Text(
                                 text = "De: ${message.sender?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido"}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.8f)
+                                color = colors.onGradient.copy(alpha = 0.8f)
                             )
                             Text(
                                 text = viewModel.formatDateTime(message.created_at),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.6f)
+                                color = colors.onGradient.copy(alpha = 0.6f)
                             )
                         }
 
@@ -618,12 +645,12 @@ fun MessageDetailDialog(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f))
+                                .background(colors.onGradient.copy(alpha = 0.15f))
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Cerrar",
-                                tint = Color.White
+                                tint = colors.onGradient
                             )
                         }
                     }
@@ -637,7 +664,7 @@ fun MessageDetailDialog(
                             .fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = AccentBlue)
+                        CircularProgressIndicator(color = colors.accentBlue)
                     }
                 } else {
                     LazyColumn(
@@ -690,7 +717,7 @@ fun MessageDetailDialog(
                 // Barra de acciones
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = SurfaceElevated,
+                    color = colors.surfaceElevated,
                     shadowElevation = 8.dp
                 ) {
                     Row(
@@ -704,7 +731,7 @@ fun MessageDetailDialog(
                             onClick = { viewModel.deleteMessage(message.id) },
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = AccentRose
+                                contentColor = colors.accentRose
                             )
                         ) {
                             Icon(
@@ -716,8 +743,6 @@ fun MessageDetailDialog(
                             Text("Eliminar")
                         }
 
-                        Spacer(modifier = Modifier.weight(1f))
-
                         // Botón responder
                         Button(
                             onClick = {
@@ -725,7 +750,7 @@ fun MessageDetailDialog(
                                 viewModel.openReply(message)
                             },
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.accentBlue)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Reply,
@@ -754,10 +779,11 @@ private fun MessageBubble(
     onDownloadAttachment: (String) -> Unit,
     isNested: Boolean = false
 ) {
+    val colors = messageColors()
     val bubbleColor = if (isOwnMessage) {
-        AccentBlue.copy(alpha = 0.1f)
+        colors.accentBlue.copy(alpha = 0.1f)
     } else {
-        SurfaceElevated
+        colors.surfaceElevated
     }
 
     val alignment = if (isOwnMessage) Alignment.End else Alignment.Start
@@ -789,14 +815,14 @@ private fun MessageBubble(
                         text = message.sender?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isOwnMessage) AccentBlue else TextPrimary
+                        color = if (isOwnMessage) colors.accentBlue else colors.textPrimary
                     )
                 }
 
                 Text(
                     text = viewModel.formatDateTime(message.created_at),
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
+                    color = colors.textSecondary
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -805,7 +831,7 @@ private fun MessageBubble(
                 Text(
                     text = message.body,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary
+                    color = colors.textPrimary
                 )
 
                 // Adjunto
@@ -817,7 +843,7 @@ private fun MessageBubble(
                             onDownloadAttachment(message.attachment_filename ?: "archivo")
                         },
                         shape = RoundedCornerShape(10.dp),
-                        color = AccentAmber.copy(alpha = 0.15f)
+                        color = colors.accentAmber.copy(alpha = 0.15f)
                     ) {
                         Row(
                             modifier = Modifier.padding(10.dp),
@@ -827,13 +853,13 @@ private fun MessageBubble(
                             Icon(
                                 imageVector = Icons.Default.Download,
                                 contentDescription = null,
-                                tint = AccentAmber,
+                                tint = colors.accentAmber,
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
                                 text = message.attachment_filename ?: "Descargar adjunto",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = AccentAmber,
+                                color = colors.accentAmber,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

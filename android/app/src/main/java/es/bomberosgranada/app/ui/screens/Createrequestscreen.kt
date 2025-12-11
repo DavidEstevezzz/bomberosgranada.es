@@ -2,26 +2,77 @@ package es.bomberosgranada.app.ui.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import androidx.compose.animation.*
+import android.content.Context
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.BeachAccess
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Checkroom
+import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Diversity3
+import androidx.compose.material.icons.filled.EditCalendar
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.WorkOff
 import androidx.compose.material.icons.rounded.Send
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -30,43 +81,17 @@ import androidx.compose.ui.unit.dp
 import es.bomberosgranada.app.data.models.User
 import es.bomberosgranada.app.ui.components.AppScaffold
 import es.bomberosgranada.app.ui.components.LoadingIndicator
+import es.bomberosgranada.app.ui.theme.AppColors
 import es.bomberosgranada.app.viewmodels.CreateRequestViewModel
-import es.bomberosgranada.app.viewmodels.CreateRequestViewModel.*
+import es.bomberosgranada.app.viewmodels.CreateRequestViewModel.CreateRequestUiState
+import es.bomberosgranada.app.viewmodels.CreateRequestViewModel.RequestType
+import es.bomberosgranada.app.viewmodels.CreateRequestViewModel.Turno
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 
-// ============================================
-// COLORES DEL DISEÑO
-// ============================================
-private val GradientStart = Color(0xFF1E3A5F)
-private val GradientEnd = Color(0xFF2D5A87)
-private val AccentOrange = Color(0xFFFF6B35)
-private val AccentGreen = Color(0xFF4CAF50)
-private val AccentBlue = Color(0xFF2196F3)
-private val SurfaceElevated = Color(0xFFF8FAFC)
-private val BackgroundColor = Color(0xFFF1F5F9)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF64748B)
-private val CardBackground = Color(0xFFFFFFFF)
-private val ErrorRed = Color(0xFFEF4444)
-private val SuccessGreen = Color(0xFF22C55E)
-
-// Colores para cada tipo de solicitud
-private val RequestTypeColors = mapOf(
-    RequestType.VACACIONES to Color(0xFF3B82F6),
-    RequestType.ASUNTOS_PROPIOS to Color(0xFF8B5CF6),
-    RequestType.HORAS_SINDICALES to Color(0xFFF59E0B),
-    RequestType.SALIDAS_PERSONALES to Color(0xFF10B981),
-    RequestType.MODULO to Color(0xFFEC4899),
-    RequestType.VESTUARIO to Color(0xFF6366F1),
-    RequestType.LICENCIAS_JORNADAS to Color(0xFF14B8A6),
-    RequestType.LICENCIAS_DIAS to Color(0xFFF97316),
-    RequestType.COMPENSACION_GRUPOS to Color(0xFF06B6D4)
-)
-
-// Iconos para cada tipo de solicitud
 private val RequestTypeIcons = mapOf(
     RequestType.VACACIONES to Icons.Default.BeachAccess,
     RequestType.ASUNTOS_PROPIOS to Icons.Default.Person,
@@ -78,10 +103,6 @@ private val RequestTypeIcons = mapOf(
     RequestType.LICENCIAS_DIAS to Icons.Default.EventBusy,
     RequestType.COMPENSACION_GRUPOS to Icons.Default.Diversity3
 )
-
-// ============================================
-// PANTALLA PRINCIPAL
-// ============================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,23 +128,16 @@ fun CreateRequestScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Mostrar mensajes de error/éxito
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
-            snackbarHostState.showSnackbar(
-                message = it,
-                duration = SnackbarDuration.Long
-            )
+            snackbarHostState.showSnackbar(message = it, duration = SnackbarDuration.Long)
             viewModel.clearError()
         }
     }
 
     LaunchedEffect(successMessage) {
         successMessage?.let {
-            snackbarHostState.showSnackbar(
-                message = it,
-                duration = SnackbarDuration.Short
-            )
+            snackbarHostState.showSnackbar(message = it, duration = SnackbarDuration.Short)
             viewModel.clearSuccess()
         }
     }
@@ -138,7 +152,11 @@ fun CreateRequestScreen(
         onBack = onBack,
         unreadMessagesCount = unreadMessagesCount
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(AppColors.background)
+        ) {
             if (currentUser == null) {
                 Box(
                     modifier = Modifier
@@ -156,7 +174,6 @@ fun CreateRequestScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Header con información del usuario
                     item {
                         UserBalanceCard(
                             user = currentUser,
@@ -165,7 +182,6 @@ fun CreateRequestScreen(
                         )
                     }
 
-                    // Selector de tipo de solicitud
                     item {
                         RequestTypeSelector(
                             selectedType = selectedType,
@@ -173,7 +189,6 @@ fun CreateRequestScreen(
                         )
                     }
 
-                    // Formulario dinámico según el tipo
                     item {
                         RequestFormCard(
                             viewModel = viewModel,
@@ -188,7 +203,6 @@ fun CreateRequestScreen(
                         )
                     }
 
-                    // Botón de envío
                     item {
                         SubmitButton(
                             uiState = uiState,
@@ -196,21 +210,17 @@ fun CreateRequestScreen(
                         )
                     }
 
-                    // Espaciado inferior
-                    item {
-                        Spacer(modifier = Modifier.height(32.dp))
-                    }
+                    item { Spacer(modifier = Modifier.height(32.dp)) }
                 }
             }
 
-            // Snackbar
             SnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = if (errorMessage != null) ErrorRed else SuccessGreen,
+                    containerColor = if (errorMessage != null) MaterialTheme.colorScheme.error else AppColors.accentGreen,
                     contentColor = Color.White,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.padding(16.dp)
@@ -220,17 +230,13 @@ fun CreateRequestScreen(
     }
 }
 
-// ============================================
-// TARJETA DE SALDO DEL USUARIO
-// ============================================
-
 @Composable
 private fun UserBalanceCard(
     user: User,
     selectedType: RequestType,
     viewModel: CreateRequestViewModel
 ) {
-    val typeColor = RequestTypeColors[selectedType] ?: AccentBlue
+    val typeColor = requestTypeColor(selectedType)
     val balance = viewModel.getCurrentBalance(user)
 
     Card(
@@ -243,14 +249,10 @@ private fun UserBalanceCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(GradientStart, GradientEnd)
-                    )
-                )
+                .background(brush = AppColors.gradientPrimaryBrush)
                 .padding(24.dp)
         ) {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -284,9 +286,6 @@ private fun UserBalanceCard(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Saldo para el tipo seleccionado
                 AnimatedContent(
                     targetState = balance,
                     transitionSpec = {
@@ -335,10 +334,6 @@ private fun UserBalanceCard(
     }
 }
 
-// ============================================
-// SELECTOR DE TIPO DE SOLICITUD
-// ============================================
-
 @Composable
 private fun RequestTypeSelector(
     selectedType: RequestType,
@@ -349,23 +344,19 @@ private fun RequestTypeSelector(
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 text = "Tipo de Solicitud",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = AppColors.textPrimary
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(RequestType.entries) { type ->
                     RequestTypeChip(
                         type = type,
@@ -384,16 +375,16 @@ private fun RequestTypeChip(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val typeColor = RequestTypeColors[type] ?: AccentBlue
+    val typeColor = requestTypeColor(type)
     val icon = RequestTypeIcons[type] ?: Icons.Default.Event
 
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) typeColor else Color.Transparent,
+    val backgroundColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) typeColor else AppColors.surfaceElevated,
         animationSpec = tween(200),
         label = "chipBackground"
     )
 
-    val contentColor by animateColorAsState(
+    val contentColor by androidx.compose.animation.animateColorAsState(
         targetValue = if (isSelected) Color.White else typeColor,
         animationSpec = tween(200),
         label = "chipContent"
@@ -405,9 +396,7 @@ private fun RequestTypeChip(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         color = backgroundColor,
-        border = if (!isSelected) {
-            androidx.compose.foundation.BorderStroke(1.5.dp, typeColor.copy(alpha = 0.5f))
-        } else null
+        border = if (!isSelected) BorderStroke(1.5.dp, typeColor.copy(alpha = 0.5f)) else null
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -430,10 +419,6 @@ private fun RequestTypeChip(
     }
 }
 
-// ============================================
-// FORMULARIO DE SOLICITUD
-// ============================================
-
 @Composable
 private fun RequestFormCard(
     viewModel: CreateRequestViewModel,
@@ -444,24 +429,23 @@ private fun RequestFormCard(
     horaFin: LocalTime?,
     turnoSeleccionado: Turno?,
     motivo: String,
-    context: android.content.Context
+    context: Context
 ) {
-    val typeColor = RequestTypeColors[selectedType] ?: AccentBlue
-    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    val typeColor = requestTypeColor(selectedType)
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.getDefault()) }
+    val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()) }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Título del formulario
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -484,13 +468,12 @@ private fun RequestFormCard(
                     text = "Datos de la Solicitud",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = AppColors.textPrimary
                 )
             }
 
-            HorizontalDivider(color = SurfaceElevated)
+            HorizontalDivider(color = AppColors.surfaceElevated)
 
-            // Fecha Inicio
             DatePickerField(
                 label = "Fecha de Inicio",
                 value = fechaInicio,
@@ -500,7 +483,6 @@ private fun RequestFormCard(
                 onDateSelected = { viewModel.setFechaInicio(it) }
             )
 
-            // Fecha Fin
             AnimatedVisibility(
                 visible = viewModel.requiresFechaFin(),
                 enter = fadeIn() + expandVertically(),
@@ -516,7 +498,6 @@ private fun RequestFormCard(
                 )
             }
 
-            // Selector de turno
             AnimatedVisibility(
                 visible = viewModel.requiresTurno(),
                 enter = fadeIn() + expandVertically(),
@@ -530,7 +511,6 @@ private fun RequestFormCard(
                 )
             }
 
-            // Horas inicio/fin
             AnimatedVisibility(
                 visible = viewModel.requiresHoras(),
                 enter = fadeIn() + expandVertically(),
@@ -556,7 +536,6 @@ private fun RequestFormCard(
                 }
             }
 
-            // Campo de motivo
             OutlinedTextField(
                 value = motivo,
                 onValueChange = { viewModel.setMotivo(it) },
@@ -575,26 +554,22 @@ private fun RequestFormCard(
     }
 }
 
-// ============================================
-// COMPONENTES DE FECHA Y HORA
-// ============================================
-
 @Composable
 private fun DatePickerField(
     label: String,
     value: LocalDate?,
     formatter: DateTimeFormatter,
     accentColor: Color,
-    context: android.content.Context,
+    context: Context,
     onDateSelected: (LocalDate) -> Unit
 ) {
-    val calendar = Calendar.getInstance()
+    val calendar = remember { Calendar.getInstance() }
 
     Column {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = TextSecondary,
+            color = AppColors.textSecondary,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -614,8 +589,8 @@ private fun DatePickerField(
                     ).show()
                 },
             shape = RoundedCornerShape(16.dp),
-            color = SurfaceElevated,
-            border = androidx.compose.foundation.BorderStroke(
+            color = AppColors.surfaceElevated,
+            border = BorderStroke(
                 1.dp,
                 if (value != null) accentColor.copy(alpha = 0.5f) else Color.Transparent
             )
@@ -634,19 +609,19 @@ private fun DatePickerField(
                     Icon(
                         imageVector = Icons.Default.CalendarToday,
                         contentDescription = null,
-                        tint = if (value != null) accentColor else TextSecondary,
+                        tint = if (value != null) accentColor else AppColors.textSecondary,
                         modifier = Modifier.size(22.dp)
                     )
                     Text(
                         text = value?.format(formatter) ?: "Seleccionar fecha",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = if (value != null) TextPrimary else TextSecondary
+                        color = if (value != null) AppColors.textPrimary else AppColors.textSecondary
                     )
                 }
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = null,
-                    tint = TextSecondary
+                    tint = AppColors.textSecondary
                 )
             }
         }
@@ -659,14 +634,14 @@ private fun TimePickerField(
     value: LocalTime?,
     formatter: DateTimeFormatter,
     accentColor: Color,
-    context: android.content.Context,
+    context: Context,
     onTimeSelected: (LocalTime) -> Unit
 ) {
     Column {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = TextSecondary,
+            color = AppColors.textSecondary,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -686,8 +661,8 @@ private fun TimePickerField(
                     ).show()
                 },
             shape = RoundedCornerShape(16.dp),
-            color = SurfaceElevated,
-            border = androidx.compose.foundation.BorderStroke(
+            color = AppColors.surfaceElevated,
+            border = BorderStroke(
                 1.dp,
                 if (value != null) accentColor.copy(alpha = 0.5f) else Color.Transparent
             )
@@ -706,28 +681,24 @@ private fun TimePickerField(
                     Icon(
                         imageVector = Icons.Default.Schedule,
                         contentDescription = null,
-                        tint = if (value != null) accentColor else TextSecondary,
+                        tint = if (value != null) accentColor else AppColors.textSecondary,
                         modifier = Modifier.size(22.dp)
                     )
                     Text(
                         text = value?.format(formatter) ?: "Seleccionar hora",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = if (value != null) TextPrimary else TextSecondary
+                        color = if (value != null) AppColors.textPrimary else AppColors.textSecondary
                     )
                 }
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = null,
-                    tint = TextSecondary
+                    tint = AppColors.textSecondary
                 )
             }
         }
     }
 }
-
-// ============================================
-// SELECTOR DE TURNO
-// ============================================
 
 @Composable
 private fun TurnoSelector(
@@ -736,14 +707,13 @@ private fun TurnoSelector(
     accentColor: Color,
     onTurnoSelected: (Turno) -> Unit
 ) {
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "Turno",
             style = MaterialTheme.typography.labelMedium,
-            color = TextSecondary,
+            color = AppColors.textSecondary,
             fontWeight = FontWeight.Medium
         )
-        Spacer(modifier = Modifier.height(12.dp))
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             turnos.chunked(3).forEach { rowTurnos ->
@@ -760,9 +730,7 @@ private fun TurnoSelector(
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    repeat(3 - rowTurnos.size) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                    repeat(3 - rowTurnos.size) { Spacer(modifier = Modifier.weight(1f)) }
                 }
             }
         }
@@ -777,14 +745,14 @@ private fun TurnoChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) accentColor else SurfaceElevated,
+    val backgroundColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) accentColor else AppColors.surfaceElevated,
         animationSpec = tween(200),
         label = "turnoBackground"
     )
 
-    val contentColor by animateColorAsState(
-        targetValue = if (isSelected) Color.White else TextPrimary,
+    val contentColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isSelected) Color.White else AppColors.textPrimary,
         animationSpec = tween(200),
         label = "turnoContent"
     )
@@ -794,7 +762,8 @@ private fun TurnoChip(
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        color = backgroundColor
+        color = backgroundColor,
+        border = if (isSelected) null else BorderStroke(1.dp, AppColors.surfaceElevated)
     ) {
         Box(
             modifier = Modifier
@@ -813,17 +782,12 @@ private fun TurnoChip(
     }
 }
 
-// ============================================
-// BOTÓN DE ENVÍO
-// ============================================
-
 @Composable
 private fun SubmitButton(
     uiState: CreateRequestUiState,
     onSubmit: () -> Unit
 ) {
-    val isLoading = uiState is CreateRequestUiState.Loading ||
-            uiState is CreateRequestUiState.Validating
+    val isLoading = uiState is CreateRequestUiState.Loading || uiState is CreateRequestUiState.Validating
 
     Button(
         onClick = onSubmit,
@@ -834,8 +798,8 @@ private fun SubmitButton(
         shape = RoundedCornerShape(16.dp),
         enabled = !isLoading,
         colors = ButtonDefaults.buttonColors(
-            containerColor = AccentOrange,
-            disabledContainerColor = AccentOrange.copy(alpha = 0.5f)
+            containerColor = AppColors.accentOrange,
+            disabledContainerColor = AppColors.accentOrange.copy(alpha = 0.5f)
         )
     ) {
         AnimatedContent(
@@ -857,8 +821,7 @@ private fun SubmitButton(
                         strokeWidth = 2.dp
                     )
                     Text(
-                        text = if (uiState is CreateRequestUiState.Validating)
-                            "Validando..." else "Enviando...",
+                        text = if (uiState is CreateRequestUiState.Validating) "Validando..." else "Enviando...",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -884,5 +847,20 @@ private fun SubmitButton(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun requestTypeColor(type: RequestType): Color {
+    return when (type) {
+        RequestType.VACACIONES -> AppColors.accentBlue
+        RequestType.ASUNTOS_PROPIOS -> AppColors.accentPurple
+        RequestType.HORAS_SINDICALES -> AppColors.accentAmber
+        RequestType.SALIDAS_PERSONALES -> AppColors.accentGreen
+        RequestType.MODULO -> MaterialTheme.colorScheme.primary
+        RequestType.VESTUARIO -> AppColors.accentPurple
+        RequestType.LICENCIAS_JORNADAS -> AppColors.accentEmerald
+        RequestType.LICENCIAS_DIAS -> AppColors.accentOrange
+        RequestType.COMPENSACION_GRUPOS -> AppColors.accentSky
     }
 }

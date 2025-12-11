@@ -31,6 +31,8 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import es.bomberosgranada.app.ui.theme.AppColors
+
 
 // ==========================================
 // COLORES
@@ -73,23 +75,30 @@ private val LocalProfilePalette = compositionLocalOf {
 @Composable
 private fun rememberProfilePalette(): ProfilePalette {
     val colorScheme = MaterialTheme.colorScheme
-    return remember(colorScheme) {
-        ProfilePalette(
-            gradientStart = colorScheme.primary,
-            gradientEnd = colorScheme.primaryContainer,
-            accentBlue = colorScheme.primary,
-            accentPurple = colorScheme.secondary,
-            accentGreen = colorScheme.tertiary,
-            accentOrange = colorScheme.secondaryContainer,
-            accentAmber = colorScheme.tertiaryContainer,
-            accentRose = colorScheme.error,
-            surfaceElevated = colorScheme.surfaceVariant,
-            cardBackground = colorScheme.surface,
-            textPrimary = colorScheme.onSurface,
-            textSecondary = colorScheme.onSurfaceVariant,
-            dividerColor = colorScheme.outline
-        )
-    }
+
+    // Aquí SÍ podemos usar AppColors.* porque estamos en una función @Composable
+    return ProfilePalette(
+        // Header rojo (mantiene identidad de bomberos)
+        gradientStart = colorScheme.primary,
+        gradientEnd = colorScheme.primaryContainer,
+
+        // Azul corporativo para iconos, números, etc.
+        accentBlue = AppColors.accentBlue,
+
+        // El resto lo puedes dejar referenciado al tema centralizado
+        accentPurple = AppColors.accentPurple,
+        accentGreen = AppColors.accentGreen,
+        accentOrange = AppColors.accentOrange,
+        accentAmber = AppColors.accentAmber,
+        accentRose = AppColors.accentRose,
+
+        // Superficies y textos coherentes con el tema
+        surfaceElevated = AppColors.surfaceElevated,
+        cardBackground = AppColors.cardBackground,
+        textPrimary = AppColors.textPrimary,
+        textSecondary = AppColors.textSecondary,
+        dividerColor = AppColors.divider
+    )
 }
 
 // ==========================================
@@ -202,8 +211,7 @@ fun ProfileScreen(
                             // Header con avatar y nombre
                             item { ProfileHeader(user = displayUser) }
 
-                            // Información personal
-                            item { PersonalInfoSection(user = displayUser) }
+
 
                             // Permisos restantes
                             item {
@@ -305,60 +313,165 @@ fun ProfileScreen(
 @Composable
 private fun ProfileHeader(user: User) {
     val palette = LocalProfilePalette.current
-    Box(
+    val gradientBrush = AppColors.gradientPrimaryBrush
+    val roleColor = MaterialTheme.colorScheme.primary   // rojo solo para el chip de rol
+
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Brush.horizontalGradient(listOf(palette.gradientStart, palette.gradientEnd)))
-            .padding(24.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        Box(
+            modifier = Modifier
+                .background(gradientBrush)
+                .padding(20.dp)
         ) {
-            // Avatar
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "${user.nombre.firstOrNull() ?: ""}${user.apellido.firstOrNull() ?: ""}",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-
-            Column {
-                Text(
-                    text = "PERFIL PROFESIONAL",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White.copy(alpha = 0.7f),
-                    letterSpacing = 2.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "${user.nombre} ${user.apellido}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White.copy(alpha = 0.2f)
+                // Fila principal: avatar + nombre + rol
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(
-                        text = user.type ?: "Bombero",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White
-                    )
+                    // Avatar circular con borde
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.12f))
+                            .border(
+                                width = 2.dp,
+                                color = Color.White.copy(alpha = 0.5f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${user.nombre.firstOrNull() ?: ""}${user.apellido.firstOrNull() ?: ""}".uppercase(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "${user.nombre} ${user.apellido}",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Chip de rol (en rojo)
+                            Surface(
+                                shape = RoundedCornerShape(999.dp),
+                                color = roleColor.copy(alpha = 0.18f)
+                            ) {
+                                Text(
+                                    text = (user.type ?: "Bombero").uppercase(),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = roleColor
+                                )
+                            }
+
+                            // Puesto (texto simple, blanco suave)
+                            user.puesto?.takeIf { it.isNotBlank() }?.let { puesto ->
+                                Text(
+                                    text = puesto,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Chips de información rápida: Email / Teléfono / Nº Fun. / Puesto
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        HeaderInfoChip(
+                            label = "Email",
+                            value = user.email,
+                            modifier = Modifier.weight(1f)
+                        )
+                        HeaderInfoChip(
+                            label = "Teléfono",
+                            value = user.telefono ?: "-",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        HeaderInfoChip(
+                            label = "Nº Funcionario",
+                            value = user.dni,
+                            modifier = Modifier.weight(1f)
+                        )
+                        HeaderInfoChip(
+                            label = "Puesto",
+                            value = user.puesto ?: "-",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+private fun HeaderInfoChip(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(999.dp),
+        color = Color.White.copy(alpha = 0.16f)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.7f)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -974,20 +1087,36 @@ private fun PasswordTextField(
 @Composable
 private fun SectionCard(title: String, subtitle: String, content: @Composable () -> Unit) {
     val palette = LocalProfilePalette.current
+    val colorScheme = MaterialTheme.colorScheme
+
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
         color = palette.cardBackground,
         shadowElevation = 2.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = palette.accentBlue, letterSpacing = 1.sp)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = palette.textSecondary)
+            Text(
+                title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                // 🔴 Rojo del tema solo para títulos de sección
+                color = colorScheme.primary,
+                letterSpacing = 1.sp
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = palette.textSecondary
+            )
             Spacer(modifier = Modifier.height(16.dp))
             content()
         }
     }
 }
+
 
 @Composable
 private fun MonthNavigator(month: YearMonth, onPrevious: () -> Unit, onNext: () -> Unit) {
@@ -1023,15 +1152,23 @@ private fun StatCard(label: String, value: String, color: Color, modifier: Modif
 private fun TableHeader(columns: List<Pair<String, Float>>) {
     val palette = LocalProfilePalette.current
     Surface(shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp), color = palette.surfaceElevated) {
-        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            columns.forEach { (title, weight) ->
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            columns.forEachIndexed { index, (title, weight) ->
                 Text(
                     title,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = palette.textSecondary,
                     modifier = Modifier.weight(weight),
-                    textAlign = if (title == columns.last().first) TextAlign.End else TextAlign.Start
+                    textAlign = when (index) {
+                        0 -> TextAlign.Start
+                        columns.lastIndex -> TextAlign.Center
+                        else -> TextAlign.Center
+                    }
                 )
             }
         }

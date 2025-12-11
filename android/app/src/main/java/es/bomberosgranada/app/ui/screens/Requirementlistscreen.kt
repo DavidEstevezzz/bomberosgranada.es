@@ -1,13 +1,15 @@
 package es.bomberosgranada.app.ui.screens
 
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,36 +35,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.bomberosgranada.app.data.models.User
 import es.bomberosgranada.app.ui.components.AppScaffold
+import es.bomberosgranada.app.ui.theme.AppColors
 import es.bomberosgranada.app.viewmodels.RequirementListViewModel
 import es.bomberosgranada.app.viewmodels.RequirementListViewModel.*
+import es.bomberosgranada.app.viewmodels.ThemeViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
-import java.util.*
-
-// ============================================
-// COLORES DEL DISEÑO
-// ============================================
-private val GradientStart = Color(0xFF1E3A5F)
-private val GradientEnd = Color(0xFF2D5A87)
-private val AccentOrange = Color(0xFFFF6B35)
-private val AccentBlue = Color(0xFF3B82F6)
-private val AccentPurple = Color(0xFF8B5CF6)
-private val AccentGreen = Color(0xFF10B981)
-private val AccentAmber = Color(0xFFF59E0B)
-private val AccentTeal = Color(0xFF14B8A6)
-private val SurfaceElevated = Color(0xFFF8FAFC)
-private val BackgroundColor = Color(0xFFF1F5F9)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF64748B)
-private val CardBackground = Color(0xFFFFFFFF)
-private val DividerColor = Color(0xFFE2E8F0)
+import java.util.Locale
 
 // ============================================
 // PANTALLA PRINCIPAL
 // ============================================
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun RequirementListScreen(
     listType: ListType,
@@ -71,7 +57,8 @@ fun RequirementListScreen(
     onNavigate: (String) -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit,
-    unreadMessagesCount: Int = 0
+    unreadMessagesCount: Int = 0,
+    themeViewModel: ThemeViewModel? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val firefighters by viewModel.filteredFirefighters.collectAsState()
@@ -136,9 +123,14 @@ fun RequirementListScreen(
         onLogout = onLogout,
         showBackButton = true,
         onBack = onBack,
-        unreadMessagesCount = unreadMessagesCount
+        unreadMessagesCount = unreadMessagesCount,
+        themeViewModel = themeViewModel
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(AppColors.background)
+        ) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -179,10 +171,9 @@ fun RequirementListScreen(
                 // Estado de carga
                 when (uiState) {
                     is RequirementListUiState.Loading -> {
-                        item {
-                            LoadingCard()
-                        }
+                        item { LoadingCard() }
                     }
+
                     is RequirementListUiState.Error -> {
                         item {
                             ErrorCard(
@@ -191,11 +182,10 @@ fun RequirementListScreen(
                             )
                         }
                     }
+
                     is RequirementListUiState.Success -> {
                         if (firefighters.isEmpty()) {
-                            item {
-                                EmptyCard()
-                            }
+                            item { EmptyCard() }
                         } else {
                             // Tabla de bomberos
                             item {
@@ -208,9 +198,7 @@ fun RequirementListScreen(
                     }
                 }
 
-                item {
-                    Spacer(modifier = Modifier.height(32.dp))
-                }
+                item { Spacer(modifier = Modifier.height(32.dp)) }
             }
 
             // Snackbar
@@ -220,7 +208,7 @@ fun RequirementListScreen(
             ) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = Color(0xFFEF4444),
+                    containerColor = AppColors.error,
                     contentColor = Color.White,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.padding(16.dp)
@@ -245,7 +233,9 @@ private fun HeaderCard(
 ) {
     val dayName = selectedDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("es", "ES"))
         .replaceFirstChar { it.uppercase() }
-    val formattedDate = selectedDate.format(DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale("es", "ES")))
+    val formattedDate = selectedDate.format(
+        DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale("es", "ES"))
+    )
 
     Card(
         modifier = Modifier
@@ -260,9 +250,7 @@ private fun HeaderCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(GradientStart, GradientEnd)
-                        )
+                        brush = AppColors.gradientPrimaryBrush
                     )
                     .padding(24.dp)
             ) {
@@ -290,7 +278,7 @@ private fun HeaderCard(
             }
 
             // Navegación de fecha
-            Surface(color = CardBackground) {
+            Surface(color = AppColors.cardBackground) {
                 Column {
                     Row(
                         modifier = Modifier
@@ -304,12 +292,12 @@ private fun HeaderCard(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(SurfaceElevated)
+                                .background(AppColors.surfaceElevated)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.ChevronLeft,
                                 contentDescription = "Día anterior",
-                                tint = TextPrimary
+                                tint = AppColors.textPrimary
                             )
                         }
 
@@ -321,7 +309,7 @@ private fun HeaderCard(
                                 text = dayName,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = AppColors.textPrimary
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -330,12 +318,12 @@ private fun HeaderCard(
                                 Text(
                                     text = formattedDate,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = TextSecondary
+                                    color = AppColors.textSecondary
                                 )
                                 Icon(
                                     imageVector = Icons.Default.CalendarMonth,
                                     contentDescription = "Seleccionar fecha",
-                                    tint = AccentBlue,
+                                    tint = AppColors.accentBlue,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -346,12 +334,12 @@ private fun HeaderCard(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(SurfaceElevated)
+                                .background(AppColors.surfaceElevated)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.ChevronRight,
                                 contentDescription = "Día siguiente",
-                                tint = TextPrimary
+                                tint = AppColors.textPrimary
                             )
                         }
                     }
@@ -367,12 +355,12 @@ private fun HeaderCard(
                         StatChip(
                             label = "Registrados",
                             value = stats.total,
-                            color = AccentBlue
+                            color = AppColors.accentBlue
                         )
                         StatChip(
                             label = "Filtrados",
                             value = stats.filtered,
-                            color = AccentGreen
+                            color = AppColors.accentGreen
                         )
                     }
                 }
@@ -431,7 +419,7 @@ private fun FiltersSection(
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -450,14 +438,14 @@ private fun FiltersSection(
                     Icon(
                         imageVector = Icons.Rounded.FilterList,
                         contentDescription = null,
-                        tint = AccentPurple,
+                        tint = AppColors.accentPurple,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
                         text = "Filtros",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        color = AppColors.textPrimary
                     )
                 }
 
@@ -468,7 +456,7 @@ private fun FiltersSection(
                             Surface(
                                 onClick = { onShowFilterMenuChange(true) },
                                 shape = RoundedCornerShape(8.dp),
-                                color = AccentBlue.copy(alpha = 0.1f)
+                                color = AppColors.accentBlue.copy(alpha = 0.1f)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -478,14 +466,14 @@ private fun FiltersSection(
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = null,
-                                        tint = AccentBlue,
+                                        tint = AppColors.accentBlue,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
                                         text = "Añadir",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = AccentBlue
+                                        color = AppColors.accentBlue
                                     )
                                 }
                             }
@@ -522,7 +510,7 @@ private fun FiltersSection(
                         Surface(
                             onClick = onClearFilters,
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFEF4444).copy(alpha = 0.1f)
+                            color = AppColors.error.copy(alpha = 0.1f)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -532,14 +520,14 @@ private fun FiltersSection(
                                 Icon(
                                     imageVector = Icons.Default.Clear,
                                     contentDescription = null,
-                                    tint = Color(0xFFEF4444),
+                                    tint = AppColors.error,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     text = "Limpiar",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFFEF4444)
+                                    color = AppColors.error
                                 )
                             }
                         }
@@ -577,13 +565,13 @@ private fun FilterChip(
         // Label del filtro
         Surface(
             shape = RoundedCornerShape(8.dp),
-            color = AccentPurple.copy(alpha = 0.1f)
+            color = AppColors.accentPurple.copy(alpha = 0.1f)
         ) {
             Text(
                 text = filter.type.label,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = AccentPurple,
+                color = AppColors.accentPurple,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
         }
@@ -597,15 +585,22 @@ private fun FilterChip(
                 Text(
                     text = filter.type.placeholder,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = AppColors.textSecondary
                 )
             },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium,
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AccentPurple,
-                unfocusedBorderColor = DividerColor
+                focusedBorderColor = AppColors.accentPurple,
+                unfocusedBorderColor = AppColors.divider,
+                cursorColor = AppColors.accentPurple,
+                focusedTextColor = AppColors.textPrimary,
+                unfocusedTextColor = AppColors.textPrimary,
+                focusedContainerColor = AppColors.surface,
+                unfocusedContainerColor = AppColors.surface,
+                focusedPlaceholderColor = AppColors.textSecondary,
+                unfocusedPlaceholderColor = AppColors.textSecondary
             ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
@@ -615,7 +610,7 @@ private fun FilterChip(
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Limpiar",
-                            tint = TextSecondary,
+                            tint = AppColors.textSecondary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -630,12 +625,12 @@ private fun FilterChip(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFEF4444).copy(alpha = 0.1f))
+                    .background(AppColors.error.copy(alpha = 0.1f))
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Eliminar filtro",
-                    tint = Color(0xFFEF4444),
+                    tint = AppColors.error,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -657,14 +652,14 @@ private fun FirefightersTable(
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Column {
             // Header de la tabla - Sin scroll horizontal
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(SurfaceElevated)
+                    .background(AppColors.surfaceElevated)
                     .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -673,7 +668,7 @@ private fun FirefightersTable(
                     text = "#",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextSecondary,
+                    color = AppColors.textSecondary,
                     modifier = Modifier.width(36.dp),
                     textAlign = TextAlign.Center
                 )
@@ -683,7 +678,7 @@ private fun FirefightersTable(
                     text = "Nombre",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextSecondary,
+                    color = AppColors.textSecondary,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -692,13 +687,13 @@ private fun FirefightersTable(
                     text = "Horas",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextSecondary,
+                    color = AppColors.textSecondary,
                     modifier = Modifier.width(56.dp),
                     textAlign = TextAlign.Center
                 )
             }
 
-            HorizontalDivider(color = DividerColor)
+            HorizontalDivider(color = AppColors.divider)
 
             // Filas de datos
             firefighters.forEachIndexed { index, firefighter ->
@@ -709,7 +704,7 @@ private fun FirefightersTable(
                     isEven = index % 2 == 0
                 )
                 if (index < firefighters.size - 1) {
-                    HorizontalDivider(color = DividerColor.copy(alpha = 0.5f))
+                    HorizontalDivider(color = AppColors.divider.copy(alpha = 0.5f))
                 }
             }
         }
@@ -726,7 +721,10 @@ private fun FirefighterRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (isEven) Color.Transparent else SurfaceElevated.copy(alpha = 0.5f))
+            .background(
+                if (isEven) Color.Transparent
+                else AppColors.surfaceElevated.copy(alpha = 0.5f)
+            )
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -737,10 +735,10 @@ private fun FirefighterRow(
                 .clip(RoundedCornerShape(10.dp))
                 .background(
                     when (position) {
-                        1 -> AccentAmber  // Oro
-                        2 -> Color(0xFF94A3B8)  // Plata
-                        3 -> Color(0xFFCD7F32)  // Bronce
-                        else -> AccentBlue.copy(alpha = 0.1f)
+                        1 -> AppColors.accentAmber  // Oro
+                        2 -> Color(0xFF94A3B8)      // Plata
+                        3 -> Color(0xFFCD7F32)      // Bronce
+                        else -> AppColors.accentBlue.copy(alpha = 0.1f)
                     }
                 ),
             contentAlignment = Alignment.Center
@@ -749,7 +747,7 @@ private fun FirefighterRow(
                 text = position.toString(),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (position <= 3) Color.White else AccentBlue
+                color = if (position <= 3) Color.White else AppColors.accentBlue
             )
         }
 
@@ -764,7 +762,7 @@ private fun FirefighterRow(
                 text = "${firefighter.nombre} ${firefighter.apellido}",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
+                color = AppColors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -772,13 +770,13 @@ private fun FirefighterRow(
             // Badge de puesto compacto
             Surface(
                 shape = RoundedCornerShape(6.dp),
-                color = AccentTeal.copy(alpha = 0.12f)
+                color = AppColors.accentSky.copy(alpha = 0.12f)
             ) {
                 Text(
                     text = firefighter.puesto ?: "-",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = AccentTeal,
+                    color = AppColors.accentSky,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     maxLines = 1
                 )
@@ -788,14 +786,14 @@ private fun FirefighterRow(
         // Horas ofrecidas con destaque
         Surface(
             shape = RoundedCornerShape(10.dp),
-            color = AccentOrange.copy(alpha = 0.12f),
+            color = AppColors.accentOrange.copy(alpha = 0.12f),
             modifier = Modifier.width(64.dp)
         ) {
             Text(
                 text = viewModel.formatHoras(firefighter.horas_ofrecidas),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = AccentOrange,
+                color = AppColors.accentOrange,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                 textAlign = TextAlign.Center
             )
@@ -812,7 +810,7 @@ private fun LoadingCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Box(
             modifier = Modifier
@@ -821,12 +819,12 @@ private fun LoadingCard() {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator(color = AccentBlue)
+                CircularProgressIndicator(color = AppColors.accentBlue)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Cargando datos...",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
+                    color = AppColors.textSecondary
                 )
             }
         }
@@ -838,7 +836,7 @@ private fun ErrorCard(message: String, onRetry: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Column(
             modifier = Modifier
@@ -849,20 +847,20 @@ private fun ErrorCard(message: String, onRetry: () -> Unit) {
             Icon(
                 imageVector = Icons.Default.ErrorOutline,
                 contentDescription = null,
-                tint = Color(0xFFEF4444),
+                tint = AppColors.error,
                 modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFFEF4444),
+                color = AppColors.error,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentOrange)
+                colors = ButtonDefaults.buttonColors(containerColor = AppColors.accentOrange)
             ) {
                 Icon(Icons.Rounded.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
@@ -877,7 +875,7 @@ private fun EmptyCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = AppColors.cardBackground)
     ) {
         Column(
             modifier = Modifier
@@ -888,7 +886,7 @@ private fun EmptyCard() {
             Icon(
                 imageVector = Icons.Rounded.PersonOff,
                 contentDescription = null,
-                tint = TextSecondary,
+                tint = AppColors.textSecondary,
                 modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -896,14 +894,13 @@ private fun EmptyCard() {
                 text = "No hay bomberos disponibles",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
+                color = AppColors.textPrimary
             )
             Text(
                 text = "Prueba a cambiar la fecha o los filtros",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                color = AppColors.textSecondary
             )
         }
     }
 }
-

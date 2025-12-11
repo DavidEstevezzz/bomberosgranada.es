@@ -629,7 +629,7 @@ fun MessageDetailDialog(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "De: ${message.sender?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido"}",
+                                text = "De: ${viewModel.getUserName(message.sender_id)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.onGradient.copy(alpha = 0.8f)
                             )
@@ -811,8 +811,10 @@ private fun MessageBubble(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val senderName = viewModel.getUserName(message.sender_id)
+
                     Text(
-                        text = message.sender?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido",
+                        text = senderName,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = if (isOwnMessage) colors.accentBlue else colors.textPrimary

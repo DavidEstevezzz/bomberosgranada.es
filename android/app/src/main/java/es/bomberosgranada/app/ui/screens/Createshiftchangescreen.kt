@@ -44,6 +44,8 @@ import es.bomberosgranada.app.viewmodels.CreateShiftChangeViewModel.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
+import es.bomberosgranada.app.viewmodels.ThemeViewModel
+
 
 // ============================================
 // PANTALLA PRINCIPAL
@@ -57,7 +59,8 @@ fun CreateShiftChangeScreen(
     onNavigate: (String) -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit,
-    unreadMessagesCount: Int = 0
+    unreadMessagesCount: Int = 0,
+    themeViewModel: ThemeViewModel? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val changeType by viewModel.changeType.collectAsState()
@@ -111,7 +114,8 @@ fun CreateShiftChangeScreen(
         onLogout = onLogout,
         showBackButton = true,
         onBack = onBack,
-        unreadMessagesCount = unreadMessagesCount
+        unreadMessagesCount = unreadMessagesCount,
+        themeViewModel = themeViewModel
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             when {

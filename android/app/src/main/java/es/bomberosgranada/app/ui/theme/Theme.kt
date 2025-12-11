@@ -22,8 +22,8 @@ import es.bomberosgranada.app.data.local.ThemeMode
 // ============================================
 
 // Colores Primary (Rojo bomberos - sofisticado)
-private val PrimaryLight = Color(0xFFDC2626) // red-600
-private val PrimaryDark = Color(0xFFEF4444)  // red-500
+private val PrimaryLight = Color(0xFFC81E1E) // red-600
+private val PrimaryDark = Color(0xFF991B1B)  // red-500
 private val PrimaryContainer = Color(0xFFB91C1C) // red-700
 
 // Colores de fondo

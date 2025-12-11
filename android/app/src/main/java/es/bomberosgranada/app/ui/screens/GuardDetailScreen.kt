@@ -3,8 +3,10 @@ package es.bomberosgranada.app.ui.screens
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,7 +14,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,25 +29,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.bomberosgranada.app.data.models.User
+import es.bomberosgranada.app.ui.components.AppScaffold
 import es.bomberosgranada.app.ui.components.LoadingIndicator
+import es.bomberosgranada.app.ui.theme.AppColors
 import es.bomberosgranada.app.viewmodels.GuardDetailViewModel
 import es.bomberosgranada.app.viewmodels.GuardDetailViewModel.*
+import es.bomberosgranada.app.viewmodels.ThemeViewModel
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import androidx.compose.foundation.clickable
 
 // ============================================
-// COLORES DEL DISEÑO
+// COLORES DEL DISEÑO (ACENTOS)
 // ============================================
 private val GradientStart = Color(0xFF1E3A5F)
 private val GradientEnd = Color(0xFF2D5A87)
 private val AccentOrange = Color(0xFFFF6B35)
 private val AccentGreen = Color(0xFF4CAF50)
-private val AccentPurple = Color(0xFF7C3AED)  // Para Requerimiento
+private val AccentPurple = Color(0xFF7C3AED)  // Para Requerimiento (si lo necesitas)
 private val AccentAmber = Color(0xFFF59E0B)   // Para Cambio de Guardia
-private val SurfaceElevated = Color(0xFFF8FAFC)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF64748B)
 
 /**
  * Tipo de asignación especial del bombero
@@ -66,7 +66,11 @@ fun GuardDetailScreen(
     date: String,
     viewModel: GuardDetailViewModel,
     currentUser: User?,
-    onBack: () -> Unit
+    onNavigate: (String) -> Unit,
+    onLogout: () -> Unit,
+    onBack: () -> Unit,
+    unreadMessagesCount: Int = 0,
+    themeViewModel: ThemeViewModel? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val assignments by viewModel.assignments.collectAsState()
@@ -80,17 +84,38 @@ fun GuardDetailScreen(
         viewModel.loadGuardDetails(guardId, brigadeId, parkId, date)
     }
 
-    Scaffold(
-        topBar = { ModernTopBar(onBack = onBack) },
-        containerColor = Color(0xFFF1F5F9)
+    AppScaffold(
+        currentRoute = "guard-attendance",
+        title = "Detalle de Guardia",
+        currentUser = currentUser,
+        onNavigate = onNavigate,
+        onLogout = onLogout,
+        showBackButton = true,
+        onBack = onBack,
+        unreadMessagesCount = unreadMessagesCount,
+        themeViewModel = themeViewModel
     ) { paddingValues ->
         when (val state = uiState) {
             is GuardDetailUiState.Loading -> {
-                LoadingIndicator()
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    LoadingIndicator()
+                }
             }
 
             is GuardDetailUiState.Error -> {
-                ErrorState(message = state.message)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ErrorState(message = state.message)
+                }
             }
 
             is GuardDetailUiState.Success -> {
@@ -112,32 +137,6 @@ fun GuardDetailScreen(
             }
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ModernTopBar(onBack: () -> Unit) {
-    TopAppBar(
-        title = {
-            Text(
-                text = "Detalle de Guardia",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.Rounded.ArrowBack,
-                    contentDescription = "Volver"
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.White,
-            titleContentColor = TextPrimary
-        )
-    )
 }
 
 @Composable
@@ -329,6 +328,8 @@ private fun HeaderCard(
  */
 @Composable
 private fun BadgeLegend() {
+    val textSecondary = AppColors.textSecondary
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -345,7 +346,7 @@ private fun BadgeLegend() {
             Text(
                 text = "Requerimiento",
                 style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary
+                color = textSecondary
             )
         }
 
@@ -358,7 +359,7 @@ private fun BadgeLegend() {
             Text(
                 text = "Cambio guardia",
                 style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary
+                color = textSecondary
             )
         }
     }
@@ -413,6 +414,11 @@ private fun ShiftSection(
         else -> MaterialTheme.colorScheme.primary
     }
 
+    val textPrimary = AppColors.textPrimary
+    val textSecondary = AppColors.textSecondary
+    val cardBackground = AppColors.cardBackground
+    val dividerColor = AppColors.divider
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -434,12 +440,12 @@ private fun ShiftSection(
                 text = shiftName,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = textPrimary
             )
             Text(
                 text = "(${attendees.size})",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                color = textSecondary
             )
         }
 
@@ -452,7 +458,7 @@ private fun ShiftSection(
                     spotColor = Color.Black.copy(alpha = 0.08f)
                 ),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = cardBackground)
         ) {
             Column(
                 modifier = Modifier.padding(12.dp),
@@ -477,7 +483,7 @@ private fun ShiftSection(
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 6.dp),
                             thickness = 1.dp,
-                            color = Color(0xFFE2E8F0)
+                            color = dividerColor
                         )
                     }
                 }
@@ -537,6 +543,10 @@ private fun CompactAttendeeRow(
     val specialType = attendee.getSpecialAssignmentType()
     val isCambioGuardia = specialType == SpecialAssignmentType.CAMBIO_GUARDIA
 
+    // Colores de texto del tema
+    val textPrimary = AppColors.textPrimary
+    val textSecondary = AppColors.textSecondary
+
     // Color del badge de turno
     val shiftBadgeColor = when {
         attendee.shift.contains("Mañana", ignoreCase = true) -> Color(0xFFFFB74D)
@@ -595,7 +605,7 @@ private fun CompactAttendeeRow(
                 text = attendee.name,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
+                color = textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -664,13 +674,13 @@ private fun CompactAttendeeRow(
                         color = if (currentAssignment.isNotEmpty())
                             AccentGreen.copy(alpha = 0.1f)
                         else
-                            Color(0xFFF1F5F9),
-                        border = androidx.compose.foundation.BorderStroke(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(
                             1.dp,
                             if (currentAssignment.isNotEmpty())
                                 AccentGreen.copy(alpha = 0.3f)
                             else
-                                Color(0xFFE2E8F0)
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
                         )
                     ) {
                         Row(
@@ -685,7 +695,7 @@ private fun CompactAttendeeRow(
                                 color = if (currentAssignment.isNotEmpty())
                                     AccentGreen
                                 else
-                                    TextSecondary,
+                                    textSecondary,
                                 maxLines = 1
                             )
                             if (isSaving) {
@@ -699,7 +709,7 @@ private fun CompactAttendeeRow(
                                     imageVector = Icons.Default.ExpandMore,
                                     contentDescription = null,
                                     modifier = Modifier.size(14.dp),
-                                    tint = TextSecondary
+                                    tint = textSecondary
                                 )
                             }
                         }
@@ -749,7 +759,7 @@ private fun CompactAttendeeRow(
                 color = if (currentAssignment.isNotEmpty())
                     AccentGreen.copy(alpha = 0.1f)
                 else
-                    Color(0xFFF1F5F9)
+                    MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Text(
                     text = currentAssignment.ifEmpty { "—" },
@@ -759,11 +769,12 @@ private fun CompactAttendeeRow(
                     color = if (currentAssignment.isNotEmpty())
                         AccentGreen
                     else
-                        TextSecondary
+                        textSecondary
                 )
             }
         }
     }
+
     if (showCgDialog && isCambioGuardia) {
         AlertDialog(
             onDismissRequest = { showCgDialog = false },
@@ -787,19 +798,18 @@ private fun CompactAttendeeRow(
                         text = "Acude: ${attendee.name}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        color = textPrimary
                     )
                     Text(
                         text = "Pide cambio: ${attendee.cambioConNombre?.takeIf { it.isNotBlank() } ?: "Sin especificar"}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary
+                        color = textPrimary
                     )
                     Text(
                         text = "Turno intercambiado: ${attendee.shift}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary
+                        color = textPrimary
                     )
-
                 }
             },
             confirmButton = {

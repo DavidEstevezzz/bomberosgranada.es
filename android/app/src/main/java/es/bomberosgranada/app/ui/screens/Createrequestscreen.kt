@@ -91,6 +91,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
+import es.bomberosgranada.app.viewmodels.ThemeViewModel
 
 private val RequestTypeIcons = mapOf(
     RequestType.VACACIONES to Icons.Default.BeachAccess,
@@ -112,7 +113,8 @@ fun CreateRequestScreen(
     onNavigate: (String) -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit,
-    unreadMessagesCount: Int = 0
+    unreadMessagesCount: Int = 0,
+    themeViewModel: ThemeViewModel? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val selectedType by viewModel.selectedType.collectAsState()
@@ -150,7 +152,8 @@ fun CreateRequestScreen(
         onLogout = onLogout,
         showBackButton = true,
         onBack = onBack,
-        unreadMessagesCount = unreadMessagesCount
+        unreadMessagesCount = unreadMessagesCount,
+        themeViewModel = themeViewModel
     ) { paddingValues ->
         Box(
             modifier = Modifier

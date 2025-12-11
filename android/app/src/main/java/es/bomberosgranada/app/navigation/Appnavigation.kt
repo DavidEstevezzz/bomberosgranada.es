@@ -175,7 +175,8 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel
             )
         }
 
@@ -213,7 +214,11 @@ fun AppNavigation(
                 date = date,
                 viewModel = guardDetailViewModel,
                 currentUser = currentUser,
-                onBack = { navController.popBackStack() }
+                onNavigate = onNavigate,
+                onLogout = onLogout,
+                onBack = { navController.popBackStack() },
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel
             )
         }
 
@@ -300,7 +305,8 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel
             )
         }
 
@@ -318,9 +324,11 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel      // 👈
             )
         }
+
 
         // Lista 10h
         composable(route = "requirement-list-10h") {
@@ -332,9 +340,11 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel      // 👈
             )
         }
+
 
         // Operadores Noche
         composable(route = "requirement-list-operators-night") {
@@ -346,9 +356,11 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel      // 👈
             )
         }
+
 
         // Operadores Mañana
         composable(route = "requirement-list-operators-morning") {
@@ -360,9 +372,11 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel      // 👈
             )
         }
+
 
         // ==========================================
         // SUGERENCIAS
@@ -401,7 +415,8 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel
             )
         }
 

@@ -239,6 +239,9 @@ class MessagesViewModel(
 
     fun openMessageDetail(message: Message) {
         viewModelScope.launch {
+            // Determinar el ID raíz del hilo
+            val rootId = message.parent_id ?: message.id
+
             _messageDetailState.value = MessageDetailState(
                 isOpen = true,
                 message = message,
@@ -250,12 +253,13 @@ class MessagesViewModel(
                 markAsRead(message.id)
             }
 
-            // Cargar hilo completo
-            val result = messagesRepository.getMessageThread(message.id)
+            // Cargar hilo completo a partir del mensaje raíz
+            val result = messagesRepository.getMessageThread(rootId)
             result.fold(
                 onSuccess = { fullMessage ->
+                    val enriched = enrichThread(fullMessage)
                     _messageDetailState.value = _messageDetailState.value.copy(
-                        message = fullMessage,
+                        message = enriched,
                         isLoading = false
                     )
                 },
@@ -268,6 +272,7 @@ class MessagesViewModel(
             )
         }
     }
+
 
     fun closeMessageDetail() {
         _messageDetailState.value = MessageDetailState()
@@ -576,6 +581,19 @@ class MessagesViewModel(
                 receiver = receiver
             )
         }
+    }
+
+    private fun enrichThread(message: Message): Message {
+        val sender = message.sender ?: _users.value.find { it.id_empleado == message.sender_id }
+        val receiver = message.receiver ?: _users.value.find { it.id_empleado == message.receiver_id }
+
+        val replies = message.replies?.map { enrichThread(it) }
+
+        return message.copy(
+            sender = sender,
+            receiver = receiver,
+            replies = replies
+        )
     }
     /**
      * Formatea una fecha para mostrar

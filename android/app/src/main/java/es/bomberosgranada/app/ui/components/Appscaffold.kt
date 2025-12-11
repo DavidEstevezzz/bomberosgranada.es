@@ -147,21 +147,8 @@ object NavigationItems {
                 )
             )
         ),
-        NavigationItem(
-            id = "calendario",
-            title = "Calendario",
-            icon = Icons.Outlined.CalendarMonth,
-            selectedIcon = Icons.Filled.CalendarMonth,
-            route = "calendar",
-            requiredUserTypes = listOf("jefe", "mando")
-        ),
-        NavigationItem(
-            id = "sugerencias",
-            title = "Sugerencias",
-            icon = Icons.Outlined.Lightbulb,
-            selectedIcon = Icons.Filled.Lightbulb,
-            route = "suggestions"
-        ),
+
+
         NavigationItem(
             id = "perfil",
             title = "Mi Perfil",
@@ -169,13 +156,7 @@ object NavigationItems {
             selectedIcon = Icons.Filled.Person,
             route = "profile"
         ),
-        NavigationItem(
-            id = "ajustes",
-            title = "Ajustes",
-            icon = Icons.Outlined.Settings,
-            selectedIcon = Icons.Filled.Settings,
-            route = "settings"
-        )
+
     )
 
     /**

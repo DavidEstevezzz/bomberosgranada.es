@@ -1,16 +1,12 @@
 package es.bomberosgranada.app.viewmodels
 
+import android.media.metrics.Event
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import es.bomberosgranada.app.data.models.*
-import es.bomberosgranada.app.data.repositories.AssignmentsRepository
-import es.bomberosgranada.app.data.repositories.BrigadesRepository
-import es.bomberosgranada.app.data.repositories.ExtraHoursRepository
-import es.bomberosgranada.app.data.repositories.GuardsRepository
-import es.bomberosgranada.app.data.repositories.RequestsRepository
-import es.bomberosgranada.app.data.repositories.ShiftChangeRequestsRepository
-import es.bomberosgranada.app.data.repositories.UsersRepository
+import es.bomberosgranada.app.data.repositories.*
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,17 +16,13 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 /**
- * ViewModel para la pantalla de Perfil
+ * ViewModel para la pantalla de Perfil - VERSIÓN OPTIMIZADA
  *
- * Funcionalidades:
- * - Datos personales del usuario
- * - Permisos restantes (vacaciones, AP, SP, etc.)
- * - Calendario personal con guardias y solicitudes
- * - Resumen de solicitudes del mes (navegable)
- * - Tabla de cambios de guardia (navegable)
- * - Tabla de horas extra (navegable)
- * - Resumen económico de guardias (navegable)
- * - Cambio de contraseña
+ * Optimizaciones:
+ * 1. Carga datos UNA sola vez y los cachea
+ * 2. Filtrado local por mes (sin llamadas API al navegar)
+ * 3. Carga paralela con async/await
+ * 4. Evita duplicación de llamadas
  */
 class ProfileViewModel(
     private val usersRepository: UsersRepository,
@@ -44,13 +36,10 @@ class ProfileViewModel(
 
     companion object {
         private const val TAG = "ProfileViewModel"
-
-        // IDs de brigadas que son guardias normales (A, B, C, D, E, F)
-        private val BRIGADAS_GUARDIA = listOf(6, 2, 7, 4, 9, 21, 22, 23, 24, 25)
     }
 
     // ==========================================
-    // ESTADOS PRINCIPALES
+    // ESTADOS UI
     // ==========================================
 
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
@@ -60,14 +49,39 @@ class ProfileViewModel(
     val user: StateFlow<User?> = _user.asStateFlow()
 
     // ==========================================
+    // CACHE DE DATOS (cargados una sola vez)
+    // ==========================================
+
+    private val _brigadesMap = MutableStateFlow<Map<Int, Brigade>>(emptyMap())
+    val brigadesMap: StateFlow<Map<Int, Brigade>> = _brigadesMap.asStateFlow()
+
+    private val _userAssignments = MutableStateFlow<List<FirefighterAssignment>>(emptyList())
+    val userAssignments: StateFlow<List<FirefighterAssignment>> = _userAssignments.asStateFlow()
+
+    // Cache de TODOS los datos del usuario (se cargan una vez)
+    private var allUserRequests: List<RequestItem> = emptyList()
+    private var allUserShiftChanges: List<ShiftChangeRequest> = emptyList()
+    private var allUserExtraHours: List<ExtraHour> = emptyList()
+    private var allGuards: List<Guard> = emptyList()
+
+    // Flag para evitar recargas
+    private var dataLoaded = false
+
+    // ==========================================
     // CALENDARIO - Mes independiente
     // ==========================================
 
     private val _calendarMonth = MutableStateFlow(YearMonth.now())
     val calendarMonth: StateFlow<YearMonth> = _calendarMonth.asStateFlow()
 
-    private val _calendarEvents = MutableStateFlow<List<CalendarEvent>>(emptyList())
-    val calendarEvents: StateFlow<List<CalendarEvent>> = _calendarEvents.asStateFlow()
+    private val _calendarGuards = MutableStateFlow<List<Guard>>(emptyList())
+    val calendarGuards: StateFlow<List<Guard>> = _calendarGuards.asStateFlow()
+
+    private val _calendarRequests = MutableStateFlow<List<RequestItem>>(emptyList())
+    val calendarRequests: StateFlow<List<RequestItem>> = _calendarRequests.asStateFlow()
+
+    private val _calendarShiftChanges = MutableStateFlow<List<ShiftChangeRequest>>(emptyList())
+    val calendarShiftChanges: StateFlow<List<ShiftChangeRequest>> = _calendarShiftChanges.asStateFlow()
 
     // ==========================================
     // SOLICITUDES - Mes independiente
@@ -100,591 +114,456 @@ class ProfileViewModel(
     val monthExtraHours: StateFlow<List<ExtraHour>> = _monthExtraHours.asStateFlow()
 
     // ==========================================
-    // RESUMEN ECONÓMICO - Mes independiente
-    // ==========================================
-
-    private val _salaryMonth = MutableStateFlow(YearMonth.now())
-    val salaryMonth: StateFlow<YearMonth> = _salaryMonth.asStateFlow()
-
-    private val _monthGuards = MutableStateFlow<List<Guard>>(emptyList())
-    val monthGuards: StateFlow<List<Guard>> = _monthGuards.asStateFlow()
-
-    private val _totalSalary = MutableStateFlow(0.0)
-    val totalSalary: StateFlow<Double> = _totalSalary.asStateFlow()
-
-    // ==========================================
-    // BRIGADAS Y ASIGNACIONES
-    // ==========================================
-
-    private val _brigades = MutableStateFlow<Map<Int, Brigade>>(emptyMap())
-    private val _userAssignments = MutableStateFlow<List<FirefighterAssignment>>(emptyList())
-
-    // ==========================================
     // CAMBIO DE CONTRASEÑA
     // ==========================================
 
-    private val _passwordState = MutableStateFlow(PasswordState())
-    val passwordState: StateFlow<PasswordState> = _passwordState.asStateFlow()
+    private val _isChangingPassword = MutableStateFlow(false)
+    val isChangingPassword: StateFlow<Boolean> = _isChangingPassword.asStateFlow()
 
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    private val _passwordChangeSuccess = MutableStateFlow<String?>(null)
+    val passwordChangeSuccess: StateFlow<String?> = _passwordChangeSuccess.asStateFlow()
+
+    private val _passwordChangeError = MutableStateFlow<String?>(null)
+    val passwordChangeError: StateFlow<String?> = _passwordChangeError.asStateFlow()
+
+    // ==========================================
+    // MENSAJES
+    // ==========================================
 
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
     // ==========================================
-    // SEALED CLASSES Y DATA CLASSES
+    // INICIALIZACIÓN
     // ==========================================
 
-    sealed class ProfileUiState {
-        object Loading : ProfileUiState()
-        object Success : ProfileUiState()
-        data class Error(val message: String) : ProfileUiState()
+    init {
+        Log.d(TAG, "ProfileViewModel inicializado")
     }
 
-    data class CalendarEvent(
-        val date: LocalDate,
-        val type: EventType,
-        val label: String,
-        val color: EventColor,
-        val brigadeId: Int? = null
-    )
-
-    enum class EventType {
-        GUARD,          // Guardia normal
-        GUARD_REQ,      // Guardia de requerimiento
-        REQUEST,        // Solicitud confirmada
-        SHIFT_CHANGE    // Cambio de guardia
-    }
-
-    enum class EventColor(val colorHex: String, val textColorHex: String) {
-        BRIGADE_A("#22C55E", "#FFFFFF"),      // Verde
-        BRIGADE_B("#F4F4F5", "#1F2937"),      // Blanco/Gris claro
-        BRIGADE_C("#3B82F6", "#FFFFFF"),      // Azul
-        BRIGADE_D("#DC2626", "#FFFFFF"),      // Rojo
-        BRIGADE_E("#FDE047", "#1F2937"),      // Amarillo
-        BRIGADE_F("#1F2937", "#FFFFFF"),      // Negro (Brigada F)
-        VACATION("#EF4444", "#FFFFFF"),       // Rojo - Vacaciones
-        PERMISSION("#F97316", "#FFFFFF"),     // Naranja - Permisos
-        SICK_LEAVE("#6B7280", "#FFFFFF"),     // Gris - Baja médica
-        SHIFT_CHANGE("#8B5CF6", "#FFFFFF"),   // Púrpura - Cambio guardia
-        REQUIREMENT("#A855F7", "#FFFFFF"),    // Púrpura claro - Requerimiento
-        DEFAULT("#94A3B8", "#FFFFFF")         // Gris
-    }
-
-    data class PasswordState(
-        val currentPassword: String = "",
-        val newPassword: String = "",
-        val confirmPassword: String = "",
-        val isLoading: Boolean = false,
-        val error: String? = null,
-        val success: String? = null
-    )
-
-    data class PermissionStat(
-        val label: String,
-        val value: String,
-        val helper: String? = null
-    )
-
-    data class LegendItem(
-        val label: String,
-        val color: EventColor
-    )
-
     // ==========================================
-    // CARGA INICIAL
+    // CARGA DE DATOS - OPTIMIZADA
     // ==========================================
 
-    fun loadProfile(currentUser: User?) {
+    /**
+     * Carga todos los datos del perfil UNA SOLA VEZ
+     * Usa carga paralela para mejorar rendimiento
+     */
+    fun loadProfile(currentUser: User) {
+        // Evitar recargas innecesarias
+        if (dataLoaded && _user.value?.id_empleado == currentUser.id_empleado) {
+            Log.d(TAG, "Datos ya cargados, usando cache")
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = ProfileUiState.Loading
-            Log.d(TAG, "=== CARGANDO PERFIL ===")
+            Log.d(TAG, "Cargando perfil para usuario: ${currentUser.id_empleado}")
 
             try {
-                if (currentUser == null) {
-                    _uiState.value = ProfileUiState.Error("Usuario no disponible")
-                    return@launch
-                }
-
                 _user.value = currentUser
-                Log.d(TAG, "✅ Usuario: ${currentUser.nombreCompleto}")
 
-                // Cargar brigadas
-                loadBrigades()
+                // CARGA PARALELA de todos los datos
+                val brigadesDeferred = async { brigadesRepository.getAllBrigades() }
+                val assignmentsDeferred = async { assignmentsRepository.getAssignments() }
+                val requestsDeferred = async { requestsRepository.getRequests() }
+                val changesDeferred = async { shiftChangeRepository.getShiftChangeRequests() }
+                val extraHoursDeferred = async { extraHoursRepository.getAllExtraHours() }
 
-                // Cargar asignaciones del usuario
-                loadUserAssignments(currentUser.id_empleado)
+                // Esperar brigadas primero (necesarias para guardias)
+                val brigadesResult = brigadesDeferred.await()
+                brigadesResult.fold(
+                    onSuccess = { brigades ->
+                        _brigadesMap.value = brigades.associateBy { it.id_brigada }
+                        Log.d(TAG, "✅ Brigadas: ${brigades.size}")
+                    },
+                    onFailure = { Log.e(TAG, "❌ Error brigadas: ${it.message}") }
+                )
 
-                // Cargar todos los datos de cada sección
-                loadCalendarData(currentUser.id_empleado)
-                loadRequestsData(currentUser.id_empleado)
-                loadShiftChangesData(currentUser.id_empleado)
-                loadExtraHoursData(currentUser.id_empleado)
-                loadSalaryData(currentUser.id_empleado)
+                // Cargar guardias del mes actual (esto sí necesita rango de fechas)
+                loadGuardsForMonth(_calendarMonth.value)
 
+                // Procesar asignaciones
+                val assignmentsResult = assignmentsDeferred.await()
+                assignmentsResult.fold(
+                    onSuccess = { assignments ->
+                        _userAssignments.value = assignments.filter {
+                            it.id_empleado == currentUser.id_empleado
+                        }
+                        Log.d(TAG, "✅ Asignaciones usuario: ${_userAssignments.value.size}")
+                    },
+                    onFailure = { Log.e(TAG, "❌ Error asignaciones: ${it.message}") }
+                )
+
+                // Procesar solicitudes - CACHEAR TODAS
+                val requestsResult = requestsDeferred.await()
+                requestsResult.fold(
+                    onSuccess = { requests ->
+                        allUserRequests = requests.filter {
+                            it.id_empleado == currentUser.id_empleado
+                        }
+                        Log.d(TAG, "✅ Total solicitudes usuario: ${allUserRequests.size}")
+
+                        // Filtrar para calendario (confirmadas)
+                        _calendarRequests.value = allUserRequests.filter {
+                            it.estado.lowercase() == "confirmada"
+                        }
+
+                        // Filtrar para sección del mes actual
+                        filterRequestsByMonth(_requestsMonth.value)
+                    },
+                    onFailure = { Log.e(TAG, "❌ Error solicitudes: ${it.message}") }
+                )
+
+                // Procesar cambios de guardia - CACHEAR TODOS
+                val changesResult = changesDeferred.await()
+                changesResult.fold(
+                    onSuccess = { changes ->
+                        allUserShiftChanges = changes.filter { change ->
+                            change.id_empleado1 == currentUser.id_empleado ||
+                                    change.id_empleado2 == currentUser.id_empleado
+                        }
+                        Log.d(TAG, "✅ Total cambios usuario: ${allUserShiftChanges.size}")
+
+                        // Filtrar para calendario (aceptados)
+                        _calendarShiftChanges.value = allUserShiftChanges.filter {
+                            it.estado.lowercase() == "aceptado"
+                        }
+
+                        // Filtrar para sección del mes actual
+                        filterShiftChangesByMonth(_shiftChangesMonth.value)
+                    },
+                    onFailure = { Log.e(TAG, "❌ Error cambios: ${it.message}") }
+                )
+
+                // Procesar horas extra - CACHEAR TODAS
+                val extraHoursResult = extraHoursDeferred.await()
+                extraHoursResult.fold(
+                    onSuccess = { hours ->
+                        allUserExtraHours = hours.filter {
+                            it.id_empleado == currentUser.id_empleado
+                        }
+                        Log.d(TAG, "✅ Total horas extra usuario: ${allUserExtraHours.size}")
+
+                        // Filtrar para sección del mes actual
+                        filterExtraHoursByMonth(_extraHoursMonth.value)
+                    },
+                    onFailure = { Log.e(TAG, "❌ Error horas extra: ${it.message}") }
+                )
+
+                dataLoaded = true
                 _uiState.value = ProfileUiState.Success
+
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Excepción: ${e.message}")
+                Log.e(TAG, "Error cargando perfil: ${e.message}", e)
                 _uiState.value = ProfileUiState.Error(e.message ?: "Error desconocido")
             }
         }
     }
 
-    private suspend fun loadBrigades() {
-        val result = brigadesRepository.getAllBrigades()
-        result.onSuccess { brigadeList ->
-            _brigades.value = brigadeList.associateBy { it.id_brigada }
-            Log.d(TAG, "✅ ${brigadeList.size} brigadas cargadas")
-        }
-    }
-
-    private suspend fun loadUserAssignments(userId: Int) {
-        val result = assignmentsRepository.getAssignments()
-        result.onSuccess { allAssignments ->
-            _userAssignments.value = allAssignments.filter { it.id_empleado == userId }
-            Log.d(TAG, "✅ ${_userAssignments.value.size} asignaciones del usuario")
-        }
-    }
-
-    // ==========================================
-    // CALENDARIO
-    // ==========================================
-
-    private suspend fun loadCalendarData(userId: Int) {
-        val month = _calendarMonth.value
-        val events = mutableListOf<CalendarEvent>()
-
-        // Filtrar asignaciones de guardia
-        val guardAssignments = _userAssignments.value.filter {
-            BRIGADAS_GUARDIA.contains(it.id_brigada_destino)
-        }
-
-        // Cargar guardias para las brigadas asignadas
-        val brigadeIds = guardAssignments.map { it.id_brigada_destino }.distinct()
-        if (brigadeIds.isNotEmpty()) {
-            val guardsResult = guardsRepository.getGuardsByDateRange(
-                brigadeIds = brigadeIds,
-                startDate = month.atDay(1).toString(),
-                endDate = month.atEndOfMonth().toString()
-            )
-
-            guardsResult.onSuccess { guards ->
-                guards.forEach { guard ->
-                    val guardDate = LocalDate.parse(guard.date)
-                    val assignment = findAssignmentForDate(guardAssignments, guardDate, guard.id_brigada)
-
-                    if (assignment != null) {
-                        val isRequerimiento = assignment.requerimiento == true
-                        val color = if (isRequerimiento) {
-                            EventColor.REQUIREMENT
-                        } else {
-                            getBrigadeColor(guard.id_brigada)
-                        }
-
-                        val brigadeName = _brigades.value[guard.id_brigada]?.nombre ?: "Guardia"
-                        val label = getBrigadeShortName(brigadeName)
-
-                        events.add(CalendarEvent(
-                            date = guardDate,
-                            type = if (isRequerimiento) EventType.GUARD_REQ else EventType.GUARD,
-                            label = label,
-                            color = color,
-                            brigadeId = guard.id_brigada
-                        ))
-                    }
-                }
-            }
-        }
-
-        // Cargar solicitudes confirmadas
-        val requestsResult = requestsRepository.getRequests()
-        requestsResult.onSuccess { allRequests ->
-            val confirmedRequests = allRequests.filter {
-                it.id_empleado == userId && it.estado.lowercase() == "confirmada"
-            }
-
-            confirmedRequests.forEach { request ->
-                val startDate = parseDate(request.fecha_ini)
-                val endDate = parseDate(request.fecha_fin)
-
-                if (startDate != null) {
-                    val end = endDate ?: startDate
-                    var currentDate: LocalDate = startDate
-
-                    while (!currentDate.isAfter(end)) {
-                        if (YearMonth.from(currentDate) == month) {
-                            events.add(CalendarEvent(
-                                date = currentDate,
-                                type = EventType.REQUEST,
-                                label = getRequestShortLabel(request.tipo),
-                                color = getRequestColor(request.tipo)
-                            ))
-                        }
-                        currentDate = currentDate.plusDays(1)
-                    }
-                }
-            }
-        }
-
-        // Cargar cambios de guardia aceptados
-        val shiftChangesResult = shiftChangeRepository.getShiftChangeRequests()
-        shiftChangesResult.onSuccess { allChanges ->
-            val confirmed = allChanges.filter {
-                (it.id_empleado1 == userId || it.id_empleado2 == userId) &&
-                        it.estado.lowercase() == "aceptado"
-            }
-
-            confirmed.forEach { change ->
-                val date = parseDate(change.fecha)
-                if (date != null && YearMonth.from(date) == month) {
-                    events.add(CalendarEvent(
-                        date = date,
-                        type = EventType.SHIFT_CHANGE,
-                        label = "CG",
-                        color = EventColor.SHIFT_CHANGE
-                    ))
-                }
-            }
-        }
-
-        _calendarEvents.value = events.sortedBy { it.date }
-        Log.d(TAG, "📅 Calendario: ${events.size} eventos")
-    }
-
-    fun previousCalendarMonth() {
-        _calendarMonth.value = _calendarMonth.value.minusMonths(1)
-        _user.value?.let { user ->
-            viewModelScope.launch { loadCalendarData(user.id_empleado) }
-        }
-    }
-
-    fun nextCalendarMonth() {
-        _calendarMonth.value = _calendarMonth.value.plusMonths(1)
-        _user.value?.let { user ->
-            viewModelScope.launch { loadCalendarData(user.id_empleado) }
-        }
-    }
-
-    // ==========================================
-    // SOLICITUDES
-    // ==========================================
-
-    private suspend fun loadRequestsData(userId: Int) {
-        val month = _requestsMonth.value
-        val requestsResult = requestsRepository.getRequests()
-
-        requestsResult.onSuccess { allRequests ->
-            _monthRequests.value = allRequests.filter { request ->
-                request.id_empleado == userId &&
-                        parseDate(request.fecha_ini)?.let { YearMonth.from(it) == month } == true
-            }
-            Log.d(TAG, "📋 Solicitudes: ${_monthRequests.value.size}")
-        }
-    }
-
-    fun previousRequestsMonth() {
-        _requestsMonth.value = _requestsMonth.value.minusMonths(1)
-        _user.value?.let { user ->
-            viewModelScope.launch { loadRequestsData(user.id_empleado) }
-        }
-    }
-
-    fun nextRequestsMonth() {
-        _requestsMonth.value = _requestsMonth.value.plusMonths(1)
-        _user.value?.let { user ->
-            viewModelScope.launch { loadRequestsData(user.id_empleado) }
-        }
-    }
-
-    // ==========================================
-    // CAMBIOS DE GUARDIA
-    // ==========================================
-
-    private suspend fun loadShiftChangesData(userId: Int) {
-        val month = _shiftChangesMonth.value
-        val result = shiftChangeRepository.getShiftChangeRequests()
-
-        result.onSuccess { allChanges ->
-            _monthShiftChanges.value = allChanges.filter { change ->
-                (change.id_empleado1 == userId || change.id_empleado2 == userId) &&
-                        parseDate(change.fecha)?.let { YearMonth.from(it) == month } == true
-            }
-            Log.d(TAG, "🔄 Cambios guardia: ${_monthShiftChanges.value.size}")
-        }
-    }
-
-    fun previousShiftChangesMonth() {
-        _shiftChangesMonth.value = _shiftChangesMonth.value.minusMonths(1)
-        _user.value?.let { user ->
-            viewModelScope.launch { loadShiftChangesData(user.id_empleado) }
-        }
-    }
-
-    fun nextShiftChangesMonth() {
-        _shiftChangesMonth.value = _shiftChangesMonth.value.plusMonths(1)
-        _user.value?.let { user ->
-            viewModelScope.launch { loadShiftChangesData(user.id_empleado) }
-        }
-    }
-
-    // ==========================================
-    // HORAS EXTRA
-    // ==========================================
-
-    private suspend fun loadExtraHoursData(userId: Int) {
-        val month = _extraHoursMonth.value
-        val monthStr = "${month.year}-${month.monthValue.toString().padStart(2, '0')}"
-
-        val result = extraHoursRepository.getAllExtraHours()
-
-        result.onSuccess { allHours ->
-            _monthExtraHours.value = allHours.filter { hour ->
-                hour.id_empleado == userId &&
-                        parseDate(hour.date)?.let { YearMonth.from(it) == month } == true
-            }
-            Log.d(TAG, "⏰ Horas extra: ${_monthExtraHours.value.size}")
-        }
-    }
-
-    fun previousExtraHoursMonth() {
-        _extraHoursMonth.value = _extraHoursMonth.value.minusMonths(1)
-        _user.value?.let { user ->
-            viewModelScope.launch { loadExtraHoursData(user.id_empleado) }
-        }
-    }
-
-    fun nextExtraHoursMonth() {
-        _extraHoursMonth.value = _extraHoursMonth.value.plusMonths(1)
-        _user.value?.let { user ->
-            viewModelScope.launch { loadExtraHoursData(user.id_empleado) }
-        }
-    }
-
-    // Cálculos de horas extra
-    fun getTotalDiurnas(): Double = _monthExtraHours.value.sumOf { it.horas_diurnas ?: 0.0 }
-    fun getTotalNocturnas(): Double = _monthExtraHours.value.sumOf { it.horas_nocturnas ?: 0.0 }
-    fun getTotalExtraHoursSalary(): Double = _monthExtraHours.value.sumOf { hour ->
-        val diurnas = hour.horas_diurnas ?: 0.0
-        val nocturnas = hour.horas_nocturnas ?: 0.0
-        val precioDiurno = hour.salarie?.precio_diurno ?: 0.0
-        val precioNocturno = hour.salarie?.precio_nocturno ?: 0.0
-        (diurnas * precioDiurno) + (nocturnas * precioNocturno)
-    }
-
-    // ==========================================
-    // RESUMEN ECONÓMICO (GUARDIAS)
-    // ==========================================
-
-    private suspend fun loadSalaryData(userId: Int) {
-        val month = _salaryMonth.value
-
-        // Filtrar asignaciones de guardia
-        val guardAssignments = _userAssignments.value.filter {
-            BRIGADAS_GUARDIA.contains(it.id_brigada_destino)
-        }
-
-        val brigadeIds = guardAssignments.map { it.id_brigada_destino }.distinct()
+    /**
+     * Carga guardias para un mes específico (requiere llamada API por rango)
+     */
+    private suspend fun loadGuardsForMonth(month: YearMonth) {
+        val brigadeIds = _brigadesMap.value.keys.toList()
         if (brigadeIds.isEmpty()) {
-            _monthGuards.value = emptyList()
-            _totalSalary.value = 0.0
+            Log.w(TAG, "No hay brigadas para cargar guardias")
             return
         }
 
-        val guardsResult = guardsRepository.getGuardsByDateRange(
+        val startDate = month.atDay(1).format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val endDate = month.atEndOfMonth().format(DateTimeFormatter.ISO_LOCAL_DATE)
+
+        val result = guardsRepository.getGuardsByDateRange(
             brigadeIds = brigadeIds,
-            startDate = month.atDay(1).toString(),
-            endDate = month.atEndOfMonth().toString()
+            startDate = startDate,
+            endDate = endDate
         )
 
-        guardsResult.onSuccess { guards ->
-            // Filtrar guardias donde el usuario estaba asignado
-            val validGuards = guards.filter { guard ->
-                val guardDate = LocalDate.parse(guard.date)
-                findAssignmentForDate(guardAssignments, guardDate, guard.id_brigada) != null
+        result.fold(
+            onSuccess = { guards ->
+                allGuards = guards
+                _calendarGuards.value = guards
+                Log.d(TAG, "✅ Guardias mes $month: ${guards.size}")
+            },
+            onFailure = { Log.e(TAG, "❌ Error guardias: ${it.message}") }
+        )
+    }
+
+    // ==========================================
+    // FILTRADO LOCAL (sin llamadas API)
+    // ==========================================
+
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+
+    private fun filterRequestsByMonth(month: YearMonth) {
+        _monthRequests.value = allUserRequests.filter { req ->
+            try {
+                val date = LocalDate.parse(req.fecha_ini, dateFormatter)
+                YearMonth.from(date) == month
+            } catch (e: Exception) {
+                false
             }
+        }.sortedByDescending { it.fecha_ini }
+    }
 
-            _monthGuards.value = validGuards
-            _totalSalary.value = validGuards.sumOf { guard ->
-                val salary = guard.salary
-                if (salary != null) {
-                    (salary.precio_diurno * salary.horas_diurnas) +
-                            (salary.precio_nocturno * salary.horas_nocturnas)
-                } else 0.0
+    private fun filterShiftChangesByMonth(month: YearMonth) {
+        _monthShiftChanges.value = allUserShiftChanges.filter { change ->
+            try {
+                val date = LocalDate.parse(change.fecha, dateFormatter)
+                YearMonth.from(date) == month
+            } catch (e: Exception) {
+                false
             }
-            Log.d(TAG, "💰 Guardias: ${validGuards.size}, Salario: ${_totalSalary.value}€")
-        }
+        }.sortedByDescending { it.fecha }
     }
 
-    fun previousSalaryMonth() {
-        _salaryMonth.value = _salaryMonth.value.minusMonths(1)
-        _user.value?.let { user ->
-            viewModelScope.launch { loadSalaryData(user.id_empleado) }
-        }
-    }
-
-    fun nextSalaryMonth() {
-        _salaryMonth.value = _salaryMonth.value.plusMonths(1)
-        _user.value?.let { user ->
-            viewModelScope.launch { loadSalaryData(user.id_empleado) }
-        }
+    private fun filterExtraHoursByMonth(month: YearMonth) {
+        _monthExtraHours.value = allUserExtraHours.filter { hour ->
+            try {
+                val date = LocalDate.parse(hour.date, dateFormatter)
+                YearMonth.from(date) == month
+            } catch (e: Exception) {
+                false
+            }
+        }.sortedByDescending { it.date }
     }
 
     // ==========================================
-    // CAMBIO DE CONTRASEÑA
+    // NAVEGACIÓN DE MESES - SIN LLAMADAS API
     // ==========================================
 
-    fun updateCurrentPassword(value: String) {
-        _passwordState.value = _passwordState.value.copy(currentPassword = value, error = null)
+    fun previousCalendarMonth(currentUser: User) {
+        _calendarMonth.value = _calendarMonth.value.minusMonths(1)
+        // Solo guardias necesitan recarga (por rango de fechas en API)
+        viewModelScope.launch { loadGuardsForMonth(_calendarMonth.value) }
     }
 
-    fun updateNewPassword(value: String) {
-        _passwordState.value = _passwordState.value.copy(newPassword = value, error = null)
+    fun nextCalendarMonth(currentUser: User) {
+        _calendarMonth.value = _calendarMonth.value.plusMonths(1)
+        viewModelScope.launch { loadGuardsForMonth(_calendarMonth.value) }
     }
 
-    fun updateConfirmPassword(value: String) {
-        _passwordState.value = _passwordState.value.copy(confirmPassword = value, error = null)
+    // Estas NO hacen llamadas API - solo filtran datos cacheados
+    fun previousRequestsMonth(currentUser: User) {
+        _requestsMonth.value = _requestsMonth.value.minusMonths(1)
+        filterRequestsByMonth(_requestsMonth.value)
     }
 
-    fun changePassword() {
-        val state = _passwordState.value
+    fun nextRequestsMonth(currentUser: User) {
+        _requestsMonth.value = _requestsMonth.value.plusMonths(1)
+        filterRequestsByMonth(_requestsMonth.value)
+    }
 
-        if (state.currentPassword.isBlank()) {
-            _passwordState.value = state.copy(error = "Introduce tu contraseña actual")
-            return
-        }
-        if (state.newPassword.length < 6) {
-            _passwordState.value = state.copy(error = "La nueva contraseña debe tener al menos 6 caracteres")
-            return
-        }
-        if (state.newPassword != state.confirmPassword) {
-            _passwordState.value = state.copy(error = "Las contraseñas no coinciden")
-            return
-        }
+    fun previousShiftChangesMonth(currentUser: User) {
+        _shiftChangesMonth.value = _shiftChangesMonth.value.minusMonths(1)
+        filterShiftChangesByMonth(_shiftChangesMonth.value)
+    }
 
-        viewModelScope.launch {
-            _passwordState.value = state.copy(isLoading = true, error = null)
+    fun nextShiftChangesMonth(currentUser: User) {
+        _shiftChangesMonth.value = _shiftChangesMonth.value.plusMonths(1)
+        filterShiftChangesByMonth(_shiftChangesMonth.value)
+    }
 
-            val user = _user.value ?: return@launch
+    fun previousExtraHoursMonth(currentUser: User) {
+        _extraHoursMonth.value = _extraHoursMonth.value.minusMonths(1)
+        filterExtraHoursByMonth(_extraHoursMonth.value)
+    }
 
-            val result = usersRepository.updateUser(
-                id = user.id_empleado,
-                user = UpdateUserRequest(
-                    current_password = state.currentPassword,
-                    password = state.newPassword,
-                    password_confirmation = state.confirmPassword
-                )
-            )
-
-            result.fold(
-                onSuccess = {
-                    _passwordState.value = PasswordState(success = "Contraseña actualizada correctamente")
-                    _successMessage.value = "Contraseña actualizada"
-                },
-                onFailure = { error ->
-                    _passwordState.value = _passwordState.value.copy(
-                        isLoading = false,
-                        error = error.message ?: "Error al cambiar contraseña"
-                    )
-                }
-            )
-        }
+    fun nextExtraHoursMonth(currentUser: User) {
+        _extraHoursMonth.value = _extraHoursMonth.value.plusMonths(1)
+        filterExtraHoursByMonth(_extraHoursMonth.value)
     }
 
     // ==========================================
-    // HELPERS
+    // REFRESCAR DATOS (forzar recarga)
     // ==========================================
 
-    fun getPermissionStats(): List<PermissionStat> {
-        val user = _user.value ?: return emptyList()
+    fun refreshData(currentUser: User) {
+        dataLoaded = false
+        loadProfile(currentUser)
+    }
 
+    // ==========================================
+    // CÁLCULOS DE HORAS EXTRA
+    // ==========================================
+
+    fun getTotalDiurnas(): Double {
+        var total = 0.0
+        for (hour in _monthExtraHours.value) {
+            total += hour.horas_diurnas.toDouble()
+        }
+        return total
+    }
+
+    fun getTotalNocturnas(): Double {
+        var total = 0.0
+        for (hour in _monthExtraHours.value) {
+            total += hour.horas_nocturnas.toDouble()
+        }
+        return total
+    }
+
+    fun getTotalExtraHoursSalary(): Double {
+        var total = 0.0
+        for (hour in _monthExtraHours.value) {
+            val diurnas = hour.horas_diurnas.toDouble()
+            val nocturnas = hour.horas_nocturnas.toDouble()
+            val precioDiurno = hour.salarie?.precio_diurno ?: 0.0
+            val precioNocturno = hour.salarie?.precio_nocturno ?: 0.0
+            total += (diurnas * precioDiurno) + (nocturnas * precioNocturno)
+        }
+        return total
+    }
+
+    // ==========================================
+    // ESTADÍSTICAS
+    // ==========================================
+
+    fun getPermissionStats(user: User): List<PermissionStat> {
         return listOf(
-            PermissionStat("Vacaciones", "${user.vacaciones ?: 0} días"),
-            PermissionStat("Asuntos Propios", "${user.AP ?: 0} jornadas"),
-            PermissionStat("Salidas Personales", "${user.SP ?: 0} horas"),
-            PermissionStat("Horas Sindicales", "${user.horas_sindicales ?: 0} horas"),
-            PermissionStat("Módulos", "${user.modulo ?: 0} días"),
-            PermissionStat("Comp. Grupos", "${user.compensacion_grupos ?: 0} jornadas")
+            PermissionStat(label = "Vacaciones", value = "${user.vacaciones ?: 0}", unit = "días"),
+            PermissionStat(label = "Asuntos Propios", value = "${user.AP ?: 0}", unit = "jornadas"),
+            PermissionStat(label = "Salidas Personales", value = "${user.SP ?: 0}", unit = "horas"),
+            PermissionStat(label = "Horas Sindicales", value = "${user.horas_sindicales ?: 0}", unit = "horas"),
+            PermissionStat(label = "Módulos", value = "${user.modulo ?: 0}", unit = "días"),
+            PermissionStat(label = "Comp. Grupos", value = "${user.compensacion_grupos ?: 0}", unit = "jornadas")
         )
     }
 
-    private fun findAssignmentForDate(
-        assignments: List<FirefighterAssignment>,
-        date: LocalDate,
-        brigadeId: Int
-    ): FirefighterAssignment? {
-        return assignments.find { assignment ->
-            val startDate = parseDate(assignment.fecha_ini)
-            assignment.id_brigada_destino == brigadeId &&
-                    startDate != null &&
-                    !startDate.isAfter(date)
+    fun getRequestsStats(): RequestsStats {
+        val requests = _monthRequests.value
+        return RequestsStats(
+            total = requests.size,
+            confirmed = requests.count { it.estado.lowercase() == "confirmada" },
+            pending = requests.count { it.estado.lowercase() == "pendiente" },
+            cancelled = requests.count { it.estado.lowercase() == "cancelada" },
+            rejected = requests.count { it.estado.lowercase() == "rechazada" }
+        )
+    }
+
+    fun getShiftChangesStats(): ShiftChangesStats {
+        val changes = _monthShiftChanges.value
+        return ShiftChangesStats(
+            total = changes.size,
+            accepted = changes.count { it.estado.lowercase() == "aceptado" },
+            pending = changes.count { it.estado.lowercase() == "pendiente" },
+            rejected = changes.count { it.estado.lowercase() == "rechazado" },
+            simple = changes.count { it.fecha2.isNullOrEmpty() },
+            mirror = changes.count { !it.fecha2.isNullOrEmpty() }
+        )
+    }
+
+    // ==========================================
+    // EVENTOS DEL CALENDARIO
+    // ==========================================
+
+    fun getEventForDate(date: LocalDate, currentUser: User): CalendarEvent? {
+        val dateStr = date.format(dateFormatter)
+
+        // 1. Solicitudes confirmadas (prioridad máxima - días libres)
+        val request = _calendarRequests.value.find { req ->
+            try {
+                val fechaIni = LocalDate.parse(req.fecha_ini, dateFormatter)
+                val fechaFin = req.fecha_fin?.let { LocalDate.parse(it, dateFormatter) } ?: fechaIni
+                !date.isBefore(fechaIni) && !date.isAfter(fechaFin)
+            } catch (e: Exception) {
+                false
+            }
+        }
+        if (request != null) {
+            return CalendarEvent(
+                type = CalendarEventType.REQUEST,
+                label = getRequestShortLabel(request.tipo),
+                color = getRequestEventColor(request.tipo)
+            )
+        }
+
+        // 2. Cambios de guardia aceptados
+        val change = _calendarShiftChanges.value.find { it.fecha == dateStr || it.fecha2 == dateStr }
+        if (change != null) {
+            val isMyGuard = (change.id_empleado1 == currentUser.id_empleado && change.fecha == dateStr) ||
+                    (change.id_empleado2 == currentUser.id_empleado && change.fecha2 == dateStr)
+            return CalendarEvent(
+                type = if (isMyGuard) CalendarEventType.SHIFT_CHANGE_WORK else CalendarEventType.SHIFT_CHANGE_FREE,
+                label = if (isMyGuard) "CG" else "Libre",
+                color = if (isMyGuard) EventColor.SHIFT_CHANGE_WORK else EventColor.BRIGADE_B
+            )
+        }
+
+        // 3. Guardia normal
+        val guard = _calendarGuards.value.find { it.date == dateStr }
+        if (guard != null) {
+            val brigade = _brigadesMap.value[guard.id_brigada]
+            val userBrigadeId = findUserBrigadeForDate(date, currentUser)
+
+            if (userBrigadeId == guard.id_brigada) {
+                return CalendarEvent(
+                    type = CalendarEventType.GUARD,
+                    label = brigade?.nombre ?: "G",
+                    color = getBrigadeEventColor(brigade?.nombre ?: "")
+                )
+            }
+        }
+
+        return null
+    }
+
+    private fun getRequestShortLabel(tipo: String): String {
+        return when (tipo.lowercase()) {
+            "vacaciones" -> "VAC"
+            "asuntos propios" -> "AP"
+            "baja" -> "BAJA"
+            "salidas personales" -> "SP"
+            "horas sindicales" -> "HS"
+            "licencias por jornadas" -> "LIC"
+            "modulo" -> "MOD"
+            "compensacion grupos especiales" -> "CG"
+            "vestuario" -> "VEST"
+            else -> tipo.take(3).uppercase()
         }
     }
 
-    private fun parseDate(dateString: String?): LocalDate? {
-        if (dateString == null) return null
-        return try {
-            LocalDate.parse(dateString.substring(0, 10), DateTimeFormatter.ISO_LOCAL_DATE)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun getBrigadeColor(brigadeId: Int): EventColor {
-        val brigade = _brigades.value[brigadeId]
-        val name = brigade?.nombre?.lowercase() ?: ""
-
-        return when {
-            name.contains("brigada a") -> EventColor.BRIGADE_A
-            name.contains("brigada b") -> EventColor.BRIGADE_B
-            name.contains("brigada c") -> EventColor.BRIGADE_C
-            name.contains("brigada d") -> EventColor.BRIGADE_D
-            name.contains("brigada e") -> EventColor.BRIGADE_E
-            name.contains("brigada f") -> EventColor.BRIGADE_F
+    private fun getRequestEventColor(tipo: String): EventColor {
+        return when (tipo.lowercase()) {
+            "vacaciones" -> EventColor.VACACIONES
+            "asuntos propios" -> EventColor.ASUNTOS_PROPIOS
+            "baja" -> EventColor.BAJA
+            "salidas personales" -> EventColor.SALIDAS_PERSONALES
+            "horas sindicales" -> EventColor.HORAS_SINDICALES
+            "licencias por jornadas" -> EventColor.LICENCIAS
+            "modulo" -> EventColor.MODULO
+            "compensacion grupos especiales" -> EventColor.COMPENSACION
+            "vestuario" -> EventColor.VESTUARIO
             else -> EventColor.DEFAULT
         }
     }
 
-    private fun getBrigadeShortName(brigadeName: String): String {
-        return when {
-            brigadeName.contains("Brigada A", ignoreCase = true) -> "A"
-            brigadeName.contains("Brigada B", ignoreCase = true) -> "B"
-            brigadeName.contains("Brigada C", ignoreCase = true) -> "C"
-            brigadeName.contains("Brigada D", ignoreCase = true) -> "D"
-            brigadeName.contains("Brigada E", ignoreCase = true) -> "E"
-            brigadeName.contains("Brigada F", ignoreCase = true) -> "F"
-            brigadeName.contains("GREPS", ignoreCase = true) -> "GREPS"
-            brigadeName.contains("GRAFOR", ignoreCase = true) -> "GRAFOR"
-            else -> brigadeName.take(3)
+    private fun getBrigadeEventColor(nombre: String): EventColor {
+        return when (nombre.uppercase()) {
+            "A" -> EventColor.BRIGADE_A
+            "B" -> EventColor.BRIGADE_B
+            "C" -> EventColor.BRIGADE_C
+            "D" -> EventColor.BRIGADE_D
+            "E" -> EventColor.BRIGADE_E
+            "F" -> EventColor.BRIGADE_F
+            else -> EventColor.DEFAULT
         }
     }
 
-    private fun getRequestColor(tipo: String?): EventColor {
-        return when (tipo?.lowercase()) {
-            "vacaciones" -> EventColor.VACATION
-            "baja medica", "baja" -> EventColor.SICK_LEAVE
-            else -> EventColor.PERMISSION
+    fun getEstadoColor(estado: String): StatusColor {
+        return when (estado.lowercase()) {
+            "confirmada" -> StatusColor.CONFIRMADA
+            "aceptado" -> StatusColor.ACEPTADO
+            "pendiente" -> StatusColor.PENDIENTE
+            "cancelada" -> StatusColor.CANCELADA
+            "rechazada" -> StatusColor.RECHAZADA
+            "rechazado" -> StatusColor.RECHAZADO
+            else -> StatusColor.DEFAULT
         }
-    }
-
-    private fun getRequestShortLabel(tipo: String?): String {
-        return when (tipo?.lowercase()) {
-            "vacaciones" -> "VAC"
-            "asuntos propios" -> "AP"
-            "salidas personales" -> "SP"
-            "baja medica", "baja" -> "BAJA"
-            "modulo" -> "MOD"
-            "horas sindicales" -> "HS"
-            "compensacion grupos especiales" -> "CGE"
-            else -> tipo?.take(3)?.uppercase() ?: "?"
-        }
-    }
-
-    fun getEventForDate(date: LocalDate): CalendarEvent? {
-        val events = _calendarEvents.value.filter { it.date == date }
-        return events.find { it.type == EventType.REQUEST }
-            ?: events.find { it.type == EventType.SHIFT_CHANGE }
-            ?: events.firstOrNull()
     }
 
     fun getCalendarLegend(): List<LegendItem> {
@@ -695,37 +574,199 @@ class ProfileViewModel(
             LegendItem("Brigada D", EventColor.BRIGADE_D),
             LegendItem("Brigada E", EventColor.BRIGADE_E),
             LegendItem("Brigada F", EventColor.BRIGADE_F),
-            LegendItem("Vacaciones", EventColor.VACATION),
-            LegendItem("Permisos", EventColor.PERMISSION),
-            LegendItem("Baja médica", EventColor.SICK_LEAVE),
-            LegendItem("Cambio guardia", EventColor.SHIFT_CHANGE),
-            LegendItem("Requerimiento", EventColor.REQUIREMENT)
+            LegendItem("Vacaciones", EventColor.VACACIONES),
+            LegendItem("Asuntos Propios", EventColor.ASUNTOS_PROPIOS),
+            LegendItem("Baja", EventColor.BAJA),
+            LegendItem("Cambio Guardia", EventColor.SHIFT_CHANGE_WORK),
         )
     }
 
-    fun formatEstado(estado: String): String {
-        return when (estado.lowercase()) {
-            "en_tramite" -> "En Trámite"
-            "aceptado_por_empleados" -> "Aceptado por Empleados"
-            "aceptado" -> "Aceptado"
-            "rechazado" -> "Rechazado"
-            "pendiente" -> "Pendiente"
-            "confirmada" -> "Confirmada"
-            "cancelada" -> "Cancelada"
-            "denegada" -> "Denegada"
-            else -> estado
+    private fun findUserBrigadeForDate(date: LocalDate, currentUser: User): Int? {
+        return _userAssignments.value
+            .filter { assignment ->
+                try {
+                    val fechaIni = LocalDate.parse(assignment.fecha_ini, dateFormatter)
+                    val fechaFin = assignment.fecha_fin?.let { LocalDate.parse(it, dateFormatter) }
+
+                    if (fechaFin != null) {
+                        !date.isBefore(fechaIni) && !date.isAfter(fechaFin)
+                    } else {
+                        !date.isBefore(fechaIni)
+                    }
+                } catch (e: Exception) {
+                    false
+                }
+            }
+            .maxByOrNull { it.fecha_ini }
+            ?.id_brigada_destino
+    }
+
+    fun findAssignmentForDate(date: LocalDate, brigadeId: Int): FirefighterAssignment? {
+        return _userAssignments.value.find { assignment ->
+            assignment.id_brigada_destino == brigadeId &&
+                    try {
+                        val fechaIni = LocalDate.parse(assignment.fecha_ini, dateFormatter)
+                        val fechaFin = assignment.fecha_fin?.let { LocalDate.parse(it, dateFormatter) }
+
+                        if (fechaFin != null) {
+                            !date.isBefore(fechaIni) && !date.isAfter(fechaFin)
+                        } else {
+                            !date.isBefore(fechaIni)
+                        }
+                    } catch (e: Exception) {
+                        false
+                    }
         }
     }
 
-    fun clearError() {
-        _errorMessage.value = null
+    // ==========================================
+    // CAMBIO DE CONTRASEÑA
+    // ==========================================
+
+    fun changePassword(
+        currentUser: User,
+        currentPassword: String,
+        newPassword: String,
+        confirmPassword: String
+    ) {
+        if (currentPassword.isBlank()) {
+            _passwordChangeError.value = "Introduce tu contraseña actual"
+            return
+        }
+
+        if (newPassword.length < 6) {
+            _passwordChangeError.value = "La nueva contraseña debe tener al menos 6 caracteres"
+            return
+        }
+
+        if (newPassword != confirmPassword) {
+            _passwordChangeError.value = "Las contraseñas no coinciden"
+            return
+        }
+
+        viewModelScope.launch {
+            _isChangingPassword.value = true
+            _passwordChangeError.value = null
+            _passwordChangeSuccess.value = null
+
+            val request = UpdateUserRequest(
+                current_password = currentPassword,
+                password = newPassword,
+                password_confirmation = confirmPassword
+            )
+
+            val result = usersRepository.updateUser(currentUser.id_empleado, request)
+
+            result.fold(
+                onSuccess = {
+                    _passwordChangeSuccess.value = "Contraseña actualizada correctamente"
+                    Log.d(TAG, "✅ Contraseña actualizada")
+                },
+                onFailure = { error ->
+                    _passwordChangeError.value = error.message ?: "Error al cambiar contraseña"
+                    Log.e(TAG, "❌ Error cambiando contraseña: ${error.message}")
+                }
+            )
+
+            _isChangingPassword.value = false
+        }
     }
 
-    fun clearSuccess() {
+    // ==========================================
+    // LIMPIEZA DE MENSAJES
+    // ==========================================
+
+    fun clearSuccessMessage() {
         _successMessage.value = null
     }
 
+    fun clearErrorMessage() {
+        _errorMessage.value = null
+    }
+
     fun clearPasswordMessages() {
-        _passwordState.value = _passwordState.value.copy(error = null, success = null)
+        _passwordChangeSuccess.value = null
+        _passwordChangeError.value = null
     }
 }
+
+// ==========================================
+// UI STATES & DATA CLASSES
+// ==========================================
+
+sealed class ProfileUiState {
+    object Loading : ProfileUiState()
+    object Success : ProfileUiState()
+    data class Error(val message: String) : ProfileUiState()
+}
+
+data class PermissionStat(
+    val label: String,
+    val value: String,
+    val unit: String
+)
+
+data class RequestsStats(
+    val total: Int,
+    val confirmed: Int,
+    val pending: Int,
+    val cancelled: Int,
+    val rejected: Int
+)
+
+data class ShiftChangesStats(
+    val total: Int,
+    val accepted: Int,
+    val pending: Int,
+    val rejected: Int,
+    val simple: Int,
+    val mirror: Int
+)
+
+data class CalendarEvent(
+    val type: CalendarEventType,
+    val label: String,
+    val color: EventColor
+)
+
+enum class CalendarEventType {
+    GUARD,
+    REQUEST,
+    SHIFT_CHANGE_WORK,
+    SHIFT_CHANGE_FREE
+}
+
+enum class EventColor(val hex: String) {
+    BRIGADE_A("#22C55E"),  // Verde
+    BRIGADE_B("#F8FAFC"),  // Blanco
+    BRIGADE_C("#3B82F6"),  // Azul
+    BRIGADE_D("#DC2626"),  // Rojo
+    BRIGADE_E("#FDE047"),  // Amarillo
+    BRIGADE_F("#000000"),
+    VACACIONES("#DC2626"),
+    ASUNTOS_PROPIOS("#F97316"),
+    BAJA("#6B7280"),
+    SALIDAS_PERSONALES("#8B5CF6"),
+    HORAS_SINDICALES("#F59E0B"),
+    LICENCIAS("#EC4899"),
+    MODULO("#14B8A6"),
+    COMPENSACION("#F97316"),
+    VESTUARIO("#6366F1"),
+    SHIFT_CHANGE_WORK("#F97316"),
+    DEFAULT("#64748B")
+}
+
+enum class StatusColor(val hex: String) {
+    CONFIRMADA("#10B981"),
+    ACEPTADO("#10B981"),
+    PENDIENTE("#F59E0B"),
+    CANCELADA("#6B7280"),
+    RECHAZADA("#EF4444"),
+    RECHAZADO("#EF4444"),
+    DEFAULT("#64748B")
+}
+
+data class LegendItem(
+    val label: String,
+    val color: EventColor
+)

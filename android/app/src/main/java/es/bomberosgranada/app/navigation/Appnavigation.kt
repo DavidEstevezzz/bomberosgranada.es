@@ -378,7 +378,7 @@ fun AppNavigation(
         // PERFIL
         // ==========================================
 
-        composable(route = "profile") {
+        composable(route = Screen.Profile.route) {
             val profileViewModel = remember {
                 ProfileViewModel(
                     usersRepository = usersRepository,

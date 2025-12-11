@@ -1,17 +1,13 @@
 package es.bomberosgranada.app.ui.screens
 
-import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,23 +15,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import es.bomberosgranada.app.data.models.*
 import es.bomberosgranada.app.ui.components.AppScaffold
-import es.bomberosgranada.app.viewmodels.ProfileViewModel
-import es.bomberosgranada.app.viewmodels.ProfileViewModel.*
-import kotlinx.coroutines.launch
+import es.bomberosgranada.app.viewmodels.*
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
-import java.util.*
+import java.util.Locale
 
-// Colores
+// ==========================================
+// COLORES
+// ==========================================
+
 private val GradientStart = Color(0xFF1E3A5F)
 private val GradientEnd = Color(0xFF2D5A87)
 private val AccentBlue = Color(0xFF3B82F6)
@@ -50,7 +49,10 @@ private val TextPrimary = Color(0xFF1A1A2E)
 private val TextSecondary = Color(0xFF64748B)
 private val DividerColor = Color(0xFFE2E8F0)
 
-@OptIn(ExperimentalMaterial3Api::class)
+// ==========================================
+// PANTALLA PRINCIPAL
+// ==========================================
+
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
@@ -62,171 +64,166 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val user by viewModel.user.collectAsState()
-    val passwordState by viewModel.passwordState.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
-    val successMessage by viewModel.successMessage.collectAsState()
 
-    // Calendario
+    // Meses de cada sección
     val calendarMonth by viewModel.calendarMonth.collectAsState()
-    val calendarEvents by viewModel.calendarEvents.collectAsState()
-
-    // Solicitudes
     val requestsMonth by viewModel.requestsMonth.collectAsState()
-    val monthRequests by viewModel.monthRequests.collectAsState()
-
-    // Cambios de guardia
     val shiftChangesMonth by viewModel.shiftChangesMonth.collectAsState()
-    val monthShiftChanges by viewModel.monthShiftChanges.collectAsState()
-
-    // Horas extra
     val extraHoursMonth by viewModel.extraHoursMonth.collectAsState()
+
+    // Datos
+    val monthRequests by viewModel.monthRequests.collectAsState()
+    val monthShiftChanges by viewModel.monthShiftChanges.collectAsState()
     val monthExtraHours by viewModel.monthExtraHours.collectAsState()
 
-    // Resumen económico
-    val salaryMonth by viewModel.salaryMonth.collectAsState()
-    val monthGuards by viewModel.monthGuards.collectAsState()
-    val totalSalary by viewModel.totalSalary.collectAsState()
+    // Cambio contraseña
+    val isChangingPassword by viewModel.isChangingPassword.collectAsState()
+    val passwordChangeSuccess by viewModel.passwordChangeSuccess.collectAsState()
+    val passwordChangeError by viewModel.passwordChangeError.collectAsState()
+
+    // Mensajes
+    val successMessage by viewModel.successMessage.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
+    // Cargar datos al inicio
     LaunchedEffect(currentUser) {
-        viewModel.loadProfile(currentUser)
+        currentUser?.let { viewModel.loadProfile(it) }
     }
 
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let {
-            scope.launch {
-                snackbarHostState.showSnackbar(it)
-                viewModel.clearError()
-            }
-        }
-    }
-
-    LaunchedEffect(successMessage) {
+    // Mostrar mensajes
+    LaunchedEffect(successMessage, errorMessage, passwordChangeSuccess, passwordChangeError) {
         successMessage?.let {
-            scope.launch {
-                snackbarHostState.showSnackbar(it)
-                viewModel.clearSuccess()
-            }
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearSuccessMessage()
+        }
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearErrorMessage()
+        }
+        passwordChangeSuccess?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearPasswordMessages()
+        }
+        passwordChangeError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearPasswordMessages()
         }
     }
 
     AppScaffold(
         currentRoute = "profile",
+        title = "Mi Perfil",
         currentUser = currentUser,
         onNavigate = onNavigate,
         onLogout = onLogout,
+        showBackButton = true,
+        onBack = onBack,
         unreadMessagesCount = unreadMessagesCount
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when (uiState) {
-                is ProfileUiState.Loading -> LoadingContent()
-                is ProfileUiState.Error -> ErrorContent(
-                    message = (uiState as ProfileUiState.Error).message,
-                    onRetry = { viewModel.loadProfile(currentUser) }
-                )
-                is ProfileUiState.Success -> {
+        Box(modifier = Modifier.fillMaxSize()) {
+            when {
+                currentUser == null -> {
+                    LoadingContent(modifier = Modifier.padding(paddingValues))
+                }
+
+                uiState is ProfileUiState.Loading -> {
+                    LoadingContent(modifier = Modifier.padding(paddingValues))
+                }
+
+                uiState is ProfileUiState.Error -> {
+                    ErrorContent(
+                        message = (uiState as ProfileUiState.Error).message,
+                        onRetry = { viewModel.loadProfile(currentUser) },
+                        modifier = Modifier.padding(paddingValues)
+                    )
+                }
+
+                uiState is ProfileUiState.Success -> {
+                    val displayUser = user ?: currentUser
+
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                            .background(SurfaceElevated),
+                        contentPadding = PaddingValues(bottom = 24.dp)
                     ) {
-                        // 1. Header con avatar
-                        item {
-                            ProfileHeader(user = user)
-                        }
+                        // Header con avatar y nombre
+                        item { ProfileHeader(user = displayUser) }
 
-                        // 2. Información personal
-                        item {
-                            PersonalInfoSection(user = user)
-                        }
+                        // Información personal
+                        item { PersonalInfoSection(user = displayUser) }
 
-                        // 3. Permisos disponibles
-                        item {
-                            PermissionsSection(stats = viewModel.getPermissionStats())
-                        }
+                        // Permisos restantes
+                        item { PermissionsSection(stats = viewModel.getPermissionStats(displayUser)) }
 
-                        // 4. Calendario de guardias
+                        // Calendario de guardias
                         item {
                             CalendarSection(
-                                currentMonth = calendarMonth,
-                                events = calendarEvents,
-                                legend = viewModel.getCalendarLegend(),
-                                onPreviousMonth = { viewModel.previousCalendarMonth() },
-                                onNextMonth = { viewModel.nextCalendarMonth() },
-                                getEventForDate = { viewModel.getEventForDate(it) }
+                                month = calendarMonth,
+                                viewModel = viewModel,
+                                currentUser = currentUser,
+                                onPreviousMonth = { viewModel.previousCalendarMonth(currentUser) },
+                                onNextMonth = { viewModel.nextCalendarMonth(currentUser) }
                             )
                         }
 
-                        // 5. Resumen de solicitudes del mes
+                        // Solicitudes del mes
                         item {
                             RequestsSummarySection(
-                                currentMonth = requestsMonth,
+                                month = requestsMonth,
                                 requests = monthRequests,
-                                onPreviousMonth = { viewModel.previousRequestsMonth() },
-                                onNextMonth = { viewModel.nextRequestsMonth() },
-                                formatEstado = { viewModel.formatEstado(it) }
+                                stats = viewModel.getRequestsStats(),
+                                viewModel = viewModel,
+                                onPreviousMonth = { viewModel.previousRequestsMonth(currentUser) },
+                                onNextMonth = { viewModel.nextRequestsMonth(currentUser) }
                             )
                         }
 
-                        // 6. Cambios de guardia del mes
+                        // Cambios de guardia del mes
                         item {
                             ShiftChangesSummarySection(
-                                currentMonth = shiftChangesMonth,
+                                month = shiftChangesMonth,
                                 shiftChanges = monthShiftChanges,
-                                currentUserId = user?.id_empleado ?: 0,
-                                onPreviousMonth = { viewModel.previousShiftChangesMonth() },
-                                onNextMonth = { viewModel.nextShiftChangesMonth() },
-                                formatEstado = { viewModel.formatEstado(it) }
+                                stats = viewModel.getShiftChangesStats(),
+                                viewModel = viewModel,
+                                currentUser = currentUser,
+                                onPreviousMonth = { viewModel.previousShiftChangesMonth(currentUser) },
+                                onNextMonth = { viewModel.nextShiftChangesMonth(currentUser) }
                             )
                         }
 
-                        // 7. Horas extra del mes
+                        // Horas extra del mes
                         item {
                             ExtraHoursSummarySection(
-                                currentMonth = extraHoursMonth,
+                                month = extraHoursMonth,
                                 extraHours = monthExtraHours,
                                 totalDiurnas = viewModel.getTotalDiurnas(),
                                 totalNocturnas = viewModel.getTotalNocturnas(),
                                 totalSalary = viewModel.getTotalExtraHoursSalary(),
-                                onPreviousMonth = { viewModel.previousExtraHoursMonth() },
-                                onNextMonth = { viewModel.nextExtraHoursMonth() }
+                                onPreviousMonth = { viewModel.previousExtraHoursMonth(currentUser) },
+                                onNextMonth = { viewModel.nextExtraHoursMonth(currentUser) }
                             )
                         }
 
-                        // 8. Resumen económico de guardias
-                        item {
-                            SalarySummarySection(
-                                currentMonth = salaryMonth,
-                                guards = monthGuards,
-                                totalSalary = totalSalary,
-                                onPreviousMonth = { viewModel.previousSalaryMonth() },
-                                onNextMonth = { viewModel.nextSalaryMonth() }
-                            )
-                        }
-
-                        // 9. Cambio de contraseña
+                        // Cambio de contraseña
                         item {
                             ChangePasswordSection(
-                                state = passwordState,
-                                onCurrentPasswordChange = { viewModel.updateCurrentPassword(it) },
-                                onNewPasswordChange = { viewModel.updateNewPassword(it) },
-                                onConfirmPasswordChange = { viewModel.updateConfirmPassword(it) },
-                                onChangePassword = { viewModel.changePassword() }
+                                isLoading = isChangingPassword,
+                                error = passwordChangeError,
+                                success = passwordChangeSuccess,
+                                onChangePassword = { current, new, confirm ->
+                                    viewModel.changePassword(currentUser, current, new, confirm)
+                                }
                             )
                         }
-
-                        // Espacio final
-                        item { Spacer(modifier = Modifier.height(32.dp)) }
                     }
                 }
             }
 
+            // SnackbarHost para mensajes
             SnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -240,72 +237,58 @@ fun ProfileScreen(
 // ==========================================
 
 @Composable
-private fun ProfileHeader(user: User?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+private fun ProfileHeader(user: User) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Brush.horizontalGradient(listOf(GradientStart, GradientEnd)))
+            .padding(24.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(GradientStart, GradientEnd)
-                    )
-                )
-                .padding(24.dp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Avatar
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
             ) {
-                // Avatar
-                Surface(
-                    modifier = Modifier.size(80.dp),
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.2f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = user?.let { "${it.nombre.firstOrNull() ?: ""}${it.apellido.firstOrNull() ?: ""}" } ?: "?",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
+                Text(
+                    text = "${user.nombre.firstOrNull() ?: ""}${user.apellido.firstOrNull() ?: ""}",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
+            Column {
                 Text(
                     text = "PERFIL PROFESIONAL",
                     style = MaterialTheme.typography.labelSmall,
-                    letterSpacing = 3.sp,
-                    color = Color.White.copy(alpha = 0.7f)
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.7f),
+                    letterSpacing = 2.sp
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = user?.nombreCompleto ?: "Cargando...",
+                    text = "${user.nombre} ${user.apellido}",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
+                Spacer(modifier = Modifier.height(4.dp))
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = Color.White.copy(alpha = 0.15f)
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.White.copy(alpha = 0.2f)
                 ) {
                     Text(
-                        text = user?.role_name?.uppercase() ?: user?.type?.uppercase() ?: "BOMBERO",
+                        text = user.type ?: "Bombero",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                        color = Color.White
                     )
                 }
             }
@@ -318,81 +301,71 @@ private fun ProfileHeader(user: User?) {
 // ==========================================
 
 @Composable
-private fun PersonalInfoSection(user: User?) {
-    SectionCard(title = "Información personal", subtitle = "Datos de contacto y puesto") {
+private fun PersonalInfoSection(user: User) {
+    SectionCard(title = "INFORMACIÓN PERSONAL", subtitle = "Datos de contacto y puesto") {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                InfoCard(
-                    label = "EMAIL",
-                    value = user?.email ?: "-",
-                    modifier = Modifier.weight(1f)
-                )
-                InfoCard(
-                    label = "TELÉFONO",
-                    value = user?.telefono ?: "-",
-                    modifier = Modifier.weight(1f)
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                InfoCard(Icons.Rounded.Email, "Email", user.email, Modifier.weight(1f))
+                InfoCard(Icons.Rounded.Phone, "Teléfono", user.telefono ?: "-", Modifier.weight(1f))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                InfoCard(
-                    label = "DNI",
-                    value = user?.dni ?: "-",
-                    modifier = Modifier.weight(1f)
-                )
-                InfoCard(
-                    label = "PUESTO",
-                    value = user?.puesto ?: "-",
-                    modifier = Modifier.weight(1f)
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                InfoCard(Icons.Rounded.Badge, "DNI", user.dni, Modifier.weight(1f))
+                InfoCard(Icons.Rounded.Work, "Puesto", user.puesto ?: "-", Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-private fun InfoCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = SurfaceElevated
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = AccentBlue,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
+private fun InfoCard(icon: ImageVector, label: String, value: String, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = SurfaceElevated) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, null, tint = AccentBlue, modifier = Modifier.size(20.dp))
+            Column {
+                Text(label, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                Text(
+                    value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
 
 // ==========================================
-// PERMISOS
+// PERMISOS RESTANTES
 // ==========================================
 
 @Composable
 private fun PermissionsSection(stats: List<PermissionStat>) {
-    SectionCard(title = "Permisos y disponibilidades", subtitle = "Saldo actual de permisos") {
+    SectionCard(title = "PERMISOS RESTANTES", subtitle = "Saldo disponible de permisos") {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            stats.chunked(2).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { stat ->
-                        PermissionCard(
-                            label = stat.label,
-                            value = stat.value,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    if (row.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
+            for (rowIndex in 0 until 2) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (colIndex in 0 until 3) {
+                        val index = rowIndex * 3 + colIndex
+                        if (index < stats.size) {
+                            PermissionCard(stats[index], Modifier.weight(1f))
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -401,393 +374,310 @@ private fun PermissionsSection(stats: List<PermissionStat>) {
 }
 
 @Composable
-private fun PermissionCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = SurfaceElevated
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+private fun PermissionCard(stat: PermissionStat, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = SurfaceElevated) {
+        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = label.uppercase(),
+                stat.label,
                 style = MaterialTheme.typography.labelSmall,
                 color = TextSecondary,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
+            Text(stat.value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = AccentBlue)
+            Text(stat.unit, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
         }
     }
 }
 
 // ==========================================
-// CALENDARIO
+// CALENDARIO DE GUARDIAS
 // ==========================================
 
 @Composable
 private fun CalendarSection(
-    currentMonth: YearMonth,
-    events: List<CalendarEvent>,
-    legend: List<LegendItem>,
+    month: YearMonth,
+    viewModel: ProfileViewModel,
+    currentUser: User,
     onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    getEventForDate: (LocalDate) -> CalendarEvent?
+    onNextMonth: () -> Unit
 ) {
-    SectionCard(title = "Calendario de guardias", subtitle = "Visualiza tus guardias y permisos") {
+    SectionCard(title = "CALENDARIO DE GUARDIAS", subtitle = "Guardias y permisos del mes") {
         Column {
-            // Navegación del mes
-            MonthNavigator(
-                currentMonth = currentMonth,
-                onPrevious = onPreviousMonth,
-                onNext = onNextMonth
-            )
-
+            MonthNavigator(month, onPreviousMonth, onNextMonth)
             Spacer(modifier = Modifier.height(16.dp))
 
             // Días de la semana
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 listOf("L", "M", "X", "J", "V", "S", "D").forEach { day ->
                     Text(
-                        text = day,
-                        style = MaterialTheme.typography.labelSmall,
+                        day,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = TextSecondary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Calendario
-            val calendarDays = generateCalendarDays(currentMonth)
-            calendarDays.chunked(7).forEach { week ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp)
-                ) {
-                    week.forEach { dayInfo ->
-                        CalendarDayCell(
-                            dayInfo = dayInfo,
-                            event = if (dayInfo.monthOffset == 0) getEventForDate(dayInfo.date) else null,
-                            modifier = Modifier.weight(1f)
-                        )
+            val calendarDays = generateCalendarDays(month)
+            val today = LocalDate.now()
+
+            Column {
+                for (week in calendarDays.chunked(7)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        for (dayInfo in week) {
+                            val event = if (dayInfo.monthOffset == 0) {
+                                viewModel.getEventForDate(dayInfo.date, currentUser)
+                            } else null
+
+                            CalendarDayCell(
+                                dayInfo = dayInfo,
+                                event = event,
+                                isToday = dayInfo.date == today,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Leyenda
-            CalendarLegend(legend = legend)
+            CalendarLegend(viewModel.getCalendarLegend())
         }
     }
 }
 
 @Composable
-private fun CalendarDayCell(
-    dayInfo: CalendarDayInfo,
-    event: CalendarEvent?,
-    modifier: Modifier = Modifier
-) {
-    val isToday = dayInfo.date == LocalDate.now()
-    val isCurrentMonth = dayInfo.monthOffset == 0
-
-    val backgroundColor = when {
-        event != null -> Color(AndroidColor.parseColor(event.color.colorHex))
-        isToday -> AccentBlue.copy(alpha = 0.1f)
-        else -> Color.Transparent
-    }
+private fun CalendarDayCell(dayInfo: CalendarDayInfo, event: CalendarEvent?, isToday: Boolean, modifier: Modifier = Modifier) {
+    val backgroundColor = if (event != null) {
+        Color(android.graphics.Color.parseColor(event.color.hex))
+    } else Color.Transparent
 
     val textColor = when {
-        event != null -> Color(AndroidColor.parseColor(event.color.textColorHex))
-        !isCurrentMonth -> TextSecondary.copy(alpha = 0.4f)
-        isToday -> AccentBlue
+        event != null -> {
+            // Brigada B (verde) y E (púrpura claro) necesitan texto oscuro
+            if (event.color == EventColor.BRIGADE_B || event.color == EventColor.BRIGADE_E) TextPrimary else Color.White
+        }
+        dayInfo.monthOffset != 0 -> TextSecondary.copy(alpha = 0.4f)
         else -> TextPrimary
     }
+
+    val borderModifier = if (isToday && event == null) {
+        Modifier.border(2.dp, AccentBlue, RoundedCornerShape(8.dp))
+    } else Modifier
 
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .padding(1.dp)
+            .padding(2.dp)
+            .then(borderModifier)
             .clip(RoundedCornerShape(8.dp))
-            .background(backgroundColor)
-            .then(
-                if (isToday && event == null) {
-                    Modifier.border(1.dp, AccentBlue, RoundedCornerShape(8.dp))
-                } else Modifier
-            ),
+            .background(backgroundColor),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = dayInfo.date.dayOfMonth.toString(),
+                dayInfo.date.dayOfMonth.toString(),
                 style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (isToday || event != null) FontWeight.Bold else FontWeight.Normal,
+                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
                 color = textColor
             )
             if (event != null) {
-                Text(
-                    text = event.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontSize = 8.sp,
-                    color = textColor
-                )
+                Text(event.label, style = MaterialTheme.typography.labelSmall, fontSize = 8.sp, color = textColor)
             }
         }
     }
 }
 
 @Composable
-private fun CalendarLegend(legend: List<LegendItem>) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        legend.chunked(3).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                row.forEach { item ->
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(Color(AndroidColor.parseColor(item.color.colorHex)))
-                        )
-                        Text(
-                            text = item.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary,
-                            maxLines = 1
-                        )
+private fun CalendarLegend(items: List<LegendItem>) {
+    Surface(shape = RoundedCornerShape(12.dp), color = SurfaceElevated) {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            Text("Leyenda", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val chunked = items.chunked(3)
+            for (row in chunked) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (item in row) {
+                        LegendChip(item, Modifier.weight(1f))
                     }
+                    repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
                 }
-                repeat(3 - row.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
+                Spacer(modifier = Modifier.height(4.dp))
             }
         }
     }
 }
 
+@Composable
+private fun LegendChip(item: LegendItem, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(Color(android.graphics.Color.parseColor(item.color.hex))))
+        Text(item.label, style = MaterialTheme.typography.labelSmall, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
 // ==========================================
-// SOLICITUDES
+// SOLICITUDES DEL MES
 // ==========================================
 
 @Composable
 private fun RequestsSummarySection(
-    currentMonth: YearMonth,
+    month: YearMonth,
     requests: List<RequestItem>,
+    stats: RequestsStats,
+    viewModel: ProfileViewModel,
     onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    formatEstado: (String) -> String
+    onNextMonth: () -> Unit
 ) {
-    SectionCard(title = "Solicitudes del mes", subtitle = "Permisos y licencias solicitados") {
+    SectionCard(title = "SOLICITUDES DEL MES", subtitle = "Resumen de permisos solicitados") {
         Column {
-            MonthNavigator(
-                currentMonth = currentMonth,
-                onPrevious = onPreviousMonth,
-                onNext = onNextMonth
-            )
+            MonthNavigator(month, onPreviousMonth, onNextMonth)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Estadísticas
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatCard("Confirmadas", stats.confirmed.toString(), AccentGreen, Modifier.weight(1f))
+                StatCard("Pendientes", stats.pending.toString(), AccentAmber, Modifier.weight(1f))
+                StatCard("Total", stats.total.toString(), AccentBlue, Modifier.weight(1f))
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             if (requests.isEmpty()) {
-                EmptyStateBox("No hay solicitudes en este mes")
+                EmptyStateBox("No hay solicitudes este mes")
             } else {
-                // Estadísticas
-                val confirmed = requests.count { it.estado.lowercase() == "confirmada" }
-                val pending = requests.count { it.estado.lowercase() == "pendiente" }
+                // Cabecera
+                TableHeader(listOf("Tipo" to 1.5f, "Fecha" to 1f, "Estado" to 1f))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard(
-                        label = "Confirmadas",
-                        value = confirmed.toString(),
-                        color = AccentGreen,
-                        modifier = Modifier.weight(1f)
+                // Filas
+                val displayRequests = requests.take(5)
+                displayRequests.forEachIndexed { index, request ->
+                    val isLast = index == displayRequests.lastIndex && requests.size <= 5
+                    TableRow(
+                        isLast = isLast,
+                        content = {
+                            Text(
+                                request.tipo.replaceFirstChar { it.uppercase() },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                modifier = Modifier.weight(1.5f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                formatDate(request.fecha_ini),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                modifier = Modifier.weight(1f),
+                                textAlign = TextAlign.Center
+                            )
+                            StatusBadge(request.estado, viewModel.getEstadoColor(request.estado), Modifier.weight(1f))
+                        }
                     )
-                    StatCard(
-                        label = "Pendientes",
-                        value = pending.toString(),
-                        color = AccentAmber,
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatCard(
-                        label = "Total",
-                        value = requests.size.toString(),
-                        color = AccentBlue,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Lista de solicitudes
-                requests.take(5).forEach { request ->
-                    RequestRow(request = request, formatEstado = formatEstado)
-                    if (request != requests.take(5).last()) {
-                        HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 8.dp))
-                    }
                 }
 
                 if (requests.size > 5) {
-                    Text(
-                        text = "+${requests.size - 5} más",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+                    MoreItemsIndicator(requests.size - 5)
                 }
             }
         }
     }
 }
 
-@Composable
-private fun RequestRow(request: RequestItem, formatEstado: (String) -> String) {
-    val statusColor = when (request.estado.lowercase()) {
-        "confirmada" -> AccentGreen
-        "pendiente" -> AccentAmber
-        "denegada", "cancelada" -> AccentRose
-        else -> TextSecondary
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = request.tipo,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-            Text(
-                text = request.fecha_ini,
-                style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary
-            )
-        }
-        StatusBadge(text = formatEstado(request.estado), color = statusColor)
-    }
-}
-
 // ==========================================
-// CAMBIOS DE GUARDIA
+// CAMBIOS DE GUARDIA DEL MES
 // ==========================================
 
 @Composable
 private fun ShiftChangesSummarySection(
-    currentMonth: YearMonth,
+    month: YearMonth,
     shiftChanges: List<ShiftChangeRequest>,
-    currentUserId: Int,
+    stats: ShiftChangesStats,
+    viewModel: ProfileViewModel,
+    currentUser: User,
     onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    formatEstado: (String) -> String
+    onNextMonth: () -> Unit
 ) {
-    SectionCard(title = "Cambios de guardia", subtitle = "Intercambios de guardia solicitados") {
+    SectionCard(title = "CAMBIOS DE GUARDIA", subtitle = "Intercambios de turno del mes") {
         Column {
-            MonthNavigator(
-                currentMonth = currentMonth,
-                onPrevious = onPreviousMonth,
-                onNext = onNextMonth
-            )
+            MonthNavigator(month, onPreviousMonth, onNextMonth)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Estadísticas
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCard("Aceptados", stats.accepted.toString(), AccentGreen, Modifier.weight(1.1f))
+                StatCard("Pendientes", stats.pending.toString(), AccentAmber, Modifier.weight(1.2f))
+                StatCard("Simples", stats.simple.toString(), AccentPurple, Modifier.weight(1f))
+                StatCard("Espejo", stats.mirror.toString(), AccentOrange, Modifier.weight(1f))
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             if (shiftChanges.isEmpty()) {
-                EmptyStateBox("No hay cambios de guardia en este mes")
+                EmptyStateBox("No hay cambios de guardia este mes")
             } else {
-                shiftChanges.forEach { change ->
-                    ShiftChangeRow(
-                        change = change,
-                        currentUserId = currentUserId,
-                        formatEstado = formatEstado
-                    )
-                    if (change != shiftChanges.last()) {
-                        HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 8.dp))
+                // Cabecera
+                TableHeader(listOf("Compañero" to 1.2f, "Fecha" to 0.8f, "Tipo" to 0.6f, "Estado" to 1f))
+
+                // Filas
+                val displayChanges = shiftChanges.take(5)
+                displayChanges.forEachIndexed { index, change ->
+                    val isLast = index == displayChanges.lastIndex && shiftChanges.size <= 5
+                    val isMirror = !change.fecha2.isNullOrEmpty()
+
+                    val companionName = if (change.id_empleado1 == currentUser.id_empleado) {
+                        change.empleado2?.let { "${it.nombre} ${it.apellido}" } ?: "Compañero"
+                    } else {
+                        change.empleado1?.let { "${it.nombre} ${it.apellido}" } ?: "Compañero"
                     }
+
+                    TableRow(
+                        isLast = isLast,
+                        content = {
+                            Text(
+                                companionName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                modifier = Modifier.weight(1.2f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                formatDate(change.fecha),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                modifier = Modifier.weight(0.8f),
+                                textAlign = TextAlign.Center
+                            )
+                            TypeBadge(isMirror, Modifier.weight(0.6f))
+                            StatusBadge(change.estado, viewModel.getEstadoColor(change.estado), Modifier.weight(1f))
+                        }
+                    )
+                }
+
+                if (shiftChanges.size > 5) {
+                    MoreItemsIndicator(shiftChanges.size - 5)
                 }
             }
         }
     }
 }
 
-@Composable
-private fun ShiftChangeRow(
-    change: ShiftChangeRequest,
-    currentUserId: Int,
-    formatEstado: (String) -> String
-) {
-    val statusColor = when (change.estado.lowercase()) {
-        "aceptado" -> AccentGreen
-        "aceptado_por_empleados" -> AccentBlue
-        "en_tramite" -> AccentAmber
-        "rechazado" -> AccentRose
-        else -> TextSecondary
-    }
-
-    val otherEmployee = if (change.id_empleado1 == currentUserId) {
-        change.empleado2?.let { "${it.nombre} ${it.apellido}" } ?: "Empleado ${change.id_empleado2}"
-    } else {
-        change.empleado1?.let { "${it.nombre} ${it.apellido}" } ?: "Empleado ${change.id_empleado1}"
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Cambio con $otherEmployee",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = change.fecha,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
-                )
-                Text(
-                    text = "• ${change.turno}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
-                )
-            }
-        }
-        StatusBadge(text = formatEstado(change.estado), color = statusColor)
-    }
-}
-
 // ==========================================
-// HORAS EXTRA
+// HORAS EXTRA DEL MES
 // ==========================================
 
 @Composable
 private fun ExtraHoursSummarySection(
-    currentMonth: YearMonth,
+    month: YearMonth,
     extraHours: List<ExtraHour>,
     totalDiurnas: Double,
     totalNocturnas: Double,
@@ -795,188 +685,77 @@ private fun ExtraHoursSummarySection(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
-    SectionCard(title = "Horas extra", subtitle = "Servicios adicionales del mes") {
+    SectionCard(title = "HORAS EXTRA", subtitle = "Horas extra realizadas en el mes") {
         Column {
-            MonthNavigator(
-                currentMonth = currentMonth,
-                onPrevious = onPreviousMonth,
-                onNext = onNextMonth
-            )
-
+            MonthNavigator(month, onPreviousMonth, onNextMonth)
             Spacer(modifier = Modifier.height(16.dp))
 
             // Estadísticas
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(
-                    label = "Diurnas",
-                    value = String.format("%.1f h", totalDiurnas),
-                    color = AccentOrange,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Nocturnas",
-                    value = String.format("%.1f h", totalNocturnas),
-                    color = AccentPurple,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Total",
-                    value = String.format("%.2f €", totalSalary),
-                    color = AccentGreen,
-                    modifier = Modifier.weight(1f)
-                )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatCard("Diurnas", String.format("%.1f h", totalDiurnas), AccentAmber, Modifier.weight(1f))
+                StatCard("Nocturnas", String.format("%.1f h", totalNocturnas), AccentPurple, Modifier.weight(1f))
+                StatCard("Total €", String.format("%.2f €", totalSalary), AccentGreen, Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (extraHours.isEmpty()) {
-                EmptyStateBox("No hay horas extra registradas en este mes")
+                EmptyStateBox("No hay horas extra este mes")
             } else {
-                extraHours.take(5).forEach { hour ->
-                    ExtraHourRow(hour = hour)
-                    if (hour != extraHours.take(5).last()) {
-                        HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 8.dp))
-                    }
+                // Cabecera
+                TableHeader(listOf("Fecha" to 1f, "Diurnas" to 0.8f, "Nocturnas" to 0.8f, "Retrib." to 1f))
+
+                // Filas
+                val displayHours = extraHours.take(5)
+                displayHours.forEachIndexed { index, hour ->
+                    val isLast = index == displayHours.lastIndex && extraHours.size <= 5
+
+                    val diurnas = hour.horas_diurnas.toDouble()
+                    val nocturnas = hour.horas_nocturnas.toDouble()
+                    val precioDiurno = hour.salarie?.precio_diurno ?: 0.0
+                    val precioNocturno = hour.salarie?.precio_nocturno ?: 0.0
+                    val retribucion = (diurnas * precioDiurno) + (nocturnas * precioNocturno)
+
+                    TableRow(
+                        isLast = isLast,
+                        content = {
+                            Text(
+                                formatDate(hour.date),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                String.format("%.1f", diurnas),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                modifier = Modifier.weight(0.8f),
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                String.format("%.1f", nocturnas),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                modifier = Modifier.weight(0.8f),
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                String.format("%.2f €", retribucion),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = AccentGreen,
+                                modifier = Modifier.weight(1f),
+                                textAlign = TextAlign.End
+                            )
+                        }
+                    )
                 }
 
                 if (extraHours.size > 5) {
-                    Text(
-                        text = "+${extraHours.size - 5} más",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+                    MoreItemsIndicator(extraHours.size - 5)
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ExtraHourRow(hour: ExtraHour) {
-    val salary = ((hour.horas_diurnas ?: 0.0) * (hour.salarie?.precio_diurno ?: 0.0)) +
-            ((hour.horas_nocturnas ?: 0.0) * (hour.salarie?.precio_nocturno ?: 0.0))
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = hour.date ?: "-",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-            Text(
-                text = "Diurnas: ${hour.horas_diurnas ?: 0}h · Nocturnas: ${hour.horas_nocturnas ?: 0}h",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary
-            )
-        }
-        Text(
-            text = String.format("%.2f €", salary),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = AccentGreen
-        )
-    }
-}
-
-// ==========================================
-// RESUMEN ECONÓMICO
-// ==========================================
-
-@Composable
-private fun SalarySummarySection(
-    currentMonth: YearMonth,
-    guards: List<Guard>,
-    totalSalary: Double,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit
-) {
-    SectionCard(title = "Resumen económico", subtitle = "Guardias y retribución estimada") {
-        Column {
-            MonthNavigator(
-                currentMonth = currentMonth,
-                onPrevious = onPreviousMonth,
-                onNext = onNextMonth
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Estadísticas
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(
-                    label = "Guardias",
-                    value = guards.size.toString(),
-                    color = AccentBlue,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Total estimado",
-                    value = String.format("%.2f €", totalSalary),
-                    color = AccentGreen,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (guards.isEmpty()) {
-                EmptyStateBox("No hay guardias registradas en este mes")
-            } else {
-                guards.take(5).forEach { guard ->
-                    GuardRow(guard = guard)
-                    if (guard != guards.take(5).last()) {
-                        HorizontalDivider(color = DividerColor, modifier = Modifier.padding(vertical = 8.dp))
-                    }
-                }
-
-                if (guards.size > 5) {
-                    Text(
-                        text = "+${guards.size - 5} más",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun GuardRow(guard: Guard) {
-    val salary = guard.salary?.let {
-        (it.precio_diurno * it.horas_diurnas) + (it.precio_nocturno * it.horas_nocturnas)
-    } ?: 0.0
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = guard.date,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-            Text(
-                text = guard.brigade?.nombre ?: "Brigada ${guard.id_brigada}",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary
-            )
-        }
-        Text(
-            text = String.format("%.2f €", salary),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = AccentGreen
-        )
     }
 }
 
@@ -986,98 +765,84 @@ private fun GuardRow(guard: Guard) {
 
 @Composable
 private fun ChangePasswordSection(
-    state: PasswordState,
-    onCurrentPasswordChange: (String) -> Unit,
-    onNewPasswordChange: (String) -> Unit,
-    onConfirmPasswordChange: (String) -> Unit,
-    onChangePassword: () -> Unit
+    isLoading: Boolean,
+    error: String?,
+    success: String?,
+    onChangePassword: (current: String, new: String, confirm: String) -> Unit
 ) {
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var showCurrentPassword by remember { mutableStateOf(false) }
     var showNewPassword by remember { mutableStateOf(false) }
     var showConfirmPassword by remember { mutableStateOf(false) }
 
-    SectionCard(title = "Seguridad de la cuenta", subtitle = "Cambia tu contraseña de acceso") {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            state.error?.let { error ->
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = AccentRose.copy(alpha = 0.1f)
-                ) {
-                    Text(
-                        text = error,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AccentRose,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-            }
-
-            state.success?.let { success ->
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = AccentGreen.copy(alpha = 0.1f)
-                ) {
-                    Text(
-                        text = success,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AccentGreen,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-            }
-
-            PasswordField(
+    SectionCard(title = "CAMBIO DE CONTRASEÑA", subtitle = "Actualiza tu contraseña de acceso") {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            PasswordTextField(
+                value = currentPassword,
+                onValueChange = { currentPassword = it },
                 label = "Contraseña actual",
-                value = state.currentPassword,
-                onValueChange = onCurrentPasswordChange,
                 showPassword = showCurrentPassword,
                 onToggleVisibility = { showCurrentPassword = !showCurrentPassword }
             )
 
-            PasswordField(
+            PasswordTextField(
+                value = newPassword,
+                onValueChange = { newPassword = it },
                 label = "Nueva contraseña",
-                value = state.newPassword,
-                onValueChange = onNewPasswordChange,
                 showPassword = showNewPassword,
-                onToggleVisibility = { showNewPassword = !showNewPassword }
+                onToggleVisibility = { showNewPassword = !showNewPassword },
+                supportingText = "Mínimo 6 caracteres"
             )
 
-            PasswordField(
+            PasswordTextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
                 label = "Confirmar contraseña",
-                value = state.confirmPassword,
-                onValueChange = onConfirmPasswordChange,
                 showPassword = showConfirmPassword,
-                onToggleVisibility = { showConfirmPassword = !showConfirmPassword }
+                onToggleVisibility = { showConfirmPassword = !showConfirmPassword },
+                isError = confirmPassword.isNotEmpty() && confirmPassword != newPassword,
+                errorText = if (confirmPassword.isNotEmpty() && confirmPassword != newPassword) "Las contraseñas no coinciden" else null
             )
+
+            error?.let { MessageBox(it, AccentRose) }
+            success?.let { MessageBox(it, AccentGreen) }
 
             Button(
-                onClick = onChangePassword,
+                onClick = {
+                    onChangePassword(currentPassword, newPassword, confirmPassword)
+                    if (success != null) {
+                        currentPassword = ""
+                        newPassword = ""
+                        confirmPassword = ""
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isLoading,
+                enabled = !isLoading && currentPassword.isNotBlank() && newPassword.length >= 6 && newPassword == confirmPassword,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
             ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text("Cambiar contraseña", fontWeight = FontWeight.SemiBold)
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
+                Text(if (isLoading) "Actualizando..." else "Cambiar contraseña", modifier = Modifier.padding(vertical = 4.dp))
             }
         }
     }
 }
 
 @Composable
-private fun PasswordField(
-    label: String,
+private fun PasswordTextField(
     value: String,
     onValueChange: (String) -> Unit,
+    label: String,
     showPassword: Boolean,
-    onToggleVisibility: () -> Unit
+    onToggleVisibility: () -> Unit,
+    supportingText: String? = null,
+    isError: Boolean = false,
+    errorText: String? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -1085,13 +850,24 @@ private fun PasswordField(
         label = { Text(label) },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
-        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+        visualTransformation = if (showPassword) {
+            androidx.compose.ui.text.input.VisualTransformation.None
+        } else {
+            androidx.compose.ui.text.input.PasswordVisualTransformation()
+        },
         trailingIcon = {
             IconButton(onClick = onToggleVisibility) {
                 Icon(
-                    imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    if (showPassword) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
                     contentDescription = if (showPassword) "Ocultar" else "Mostrar"
                 )
+            }
+        },
+        isError = isError,
+        supportingText = {
+            when {
+                errorText != null -> Text(errorText, color = AccentRose)
+                supportingText != null -> Text(supportingText)
             }
         },
         shape = RoundedCornerShape(12.dp)
@@ -1103,30 +879,16 @@ private fun PasswordField(
 // ==========================================
 
 @Composable
-private fun SectionCard(
-    title: String,
-    subtitle: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
+private fun SectionCard(title: String, subtitle: String, content: @Composable () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        color = CardBackground,
+        shadowElevation = 2.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                letterSpacing = 2.sp,
-                color = AccentBlue,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
-            )
+            Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = AccentBlue, letterSpacing = 1.sp)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             Spacer(modifier = Modifier.height(16.dp))
             content()
         }
@@ -1134,149 +896,145 @@ private fun SectionCard(
 }
 
 @Composable
-private fun MonthNavigator(
-    currentMonth: YearMonth,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit
-) {
-    val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es", "ES"))
-        .replaceFirstChar { it.uppercase() }
+private fun MonthNavigator(month: YearMonth, onPrevious: () -> Unit, onNext: () -> Unit) {
+    val monthName = month.month.getDisplayName(TextStyle.FULL, Locale("es", "ES")).replaceFirstChar { it.uppercase() }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onPrevious) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = "Mes anterior",
-                tint = AccentBlue
-            )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onPrevious, modifier = Modifier.size(40.dp).clip(CircleShape).background(SurfaceElevated)) {
+            Icon(Icons.Rounded.ChevronLeft, "Mes anterior", tint = TextPrimary)
         }
-        Text(
-            text = "$monthName ${currentMonth.year}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
-        IconButton(onClick = onNext) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Mes siguiente",
-                tint = AccentBlue
-            )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(monthName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text("${month.year}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+        }
+        IconButton(onClick = onNext, modifier = Modifier.size(40.dp).clip(CircleShape).background(SurfaceElevated)) {
+            Icon(Icons.Rounded.ChevronRight, "Mes siguiente", tint = TextPrimary)
         }
     }
 }
 
 @Composable
-private fun StatCard(
-    label: String,
-    value: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
+private fun StatCard(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = color.copy(alpha = 0.1f)) {
+        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = TextSecondary, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun TableHeader(columns: List<Pair<String, Float>>) {
+    Surface(shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp), color = SurfaceElevated) {
+        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            columns.forEach { (title, weight) ->
+                Text(
+                    title,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextSecondary,
+                    modifier = Modifier.weight(weight),
+                    textAlign = if (title == columns.last().first) TextAlign.End else TextAlign.Start
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TableRow(isLast: Boolean, content: @Composable RowScope.() -> Unit) {
     Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = color.copy(alpha = 0.1f)
+        shape = if (isLast) RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp) else RoundedCornerShape(0.dp),
+        color = CardBackground
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = color
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                content = content
             )
+            if (!isLast) HorizontalDivider(color = DividerColor)
+        }
+    }
+}
+
+@Composable
+private fun StatusBadge(status: String, color: StatusColor, modifier: Modifier = Modifier) {
+    val bgColor = Color(android.graphics.Color.parseColor(color.hex))
+    Box(modifier = modifier, contentAlignment = Alignment.CenterEnd) {
+        Surface(shape = RoundedCornerShape(8.dp), color = bgColor.copy(alpha = 0.1f)) {
             Text(
-                text = label,
+                status.replaceFirstChar { it.uppercase() },
                 style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary
+                color = bgColor,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
         }
     }
 }
 
 @Composable
-private fun StatusBadge(text: String, color: Color) {
-    Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = color.copy(alpha = 0.1f)
-    ) {
+private fun TypeBadge(isMirror: Boolean, modifier: Modifier = Modifier) {
+    val color = if (isMirror) AccentOrange else AccentPurple
+    Surface(modifier = modifier, shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.1f)) {
         Text(
-            text = text,
+            if (isMirror) "Espejo" else "Simple",
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
             color = color,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            textAlign = TextAlign.Center
         )
+    }
+}
+
+@Composable
+private fun MoreItemsIndicator(count: Int) {
+    Surface(shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp), color = SurfaceElevated) {
+        Text("+$count más", style = MaterialTheme.typography.labelMedium, color = AccentBlue, modifier = Modifier.fillMaxWidth().padding(12.dp), textAlign = TextAlign.Center)
     }
 }
 
 @Composable
 private fun EmptyStateBox(message: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = SurfaceElevated
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(24.dp)
-        )
-    }
-}
-
-@Composable
-private fun LoadingContent() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(color = AccentBlue)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Cargando perfil...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
+    Surface(shape = RoundedCornerShape(12.dp), color = SurfaceElevated) {
+        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Rounded.EventBusy, null, tint = TextSecondary, modifier = Modifier.size(48.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(message, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center)
+            }
         }
     }
 }
 
 @Composable
-private fun ErrorContent(message: String, onRetry: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+private fun MessageBox(message: String, color: Color) {
+    Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.1f)) {
+        Text(message, color = color, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(12.dp))
+    }
+}
+
+@Composable
+private fun LoadingContent(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.ErrorOutline,
-                contentDescription = null,
-                tint = AccentRose,
-                modifier = Modifier.size(48.dp)
-            )
+            CircularProgressIndicator(color = AccentBlue, modifier = Modifier.size(48.dp))
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
-                textAlign = TextAlign.Center
-            )
+            Text("Cargando perfil...", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+        }
+    }
+}
+
+@Composable
+private fun ErrorContent(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Rounded.Error, null, tint = AccentRose, modifier = Modifier.size(64.dp))
             Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
-            ) {
+            Text(message, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center)
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onRetry, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) {
                 Text("Reintentar")
             }
         }
@@ -1287,38 +1045,49 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
 // HELPERS
 // ==========================================
 
-private data class CalendarDayInfo(
-    val date: LocalDate,
-    val monthOffset: Int // -1 = mes anterior, 0 = mes actual, 1 = mes siguiente
-)
+private fun formatDate(dateStr: String?): String {
+    if (dateStr.isNullOrBlank()) return "-"
+    return try {
+        val date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE)
+        date.format(DateTimeFormatter.ofPattern("dd/MM"))
+    } catch (e: Exception) {
+        dateStr.take(10)
+    }
+}
+
+data class CalendarDayInfo(val date: LocalDate, val monthOffset: Int)
 
 private fun generateCalendarDays(month: YearMonth): List<CalendarDayInfo> {
     val days = mutableListOf<CalendarDayInfo>()
-    val firstDay = month.atDay(1)
-    val lastDay = month.atEndOfMonth()
+    val firstDayOfMonth = month.atDay(1)
+    val lastDayOfMonth = month.atEndOfMonth()
 
-    // Ajustar para que la semana empiece en lunes
-    val startDayOfWeek = firstDay.dayOfWeek.value // 1 = Lunes, 7 = Domingo
-    val daysFromPrevMonth = startDayOfWeek - 1
-
-    // Días del mes anterior
-    for (i in daysFromPrevMonth downTo 1) {
-        days.add(CalendarDayInfo(firstDay.minusDays(i.toLong()), -1))
+    val daysFromPreviousMonth = when (firstDayOfMonth.dayOfWeek) {
+        DayOfWeek.MONDAY -> 0
+        DayOfWeek.TUESDAY -> 1
+        DayOfWeek.WEDNESDAY -> 2
+        DayOfWeek.THURSDAY -> 3
+        DayOfWeek.FRIDAY -> 4
+        DayOfWeek.SATURDAY -> 5
+        DayOfWeek.SUNDAY -> 6
     }
 
-    // Días del mes actual
-    var currentDay = firstDay
-    while (!currentDay.isAfter(lastDay)) {
-        days.add(CalendarDayInfo(currentDay, 0))
-        currentDay = currentDay.plusDays(1)
+    val previousMonth = month.minusMonths(1)
+    val lastDayOfPreviousMonth = previousMonth.atEndOfMonth()
+    for (i in daysFromPreviousMonth downTo 1) {
+        days.add(CalendarDayInfo(lastDayOfPreviousMonth.minusDays(i.toLong() - 1), -1))
     }
 
-    // Días del mes siguiente para completar 42 (6 semanas)
-    val remaining = 42 - days.size
-    var nextDay = lastDay.plusDays(1)
-    for (i in 0 until remaining) {
-        days.add(CalendarDayInfo(nextDay, 1))
-        nextDay = nextDay.plusDays(1)
+    var currentDate: LocalDate = firstDayOfMonth
+    while (!currentDate.isAfter(lastDayOfMonth)) {
+        days.add(CalendarDayInfo(currentDate, 0))
+        currentDate = currentDate.plusDays(1)
+    }
+
+    val daysToAdd = 42 - days.size
+    val nextMonth = month.plusMonths(1)
+    for (i in 1..daysToAdd) {
+        days.add(CalendarDayInfo(nextMonth.atDay(i), 1))
     }
 
     return days

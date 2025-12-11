@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -461,8 +462,9 @@ private fun CalendarDayCell(dayInfo: CalendarDayInfo, event: CalendarEvent?, isT
 
     val textColor = when {
         event != null -> {
-            // Brigada B (verde) y E (púrpura claro) necesitan texto oscuro
-            if (event.color == EventColor.BRIGADE_B || event.color == EventColor.BRIGADE_E) TextPrimary else Color.White
+            // Asegurar contraste: texto oscuro sobre fondos claros y blanco sobre fondos oscuros
+            val luminance = backgroundColor.luminance()
+            if (luminance > 0.6f) TextPrimary else Color.White
         }
         dayInfo.monthOffset != 0 -> TextSecondary.copy(alpha = 0.4f)
         else -> TextPrimary

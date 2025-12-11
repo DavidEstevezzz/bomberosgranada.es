@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -289,13 +290,21 @@ fun BomberosGranadaTheme(
 
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        shapes = AppShapes,
-        content = content
-    )
+    CompositionLocalProvider(LocalAppDarkTheme provides darkTheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            shapes = AppShapes,
+            content = content
+        )
+    }
 }
+
+@Composable
+@ReadOnlyComposable
+private fun isAppDarkTheme(): Boolean = LocalAppDarkTheme.current
+
+private val LocalAppDarkTheme = compositionLocalOf { false }
 
 // ============================================
 // COLORES EXTENDIDOS (para estados especiales)
@@ -312,14 +321,11 @@ object ExtendedColors {
     val infoDark = InfoDark
 
     @Composable
-    fun success() = if (isSystemInDarkTheme()) successDark else successLight
-
+    fun success() = if (isAppDarkTheme()) successDark else successLight
     @Composable
-    fun warning() = if (isSystemInDarkTheme()) warningDark else warningLight
-
+    fun warning() = if (isAppDarkTheme()) warningDark else warningLight
     @Composable
-    fun info() = if (isSystemInDarkTheme()) infoDark else infoLight
-}
+    fun info() = if (isAppDarkTheme()) infoDark else infoLight}
 
 // ============================================
 // APP COLORS - Sistema centralizado de colores
@@ -346,7 +352,7 @@ object AppColors {
     val gradientNorte: List<Color>
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) {
+        get() = if (isAppDarkTheme()) {
             listOf(Color(0xFF0F1F35), Color(0xFF1A3352))
         } else {
             listOf(Color(0xFF1E3A5F), Color(0xFF2D5A87))
@@ -356,7 +362,7 @@ object AppColors {
     val gradientSur: List<Color>
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) {
+        get() = if (isAppDarkTheme()) {
             listOf(Color(0xFF7F1D1D), Color(0xFF991B1B))
         } else {
             listOf(Color(0xFFB91C1C), Color(0xFFDC2626))
@@ -366,7 +372,7 @@ object AppColors {
     val gradientPrimary: List<Color>
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) {
+        get() = if (isAppDarkTheme()) {
             listOf(Color(0xFF0F1F35), Color(0xFF1A3352))
         } else {
             listOf(Color(0xFF1E3A5F), Color(0xFF2D5A87))
@@ -395,19 +401,19 @@ object AppColors {
     val textPrimary: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFFF1F5F9) else Color(0xFF1A1A2E)
+        get() = if (isAppDarkTheme()) Color(0xFFF1F5F9) else Color(0xFF1A1A2E)
 
     /** Color de texto secundario */
     val textSecondary: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF94A3B8) else Color(0xFF64748B)
+        get() = if (isAppDarkTheme()) Color(0xFF94A3B8) else Color(0xFF64748B)
 
     /** Color de texto terciario (más sutil) */
     val textTertiary: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF64748B) else Color(0xFF94A3B8)
+        get() = if (isAppDarkTheme()) Color(0xFF64748B) else Color(0xFF94A3B8)
 
     // ==========================================
     // COLORES DE SUPERFICIE Y FONDO
@@ -417,32 +423,28 @@ object AppColors {
     val background: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF0F172A) else Color(0xFFF1F5F9)
+        get() = if (isAppDarkTheme()) Color(0xFF0F172A) else Color(0xFFF1F5F9)
 
     /** Color de superficie (cards, etc) */
     val surface: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF1E293B) else Color(0xFFFFFFFF)
-
+        get() = if (isAppDarkTheme()) Color(0xFF1E293B) else Color(0xFFFFFFFF)
     /** Color de superficie elevada */
     val surfaceElevated: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF273549) else Color(0xFFF8FAFC)
-
+        get() = if (isAppDarkTheme()) Color(0xFF273549) else Color(0xFFF8FAFC)
     /** Color de card (superficie con borde sutil) */
     val cardBackground: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF1E293B) else Color(0xFFFFFFFF)
-
+        get() = if (isAppDarkTheme()) Color(0xFF1E293B) else Color(0xFFFFFFFF)
     /** Color de fondo del drawer */
     val drawerBackground: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF0F172A) else Color(0xFFFFFFFF)
-
+        get() = if (isAppDarkTheme()) Color(0xFF0F172A) else Color(0xFFFFFFFF)
     // ==========================================
     // COLORES DE SELECCIÓN Y ESTADOS
     // ==========================================
@@ -451,14 +453,12 @@ object AppColors {
     val selectedItemBackground: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF1E3A5F) else Color(0xFFF0F7FF)
-
+        get() = if (isAppDarkTheme()) Color(0xFF1E3A5F) else Color(0xFFF0F7FF)
     /** Borde de item seleccionado */
     val selectedItemBorder: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF60A5FA) else Color(0xFF3B82F6)
-
+        get() = if (isAppDarkTheme()) Color(0xFF60A5FA) else Color(0xFF3B82F6)
     // ==========================================
     // COLORES DE ACENTO
     // ==========================================
@@ -467,50 +467,42 @@ object AppColors {
     val accentOrange: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFFFF8F5A) else Color(0xFFFF6B35)
-
+        get() = if (isAppDarkTheme()) Color(0xFFFF8F5A) else Color(0xFFFF6B35)
     /** Acento verde (éxito, online) */
     val accentGreen: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF34D399) else Color(0xFF10B981)
-
+        get() = if (isAppDarkTheme()) Color(0xFF34D399) else Color(0xFF10B981)
     /** Acento azul */
     val accentBlue: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF60A5FA) else Color(0xFF3B82F6)
-
+        get() = if (isAppDarkTheme()) Color(0xFF60A5FA) else Color(0xFF3B82F6)
     /** Acento púrpura */
     val accentPurple: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFFA78BFA) else Color(0xFF8B5CF6)
-
+        get() = if (isAppDarkTheme()) Color(0xFFA78BFA) else Color(0xFF8B5CF6)
     /** Acento ámbar (warning) */
     val accentAmber: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFFFBBF24) else Color(0xFFF59E0B)
-
+        get() = if (isAppDarkTheme()) Color(0xFFFBBF24) else Color(0xFFF59E0B)
     /** Acento rosa/rojo (error, rechazado) */
     val accentRose: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFFF87171) else Color(0xFFEF4444)
-
+        get() = if (isAppDarkTheme()) Color(0xFFF87171) else Color(0xFFEF4444)
     /** Acento sky (información) */
     val accentSky: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF38BDF8) else Color(0xFF0EA5E9)
-
+        get() = if (isAppDarkTheme()) Color(0xFF38BDF8) else Color(0xFF0EA5E9)
     /** Acento emerald (confirmado) */
     val accentEmerald: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF34D399) else Color(0xFF059669)
-
+        get() = if (isAppDarkTheme()) Color(0xFF34D399) else Color(0xFF059669)
     // ==========================================
     // COLORES POR ESTADO (REQUESTS, etc.)
     // ==========================================
@@ -543,20 +535,17 @@ object AppColors {
     val success: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF34D399) else Color(0xFF22C55E)
-
+        get() = if (isAppDarkTheme()) Color(0xFF34D399) else Color(0xFF22C55E)
     /** Color de error */
     val error: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFFF87171) else Color(0xFFEF4444)
-
+        get() = if (isAppDarkTheme()) Color(0xFFF87171) else Color(0xFFEF4444)
     /** Color de warning */
     val warning: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFFFBBF24) else Color(0xFFF59E0B)
-
+        get() = if (isAppDarkTheme()) Color(0xFFFBBF24) else Color(0xFFF59E0B)
     // ==========================================
     // COLORES DE DIVIDER Y OUTLINE
     // ==========================================
@@ -565,14 +554,12 @@ object AppColors {
     val divider: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF334155) else Color(0xFFE2E8F0)
-
+        get() = if (isAppDarkTheme()) Color(0xFF334155) else Color(0xFFE2E8F0)
     /** Color de borde */
     val outline: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF475569) else Color(0xFFCBD5E1)
-
+        get() = if (isAppDarkTheme()) Color(0xFF475569) else Color(0xFFCBD5E1)
     // ==========================================
     // COLORES ESPECIALES PARA COMPONENTES
     // ==========================================
@@ -581,25 +568,22 @@ object AppColors {
     val circleButtonBackground: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF1E293B) else Color(0xFFF1F5F9)
-
+        get() = if (isAppDarkTheme()) Color(0xFF1E293B) else Color(0xFFF1F5F9)
     /** Shimmer base color para loading states */
     val shimmerBase: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF1E293B) else Color(0xFFE2E8F0)
-
+        get() = if (isAppDarkTheme()) Color(0xFF1E293B) else Color(0xFFE2E8F0)
     /** Shimmer highlight color para loading states */
     val shimmerHighlight: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) Color(0xFF334155) else Color(0xFFF8FAFC)
-
+        get() = if (isAppDarkTheme()) Color(0xFF334155) else Color(0xFFF8FAFC)
     /** Overlay oscuro para modals/dialogs */
     val overlay: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) {
+        get() = if (isAppDarkTheme()) {
             Color.Black.copy(alpha = 0.7f)
         } else {
             Color.Black.copy(alpha = 0.5f)

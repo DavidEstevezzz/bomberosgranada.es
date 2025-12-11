@@ -465,6 +465,7 @@ private fun ModernDayCell(
     val brigadeLabel = brigadeInfo?.label
         ?.ifBlank { brigadeInfo.name.take(1) }
         ?.ifBlank { "?" }
+    val brigadeTextColor = brigadeInfo?.onColorHex?.let(::parseHexColor)
 
     Box(
         modifier = modifier
@@ -496,9 +497,8 @@ private fun ModernDayCell(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium,
                 color = when {
-                    hasGuard && brigadeColor != null -> {
-                        if (brigadeColor.luminance() > 0.5f) textPrimary else Color.White
-                    }
+                    hasGuard && brigadeColor != null -> brigadeTextColor
+                        ?: if (brigadeColor.luminance() > 0.5f) Color(0xFF0F172A) else Color.White
                     else -> textPrimary
                 }
             )
@@ -509,8 +509,9 @@ private fun ModernDayCell(
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = when {
-                        brigadeColor != null && brigadeColor.luminance() > 0.5f -> textPrimary
-                        else -> Color.White.copy(alpha = 0.9f)
+                        brigadeColor != null -> brigadeTextColor
+                            ?: if (brigadeColor.luminance() > 0.5f) Color(0xFF0F172A) else Color.White.copy(alpha = 0.9f)
+                        else -> textPrimary
                     }
                 )
             }

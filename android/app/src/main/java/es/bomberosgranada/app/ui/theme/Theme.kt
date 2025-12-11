@@ -297,25 +297,6 @@ fun BomberosGranadaTheme(
     )
 }
 
-/**
- * Versión legacy del tema que usa directamente isSystemInDarkTheme
- * Mantener para compatibilidad con código existente
- */
-@Composable
-fun BomberosGranadaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
-) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        shapes = AppShapes,
-        content = content
-    )
-}
-
 // ============================================
 // COLORES EXTENDIDOS (para estados especiales)
 // ============================================

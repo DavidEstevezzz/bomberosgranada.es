@@ -31,21 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import es.bomberosgranada.app.data.models.User
-
-// ============================================
-// COLORES DEL DISEÑO
-// ============================================
-private val GradientStart = Color(0xFF1E3A5F)
-private val GradientEnd = Color(0xFF2D5A87)
-private val AccentOrange = Color(0xFFFF6B35)
-private val AccentGreen = Color(0xFF4CAF50)
-private val SurfaceElevated = Color(0xFFF8FAFC)
-private val BackgroundColor = Color(0xFFF1F5F9)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF64748B)
-private val DrawerBackground = Color(0xFFFFFFFF)
-private val SelectedItemBackground = Color(0xFFF0F7FF)
-private val SelectedItemBorder = Color(0xFF3B82F6)
+import es.bomberosgranada.app.data.local.ThemeMode
+import es.bomberosgranada.app.ui.theme.AppColors
+import es.bomberosgranada.app.viewmodels.ThemeViewModel
 
 // ============================================
 // MODELO DE ITEMS DEL MENÚ
@@ -61,7 +49,7 @@ data class NavigationItem(
     val selectedIcon: ImageVector = icon,
     val route: String,
     val badge: Int? = null,
-    val badgeColor: Color = AccentOrange,
+    val badgeColor: Color? = null, // null = usar AppColors.accentOrange
     val children: List<NavigationItem>? = null,
     val requiredUserTypes: List<String>? = null, // null = todos pueden ver
     val requiresMandoEspecial: Boolean = false
@@ -147,8 +135,6 @@ object NavigationItems {
                 )
             )
         ),
-
-
         NavigationItem(
             id = "perfil",
             title = "Mi Perfil",
@@ -156,7 +142,6 @@ object NavigationItems {
             selectedIcon = Icons.Filled.Person,
             route = "profile"
         ),
-
     )
 
     /**
@@ -187,7 +172,7 @@ object NavigationItems {
  * Scaffold principal de la aplicación con soporte para navegación drawer
  *
  * Este componente envuelve todas las pantallas y proporciona:
- * - TopBar con botón de menú y título centrado
+ * - TopBar con botón de menú, título centrado y toggle de tema
  * - Modal Navigation Drawer
  * - Contenido de la pantalla
  */
@@ -202,9 +187,16 @@ fun AppScaffold(
     showBackButton: Boolean = false,
     onBack: (() -> Unit)? = null,
     unreadMessagesCount: Int = 0,
+    themeViewModel: ThemeViewModel? = null,
     floatingActionButton: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
+    // Colores del tema
+    val backgroundColor = AppColors.background
+
+    // Estado del tema
+    val themeMode = themeViewModel?.themeMode?.collectAsState()?.value ?: ThemeMode.SYSTEM
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -260,11 +252,13 @@ fun AppScaffold(
                             drawerState.open()
                         }
                     },
-                    onBack = onBack
+                    onBack = onBack,
+                    themeMode = themeMode,
+                    onThemeToggle = { themeViewModel?.cycleThemeMode() }
                 )
             },
             floatingActionButton = floatingActionButton,
-            containerColor = BackgroundColor
+            containerColor = backgroundColor
         ) { paddingValues ->
             content(paddingValues)
         }
@@ -281,47 +275,62 @@ private fun ModernTopBar(
     title: String,
     showBackButton: Boolean,
     onMenuClick: () -> Unit,
-    onBack: (() -> Unit)?
+    onBack: (() -> Unit)?,
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onThemeToggle: (() -> Unit)? = null
 ) {
+    // Colores del tema
+    val textPrimary = AppColors.textPrimary
+    val surface = AppColors.surface
+
+    // Icono según el modo de tema
+    val themeIcon = when (themeMode) {
+        ThemeMode.SYSTEM -> Icons.Outlined.SettingsBrightness
+        ThemeMode.LIGHT -> Icons.Outlined.LightMode
+        ThemeMode.DARK -> Icons.Outlined.DarkMode
+    }
+
+    // Tooltip según el modo
+    val themeTooltip = when (themeMode) {
+        ThemeMode.SYSTEM -> "Tema: Sistema"
+        ThemeMode.LIGHT -> "Tema: Claro"
+        ThemeMode.DARK -> "Tema: Oscuro"
+    }
+
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        shadowElevation = 2.dp
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp),
+        color = surface
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .height(64.dp)
-                .padding(horizontal = 4.dp),
+                .padding(horizontal = 8.dp, vertical = 12.dp)
         ) {
             // Botón izquierdo (menú o back)
-            Box(
-                modifier = Modifier.align(Alignment.CenterStart)
-            ) {
-                if (showBackButton && onBack != null) {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = TextPrimary
-                        )
-                    }
-                } else {
-                    IconButton(
-                        onClick = onMenuClick,
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Menu,
-                            contentDescription = "Menú",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
+            if (showBackButton && onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ArrowBack,
+                        contentDescription = "Volver",
+                        tint = textPrimary
+                    )
+                }
+            } else {
+                IconButton(
+                    onClick = onMenuClick,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Menu,
+                        contentDescription = "Abrir menú",
+                        tint = textPrimary
+                    )
                 }
             }
 
@@ -330,18 +339,32 @@ private fun ModernTopBar(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = textPrimary,
                 modifier = Modifier.align(Alignment.Center),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Espacio para balancear (podría tener acciones en el futuro)
-            Spacer(
-                modifier = Modifier
-                    .size(48.dp)
-                    .align(Alignment.CenterEnd)
-            )
+            // Botón de tema (derecha)
+            if (onThemeToggle != null) {
+                IconButton(
+                    onClick = onThemeToggle,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Icon(
+                        imageVector = themeIcon,
+                        contentDescription = themeTooltip,
+                        tint = textPrimary
+                    )
+                }
+            } else {
+                // Espacio para balancear si no hay toggle de tema
+                Spacer(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.CenterEnd)
+                )
+            }
         }
     }
 }
@@ -359,11 +382,15 @@ private fun NavigationDrawerContent(
     onLogout: () -> Unit,
     onClose: () -> Unit
 ) {
+    // Colores del tema
+    val drawerBackground = AppColors.drawerBackground
+    val dividerColor = AppColors.divider
+
     var expandedItems by remember { mutableStateOf(setOf<String>()) }
 
     ModalDrawerSheet(
         modifier = Modifier.width(300.dp),
-        drawerContainerColor = DrawerBackground,
+        drawerContainerColor = drawerBackground,
         drawerShape = RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)
     ) {
         LazyColumn(
@@ -382,7 +409,7 @@ private fun NavigationDrawerContent(
             item {
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    color = SurfaceElevated
+                    color = dividerColor
                 )
             }
 
@@ -417,7 +444,7 @@ private fun NavigationDrawerContent(
             item {
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-                    color = SurfaceElevated
+                    color = dividerColor
                 )
             }
 
@@ -438,13 +465,14 @@ private fun DrawerHeader(
     user: User?,
     onClose: () -> Unit
 ) {
+    // Colores del tema
+    val gradientColors = AppColors.gradientPrimary
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(GradientStart, GradientEnd)
-                )
+                brush = Brush.horizontalGradient(colors = gradientColors)
             )
             .statusBarsPadding()
             .padding(24.dp)
@@ -538,24 +566,30 @@ private fun NavigationDrawerItem(
     modifier: Modifier = Modifier,
     indented: Boolean = false
 ) {
+    // Colores del tema
+    val textPrimary = AppColors.textPrimary
+    val textSecondary = AppColors.textSecondary
+    val selectedBackground = AppColors.selectedItemBackground
+    val selectedBorder = AppColors.selectedItemBorder
+    val accentOrange = AppColors.accentOrange
+
     val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) SelectedItemBackground else Color.Transparent,
+        targetValue = if (isSelected) selectedBackground else Color.Transparent,
         animationSpec = tween(200),
         label = "itemBackground"
     )
 
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) SelectedItemBorder else TextSecondary,
+        targetValue = if (isSelected) selectedBorder else textSecondary,
         animationSpec = tween(200),
         label = "itemContent"
     )
 
-    val startPadding = if (indented) 40.dp else 16.dp
-
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp),
+            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .padding(start = if (indented) 24.dp else 0.dp),
         color = backgroundColor,
         shape = RoundedCornerShape(16.dp),
         onClick = onClick
@@ -563,22 +597,9 @@ private fun NavigationDrawerItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = startPadding, end = 16.dp, top = 14.dp, bottom = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Indicador de selección
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .width(4.dp)
-                        .height(24.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(SelectedItemBorder)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-
-            // Icono
             Icon(
                 imageVector = if (isSelected) item.selectedIcon else item.icon,
                 contentDescription = null,
@@ -588,12 +609,11 @@ private fun NavigationDrawerItem(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Título
             Text(
                 text = item.title,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isSelected) TextPrimary else TextSecondary,
+                color = if (isSelected) textPrimary else textSecondary,
                 modifier = Modifier.weight(1f)
             )
 
@@ -602,7 +622,7 @@ private fun NavigationDrawerItem(
                 if (count > 0) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = item.badgeColor
+                        color = item.badgeColor ?: accentOrange
                     ) {
                         Text(
                             text = if (count > 99) "99+" else count.toString(),
@@ -630,6 +650,12 @@ private fun ExpandableNavigationItem(
     onExpandToggle: () -> Unit,
     onChildClick: (String) -> Unit
 ) {
+    // Colores del tema
+    val textPrimary = AppColors.textPrimary
+    val textSecondary = AppColors.textSecondary
+    val selectedBackground = AppColors.selectedItemBackground
+    val selectedBorder = AppColors.selectedItemBorder
+
     val rotationAngle by animateFloatAsState(
         targetValue = if (isExpanded) 180f else 0f,
         animationSpec = tween(200),
@@ -644,7 +670,7 @@ private fun ExpandableNavigationItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 2.dp),
-            color = if (isAnyChildSelected) SelectedItemBackground.copy(alpha = 0.5f) else Color.Transparent,
+            color = if (isAnyChildSelected) selectedBackground.copy(alpha = 0.5f) else Color.Transparent,
             shape = RoundedCornerShape(16.dp),
             onClick = onExpandToggle
         ) {
@@ -657,7 +683,7 @@ private fun ExpandableNavigationItem(
                 Icon(
                     imageVector = if (isAnyChildSelected) item.selectedIcon else item.icon,
                     contentDescription = null,
-                    tint = if (isAnyChildSelected) SelectedItemBorder else TextSecondary,
+                    tint = if (isAnyChildSelected) selectedBorder else textSecondary,
                     modifier = Modifier.size(24.dp)
                 )
 
@@ -667,14 +693,14 @@ private fun ExpandableNavigationItem(
                     text = item.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = if (isAnyChildSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isAnyChildSelected) TextPrimary else TextSecondary,
+                    color = if (isAnyChildSelected) textPrimary else textSecondary,
                     modifier = Modifier.weight(1f)
                 )
 
                 Icon(
                     imageVector = Icons.Filled.KeyboardArrowDown,
                     contentDescription = if (isExpanded) "Contraer" else "Expandir",
-                    tint = TextSecondary,
+                    tint = textSecondary,
                     modifier = Modifier
                         .size(24.dp)
                         .graphicsLayer(rotationZ = rotationAngle)
@@ -710,11 +736,16 @@ private fun ExpandableNavigationItem(
 
 @Composable
 private fun LogoutButton(onClick: () -> Unit) {
+    // Colores del tema - el botón de logout mantiene colores fijos rojos
+    // para mantener la consistencia visual de "acción destructiva"
+    val logoutBackground = Color(0xFFFEE2E2) // Rojo claro
+    val logoutText = Color(0xFFDC2626) // Rojo
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
-        color = Color(0xFFFEE2E2),
+        color = logoutBackground,
         shape = RoundedCornerShape(16.dp),
         onClick = onClick
     ) {
@@ -727,7 +758,7 @@ private fun LogoutButton(onClick: () -> Unit) {
             Icon(
                 imageVector = Icons.Filled.Logout,
                 contentDescription = null,
-                tint = Color(0xFFDC2626),
+                tint = logoutText,
                 modifier = Modifier.size(24.dp)
             )
 
@@ -737,9 +768,8 @@ private fun LogoutButton(onClick: () -> Unit) {
                 text = "Cerrar Sesión",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFFDC2626)
+                color = logoutText
             )
         }
     }
 }
-

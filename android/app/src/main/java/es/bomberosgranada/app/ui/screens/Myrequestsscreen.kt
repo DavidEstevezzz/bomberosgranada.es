@@ -29,50 +29,18 @@ import androidx.compose.ui.unit.sp
 import es.bomberosgranada.app.data.models.RequestItem
 import es.bomberosgranada.app.data.models.ShiftChangeRequest
 import es.bomberosgranada.app.data.models.User
-
-// Type alias
 import es.bomberosgranada.app.ui.components.AppScaffold
 import es.bomberosgranada.app.ui.components.LoadingIndicator
+import es.bomberosgranada.app.ui.theme.AppColors
 import es.bomberosgranada.app.viewmodels.MyRequestsViewModel
 import es.bomberosgranada.app.viewmodels.MyRequestsViewModel.*
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.*
+
+// Type alias
 private typealias Request = RequestItem
-
-// ============================================
-// COLORES DEL DISEÑO
-// ============================================
-private val GradientStart = Color(0xFF1E3A5F)
-private val GradientEnd = Color(0xFF2D5A87)
-private val AccentOrange = Color(0xFFFF6B35)
-private val AccentBlue = Color(0xFF3B82F6)
-private val AccentPurple = Color(0xFF8B5CF6)
-private val AccentGreen = Color(0xFF10B981)
-private val AccentAmber = Color(0xFFF59E0B)
-private val AccentRose = Color(0xFFEF4444)
-private val AccentSky = Color(0xFF0EA5E9)
-private val AccentEmerald = Color(0xFF059669)
-private val SurfaceElevated = Color(0xFFF8FAFC)
-private val BackgroundColor = Color(0xFFF1F5F9)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF64748B)
-private val CardBackground = Color(0xFFFFFFFF)
-private val ErrorRed = Color(0xFFEF4444)
-private val SuccessGreen = Color(0xFF22C55E)
-
-// Colores por estado
-private val StatusColors = mapOf(
-    "Pendiente" to AccentBlue,
-    "En trámite" to AccentAmber,
-    "Aceptado por empleados" to AccentSky,
-    "Aceptado" to AccentEmerald,
-    "Confirmada" to AccentEmerald,
-    "Rechazado" to AccentRose,
-    "Cancelada" to Color(0xFF64748B),
-    "Denegada" to AccentRose
-)
 
 // ============================================
 // PANTALLA PRINCIPAL
@@ -88,6 +56,10 @@ fun MyRequestsScreen(
     onBack: () -> Unit,
     unreadMessagesCount: Int = 0
 ) {
+    // Colores del tema
+    val errorColor = AppColors.error
+    val successColor = AppColors.success
+
     val uiState by viewModel.uiState.collectAsState()
     val currentMonth by viewModel.currentMonth.collectAsState()
     val requests by viewModel.requests.collectAsState()
@@ -106,17 +78,14 @@ fun MyRequestsScreen(
         }
     }
 
-    // Mostrar mensajes
-    LaunchedEffect(errorMessage) {
+    // Mostrar mensajes de error/éxito
+    LaunchedEffect(errorMessage, successMessage) {
         errorMessage?.let {
-            snackbarHostState.showSnackbar(message = it, duration = SnackbarDuration.Long)
+            snackbarHostState.showSnackbar(it)
             viewModel.clearError()
         }
-    }
-
-    LaunchedEffect(successMessage) {
         successMessage?.let {
-            snackbarHostState.showSnackbar(message = it, duration = SnackbarDuration.Short)
+            snackbarHostState.showSnackbar(it)
             viewModel.clearSuccess()
         }
     }
@@ -131,50 +100,36 @@ fun MyRequestsScreen(
         onBack = onBack,
         unreadMessagesCount = unreadMessagesCount
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                currentUser == null -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        LoadingIndicator(message = "Cargando usuario...")
-                    }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when (uiState) {
+                is MyRequestsViewModel.MyRequestsUiState.Loading -> {
+                    LoadingIndicator(message = "Cargando solicitudes...")
                 }
-                uiState is MyRequestsUiState.Loading -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        LoadingIndicator(message = "Cargando solicitudes...")
-                    }
-                }
-                uiState is MyRequestsUiState.Error -> {
+
+                is MyRequestsViewModel.MyRequestsUiState.Error -> {
                     ErrorContent(
-                        message = (uiState as MyRequestsUiState.Error).message,
-                        onRetry = { viewModel.loadData(currentUser) },
-                        modifier = Modifier.padding(paddingValues)
+                        message = (uiState as MyRequestsViewModel.MyRequestsUiState.Error).message,
+                        onRetry = { currentUser?.let { viewModel.loadData(it) } }
                     )
                 }
-                else -> {
+
+                is MyRequestsViewModel.MyRequestsUiState.Success -> {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
+                        modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // Header con navegación de mes
                         item {
                             MonthHeader(
                                 currentMonth = currentMonth,
                                 stats = viewModel.getStats(),
-                                onPreviousMonth = { viewModel.previousMonth(currentUser) },
-                                onNextMonth = { viewModel.nextMonth(currentUser) }
+                                onPreviousMonth = { currentUser?.let { viewModel.previousMonth(it) } },
+                                onNextMonth = { currentUser?.let { viewModel.nextMonth(it) } }
                             )
                         }
 
@@ -184,7 +139,7 @@ fun MyRequestsScreen(
                                 title = "Solicitudes de Permisos",
                                 subtitle = "Vacaciones, asuntos propios y otros permisos",
                                 icon = Icons.Rounded.Description,
-                                accentColor = AccentBlue,
+                                accentColor = AppColors.accentBlue,
                                 count = requests.size
                             )
                         }
@@ -202,8 +157,7 @@ fun MyRequestsScreen(
                                     request = request,
                                     viewModel = viewModel,
                                     isUpdating = updatingItemId == request.id,
-                                    onCancel = { viewModel.cancelRequest(request.id, currentUser) }
-                                )
+                                    onCancel = { currentUser?.let { viewModel.cancelRequest(request.id, it) } }                                )
                             }
                         }
 
@@ -214,7 +168,7 @@ fun MyRequestsScreen(
                                 title = "Cambios de Guardia Simples",
                                 subtitle = "Intercambio de una guardia con un compañero",
                                 icon = Icons.Rounded.SwapHoriz,
-                                accentColor = AccentPurple,
+                                accentColor = AppColors.accentPurple,
                                 count = simpleShiftChanges.size
                             )
                         }
@@ -228,15 +182,17 @@ fun MyRequestsScreen(
                             }
                         } else {
                             items(simpleShiftChanges, key = { it.id }) { change ->
-                                ShiftChangeCard(
-                                    change = change,
-                                    isMirror = false,
-                                    viewModel = viewModel,
-                                    currentUser = currentUser,
-                                    isUpdating = updatingItemId == change.id,
-                                    onAccept = { viewModel.acceptShiftChange(change.id, currentUser) },
-                                    onReject = { viewModel.rejectShiftChange(change.id, currentUser) }
-                                )
+                                currentUser?.let { user ->
+                                    ShiftChangeCard(
+                                        change = change,
+                                        isMirror = false,
+                                        viewModel = viewModel,
+                                        currentUser = user,
+                                        isUpdating = updatingItemId == change.id,
+                                        onAccept = { viewModel.acceptShiftChange(change.id, user) },
+                                        onReject = { viewModel.rejectShiftChange(change.id, user) }
+                                    )
+                                }
                             }
                         }
 
@@ -247,7 +203,7 @@ fun MyRequestsScreen(
                                 title = "Cambios de Guardia Espejo",
                                 subtitle = "Intercambio doble entre dos fechas",
                                 icon = Icons.Rounded.CompareArrows,
-                                accentColor = AccentOrange,
+                                accentColor = AppColors.accentOrange,
                                 count = mirrorShiftChanges.size
                             )
                         }
@@ -261,15 +217,17 @@ fun MyRequestsScreen(
                             }
                         } else {
                             items(mirrorShiftChanges, key = { it.id }) { change ->
-                                ShiftChangeCard(
-                                    change = change,
-                                    isMirror = true,
-                                    viewModel = viewModel,
-                                    currentUser = currentUser,
-                                    isUpdating = updatingItemId == change.id,
-                                    onAccept = { viewModel.acceptShiftChange(change.id, currentUser) },
-                                    onReject = { viewModel.rejectShiftChange(change.id, currentUser) }
-                                )
+                                currentUser?.let { user ->
+                                    ShiftChangeCard(
+                                        change = change,
+                                        isMirror = true,
+                                        viewModel = viewModel,
+                                        currentUser = user,
+                                        isUpdating = updatingItemId == change.id,
+                                        onAccept = { viewModel.acceptShiftChange(change.id, user) },
+                                        onReject = { viewModel.rejectShiftChange(change.id, user) }
+                                    )
+                                }
                             }
                         }
 
@@ -287,11 +245,56 @@ fun MyRequestsScreen(
             ) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = if (errorMessage != null) ErrorRed else SuccessGreen,
+                    containerColor = if (errorMessage != null) errorColor else successColor,
                     contentColor = Color.White,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.padding(16.dp)
                 )
+            }
+        }
+    }
+}
+
+// ============================================
+// CONTENIDO DE ERROR
+// ============================================
+
+@Composable
+private fun ErrorContent(
+    message: String,
+    onRetry: () -> Unit
+) {
+    val accentOrange = AppColors.accentOrange
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ErrorOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(containerColor = accentOrange)
+            ) {
+                Icon(Icons.Rounded.Refresh, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Reintentar")
             }
         }
     }
@@ -308,6 +311,16 @@ private fun MonthHeader(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
+    // Colores del tema
+    val gradientColors = AppColors.gradientPrimary
+    val cardBackground = AppColors.cardBackground
+    val surfaceElevated = AppColors.surfaceElevated
+    val textPrimary = AppColors.textPrimary
+    val textSecondary = AppColors.textSecondary
+    val accentBlue = AppColors.accentBlue
+    val accentPurple = AppColors.accentPurple
+    val accentOrange = AppColors.accentOrange
+
     val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es", "ES"))
         .replaceFirstChar { it.uppercase() }
 
@@ -324,9 +337,7 @@ private fun MonthHeader(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(GradientStart, GradientEnd)
-                        )
+                        brush = Brush.horizontalGradient(colors = gradientColors)
                     )
                     .padding(24.dp)
             ) {
@@ -345,14 +356,11 @@ private fun MonthHeader(
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
-
                 }
             }
 
             // Navegación de mes
-            Surface(
-                color = CardBackground
-            ) {
+            Surface(color = cardBackground) {
                 Column {
                     Row(
                         modifier = Modifier
@@ -366,12 +374,12 @@ private fun MonthHeader(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(SurfaceElevated)
+                                .background(surfaceElevated)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.ChevronLeft,
                                 contentDescription = "Mes anterior",
-                                tint = TextPrimary
+                                tint = textPrimary
                             )
                         }
 
@@ -380,12 +388,12 @@ private fun MonthHeader(
                                 text = monthName,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = textPrimary
                             )
                             Text(
                                 text = "${currentMonth.year}",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary
+                                color = textSecondary
                             )
                         }
 
@@ -394,38 +402,38 @@ private fun MonthHeader(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(SurfaceElevated)
+                                .background(surfaceElevated)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.ChevronRight,
                                 contentDescription = "Mes siguiente",
-                                tint = TextPrimary
+                                tint = textPrimary
                             )
                         }
                     }
 
-                    // Estadísticas
+                    // Stats
+                    HorizontalDivider(color = surfaceElevated)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .padding(bottom = 16.dp),
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        StatChip(
+                        StatItem(
+                            value = stats.requestsCount.toString(),
                             label = "Permisos",
-                            value = stats.requestsCount,
-                            color = AccentBlue
+                            color = accentBlue
                         )
-                        StatChip(
+                        StatItem(
+                            value = stats.simpleChangesCount.toString(),
                             label = "Simples",
-                            value = stats.simpleChangesCount,
-                            color = AccentPurple
+                            color = accentPurple
                         )
-                        StatChip(
+                        StatItem(
+                            value = stats.mirrorChangesCount.toString(),
                             label = "Espejo",
-                            value = stats.mirrorChangesCount,
-                            color = AccentOrange
+                            color = accentOrange
                         )
                     }
                 }
@@ -435,32 +443,25 @@ private fun MonthHeader(
 }
 
 @Composable
-private fun StatChip(
+private fun StatItem(
+    value: String,
     label: String,
-    value: Int,
     color: Color
 ) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = color.copy(alpha = 0.1f)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = value.toString(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = color
-            )
-        }
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = color
+        )
     }
 }
 
@@ -476,6 +477,9 @@ private fun SectionHeader(
     accentColor: Color,
     count: Int
 ) {
+    val textPrimary = AppColors.textPrimary
+    val textSecondary = AppColors.textSecondary
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -502,12 +506,12 @@ private fun SectionHeader(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = textPrimary
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
+                color = textSecondary
             )
         }
         Surface(
@@ -536,8 +540,14 @@ private fun RequestCard(
     isUpdating: Boolean,
     onCancel: () -> Unit
 ) {
+    val cardBackground = AppColors.cardBackground
+    val textSecondary = AppColors.textSecondary
+    val accentBlue = AppColors.accentBlue
+    val accentRose = AppColors.accentRose
+    val dividerColor = AppColors.divider
+
     val statusNormalized = viewModel.normalizeState(request.estado)
-    val statusColor = StatusColors[statusNormalized] ?: TextSecondary
+    val statusColor = AppColors.getStatusColor(statusNormalized)
     val canCancel = viewModel.canCancelRequest(request)
 
     Card(
@@ -545,7 +555,7 @@ private fun RequestCard(
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = cardBackground)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -559,13 +569,13 @@ private fun RequestCard(
                 // Tipo de solicitud
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = AccentBlue.copy(alpha = 0.1f)
+                    color = accentBlue.copy(alpha = 0.1f)
                 ) {
                     Text(
                         text = request.tipo.replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = AccentBlue,
+                        color = accentBlue,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
@@ -614,7 +624,7 @@ private fun RequestCard(
                     Text(
                         text = motivo,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = textSecondary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -624,13 +634,13 @@ private fun RequestCard(
             // Botón de cancelar
             if (canCancel) {
                 Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = SurfaceElevated)
+                HorizontalDivider(color = dividerColor)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 ActionButton(
                     text = "Cancelar",
                     icon = Icons.Default.Close,
-                    color = AccentRose,
+                    color = accentRose,
                     isLoading = isUpdating,
                     onClick = onCancel
                 )
@@ -653,17 +663,26 @@ private fun ShiftChangeCard(
     onAccept: () -> Unit,
     onReject: () -> Unit
 ) {
+    val cardBackground = AppColors.cardBackground
+    val textSecondary = AppColors.textSecondary
+    val accentBlue = AppColors.accentBlue
+    val accentPurple = AppColors.accentPurple
+    val accentOrange = AppColors.accentOrange
+    val accentEmerald = AppColors.accentEmerald
+    val accentRose = AppColors.accentRose
+    val dividerColor = AppColors.divider
+
     val statusNormalized = viewModel.normalizeState(change.estado)
-    val statusColor = StatusColors[statusNormalized] ?: TextSecondary
+    val statusColor = AppColors.getStatusColor(statusNormalized)
     val actions = viewModel.getShiftChangeActions(change, currentUser)
-    val accentColor = if (isMirror) AccentOrange else AccentPurple
+    val accentColor = if (isMirror) accentOrange else accentPurple
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = cardBackground)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -713,13 +732,13 @@ private fun ShiftChangeCard(
                 EmployeeChip(
                     name = change.empleado1?.let { "${it.nombre} ${it.apellido}" } ?: "Empleado 1",
                     isCurrentUser = change.id_empleado1 == currentUser.id_empleado,
-                    color = AccentBlue
+                    color = accentBlue
                 )
 
                 Icon(
                     imageVector = Icons.Default.SwapHoriz,
                     contentDescription = null,
-                    tint = TextSecondary,
+                    tint = textSecondary,
                     modifier = Modifier.size(24.dp)
                 )
 
@@ -727,11 +746,11 @@ private fun ShiftChangeCard(
                 EmployeeChip(
                     name = change.empleado2?.let { "${it.nombre} ${it.apellido}" } ?: "Empleado 2",
                     isCurrentUser = change.id_empleado2 == currentUser.id_empleado,
-                    color = AccentPurple
+                    color = accentPurple
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Fechas
             Row(
@@ -740,42 +759,24 @@ private fun ShiftChangeCard(
             ) {
                 InfoItem(
                     icon = Icons.Default.CalendarToday,
-                    label = "Fecha",
+                    label = "Fecha 1",
                     value = formatDate(change.fecha)
                 )
-                if (isMirror && change.fecha2 != null) {
-                    InfoItem(
-                        icon = Icons.Default.Event,
-                        label = "Fecha 2",
-                        value = formatDate(change.fecha2)
-                    )
+                if (isMirror) {
+                    change.fecha2?.let {
+                        InfoItem(
+                            icon = Icons.Default.Event,
+                            label = "Fecha 2",
+                            value = formatDate(it)
+                        )
+                    }
                 }
-            }
-
-            // Turno
-            Spacer(modifier = Modifier.height(8.dp))
-            InfoItem(
-                icon = Icons.Default.Schedule,
-                label = "Turno",
-                value = change.turno
-            )
-
-            // Motivo si existe
-            if (change.motivo.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = change.motivo,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
 
             // Acciones
             if (actions != ShiftChangeActions.NONE) {
                 Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = SurfaceElevated)
+                HorizontalDivider(color = dividerColor)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
@@ -786,7 +787,7 @@ private fun ShiftChangeCard(
                         ActionButton(
                             text = "Aceptar",
                             icon = Icons.Default.Check,
-                            color = AccentEmerald,
+                            color = accentEmerald,
                             isLoading = isUpdating,
                             onClick = onAccept,
                             modifier = Modifier.weight(1f)
@@ -795,7 +796,7 @@ private fun ShiftChangeCard(
                     ActionButton(
                         text = "Rechazar",
                         icon = Icons.Default.Close,
-                        color = AccentRose,
+                        color = accentRose,
                         isLoading = isUpdating,
                         onClick = onReject,
                         modifier = if (actions == ShiftChangeActions.CAN_ACCEPT_REJECT) {
@@ -837,6 +838,9 @@ private fun InfoItem(
     label: String,
     value: String
 ) {
+    val textPrimary = AppColors.textPrimary
+    val textSecondary = AppColors.textSecondary
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -844,20 +848,20 @@ private fun InfoItem(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = TextSecondary,
+            tint = textSecondary,
             modifier = Modifier.size(16.dp)
         )
         Column {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary
+                color = textSecondary
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = TextPrimary
+                color = textPrimary
             )
         }
     }
@@ -869,42 +873,38 @@ private fun EmployeeChip(
     isCurrentUser: Boolean,
     color: Color
 ) {
-    val initials = name.split(" ")
-        .take(2)
-        .mapNotNull { it.firstOrNull()?.uppercase() }
-        .joinToString("")
+    val textPrimary = AppColors.textPrimary
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (isCurrentUser) color.copy(alpha = 0.15f) else color.copy(alpha = 0.05f)
     ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(if (isCurrentUser) color else color.copy(alpha = 0.2f)),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(
-                text = initials,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (isCurrentUser) Color.White else color
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = null,
+                tint = if (isCurrentUser) color else textPrimary,
+                modifier = Modifier.size(14.dp)
             )
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = name.split(" ").first(),
-            style = MaterialTheme.typography.labelSmall,
-            color = if (isCurrentUser) color else TextSecondary,
-            fontWeight = if (isCurrentUser) FontWeight.SemiBold else FontWeight.Normal
-        )
-        if (isCurrentUser) {
             Text(
-                text = "(Tú)",
-                style = MaterialTheme.typography.labelSmall,
-                color = color,
-                fontWeight = FontWeight.Bold
+                text = name.split(" ").firstOrNull() ?: name,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (isCurrentUser) FontWeight.Bold else FontWeight.Normal,
+                color = if (isCurrentUser) color else textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+            if (isCurrentUser) {
+                Text(
+                    text = "(Tú)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = color
+                )
+            }
         }
     }
 }
@@ -958,10 +958,13 @@ private fun EmptyStateCard(
     message: String,
     icon: ImageVector
 ) {
+    val surfaceElevated = AppColors.surfaceElevated
+    val textSecondary = AppColors.textSecondary
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceElevated)
+        colors = CardDefaults.cardColors(containerColor = surfaceElevated)
     ) {
         Row(
             modifier = Modifier
@@ -973,69 +976,30 @@ private fun EmptyStateCard(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = TextSecondary,
+                tint = textSecondary,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                color = textSecondary
             )
-        }
-    }
-}
-
-@Composable
-private fun ErrorContent(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ErrorOutline,
-                contentDescription = null,
-                tint = AccentRose,
-                modifier = Modifier.size(64.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = message,
-                color = AccentRose,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentOrange)
-            ) {
-                Icon(Icons.Rounded.Refresh, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Reintentar")
-            }
         }
     }
 }
 
 // ============================================
-// HELPERS
+// UTILIDADES
 // ============================================
 
 private fun formatDate(dateString: String): String {
     return try {
-        val date = java.time.LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE)
-        date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        val inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val outputFormatter = DateTimeFormatter.ofPattern("d MMM", Locale("es", "ES"))
+        val date = java.time.LocalDate.parse(dateString, inputFormatter)
+        date.format(outputFormatter)
     } catch (e: Exception) {
         dateString
     }
 }
-

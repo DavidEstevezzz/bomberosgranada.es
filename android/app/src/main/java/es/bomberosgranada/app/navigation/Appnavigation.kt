@@ -16,6 +16,7 @@ import es.bomberosgranada.app.viewmodels.AuthViewModel
 import es.bomberosgranada.app.viewmodels.CreateRequestViewModel
 import es.bomberosgranada.app.viewmodels.DashboardViewModel
 import es.bomberosgranada.app.viewmodels.GuardDetailViewModel
+import es.bomberosgranada.app.viewmodels.ThemeViewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,20 +36,20 @@ import es.bomberosgranada.app.ui.screens.MessagesScreen
 import es.bomberosgranada.app.viewmodels.MessagesViewModel
 import es.bomberosgranada.app.ui.screens.ProfileScreen
 import es.bomberosgranada.app.viewmodels.ProfileViewModel
-import es.bomberosgranada.app.data.repositories.ShiftChangeRequestsRepository
-
+import es.bomberosgranada.app.ui.theme.AppColors
 
 
 /**
  * Navigation Host principal de la aplicación
  *
  * Maneja todas las rutas y la navegación entre pantallas.
- * Ahora con soporte para navegación por drawer lateral.
+ * Ahora con soporte para navegación por drawer lateral y tema.
  */
 @Composable
 fun AppNavigation(
     navController: NavHostController,
     authViewModel: AuthViewModel,
+    themeViewModel: ThemeViewModel,
     // Repositories
     guardsRepository: GuardsRepository,
     brigadesRepository: BrigadesRepository,
@@ -150,7 +151,8 @@ fun AppNavigation(
                         Screen.GuardAttendance.createRoute(guardId, brigadeId, parkId, date)
                     )
                 },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel
             )
         }
 
@@ -429,6 +431,10 @@ private fun PlaceholderScreen(
     onLogout: () -> Unit,
     unreadMessagesCount: Int
 ) {
+    // Colores del tema
+    val textPrimary = AppColors.textPrimary
+    val textSecondary = AppColors.textSecondary
+
     es.bomberosgranada.app.ui.components.AppScaffold(
         currentRoute = title.lowercase().replace(" ", "-"),
         title = title,
@@ -451,22 +457,20 @@ private fun PlaceholderScreen(
                     imageVector = Icons.Filled.Construction,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
-                    tint = androidx.compose.ui.graphics.Color(0xFF64748B)
+                    tint = textSecondary
                 )
                 Text(
                     text = "Próximamente",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    color = androidx.compose.ui.graphics.Color(0xFF1A1A2E)
+                    color = textPrimary
                 )
                 Text(
                     text = "Esta sección está en desarrollo",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = androidx.compose.ui.graphics.Color(0xFF64748B)
+                    color = textSecondary
                 )
             }
         }
     }
 }
-
-

@@ -1,8 +1,21 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+import org.gradle.api.GradleException
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
+
+val localProperties = gradleLocalProperties(rootDir, providers)
+val keystoreStorePassword = (project.findProperty("keystoreStorePassword") as String?)
+    ?: localProperties.getProperty("keystoreStorePassword")
+val keystoreAlias = (project.findProperty("keystoreAlias") as String?)
+    ?: localProperties.getProperty("keystoreAlias")
+val keystoreKeyPassword = (project.findProperty("keystoreKeyPassword") as String?)
+    ?: localProperties.getProperty("keystoreKeyPassword")
+val hasSigningCredentials = listOf(keystoreStorePassword, keystoreAlias, keystoreKeyPassword).all { it != null }
+
 
 android {
     namespace = "es.bomberosgranada.app"
@@ -18,6 +31,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            if (!hasSigningCredentials) {
+                throw GradleException(
+                    "Define keystoreStorePassword, keystoreAlias y keystoreKeyPassword en gradle.properties o local.properties para firmar el APK de release."
+                )
+            }
+
+            storeFile = file("bomberos-release.jks")
+            storePassword = keystoreStorePassword
+            keyAlias = keystoreAlias
+            keyPassword = keystoreKeyPassword
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -25,6 +53,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

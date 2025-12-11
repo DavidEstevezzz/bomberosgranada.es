@@ -234,7 +234,8 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel  // AÑADIR ESTA LÍNEA
             )
         }
 
@@ -256,7 +257,8 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel
             )
         }
 
@@ -276,7 +278,8 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount
+                unreadMessagesCount = unreadMessagesCount,
+                themeViewModel = themeViewModel
             )
         }
 
@@ -398,8 +401,7 @@ fun AppNavigation(
                 onNavigate = onNavigate,
                 onLogout = onLogout,
                 onBack = { navController.popBackStack() },
-                unreadMessagesCount = unreadMessagesCount,
-                themeViewModel = themeViewModel
+                unreadMessagesCount = unreadMessagesCount
             )
         }
 

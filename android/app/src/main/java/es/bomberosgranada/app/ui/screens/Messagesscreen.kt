@@ -1,17 +1,12 @@
 package es.bomberosgranada.app.ui.screens
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -24,38 +19,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import es.bomberosgranada.app.data.models.Message
 import es.bomberosgranada.app.data.models.User
 import es.bomberosgranada.app.ui.components.AppScaffold
+import es.bomberosgranada.app.ui.theme.AppColors
 import es.bomberosgranada.app.viewmodels.MessagesViewModel
 import es.bomberosgranada.app.viewmodels.MessagesViewModel.*
+import es.bomberosgranada.app.viewmodels.ThemeViewModel
 import java.time.format.TextStyle
 import java.util.*
-
-// ============================================
-// COLORES DEL DISEÑO
-// ============================================
-private val GradientStart = Color(0xFF1E3A5F)
-private val GradientEnd = Color(0xFF2D5A87)
-private val AccentBlue = Color(0xFF3B82F6)
-private val AccentPurple = Color(0xFF8B5CF6)
-private val AccentGreen = Color(0xFF10B981)
-private val AccentOrange = Color(0xFFFF6B35)
-private val AccentAmber = Color(0xFFF59E0B)
-private val AccentRose = Color(0xFFEF4444)
-private val SurfaceElevated = Color(0xFFF8FAFC)
-private val CardBackground = Color(0xFFFFFFFF)
-private val TextPrimary = Color(0xFF1A1A2E)
-private val TextSecondary = Color(0xFF64748B)
-private val UnreadBadge = Color(0xFF3B82F6)
 
 // ============================================
 // PANTALLA PRINCIPAL DE MENSAJES
@@ -69,8 +46,13 @@ fun MessagesScreen(
     onNavigate: (String) -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit,
-    unreadMessagesCount: Int = 0
+    unreadMessagesCount: Int = 0,
+    themeViewModel: ThemeViewModel? = null
 ) {
+    // Colores del tema
+    val accentGreen = AppColors.accentGreen
+    val accentRose = AppColors.accentRose
+
     val uiState by viewModel.uiState.collectAsState()
     val currentView by viewModel.currentView.collectAsState()
     val currentMonth by viewModel.currentMonth.collectAsState()
@@ -127,7 +109,8 @@ fun MessagesScreen(
         onLogout = onLogout,
         showBackButton = true,
         onBack = onBack,
-        unreadMessagesCount = unreadMessagesCount
+        unreadMessagesCount = unreadMessagesCount,
+        themeViewModel = themeViewModel
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
@@ -191,7 +174,7 @@ fun MessagesScreen(
             ) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = if (successMessage != null) AccentGreen else AccentRose,
+                    containerColor = if (successMessage != null) accentGreen else accentRose,
                     contentColor = Color.White,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.padding(16.dp)
@@ -212,6 +195,15 @@ private fun MessagesHeader(
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
+    // Colores del tema
+    val gradientColors = AppColors.gradientPrimary
+    val cardBackground = AppColors.cardBackground
+    val surfaceElevated = AppColors.surfaceElevated
+    val textPrimary = AppColors.textPrimary
+    val accentBlue = AppColors.accentBlue
+    val accentPurple = AppColors.accentPurple
+    val accentOrange = AppColors.accentOrange
+
     val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale("es", "ES"))
         .replaceFirstChar { it.uppercase() }
 
@@ -227,9 +219,7 @@ private fun MessagesHeader(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(GradientStart, GradientEnd)
-                        )
+                        brush = Brush.horizontalGradient(colors = gradientColors)
                     )
                     .padding(24.dp)
             ) {
@@ -255,11 +245,10 @@ private fun MessagesHeader(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
-
                 }
             }
 
-            Surface(color = CardBackground) {
+            Surface(color = cardBackground) {
                 Column {
                     Row(
                         modifier = Modifier
@@ -273,12 +262,12 @@ private fun MessagesHeader(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(SurfaceElevated)
+                                .background(surfaceElevated)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.ChevronLeft,
                                 contentDescription = "Mes anterior",
-                                tint = TextPrimary
+                                tint = textPrimary
                             )
                         }
 
@@ -286,7 +275,7 @@ private fun MessagesHeader(
                             text = "$monthName ${currentMonth.year}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = textPrimary
                         )
 
                         IconButton(
@@ -294,12 +283,12 @@ private fun MessagesHeader(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(SurfaceElevated)
+                                .background(surfaceElevated)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.ChevronRight,
                                 contentDescription = "Mes siguiente",
-                                tint = TextPrimary
+                                tint = textPrimary
                             )
                         }
                     }
@@ -311,10 +300,10 @@ private fun MessagesHeader(
                             .padding(bottom = 16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        StatChip(label = "Bandeja", value = stats.viewName, color = AccentBlue)
-                        StatChip(label = "Mensajes", value = stats.totalCount.toString(), color = AccentPurple)
+                        StatChip(label = "Bandeja", value = stats.viewName, color = accentBlue)
+                        StatChip(label = "Mensajes", value = stats.totalCount.toString(), color = accentPurple)
                         if (stats.unreadCount > 0) {
-                            StatChip(label = "Sin leer", value = stats.unreadCount.toString(), color = AccentOrange)
+                            StatChip(label = "Sin leer", value = stats.unreadCount.toString(), color = accentOrange)
                         }
                     }
                 }
@@ -359,10 +348,14 @@ private fun ActionBar(
     onViewChange: (MessageView) -> Unit,
     onCreateMessage: () -> Unit
 ) {
+    val cardBackground = AppColors.cardBackground
+    val surfaceElevated = AppColors.surfaceElevated
+    val accentBlue = AppColors.accentBlue
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = cardBackground)
     ) {
         Row(
             modifier = Modifier
@@ -374,7 +367,7 @@ private fun ActionBar(
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceElevated)
+                    .background(surfaceElevated)
             ) {
                 ToggleButton(
                     text = "Entrada",
@@ -393,7 +386,7 @@ private fun ActionBar(
             Button(
                 onClick = onCreateMessage,
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                colors = ButtonDefaults.buttonColors(containerColor = accentBlue)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -414,10 +407,13 @@ private fun ToggleButton(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val accentBlue = AppColors.accentBlue
+    val textSecondary = AppColors.textSecondary
+
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
-        color = if (selected) AccentBlue else Color.Transparent
+        color = if (selected) accentBlue else Color.Transparent
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -427,14 +423,14 @@ private fun ToggleButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (selected) Color.White else TextSecondary,
+                tint = if (selected) Color.White else textSecondary,
                 modifier = Modifier.size(18.dp)
             )
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                color = if (selected) Color.White else TextSecondary
+                color = if (selected) Color.White else textSecondary
             )
         }
     }
@@ -451,6 +447,12 @@ private fun MessageCard(
     isInbox: Boolean,
     onClick: () -> Unit
 ) {
+    val cardBackground = AppColors.cardBackground
+    val textPrimary = AppColors.textPrimary
+    val textSecondary = AppColors.textSecondary
+    val accentBlue = AppColors.accentBlue
+    val accentPurple = AppColors.accentPurple
+
     val isRead = message.isReadBoolean
     val isMassive = message.massive != null && message.massive != "false"
     val massiveLabel = viewModel.getMassiveLabel(message.massive)
@@ -462,7 +464,7 @@ private fun MessageCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (!isRead && isInbox) AccentBlue.copy(alpha = 0.05f) else CardBackground
+            containerColor = if (!isRead && isInbox) accentBlue.copy(alpha = 0.05f) else cardBackground
         )
     ) {
         Row(
@@ -476,8 +478,8 @@ private fun MessageCard(
                     .size(48.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isMassive) AccentPurple.copy(alpha = 0.15f)
-                        else AccentBlue.copy(alpha = 0.15f)
+                        if (isMassive) accentPurple.copy(alpha = 0.15f)
+                        else accentBlue.copy(alpha = 0.15f)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -485,7 +487,7 @@ private fun MessageCard(
                     Icon(
                         imageVector = Icons.Default.Campaign,
                         contentDescription = null,
-                        tint = AccentPurple,
+                        tint = accentPurple,
                         modifier = Modifier.size(24.dp)
                     )
                 } else {
@@ -498,7 +500,7 @@ private fun MessageCard(
                         text = name.firstOrNull()?.uppercase() ?: "?",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = AccentBlue
+                        color = accentBlue
                     )
                 }
             }
@@ -524,7 +526,7 @@ private fun MessageCard(
                         text = displayName,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = if (!isRead && isInbox) FontWeight.Bold else FontWeight.SemiBold,
-                        color = TextPrimary,
+                        color = textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
@@ -533,89 +535,63 @@ private fun MessageCard(
                     Text(
                         text = viewModel.formatDate(message.created_at),
                         style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary
+                        color = textSecondary
                     )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = message.subject,
+                    text = message.subject.ifBlank { "(Sin asunto)" },
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (!isRead && isInbox) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (!isRead && isInbox) TextPrimary else TextSecondary,
+                    color = textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = message.body,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary.copy(alpha = 0.8f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
                 Row(
-                    modifier = Modifier.padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (message.attachment != null) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = AccentAmber.copy(alpha = 0.1f)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AttachFile,
-                                    contentDescription = null,
-                                    tint = AccentAmber,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "Adjunto",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = AccentAmber
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        text = message.body.take(50).let { if (message.body.length > 50) "$it..." else it },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
 
-                    if (isMassive && !isInbox) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = AccentPurple.copy(alpha = 0.1f)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Groups,
-                                    contentDescription = null,
-                                    tint = AccentPurple,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "${message.read_count ?: 0}/${message.total_recipients ?: 0}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = AccentPurple
-                                )
-                            }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (!message.attachment.isNullOrBlank()) {
+                            Icon(
+                                imageVector = Icons.Default.AttachFile,
+                                contentDescription = "Tiene adjunto",
+                                tint = textSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        if (isMassive && !isInbox) {
+                            Text(
+                                text = "${message.read_count ?: 0}/${message.total_recipients ?: 0}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = accentPurple
+                            )
                         }
                     }
 
                     if (!isRead && isInbox) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = UnreadBadge
+                            color = accentBlue
                         ) {
                             Text(
                                 text = "Nuevo",
@@ -638,10 +614,14 @@ private fun MessageCard(
 
 @Composable
 private fun LoadingCard() {
+    val cardBackground = AppColors.cardBackground
+    val textSecondary = AppColors.textSecondary
+    val accentBlue = AppColors.accentBlue
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = cardBackground)
     ) {
         Box(
             modifier = Modifier
@@ -650,12 +630,12 @@ private fun LoadingCard() {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator(color = AccentBlue)
+                CircularProgressIndicator(color = accentBlue)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Cargando mensajes...",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
+                    color = textSecondary
                 )
             }
         }
@@ -664,10 +644,14 @@ private fun LoadingCard() {
 
 @Composable
 private fun ErrorCard(message: String, onRetry: () -> Unit) {
+    val cardBackground = AppColors.cardBackground
+    val accentRose = AppColors.accentRose
+    val accentOrange = AppColors.accentOrange
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = cardBackground)
     ) {
         Column(
             modifier = Modifier
@@ -678,20 +662,20 @@ private fun ErrorCard(message: String, onRetry: () -> Unit) {
             Icon(
                 imageVector = Icons.Default.ErrorOutline,
                 contentDescription = null,
-                tint = AccentRose,
+                tint = accentRose,
                 modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = AccentRose,
+                color = accentRose,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentOrange)
+                colors = ButtonDefaults.buttonColors(containerColor = accentOrange)
             ) {
                 Icon(Icons.Rounded.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
@@ -703,10 +687,15 @@ private fun ErrorCard(message: String, onRetry: () -> Unit) {
 
 @Composable
 private fun EmptyMessagesCard(currentView: MessageView) {
+    val cardBackground = AppColors.cardBackground
+    val textPrimary = AppColors.textPrimary
+    val textSecondary = AppColors.textSecondary
+    val accentBlue = AppColors.accentBlue
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = cardBackground)
     ) {
         Column(
             modifier = Modifier
@@ -715,26 +704,29 @@ private fun EmptyMessagesCard(currentView: MessageView) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                imageVector = if (currentView == MessageView.INBOX) Icons.Outlined.Inbox else Icons.Outlined.Send,
+                imageVector = if (currentView == MessageView.INBOX)
+                    Icons.Outlined.Inbox else Icons.Outlined.Send,
                 contentDescription = null,
-                tint = TextSecondary,
-                modifier = Modifier.size(48.dp)
+                tint = accentBlue.copy(alpha = 0.5f),
+                modifier = Modifier.size(64.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = if (currentView == MessageView.INBOX)
-                    "No hay mensajes en la bandeja de entrada"
-                else
-                    "No has enviado mensajes este mes",
+                    "No hay mensajes recibidos" else "No hay mensajes enviados",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
+                color = textPrimary,
                 textAlign = TextAlign.Center
             )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Los mensajes aparecerán aquí",
+                text = if (currentView == MessageView.INBOX)
+                    "Los mensajes que recibas aparecerán aquí"
+                else "Los mensajes que envíes aparecerán aquí",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                color = textSecondary,
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -742,756 +734,42 @@ private fun EmptyMessagesCard(currentView: MessageView) {
 
 // ============================================
 // DIÁLOGO DE COMPOSICIÓN DE MENSAJE
+// (Placeholder - importar desde MessagesDialogs.kt)
 // ============================================
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ComposeMessageDialog(
+fun ComposeMessageDialog(
     viewModel: MessagesViewModel,
     composeState: ComposeState,
     isJefe: Boolean,
     users: List<User>
 ) {
-    val context = LocalContext.current
-    var searchQuery by remember { mutableStateOf("") }
-    var showUserDropdown by remember { mutableStateOf(false) }
-
-    val filteredUsers = remember(searchQuery, users) {
-        if (searchQuery.isBlank()) users
-        else users.filter { user ->
-            val fullName = "${user.nombre} ${user.apellido}".lowercase()
-            fullName.contains(searchQuery.lowercase())
-        }
-    }
-
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            val cursor = context.contentResolver.query(it, null, null, null, null)
-            val nameIndex = cursor?.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-            cursor?.moveToFirst()
-            val fileName = nameIndex?.let { idx -> cursor.getString(idx) } ?: "archivo"
-            cursor?.close()
-            viewModel.updateComposeAttachment(it, fileName)
-        }
-    }
-
-    Dialog(
-        onDismissRequest = { if (!composeState.isSending) viewModel.closeCompose() },
-        properties = DialogProperties(
-            dismissOnBackPress = !composeState.isSending,
-            dismissOnClickOutside = !composeState.isSending,
-            usePlatformDefaultWidth = false
-        )
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.9f),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBackground)
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Header con gradiente
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(GradientStart, GradientEnd)
-                            )
-                        )
-                        .padding(20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "COMUNICACIONES",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.7f),
-                                letterSpacing = 2.sp
-                            )
-                            Text(
-                                text = if (composeState.isReply) "Responder mensaje" else "Nuevo mensaje",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { viewModel.closeCompose() },
-                            enabled = !composeState.isSending,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Cerrar",
-                                tint = Color.White
-                            )
-                        }
-                    }
-                }
-
-                // Contenido scrollable
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Error
-                    composeState.error?.let { error ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = AccentRose.copy(alpha = 0.1f)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Error,
-                                    contentDescription = null,
-                                    tint = AccentRose,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = error,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = AccentRose
-                                )
-                            }
-                        }
-                    }
-
-                    // Info de respuesta
-                    if (composeState.isReply && composeState.replyToMessage != null) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = AccentBlue.copy(alpha = 0.08f)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Reply,
-                                    contentDescription = null,
-                                    tint = AccentBlue,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Column {
-                                    Text(
-                                        text = "Respondiendo a ${composeState.receiverName}",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = AccentBlue
-                                    )
-                                    Text(
-                                        text = composeState.replyToMessage.subject,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Selector de alcance (solo jefes)
-                    if (isJefe && !composeState.isReply) {
-                        Text(
-                            text = "Alcance del mensaje",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            MassiveScope.entries.forEach { scope ->
-                                FilterChip(
-                                    selected = composeState.massiveScope == scope,
-                                    onClick = { viewModel.updateComposeMassiveScope(scope) },
-                                    label = {
-                                        Text(
-                                            text = scope.label,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    },
-                                    leadingIcon = if (composeState.massiveScope == scope) {
-                                        {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    } else null,
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = AccentPurple.copy(alpha = 0.15f),
-                                        selectedLabelColor = AccentPurple
-                                    )
-                                )
-                            }
-                        }
-                    }
-
-                    // Selector de destinatario
-                    if (composeState.massiveScope == MassiveScope.INDIVIDUAL && !composeState.isReply) {
-                        Text(
-                            text = "Destinatario",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-
-                        ExposedDropdownMenuBox(
-                            expanded = showUserDropdown,
-                            onExpandedChange = { showUserDropdown = it }
-                        ) {
-                            OutlinedTextField(
-                                value = if (composeState.receiverId != null) composeState.receiverName else searchQuery,
-                                onValueChange = {
-                                    searchQuery = it
-                                    if (composeState.receiverId != null) {
-                                        viewModel.updateComposeReceiver(0, "")
-                                    }
-                                    showUserDropdown = true
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(),
-                                placeholder = { Text("Buscar por nombre...") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Person, contentDescription = null, tint = TextSecondary)
-                                },
-                                trailingIcon = {
-                                    if (composeState.receiverId != null) {
-                                        IconButton(onClick = {
-                                            viewModel.updateComposeReceiver(0, "")
-                                            searchQuery = ""
-                                        }) {
-                                            Icon(Icons.Default.Clear, contentDescription = "Limpiar")
-                                        }
-                                    } else {
-                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = showUserDropdown)
-                                    }
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                singleLine = true
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = showUserDropdown && filteredUsers.isNotEmpty(),
-                                onDismissRequest = { showUserDropdown = false }
-                            ) {
-                                filteredUsers.take(10).forEach { user ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Column {
-                                                Text(
-                                                    text = "${user.nombre} ${user.apellido}",
-                                                    fontWeight = FontWeight.Medium
-                                                )
-                                                Text(
-                                                    text = user.puesto ?: user.type,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = TextSecondary
-                                                )
-                                            }
-                                        },
-                                        onClick = {
-                                            viewModel.updateComposeReceiver(
-                                                user.id_empleado,
-                                                "${user.nombre} ${user.apellido}"
-                                            )
-                                            searchQuery = ""
-                                            showUserDropdown = false
-                                        },
-                                        leadingIcon = {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(32.dp)
-                                                    .clip(CircleShape)
-                                                    .background(AccentBlue.copy(alpha = 0.1f)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    text = user.nombre.firstOrNull()?.uppercase() ?: "?",
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = AccentBlue
-                                                )
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Asunto
-                    Text(
-                        text = "Asunto",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
-                    )
-
-                    OutlinedTextField(
-                        value = composeState.subject,
-                        onValueChange = { viewModel.updateComposeSubject(it) },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Escribe el asunto...") },
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        enabled = !composeState.isSending
-                    )
-
-                    // Cuerpo del mensaje
-                    Text(
-                        text = "Mensaje",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
-                    )
-
-                    OutlinedTextField(
-                        value = composeState.body,
-                        onValueChange = { viewModel.updateComposeBody(it) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 120.dp),
-                        placeholder = { Text("Escribe tu mensaje...") },
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = !composeState.isSending,
-                        maxLines = 8
-                    )
-
-                    // Adjunto
-                    Text(
-                        text = "Archivo adjunto (opcional)",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
-                    )
-
-                    if (composeState.attachmentUri != null) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = AccentAmber.copy(alpha = 0.1f)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.AttachFile,
-                                        contentDescription = null,
-                                        tint = AccentAmber,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = composeState.attachmentName ?: "Archivo",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextPrimary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = { viewModel.clearComposeAttachment() },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Eliminar adjunto",
-                                        tint = AccentRose,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { filePickerLauncher.launch("*/*") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !composeState.isSending
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.AttachFile,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Seleccionar archivo")
-                        }
-
-                        Text(
-                            text = "PDF, JPG o PNG. Máximo 2 MB",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary
-                        )
-                    }
-                }
-
-                // Botones
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = SurfaceElevated,
-                    shadowElevation = 8.dp
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { viewModel.closeCompose() },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !composeState.isSending
-                        ) {
-                            Text("Cancelar")
-                        }
-
-                        Button(
-                            onClick = { viewModel.sendMessage(context) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !composeState.isSending,
-                            colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
-                        ) {
-                            if (composeState.isSending) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Send,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (composeState.isSending) "Enviando..." else "Enviar")
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // Este diálogo debería estar en MessagesDialogs.kt
+    // Por ahora se mantiene la referencia
+    es.bomberosgranada.app.ui.screens.messages.ComposeMessageDialog(
+        viewModel = viewModel,
+        composeState = composeState,
+        isJefe = isJefe,
+        users = users
+    )
 }
 
 // ============================================
 // DIÁLOGO DE DETALLE DE MENSAJE
+// (Placeholder - importar desde MessagesDialogs.kt)
 // ============================================
 
 @Composable
-private fun MessageDetailDialog(
+fun MessageDetailDialog(
     viewModel: MessagesViewModel,
     state: MessageDetailState,
     currentUserId: Int
 ) {
-    val context = LocalContext.current
-    val message = state.message ?: return
-
-    Dialog(
-        onDismissRequest = { viewModel.closeMessageDetail() },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.9f),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBackground)
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Header
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(GradientStart, GradientEnd)
-                            )
-                        )
-                        .padding(20.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "MENSAJE",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.7f),
-                                letterSpacing = 2.sp
-                            )
-                            Text(
-                                text = message.subject,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "De: ${message.sender?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido"}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                            Text(
-                                text = viewModel.formatDateTime(message.created_at),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.6f)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { viewModel.closeMessageDetail() },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Cerrar",
-                                tint = Color.White
-                            )
-                        }
-                    }
-                }
-
-                // Contenido
-                if (state.isLoading) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = AccentBlue)
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        item {
-                            MessageBubble(
-                                message = message,
-                                isOwnMessage = message.sender_id == currentUserId,
-                                viewModel = viewModel,
-                                onDownloadAttachment = { fileName ->
-                                    viewModel.downloadAttachment(context, message.id, fileName)
-                                }
-                            )
-                        }
-
-                        message.replies?.let { replies ->
-                            items(replies) { reply ->
-                                MessageBubble(
-                                    message = reply,
-                                    isOwnMessage = reply.sender_id == currentUserId,
-                                    viewModel = viewModel,
-                                    onDownloadAttachment = { fileName ->
-                                        viewModel.downloadAttachment(context, reply.id, fileName)
-                                    }
-                                )
-
-                                reply.replies?.forEach { nestedReply ->
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    MessageBubble(
-                                        message = nestedReply,
-                                        isOwnMessage = nestedReply.sender_id == currentUserId,
-                                        viewModel = viewModel,
-                                        onDownloadAttachment = { fileName ->
-                                            viewModel.downloadAttachment(context, nestedReply.id, fileName)
-                                        },
-                                        isNested = true
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Barra de acciones
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = SurfaceElevated,
-                    shadowElevation = 8.dp
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { viewModel.deleteMessage(message.id) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentRose)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Eliminar")
-                        }
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        Button(
-                            onClick = {
-                                viewModel.closeMessageDetail()
-                                viewModel.openReply(message)
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Reply,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Responder")
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // Este diálogo debería estar en MessagesDialogs.kt
+    // Por ahora se mantiene la referencia
+    es.bomberosgranada.app.ui.screens.messages.MessageDetailDialog(
+        viewModel = viewModel,
+        state = state,
+        currentUserId = currentUserId
+    )
 }
-
-// ============================================
-// BURBUJA DE MENSAJE
-// ============================================
-
-@Composable
-private fun MessageBubble(
-    message: Message,
-    isOwnMessage: Boolean,
-    viewModel: MessagesViewModel,
-    onDownloadAttachment: (String) -> Unit,
-    isNested: Boolean = false
-) {
-    val bubbleColor = if (isOwnMessage) AccentBlue.copy(alpha = 0.1f) else SurfaceElevated
-    val alignment = if (isOwnMessage) Alignment.End else Alignment.Start
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = if (isNested) 24.dp else 0.dp),
-        horizontalAlignment = alignment
-    ) {
-        Surface(
-            shape = RoundedCornerShape(
-                topStart = 20.dp,
-                topEnd = 20.dp,
-                bottomStart = if (isOwnMessage) 20.dp else 4.dp,
-                bottomEnd = if (isOwnMessage) 4.dp else 20.dp
-            ),
-            color = bubbleColor,
-            modifier = Modifier.widthIn(max = 300.dp)
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Text(
-                    text = message.sender?.let { "${it.nombre} ${it.apellido}" } ?: "Desconocido",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isOwnMessage) AccentBlue else TextPrimary
-                )
-
-                Text(
-                    text = viewModel.formatDateTime(message.created_at),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = message.body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextPrimary
-                )
-
-                if (message.attachment != null) {
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Surface(
-                        onClick = { onDownloadAttachment(message.attachment_filename ?: "archivo") },
-                        shape = RoundedCornerShape(10.dp),
-                        color = AccentAmber.copy(alpha = 0.15f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Download,
-                                contentDescription = null,
-                                tint = AccentAmber,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = message.attachment_filename ?: "Descargar adjunto",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = AccentAmber,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-

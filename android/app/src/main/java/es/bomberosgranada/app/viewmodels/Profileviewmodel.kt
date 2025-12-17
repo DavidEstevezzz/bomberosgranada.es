@@ -43,7 +43,7 @@ class ProfileViewModel(
     }
 
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-
+    private val turnPriority = listOf("Noche", "Tarde", "Mañana")
     // ==========================================
     // ESTADOS
     // ==========================================
@@ -181,6 +181,7 @@ class ProfileViewModel(
                             it.id_empleado == currentUser.id_empleado
                         }
                         _userAssignments.value = userAssignments
+                        applyUserBrigadeGuardFilter()
 
                         Log.d(TAG, "═══════════════════════════════════════")
                         Log.d(TAG, "📊 ASIGNACIONES DEL USUARIO")
@@ -299,6 +300,7 @@ class ProfileViewModel(
         result.fold(
             onSuccess = { guards ->
                 allGuards = guards
+                applyUserBrigadeGuardFilter()
                 _calendarGuards.value = guards
                 Log.d(TAG, "✅ Guardias mes $month: ${guards.size}")
 
@@ -311,9 +313,84 @@ class ProfileViewModel(
         )
     }
 
+    private fun applyUserBrigadeGuardFilter() {
+        val relevantBrigades = _userAssignments.value.map { it.id_brigada_destino }.distinct()
+        _calendarGuards.value = if (relevantBrigades.isNotEmpty()) {
+            val filtered = allGuards.filter { it.id_brigada in relevantBrigades }
+            Log.d(TAG, "🛡️ Filtrando guardias por brigadas del usuario: ${relevantBrigades.joinToString()}")
+            Log.d(TAG, "   Guardias mostradas tras filtro: ${filtered.size} de ${allGuards.size}")
+            filtered
+        } else {
+            allGuards
+        }
+    }
+
     // ==========================================
     // FILTRADO LOCAL
     // ==========================================
+
+    private fun getAssignmentComparator(): Comparator<FirefighterAssignment> {
+        return compareByDescending<FirefighterAssignment> { assignment ->
+            try {
+                LocalDate.parse(assignment.fecha_ini, dateFormatter)
+            } catch (e: Exception) {
+                LocalDate.MIN
+            }
+        }.thenBy { assignment ->
+            val turno = assignment.turno ?: "Mañana"
+            turnPriority.indexOf(turno).let { if (it == -1) turnPriority.size else it }
+        }
+    }
+
+    private fun getLatestPriorAssignment(monthStart: LocalDate): FirefighterAssignment? {
+        val assignmentsUpToMonth = _userAssignments.value.filter { assignment ->
+            try {
+                val assignmentDate = LocalDate.parse(assignment.fecha_ini, dateFormatter)
+                !assignmentDate.isAfter(monthStart)
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        if (assignmentsUpToMonth.isEmpty()) {
+            return null
+        }
+
+        return assignmentsUpToMonth.maxWithOrNull(getAssignmentComparator())?.also {
+            Log.d(
+                TAG,
+                "   🔁 Usando asignación previa (${it.fecha_ini}, turno ${it.turno}) como fallback para el mes ${monthStart.month}"
+            )
+        }
+    }
+
+    private fun applyUserBrigadeGuardFilter(month: YearMonth) {
+        if (allGuards.isEmpty()) {
+            _calendarGuards.value = emptyList()
+            return
+        }
+
+        val monthStart = month.atDay(1)
+        val fallbackAssignment = getLatestPriorAssignment(monthStart)
+
+        val filteredGuards = if (_userAssignments.value.isEmpty()) {
+            allGuards
+        } else {
+            allGuards.filter { guard ->
+                try {
+                    val guardDate = LocalDate.parse(guard.date, dateFormatter)
+                    val userBrigadeForDate = findUserBrigadeForDate(guardDate, fallbackAssignment)
+                    userBrigadeForDate == null || guard.id_brigada == userBrigadeForDate
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error parseando fecha de guardia ${guard.date}", e)
+                    false
+                }
+            }
+        }
+
+        _calendarGuards.value = filteredGuards
+    }
+
 
     private fun filterRequestsByMonth(month: YearMonth) {
         _monthRequests.value = allUserRequests.filter { req ->
@@ -440,10 +517,12 @@ class ProfileViewModel(
         }
 
         // 3. Guardia normal - AQUÍ ESTÁ LA LÓGICA CRÍTICA
-        val guard = _calendarGuards.value.find { it.date == dateStr }
-        if (guard != null) {
+        val userBrigadeId = findUserBrigadeForDate(date)
+        val guard = _calendarGuards.value.find { guard ->
+            guard.date == dateStr && (userBrigadeId == null || guard.id_brigada == userBrigadeId)
+        }
+        if (guard != null && userBrigadeId != null) {
             val brigade = _brigadesMap.value[guard.id_brigada]
-            val userBrigadeId = findUserBrigadeForDate(date)
 
             Log.d(TAG, "═══════════════════════════════════════")
             Log.d(TAG, "🔍 EVALUANDO GUARDIA PARA FECHA: $dateStr")
@@ -473,9 +552,13 @@ class ProfileViewModel(
      * 3. Para la misma fecha, ordena por prioridad de turno: Noche > Tarde > Mañana
      * 4. Devuelve la brigada destino de la primera asignación
      */
-    private fun findUserBrigadeForDate(date: LocalDate): Int? {
+    private fun findUserBrigadeForDate(
+        date: LocalDate,
+        latestPriorAssignment: FirefighterAssignment? = null
+    ): Int? {
         val dateStr = date.format(dateFormatter)
-        val turnPriority = listOf("Noche", "Tarde", "Mañana")
+        val monthStart = date.withDayOfMonth(1)
+        val priorAssignmentForMonth = latestPriorAssignment ?: getLatestPriorAssignment(monthStart)
 
         Log.d(TAG, "   🔎 Buscando brigada para fecha: $dateStr")
         Log.d(TAG, "   📊 Total asignaciones del usuario: ${_userAssignments.value.size}")
@@ -498,26 +581,18 @@ class ProfileViewModel(
         Log.d(TAG, "   📋 Asignaciones válidas encontradas: ${validAssignments.size}")
 
         if (validAssignments.isEmpty()) {
+            priorAssignmentForMonth?.let { fallback ->
+                Log.d(TAG, "   🔄 Usando asignación previa del ${fallback.fecha_ini} para fecha $dateStr")
+                return fallback.id_brigada_destino
+            }
             Log.w(TAG, "   ⚠️ NO HAY ASIGNACIONES VÁLIDAS para fecha $dateStr")
             return null
         }
 
         // Ordenar: primero por fecha descendente, luego por prioridad de turno
-        val sortedAssignments = validAssignments.sortedWith(
-            compareByDescending<FirefighterAssignment> { assignment ->
-                try {
-                    LocalDate.parse(assignment.fecha_ini, dateFormatter)
-                } catch (e: Exception) {
-                    LocalDate.MIN
-                }
-            }.thenBy { assignment ->
-                // Prioridad de turno: Noche (0) > Tarde (1) > Mañana (2)
-                val turno = assignment.turno ?: "Mañana"
-                turnPriority.indexOf(turno).let { if (it == -1) 3 else it }
-            }
-        )
+        val sortedAssignments = validAssignments.sortedWith(getAssignmentComparator())
 
-        val lastAssignment = sortedAssignments.firstOrNull()
+        val lastAssignment = sortedAssignments.firstOrNull() ?: priorAssignmentForMonth
 
         if (lastAssignment != null) {
             Log.d(TAG, "   ✅ Última asignación seleccionada:")

@@ -19,13 +19,13 @@ val hasSigningCredentials = listOf(keystoreStorePassword, keystoreAlias, keystor
 
 android {
     namespace = "es.bomberosgranada.app"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "es.bomberosgranada.app"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
+        targetSdk = 35
+        versionCode = 2
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

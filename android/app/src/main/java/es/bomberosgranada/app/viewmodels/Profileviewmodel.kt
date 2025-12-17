@@ -1,6 +1,5 @@
 package es.bomberosgranada.app.viewmodels
 
-import android.media.metrics.Event
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -36,6 +35,10 @@ class ProfileViewModel(
 
     companion object {
         private const val TAG = "ProfileViewModel"
+
+        // Prioridad de turnos: Noche > Tarde > Mañana (igual que en React)
+        // Un índice menor significa mayor prioridad
+        private val TURN_PRIORITY = listOf("Noche", "Tarde", "Mañana")
     }
 
     // ==========================================
@@ -147,6 +150,8 @@ class ProfileViewModel(
     // ==========================================
     // CARGA DE DATOS - OPTIMIZADA
     // ==========================================
+
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 
     /**
      * Carga todos los datos del perfil UNA SOLA VEZ
@@ -297,8 +302,6 @@ class ProfileViewModel(
     // FILTRADO LOCAL (sin llamadas API)
     // ==========================================
 
-    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
-
     private fun filterRequestsByMonth(month: YearMonth) {
         _monthRequests.value = allUserRequests.filter { req ->
             try {
@@ -379,32 +382,15 @@ class ProfileViewModel(
     }
 
     // ==========================================
-    // REFRESCAR DATOS (forzar recarga)
-    // ==========================================
-
-    fun refreshData(currentUser: User) {
-        dataLoaded = false
-        loadProfile(currentUser)
-    }
-
-    // ==========================================
-    // CÁLCULOS DE HORAS EXTRA
+    // ESTADÍSTICAS
     // ==========================================
 
     fun getTotalDiurnas(): Double {
-        var total = 0.0
-        for (hour in _monthExtraHours.value) {
-            total += hour.horas_diurnas.toDouble()
-        }
-        return total
+        return _monthExtraHours.value.sumOf { it.horas_diurnas.toDouble() }
     }
 
     fun getTotalNocturnas(): Double {
-        var total = 0.0
-        for (hour in _monthExtraHours.value) {
-            total += hour.horas_nocturnas.toDouble()
-        }
-        return total
+        return _monthExtraHours.value.sumOf { it.horas_nocturnas.toDouble() }
     }
 
     fun getTotalExtraHoursSalary(): Double {
@@ -418,10 +404,6 @@ class ProfileViewModel(
         }
         return total
     }
-
-    // ==========================================
-    // ESTADÍSTICAS
-    // ==========================================
 
     fun getPermissionStats(user: User): List<PermissionStat> {
         return listOf(
@@ -498,7 +480,9 @@ class ProfileViewModel(
         val guard = _calendarGuards.value.find { it.date == dateStr }
         if (guard != null) {
             val brigade = _brigadesMap.value[guard.id_brigada]
-            val userBrigadeId = findUserBrigadeForDate(date, currentUser)
+            val userBrigadeId = findUserBrigadeForDate(date)
+
+            Log.d(TAG, "📅 Fecha: $dateStr | Guardia brigada: ${guard.id_brigada} | Usuario brigada: $userBrigadeId")
 
             if (userBrigadeId == guard.id_brigada) {
                 return CalendarEvent(
@@ -510,6 +494,61 @@ class ProfileViewModel(
         }
 
         return null
+    }
+
+    /**
+     * Encuentra la brigada del usuario para una fecha específica.
+     *
+     * LÓGICA CORREGIDA (igual que React):
+     * 1. Filtra asignaciones donde fecha_ini <= date (asignaciones que empiezan antes o en la fecha)
+     * 2. Ordena por fecha descendente (más reciente primero)
+     * 3. Para la misma fecha, ordena por prioridad de turno: Noche > Tarde > Mañana
+     * 4. Devuelve la brigada destino de la primera asignación
+     */
+    private fun findUserBrigadeForDate(date: LocalDate): Int? {
+        val dateStr = date.format(dateFormatter)
+
+        // Filtrar asignaciones válidas para esta fecha
+        val validAssignments = _userAssignments.value.filter { assignment ->
+            try {
+                val fechaIni = LocalDate.parse(assignment.fecha_ini, dateFormatter)
+                // La asignación es válida si empieza antes o en la fecha consultada
+                !fechaIni.isAfter(date)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error parseando fecha de asignación: ${assignment.fecha_ini}", e)
+                false
+            }
+        }
+
+        if (validAssignments.isEmpty()) {
+            Log.d(TAG, "⚠️ No hay asignaciones válidas para fecha $dateStr")
+            return null
+        }
+
+        // Ordenar: primero por fecha descendente, luego por prioridad de turno
+        val sortedAssignments = validAssignments.sortedWith(
+            compareByDescending<FirefighterAssignment> { assignment ->
+                try {
+                    LocalDate.parse(assignment.fecha_ini, dateFormatter)
+                } catch (e: Exception) {
+                    LocalDate.MIN
+                }
+            }.thenBy { assignment ->
+                // Prioridad de turno: Noche (0) > Tarde (1) > Mañana (2)
+                // Un índice menor = mayor prioridad
+                val turno = assignment.turno ?: ""
+                TURN_PRIORITY.indexOf(turno).let { if (it == -1) Int.MAX_VALUE else it }
+            }
+        )
+
+        val bestAssignment = sortedAssignments.firstOrNull()
+
+        if (bestAssignment != null) {
+            Log.d(TAG, "✅ Mejor asignación para $dateStr: brigada=${bestAssignment.id_brigada_destino}, " +
+                    "fecha_ini=${bestAssignment.fecha_ini}, turno=${bestAssignment.turno}")
+        }
+
+        return bestAssignment?.id_brigada_destino
     }
 
     private fun getRequestShortLabel(tipo: String): String {
@@ -579,26 +618,6 @@ class ProfileViewModel(
             LegendItem("Baja", EventColor.BAJA),
             LegendItem("Cambio Guardia", EventColor.SHIFT_CHANGE_WORK),
         )
-    }
-
-    private fun findUserBrigadeForDate(date: LocalDate, currentUser: User): Int? {
-        return _userAssignments.value
-            .filter { assignment ->
-                try {
-                    val fechaIni = LocalDate.parse(assignment.fecha_ini, dateFormatter)
-                    val fechaFin = assignment.fecha_fin?.let { LocalDate.parse(it, dateFormatter) }
-
-                    if (fechaFin != null) {
-                        !date.isBefore(fechaIni) && !date.isAfter(fechaFin)
-                    } else {
-                        !date.isBefore(fechaIni)
-                    }
-                } catch (e: Exception) {
-                    false
-                }
-            }
-            .maxByOrNull { it.fecha_ini }
-            ?.id_brigada_destino
     }
 
     fun findAssignmentForDate(date: LocalDate, brigadeId: Int): FirefighterAssignment? {
@@ -742,7 +761,7 @@ enum class EventColor(val hex: String) {
     BRIGADE_C("#3B82F6"),  // Azul
     BRIGADE_D("#DC2626"),  // Rojo
     BRIGADE_E("#FDE047"),  // Amarillo
-    BRIGADE_F("#000000"),
+    BRIGADE_F("#000000"),  // Negro
     VACACIONES("#DC2626"),
     ASUNTOS_PROPIOS("#F97316"),
     BAJA("#6B7280"),

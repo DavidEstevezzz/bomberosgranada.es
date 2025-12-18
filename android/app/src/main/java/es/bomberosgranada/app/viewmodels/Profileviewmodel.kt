@@ -13,20 +13,16 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
- * ProfileViewModel - VERSIÓN CORREGIDA Y CON LOGS DE DIAGNÓSTICO
+ * ViewModel para la pantalla de Perfil - VERSIÓN CORREGIDA
  *
- * CORRECCIONES APLICADAS (igual que React):
- * 1. ✅ Se cargan TODAS las asignaciones del usuario (no solo del mes actual)
- * 2. ✅ La lógica findUserBrigadeForDate ahora considera asignaciones de meses anteriores
- * 3. ✅ Logs detallados para depuración
+ * CORRECCIÓN PRINCIPAL: Replica EXACTAMENTE la lógica de React (UserGuardsCalendarPage.jsx):
  *
- * DIFERENCIA CLAVE CON REACT:
- * React pre-filtra las guardias y solo muestra aquellas donde la brigada coincide.
- * Android evalúa cada día del calendario y muestra el evento correspondiente.
- * Ambos enfoques deberían dar el mismo resultado si la lógica de findUserBrigadeForDate es correcta.
+ * 1. Obtiene asignaciones efectivas = última asignación previa + asignaciones del mes
+ * 2. Extrae brigadas únicas DE LAS ASIGNACIONES DEL USUARIO (no todas las brigadas)
+ * 3. Obtiene guardias SOLO de esas brigadas
+ * 4. Para cada guardia, usa findLastAssignment(date, requiredBrigada) para verificar
  */
 class ProfileViewModel(
     private val usersRepository: UsersRepository,
@@ -39,13 +35,15 @@ class ProfileViewModel(
 ) : ViewModel() {
 
     companion object {
-        private const val TAG = "ProfileVM_DEBUG"
+        private const val TAG = "ProfileViewModel"
+        private const val TAG_DEBUG = "ProfileVM_DEBUG"
+
+        // Prioridad de turnos: Noche > Tarde > Mañana (igual que en React)
+        private val TURN_PRIORITY = listOf("Noche", "Tarde", "Mañana")
     }
 
-    private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    private val turnPriority = listOf("Noche", "Tarde", "Mañana")
     // ==========================================
-    // ESTADOS
+    // ESTADOS UI
     // ==========================================
 
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
@@ -54,16 +52,35 @@ class ProfileViewModel(
     private val _user = MutableStateFlow<User?>(null)
     val user: StateFlow<User?> = _user.asStateFlow()
 
-    // Mapa de brigadas
+    // ==========================================
+    // CACHE DE DATOS (cargados una sola vez)
+    // ==========================================
+
     private val _brigadesMap = MutableStateFlow<Map<Int, Brigade>>(emptyMap())
     val brigadesMap: StateFlow<Map<Int, Brigade>> = _brigadesMap.asStateFlow()
 
-    // TODAS las asignaciones del usuario (no solo del mes actual)
     private val _userAssignments = MutableStateFlow<List<FirefighterAssignment>>(emptyList())
     val userAssignments: StateFlow<List<FirefighterAssignment>> = _userAssignments.asStateFlow()
 
+    // Cache de TODOS los datos del usuario (se cargan una vez)
+    private var allUserRequests: List<RequestItem> = emptyList()
+    private var allUserShiftChanges: List<ShiftChangeRequest> = emptyList()
+    private var allUserExtraHours: List<ExtraHour> = emptyList()
+
+    // *** CLAVE: Cache de TODAS las asignaciones del usuario ***
+    private var allUserAssignmentsCache: List<FirefighterAssignment> = emptyList()
+
+    // *** CLAVE: Asignaciones efectivas para el mes actual (incluye última previa) ***
+    // Convertido a StateFlow para que el UI pueda observar cambios
+    private val _effectiveAssignments = MutableStateFlow<List<FirefighterAssignment>>(emptyList())
+    private val effectiveAssignments: List<FirefighterAssignment>
+        get() = _effectiveAssignments.value
+
+    // Flag para evitar recargas
+    private var dataLoaded = false
+
     // ==========================================
-    // CALENDARIO
+    // CALENDARIO - Mes independiente
     // ==========================================
 
     private val _calendarMonth = MutableStateFlow(YearMonth.now())
@@ -77,6 +94,10 @@ class ProfileViewModel(
 
     private val _calendarShiftChanges = MutableStateFlow<List<ShiftChangeRequest>>(emptyList())
     val calendarShiftChanges: StateFlow<List<ShiftChangeRequest>> = _calendarShiftChanges.asStateFlow()
+
+    // Estado de carga del calendario
+    private val _isCalendarLoading = MutableStateFlow(false)
+    val isCalendarLoading: StateFlow<Boolean> = _isCalendarLoading.asStateFlow()
 
     // ==========================================
     // SOLICITUDES - Mes independiente
@@ -112,96 +133,105 @@ class ProfileViewModel(
     // CAMBIO DE CONTRASEÑA
     // ==========================================
 
+    private val _isChangingPassword = MutableStateFlow(false)
+    val isChangingPassword: StateFlow<Boolean> = _isChangingPassword.asStateFlow()
+
     private val _passwordChangeSuccess = MutableStateFlow<String?>(null)
     val passwordChangeSuccess: StateFlow<String?> = _passwordChangeSuccess.asStateFlow()
 
     private val _passwordChangeError = MutableStateFlow<String?>(null)
     val passwordChangeError: StateFlow<String?> = _passwordChangeError.asStateFlow()
 
-    // Mensajes de estado
+    // ==========================================
+    // MENSAJES
+    // ==========================================
+
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    // Cache para evitar recargas
-    private var dataLoaded = false
-    private var allUserRequests: List<RequestItem> = emptyList()
-    private var allUserShiftChanges: List<ShiftChangeRequest> = emptyList()
-    private var allUserExtraHours: List<ExtraHour> = emptyList()
-    private var allGuards: List<Guard> = emptyList()
-
     // ==========================================
-    // CARGA DE DATOS - MEJORADA CON LOGS
+    // INICIALIZACIÓN
     // ==========================================
 
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+
+    init {
+        Log.d(TAG, "ProfileViewModel inicializado")
+    }
+
+    // ==========================================
+    // CARGA DE DATOS - OPTIMIZADA
+    // ==========================================
+
+    /**
+     * Carga todos los datos del perfil UNA SOLA VEZ
+     */
     fun loadProfile(currentUser: User) {
-        if (dataLoaded) {
-            Log.d(TAG, "📋 Datos ya cargados, omitiendo recarga")
+        if (dataLoaded && _user.value?.id_empleado == currentUser.id_empleado) {
+            Log.d(TAG, "Datos ya cargados, usando cache")
             return
         }
 
         viewModelScope.launch {
             _uiState.value = ProfileUiState.Loading
-            Log.d(TAG, "═══════════════════════════════════════")
-            Log.d(TAG, "🚀 INICIANDO CARGA DE PERFIL")
-            Log.d(TAG, "👤 Usuario: ${currentUser.nombre} ${currentUser.apellido} (ID: ${currentUser.id_empleado})")
-            Log.d(TAG, "═══════════════════════════════════════")
+            Log.d(TAG, "Cargando perfil para usuario: ${currentUser.id_empleado}")
 
             try {
-                // Cargar todo en paralelo
+                _user.value = currentUser
+
+                // CARGA PARALELA de todos los datos
                 val brigadesDeferred = async { brigadesRepository.getAllBrigades() }
                 val assignmentsDeferred = async { assignmentsRepository.getAssignments() }
                 val requestsDeferred = async { requestsRepository.getRequests() }
                 val changesDeferred = async { shiftChangeRepository.getShiftChangeRequests() }
                 val extraHoursDeferred = async { extraHoursRepository.getAllExtraHours() }
 
-                // Esperar brigadas primero (necesarias para guardias)
+                // Esperar brigadas primero (para mapeo de nombres)
                 val brigadesResult = brigadesDeferred.await()
                 brigadesResult.fold(
                     onSuccess = { brigades ->
                         _brigadesMap.value = brigades.associateBy { it.id_brigada }
-                        Log.d(TAG, "✅ Brigadas cargadas: ${brigades.size}")
-                        brigades.forEach {
-                            Log.d(TAG, "   📍 Brigada ${it.id_brigada}: ${it.nombre} (Parque: ${it.id_parque})")
-                        }
+                        Log.d(TAG, "✅ Brigadas: ${brigades.size}")
                     },
                     onFailure = { Log.e(TAG, "❌ Error brigadas: ${it.message}") }
                 )
 
-                // Cargar guardias del mes actual
-                loadGuardsForMonth(_calendarMonth.value)
-
-                // Procesar asignaciones - TODAS, no solo las del mes
+                // Procesar asignaciones - GUARDAR TODAS EN CACHE (ANTES de cargar guardias)
                 val assignmentsResult = assignmentsDeferred.await()
                 assignmentsResult.fold(
                     onSuccess = { assignments ->
-                        val userAssignments = assignments.filter {
+                        Log.d(TAG_DEBUG, "📋 Total asignaciones del API: ${assignments.size}")
+                        Log.d(TAG_DEBUG, "📋 Usuario actual id_empleado: ${currentUser.id_empleado}")
+
+                        // DEBUG: Mostrar algunos id_empleado de las asignaciones
+                        val sampleIds = assignments.take(10).map { it.id_empleado }.distinct()
+                        Log.d(TAG_DEBUG, "📋 Muestra de id_empleado en asignaciones: $sampleIds")
+
+                        // Filtrar SOLO las asignaciones de este usuario
+                        allUserAssignmentsCache = assignments.filter {
                             it.id_empleado == currentUser.id_empleado
                         }
-                        _userAssignments.value = userAssignments
-                        applyUserBrigadeGuardFilter()
+                        _userAssignments.value = allUserAssignmentsCache
 
-                        Log.d(TAG, "═══════════════════════════════════════")
-                        Log.d(TAG, "📊 ASIGNACIONES DEL USUARIO")
-                        Log.d(TAG, "═══════════════════════════════════════")
-                        Log.d(TAG, "Total asignaciones en sistema: ${assignments.size}")
-                        Log.d(TAG, "Asignaciones del usuario: ${userAssignments.size}")
+                        Log.d(TAG_DEBUG, "✅ Asignaciones usuario (total): ${allUserAssignmentsCache.size}")
 
-                        // Mostrar las últimas 10 asignaciones ordenadas
-                        userAssignments
-                            .sortedByDescending { it.fecha_ini }
-                            .take(10)
-                            .forEach { assignment ->
-                                Log.d(TAG, "   📅 ${assignment.fecha_ini} | " +
-                                        "Turno: ${assignment.turno} | " +
-                                        "Brigada Destino: ${assignment.id_brigada_destino} | " +
-                                        "Brigada Origen: ${assignment.id_brigada_origen}")
+                        // DEBUG: Mostrar las últimas 20 asignaciones del usuario
+                        if (allUserAssignmentsCache.isNotEmpty()) {
+                            allUserAssignmentsCache.sortedByDescending { it.fecha_ini }.take(20).forEach { assignment ->
+                                Log.d(TAG_DEBUG, "   📋 ${assignment.fecha_ini} | Brigada: ${assignment.id_brigada_destino} | Turno: ${assignment.turno}")
                             }
+                        } else {
+                            Log.w(TAG_DEBUG, "⚠️ NO HAY ASIGNACIONES PARA ESTE USUARIO (id=${currentUser.id_empleado})")
+                        }
                     },
                     onFailure = { Log.e(TAG, "❌ Error asignaciones: ${it.message}") }
                 )
+
+                // Cargar guardias del mes actual (DESPUÉS de tener las asignaciones)
+                loadGuardsForMonth(_calendarMonth.value)
 
                 // Procesar solicitudes - CACHEAR TODAS
                 val requestsResult = requestsDeferred.await()
@@ -212,13 +242,10 @@ class ProfileViewModel(
                         }
                         Log.d(TAG, "✅ Total solicitudes usuario: ${allUserRequests.size}")
 
-                        // Filtrar para calendario (confirmadas)
                         _calendarRequests.value = allUserRequests.filter {
                             it.estado.lowercase() == "confirmada"
                         }
-                        Log.d(TAG, "   📋 Solicitudes confirmadas para calendario: ${_calendarRequests.value.size}")
 
-                        // Filtrar para sección del mes actual
                         filterRequestsByMonth(_requestsMonth.value)
                     },
                     onFailure = { Log.e(TAG, "❌ Error solicitudes: ${it.message}") }
@@ -234,13 +261,10 @@ class ProfileViewModel(
                         }
                         Log.d(TAG, "✅ Total cambios usuario: ${allUserShiftChanges.size}")
 
-                        // Filtrar para calendario (aceptados)
                         _calendarShiftChanges.value = allUserShiftChanges.filter {
                             it.estado.lowercase() == "aceptado"
                         }
-                        Log.d(TAG, "   🔄 Cambios aceptados para calendario: ${_calendarShiftChanges.value.size}")
 
-                        // Filtrar para sección del mes actual
                         filterShiftChangesByMonth(_shiftChangesMonth.value)
                     },
                     onFailure = { Log.e(TAG, "❌ Error cambios: ${it.message}") }
@@ -255,7 +279,6 @@ class ProfileViewModel(
                         }
                         Log.d(TAG, "✅ Total horas extra usuario: ${allUserExtraHours.size}")
 
-                        // Filtrar para sección del mes actual
                         filterExtraHoursByMonth(_extraHoursMonth.value)
                     },
                     onFailure = { Log.e(TAG, "❌ Error horas extra: ${it.message}") }
@@ -264,133 +287,143 @@ class ProfileViewModel(
                 dataLoaded = true
                 _uiState.value = ProfileUiState.Success
 
-                Log.d(TAG, "═══════════════════════════════════════")
-                Log.d(TAG, "✅ CARGA DE PERFIL COMPLETADA")
-                Log.d(TAG, "═══════════════════════════════════════")
-
             } catch (e: Exception) {
-                Log.e(TAG, "💥 Error cargando perfil: ${e.message}", e)
+                Log.e(TAG, "Error cargando perfil: ${e.message}", e)
                 _uiState.value = ProfileUiState.Error(e.message ?: "Error desconocido")
             }
         }
     }
 
+    // ==========================================
+    // CARGA DE GUARDIAS - LÓGICA DE REACT
+    // ==========================================
+
     /**
-     * Carga guardias para un mes específico
+     * Carga guardias para un mes específico.
+     *
+     * REPLICA LA LÓGICA DE REACT (UserGuardsCalendarPage.jsx):
+     * 1. Calcula asignaciones efectivas (mes actual + última previa)
+     * 2. Extrae brigadas ÚNICAS de esas asignaciones
+     * 3. Obtiene guardias SOLO de esas brigadas
      */
     private suspend fun loadGuardsForMonth(month: YearMonth) {
-        val brigadeIds = _brigadesMap.value.keys.toList()
-        if (brigadeIds.isEmpty()) {
-            Log.w(TAG, "⚠️ No hay brigadas para cargar guardias")
+        // 1. Calcular asignaciones efectivas para este mes
+        calculateEffectiveAssignments(month)
+
+        // 2. Extraer brigadas únicas DE LAS ASIGNACIONES (no todas las brigadas del sistema)
+        val userBrigadeIds = effectiveAssignments
+            .map { it.id_brigada_destino }
+            .distinct()
+
+        if (userBrigadeIds.isEmpty()) {
+            Log.w(TAG_DEBUG, "⚠️ No hay brigadas en las asignaciones del usuario")
+            _calendarGuards.value = emptyList()
             return
         }
 
         val startDate = month.atDay(1).format(DateTimeFormatter.ISO_LOCAL_DATE)
         val endDate = month.atEndOfMonth().format(DateTimeFormatter.ISO_LOCAL_DATE)
 
-        Log.d(TAG, "📅 Cargando guardias para mes: $month ($startDate a $endDate)")
-        Log.d(TAG, "   Brigadas a consultar: $brigadeIds")
+        Log.d(TAG_DEBUG, "📅 Cargando guardias para mes: $month ($startDate a $endDate)")
+        Log.d(TAG_DEBUG, "   Brigadas del usuario: $userBrigadeIds")
 
+        // 3. Obtener guardias SOLO de las brigadas del usuario
         val result = guardsRepository.getGuardsByDateRange(
-            brigadeIds = brigadeIds,
+            brigadeIds = userBrigadeIds,
             startDate = startDate,
             endDate = endDate
         )
 
         result.fold(
             onSuccess = { guards ->
-                allGuards = guards
-                applyUserBrigadeGuardFilter()
                 _calendarGuards.value = guards
-                Log.d(TAG, "✅ Guardias mes $month: ${guards.size}")
+                Log.d(TAG_DEBUG, "✅ Guardias obtenidas: ${guards.size}")
 
-                // Mostrar algunas guardias como ejemplo
-                guards.take(5).forEach { guard ->
-                    Log.d(TAG, "   🛡️ ${guard.date} | Brigada: ${guard.id_brigada}")
+                // DEBUG: Mostrar las guardias
+                guards.take(10).forEach { guard ->
+                    val brigadeName = _brigadesMap.value[guard.id_brigada]?.nombre ?: "?"
+                    Log.d(TAG_DEBUG, "   🛡️ ${guard.date} | Brigada: ${guard.id_brigada} ($brigadeName)")
                 }
             },
             onFailure = { Log.e(TAG, "❌ Error guardias: ${it.message}") }
         )
     }
 
-    private fun applyUserBrigadeGuardFilter() {
-        val relevantBrigades = _userAssignments.value.map { it.id_brigada_destino }.distinct()
-        _calendarGuards.value = if (relevantBrigades.isNotEmpty()) {
-            val filtered = allGuards.filter { it.id_brigada in relevantBrigades }
-            Log.d(TAG, "🛡️ Filtrando guardias por brigadas del usuario: ${relevantBrigades.joinToString()}")
-            Log.d(TAG, "   Guardias mostradas tras filtro: ${filtered.size} de ${allGuards.size}")
-            filtered
-        } else {
-            allGuards
-        }
-    }
+    /**
+     * Calcula las asignaciones efectivas para un mes.
+     *
+     * REPLICA LA LÓGICA DE REACT:
+     * - Asignaciones del mes actual
+     * - + Última asignación PREVIA al mes (buscando hacia atrás)
+     */
+    private fun calculateEffectiveAssignments(month: YearMonth) {
+        val monthStart = month.atDay(1)
+        val monthEnd = month.atEndOfMonth()
 
-    // ==========================================
-    // FILTRADO LOCAL
-    // ==========================================
-
-    private fun getAssignmentComparator(): Comparator<FirefighterAssignment> {
-        return compareByDescending<FirefighterAssignment> { assignment ->
-            try {
-                LocalDate.parse(assignment.fecha_ini, dateFormatter)
-            } catch (e: Exception) {
-                LocalDate.MIN
-            }
-        }.thenBy { assignment ->
-            val turno = assignment.turno ?: "Mañana"
-            turnPriority.indexOf(turno).let { if (it == -1) turnPriority.size else it }
-        }
-    }
-
-    private fun getLatestPriorAssignment(monthStart: LocalDate): FirefighterAssignment? {
-        val assignmentsUpToMonth = _userAssignments.value.filter { assignment ->
+        // 1. Asignaciones del mes actual
+        val currentMonthAssignments = allUserAssignmentsCache.filter { assignment ->
             try {
                 val assignmentDate = LocalDate.parse(assignment.fecha_ini, dateFormatter)
-                !assignmentDate.isAfter(monthStart)
+                !assignmentDate.isBefore(monthStart) && !assignmentDate.isAfter(monthEnd)
             } catch (e: Exception) {
                 false
             }
         }
 
-        if (assignmentsUpToMonth.isEmpty()) {
-            return null
+        Log.d(TAG_DEBUG, "📅 Asignaciones del mes $month: ${currentMonthAssignments.size}")
+        currentMonthAssignments.forEach { assignment ->
+            Log.d(TAG_DEBUG, "   📋 ${assignment.fecha_ini} | Brigada: ${assignment.id_brigada_destino} | Turno: ${assignment.turno}")
         }
 
-        return assignmentsUpToMonth.maxWithOrNull(getAssignmentComparator())?.also {
-            Log.d(
-                TAG,
-                "   🔁 Usando asignación previa (${it.fecha_ini}, turno ${it.turno}) como fallback para el mes ${monthStart.month}"
-            )
+        // 2. Buscar la última asignación PREVIA al mes (igual que React)
+        val lastAssignmentPrevMonth = findLastAssignmentBeforeDate(monthStart)
+
+        if (lastAssignmentPrevMonth != null) {
+            Log.d(TAG_DEBUG, "📅 Última asignación previa: ${lastAssignmentPrevMonth.fecha_ini} | Brigada: ${lastAssignmentPrevMonth.id_brigada_destino}")
+            // Combinar: última previa + mes actual
+            _effectiveAssignments.value = listOf(lastAssignmentPrevMonth) + currentMonthAssignments
+        } else {
+            Log.d(TAG_DEBUG, "⚠️ No se encontró asignación previa al mes $month")
+            _effectiveAssignments.value = currentMonthAssignments
         }
+
+        Log.d(TAG_DEBUG, "📅 Asignaciones efectivas totales: ${_effectiveAssignments.value.size}")
     }
 
-    private fun applyUserBrigadeGuardFilter(month: YearMonth) {
-        if (allGuards.isEmpty()) {
-            _calendarGuards.value = emptyList()
-            return
-        }
-
-        val monthStart = month.atDay(1)
-        val fallbackAssignment = getLatestPriorAssignment(monthStart)
-
-        val filteredGuards = if (_userAssignments.value.isEmpty()) {
-            allGuards
-        } else {
-            allGuards.filter { guard ->
-                try {
-                    val guardDate = LocalDate.parse(guard.date, dateFormatter)
-                    val userBrigadeForDate = findUserBrigadeForDate(guardDate, fallbackAssignment)
-                    userBrigadeForDate == null || guard.id_brigada == userBrigadeForDate
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error parseando fecha de guardia ${guard.date}", e)
-                    false
-                }
+    /**
+     * Busca la última asignación antes de una fecha específica.
+     * Ordena por fecha desc y luego por prioridad de turno.
+     */
+    private fun findLastAssignmentBeforeDate(date: LocalDate): FirefighterAssignment? {
+        val previousAssignments = allUserAssignmentsCache.filter { assignment ->
+            try {
+                val assignmentDate = LocalDate.parse(assignment.fecha_ini, dateFormatter)
+                assignmentDate.isBefore(date)
+            } catch (e: Exception) {
+                false
             }
         }
 
-        _calendarGuards.value = filteredGuards
+        if (previousAssignments.isEmpty()) return null
+
+        // Ordenar: fecha desc, luego prioridad de turno
+        return previousAssignments.sortedWith(
+            compareByDescending<FirefighterAssignment> { assignment ->
+                try {
+                    LocalDate.parse(assignment.fecha_ini, dateFormatter)
+                } catch (e: Exception) {
+                    LocalDate.MIN
+                }
+            }.thenBy { assignment ->
+                val turno = assignment.turno ?: "Mañana"
+                TURN_PRIORITY.indexOf(turno).let { if (it == -1) Int.MAX_VALUE else it }
+            }
+        ).firstOrNull()
     }
 
+    // ==========================================
+    // FILTRADO LOCAL
+    // ==========================================
 
     private fun filterRequestsByMonth(month: YearMonth) {
         _monthRequests.value = allUserRequests.filter { req ->
@@ -430,13 +463,67 @@ class ProfileViewModel(
     // ==========================================
 
     fun previousCalendarMonth(currentUser: User) {
-        _calendarMonth.value = _calendarMonth.value.minusMonths(1)
-        viewModelScope.launch { loadGuardsForMonth(_calendarMonth.value) }
+        viewModelScope.launch {
+            _isCalendarLoading.value = true
+            _calendarGuards.value = emptyList() // Limpiar guardias mientras carga
+            _calendarMonth.value = _calendarMonth.value.minusMonths(1)
+
+            // Recalcular asignaciones efectivas y luego cargar guardias
+            calculateEffectiveAssignments(_calendarMonth.value)
+            loadGuardsForMonthInternal(_calendarMonth.value)
+
+            _isCalendarLoading.value = false
+        }
     }
 
     fun nextCalendarMonth(currentUser: User) {
-        _calendarMonth.value = _calendarMonth.value.plusMonths(1)
-        viewModelScope.launch { loadGuardsForMonth(_calendarMonth.value) }
+        viewModelScope.launch {
+            _isCalendarLoading.value = true
+            _calendarGuards.value = emptyList() // Limpiar guardias mientras carga
+            _calendarMonth.value = _calendarMonth.value.plusMonths(1)
+
+            // Recalcular asignaciones efectivas y luego cargar guardias
+            calculateEffectiveAssignments(_calendarMonth.value)
+            loadGuardsForMonthInternal(_calendarMonth.value)
+
+            _isCalendarLoading.value = false
+        }
+    }
+
+    /**
+     * Carga guardias sin recalcular effectiveAssignments (para navegación)
+     */
+    private suspend fun loadGuardsForMonthInternal(month: YearMonth) {
+        // Extraer brigadas únicas DE LAS ASIGNACIONES
+        val userBrigadeIds = effectiveAssignments
+            .map { it.id_brigada_destino }
+            .distinct()
+
+        if (userBrigadeIds.isEmpty()) {
+            Log.w(TAG_DEBUG, "⚠️ No hay brigadas en las asignaciones del usuario para $month")
+            _calendarGuards.value = emptyList()
+            return
+        }
+
+        val startDate = month.atDay(1).format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val endDate = month.atEndOfMonth().format(DateTimeFormatter.ISO_LOCAL_DATE)
+
+        Log.d(TAG_DEBUG, "📅 Cargando guardias para mes: $month ($startDate a $endDate)")
+        Log.d(TAG_DEBUG, "   Brigadas del usuario: $userBrigadeIds")
+
+        val result = guardsRepository.getGuardsByDateRange(
+            brigadeIds = userBrigadeIds,
+            startDate = startDate,
+            endDate = endDate
+        )
+
+        result.fold(
+            onSuccess = { guards ->
+                _calendarGuards.value = guards
+                Log.d(TAG_DEBUG, "✅ Guardias obtenidas: ${guards.size}")
+            },
+            onFailure = { Log.e(TAG, "❌ Error guardias: ${it.message}") }
+        )
     }
 
     fun previousRequestsMonth(currentUser: User) {
@@ -467,227 +554,6 @@ class ProfileViewModel(
     fun nextExtraHoursMonth(currentUser: User) {
         _extraHoursMonth.value = _extraHoursMonth.value.plusMonths(1)
         filterExtraHoursByMonth(_extraHoursMonth.value)
-    }
-
-    // ==========================================
-    // EVENTOS DEL CALENDARIO - CON LOGS DETALLADOS
-    // ==========================================
-
-    /**
-     * Obtiene el evento a mostrar para una fecha específica.
-     *
-     * PRIORIDAD:
-     * 1. Solicitudes confirmadas (vacaciones, permisos, etc.)
-     * 2. Cambios de guardia aceptados
-     * 3. Guardias normales (donde la brigada del usuario coincide)
-     */
-    fun getEventForDate(date: LocalDate, currentUser: User): CalendarEvent? {
-        val dateStr = date.format(dateFormatter)
-
-        // 1. Solicitudes confirmadas (prioridad máxima - días libres)
-        val request = _calendarRequests.value.find { req ->
-            try {
-                val fechaIni = LocalDate.parse(req.fecha_ini, dateFormatter)
-                val fechaFin = req.fecha_fin?.let { LocalDate.parse(it, dateFormatter) } ?: fechaIni
-                !date.isBefore(fechaIni) && !date.isAfter(fechaFin)
-            } catch (e: Exception) {
-                false
-            }
-        }
-        if (request != null) {
-            Log.d(TAG, "📅 $dateStr → Solicitud: ${request.tipo}")
-            return CalendarEvent(
-                type = CalendarEventType.REQUEST,
-                label = getRequestShortLabel(request.tipo),
-                color = getRequestEventColor(request.tipo)
-            )
-        }
-
-        // 2. Cambios de guardia aceptados
-        val change = _calendarShiftChanges.value.find { it.fecha == dateStr || it.fecha2 == dateStr }
-        if (change != null) {
-            val isMyGuard = (change.id_empleado1 == currentUser.id_empleado && change.fecha == dateStr) ||
-                    (change.id_empleado2 == currentUser.id_empleado && change.fecha2 == dateStr)
-            Log.d(TAG, "📅 $dateStr → Cambio guardia: ${if (isMyGuard) "TRABAJO" else "LIBRE"}")
-            return CalendarEvent(
-                type = if (isMyGuard) CalendarEventType.SHIFT_CHANGE_WORK else CalendarEventType.SHIFT_CHANGE_FREE,
-                label = if (isMyGuard) "CG" else "Libre",
-                color = if (isMyGuard) EventColor.SHIFT_CHANGE_WORK else EventColor.BRIGADE_B
-            )
-        }
-
-        // 3. Guardia normal - AQUÍ ESTÁ LA LÓGICA CRÍTICA
-        val userBrigadeId = findUserBrigadeForDate(date)
-        val guard = _calendarGuards.value.find { guard ->
-            guard.date == dateStr && (userBrigadeId == null || guard.id_brigada == userBrigadeId)
-        }
-        if (guard != null && userBrigadeId != null) {
-            val brigade = _brigadesMap.value[guard.id_brigada]
-
-            Log.d(TAG, "═══════════════════════════════════════")
-            Log.d(TAG, "🔍 EVALUANDO GUARDIA PARA FECHA: $dateStr")
-            Log.d(TAG, "   🛡️ Guardia encontrada: Brigada ${guard.id_brigada} (${brigade?.nombre})")
-            Log.d(TAG, "   👤 Brigada del usuario: $userBrigadeId")
-            Log.d(TAG, "   ✓ ¿Coinciden? ${userBrigadeId == guard.id_brigada}")
-            Log.d(TAG, "═══════════════════════════════════════")
-
-            if (userBrigadeId == guard.id_brigada) {
-                return CalendarEvent(
-                    type = CalendarEventType.GUARD,
-                    label = brigade?.nombre ?: "G",
-                    color = getBrigadeEventColor(brigade?.nombre ?: "")
-                )
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * Encuentra la brigada del usuario para una fecha específica.
-     *
-     * LÓGICA (igual que React):
-     * 1. Filtra asignaciones donde fecha_ini <= date
-     * 2. Ordena por fecha descendente (más reciente primero)
-     * 3. Para la misma fecha, ordena por prioridad de turno: Noche > Tarde > Mañana
-     * 4. Devuelve la brigada destino de la primera asignación
-     */
-    private fun findUserBrigadeForDate(
-        date: LocalDate,
-        latestPriorAssignment: FirefighterAssignment? = null
-    ): Int? {
-        val dateStr = date.format(dateFormatter)
-        val monthStart = date.withDayOfMonth(1)
-        val priorAssignmentForMonth = latestPriorAssignment ?: getLatestPriorAssignment(monthStart)
-
-        Log.d(TAG, "   🔎 Buscando brigada para fecha: $dateStr")
-        Log.d(TAG, "   📊 Total asignaciones del usuario: ${_userAssignments.value.size}")
-
-        // Filtrar asignaciones válidas para esta fecha
-        val validAssignments = _userAssignments.value.filter { assignment ->
-            try {
-                val fechaIni = LocalDate.parse(assignment.fecha_ini, dateFormatter)
-                val isValid = !fechaIni.isAfter(date)
-                if (isValid) {
-                    Log.v(TAG, "      ✓ Asignación válida: ${assignment.fecha_ini} (turno: ${assignment.turno}) → Brigada ${assignment.id_brigada_destino}")
-                }
-                isValid
-            } catch (e: Exception) {
-                Log.e(TAG, "      ❌ Error parseando fecha: ${assignment.fecha_ini}", e)
-                false
-            }
-        }
-
-        Log.d(TAG, "   📋 Asignaciones válidas encontradas: ${validAssignments.size}")
-
-        if (validAssignments.isEmpty()) {
-            priorAssignmentForMonth?.let { fallback ->
-                Log.d(TAG, "   🔄 Usando asignación previa del ${fallback.fecha_ini} para fecha $dateStr")
-                return fallback.id_brigada_destino
-            }
-            Log.w(TAG, "   ⚠️ NO HAY ASIGNACIONES VÁLIDAS para fecha $dateStr")
-            return null
-        }
-
-        // Ordenar: primero por fecha descendente, luego por prioridad de turno
-        val sortedAssignments = validAssignments.sortedWith(getAssignmentComparator())
-
-        val lastAssignment = sortedAssignments.firstOrNull() ?: priorAssignmentForMonth
-
-        if (lastAssignment != null) {
-            Log.d(TAG, "   ✅ Última asignación seleccionada:")
-            Log.d(TAG, "      📅 Fecha: ${lastAssignment.fecha_ini}")
-            Log.d(TAG, "      🕐 Turno: ${lastAssignment.turno}")
-            Log.d(TAG, "      🏠 Brigada Origen: ${lastAssignment.id_brigada_origen}")
-            Log.d(TAG, "      🎯 Brigada Destino: ${lastAssignment.id_brigada_destino}")
-            return lastAssignment.id_brigada_destino
-        }
-
-        Log.w(TAG, "   ⚠️ No se encontró asignación para fecha $dateStr")
-        return null
-    }
-
-    // ==========================================
-    // HELPERS PARA COLORES Y ETIQUETAS
-    // ==========================================
-
-    private fun getRequestShortLabel(tipo: String): String {
-        return when (tipo.lowercase()) {
-            "vacaciones" -> "VAC"
-            "asuntos propios" -> "AP"
-            "licencias por jornadas" -> "LJ"
-            "licencias por días" -> "LD"
-            "modulo" -> "MOD"
-            "bajas" -> "BAJA"
-            "compensacion grupos especiales" -> "CGE"
-            "horas sindicales" -> "HS"
-            "vestuario" -> "VEST"
-            else -> tipo.take(3).uppercase()
-        }
-    }
-
-    private fun getRequestEventColor(tipo: String): EventColor {
-        return when (tipo.lowercase()) {
-            "vacaciones" -> EventColor.VACACIONES
-            "asuntos propios" -> EventColor.ASUNTOS_PROPIOS
-            "bajas" -> EventColor.BAJA
-            "licencias por jornadas", "licencias por días" -> EventColor.LICENCIA
-            "modulo" -> EventColor.MODULO
-            "compensacion grupos especiales" -> EventColor.COMPENSACION
-            "horas sindicales" -> EventColor.HORAS_SINDICALES
-            else -> EventColor.OTHER_REQUEST
-        }
-    }
-
-    fun getBrigadeEventColor(brigadeName: String): EventColor {
-        val normalized = brigadeName.lowercase(Locale.getDefault())
-        return when {
-            normalized.contains("brigada a") -> EventColor.BRIGADE_A
-            normalized.contains("brigada b") -> EventColor.BRIGADE_B
-            normalized.contains("brigada c") -> EventColor.BRIGADE_C
-            normalized.contains("brigada d") -> EventColor.BRIGADE_D
-            normalized.contains("brigada e") -> EventColor.BRIGADE_E
-            normalized.contains("brigada f") -> EventColor.BRIGADE_F
-            else -> EventColor.BRIGADE_DEFAULT
-        }
-    }
-
-    fun getStatusColor(status: String): StatusColor {
-        return when (status.lowercase()) {
-            "confirmada" -> StatusColor.CONFIRMADA
-            "aceptado" -> StatusColor.ACEPTADO
-            "pendiente" -> StatusColor.PENDIENTE
-            "cancelada" -> StatusColor.CANCELADA
-            "rechazada" -> StatusColor.RECHAZADA
-            "rechazado" -> StatusColor.RECHAZADO
-            else -> StatusColor.DEFAULT
-        }
-    }
-
-    fun getCalendarLegend(): List<LegendItem> {
-        return listOf(
-            LegendItem("Brigada A", EventColor.BRIGADE_A),
-            LegendItem("Brigada B", EventColor.BRIGADE_B),
-            LegendItem("Brigada C", EventColor.BRIGADE_C),
-            LegendItem("Brigada D", EventColor.BRIGADE_D),
-            LegendItem("Brigada E", EventColor.BRIGADE_E),
-            LegendItem("Brigada F", EventColor.BRIGADE_F),
-            LegendItem("Vacaciones", EventColor.VACACIONES),
-            LegendItem("Asuntos Propios", EventColor.ASUNTOS_PROPIOS),
-            LegendItem("Baja", EventColor.BAJA),
-            LegendItem("Cambio Guardia", EventColor.SHIFT_CHANGE_WORK),
-        )
-    }
-
-    fun findAssignmentForDate(date: LocalDate, brigadeId: Int): FirefighterAssignment? {
-        return _userAssignments.value.find { assignment ->
-            try {
-                val assignmentDate = LocalDate.parse(assignment.fecha_ini, dateFormatter)
-                assignmentDate == date && assignment.id_brigada_destino == brigadeId
-            } catch (e: Exception) {
-                false
-            }
-        }
     }
 
     // ==========================================
@@ -728,13 +594,398 @@ class ProfileViewModel(
         )
     }
 
+    fun getTotalDiurnas(): Double {
+        return _monthExtraHours.value.sumOf { (it.horas_diurnas ?: 0.0).toDouble() }
+    }
+
+    fun getTotalNocturnas(): Double {
+        return _monthExtraHours.value.sumOf { (it.horas_nocturnas ?: 0.0).toDouble() }
+    }
+
+    // ==========================================
+    // EVENTOS DEL CALENDARIO - LÓGICA DE REACT
+    // ==========================================
+
+    /**
+     * Obtiene el evento para una fecha específica.
+     *
+     * REPLICA LA LÓGICA DE REACT (UserGuardsCalendarPage.jsx):
+     * 1. Solicitudes confirmadas (prioridad máxima)
+     * 2. Cambios de guardia aceptados
+     * 3. Guardias: usa findLastAssignment(date, guard.id_brigada)
+     *    - Si es requerimiento -> color verde
+     */
+    fun getEventForDate(date: LocalDate, currentUser: User): CalendarEvent? {
+        // Si está cargando, no mostrar nada
+        if (_isCalendarLoading.value) {
+            return null
+        }
+
+        val dateStr = date.format(dateFormatter)
+
+        // 1. Solicitudes confirmadas (prioridad máxima - días libres)
+        val request = _calendarRequests.value.find { req ->
+            try {
+                val fechaIni = LocalDate.parse(req.fecha_ini, dateFormatter)
+                val fechaFin = req.fecha_fin?.let { LocalDate.parse(it, dateFormatter) } ?: fechaIni
+                !date.isBefore(fechaIni) && !date.isAfter(fechaFin)
+            } catch (e: Exception) {
+                false
+            }
+        }
+        if (request != null) {
+            Log.d(TAG_DEBUG, "📅 $dateStr → Solicitud: ${request.tipo}")
+            return CalendarEvent(
+                type = CalendarEventType.REQUEST,
+                label = getRequestShortLabel(request.tipo),
+                color = getRequestEventColor(request.tipo)
+            )
+        }
+
+        // 2. Cambios de guardia aceptados
+        val change = _calendarShiftChanges.value.find { it.fecha == dateStr || it.fecha2 == dateStr }
+        if (change != null) {
+            val isMyGuard = (change.id_empleado1 == currentUser.id_empleado && change.fecha == dateStr) ||
+                    (change.id_empleado2 == currentUser.id_empleado && change.fecha2 == dateStr)
+            Log.d(TAG_DEBUG, "📅 $dateStr → Cambio guardia: ${if (isMyGuard) "trabajo" else "libre"}")
+            return CalendarEvent(
+                type = if (isMyGuard) CalendarEventType.SHIFT_CHANGE_WORK else CalendarEventType.SHIFT_CHANGE_FREE,
+                label = if (isMyGuard) "CG" else "Libre",
+                color = if (isMyGuard) EventColor.SHIFT_CHANGE_WORK else EventColor.BRIGADE_B
+            )
+        }
+
+        // 3. Guardia normal - USANDO LÓGICA DE REACT
+        val guard = _calendarGuards.value.find { it.date == dateStr }
+        if (guard != null) {
+            val brigade = _brigadesMap.value[guard.id_brigada]
+
+            // *** CLAVE: Usar findLastAssignment con la brigada requerida (igual que React) ***
+            val (lastAssignment, suffix) = findLastAssignment(date, guard.id_brigada)
+
+            // Verificar si la última asignación coincide con la brigada de la guardia
+            val isValid = lastAssignment != null && lastAssignment.id_brigada_destino == guard.id_brigada
+
+            // Detectar si es requerimiento
+            val isRequerimiento = lastAssignment?.requerimiento == true
+
+            Log.d(TAG_DEBUG, "📅 $dateStr | Guardia: ${guard.id_brigada} (${brigade?.nombre}) | " +
+                    "Última asig: ${lastAssignment?.id_brigada_destino} | Valid: $isValid | " +
+                    "Req: $isRequerimiento | Suffix: $suffix")
+
+            if (isValid) {
+                // Crear etiqueta corta: "A", "B", "C", etc. + sufijo abreviado
+                val shortBrigadeName = getShortBrigadeName(brigade?.nombre ?: "G")
+                val shortSuffix = getShortSuffix(suffix)
+                val label = if (shortSuffix.isNotEmpty()) {
+                    "$shortBrigadeName ($shortSuffix)"
+                } else {
+                    shortBrigadeName
+                }
+
+                // Si es requerimiento -> color verde (REQUERIMIENTO)
+                val color = if (isRequerimiento) {
+                    EventColor.REQUERIMIENTO
+                } else {
+                    getBrigadeEventColor(brigade?.nombre ?: "")
+                }
+
+                return CalendarEvent(
+                    type = CalendarEventType.GUARD,
+                    label = label,
+                    color = color,
+                    isRequerimiento = isRequerimiento
+                )
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Obtiene el nombre corto de la brigada (solo la letra)
+     */
+    private fun getShortBrigadeName(brigadeName: String): String {
+        return when {
+            brigadeName.contains("Brigada A", ignoreCase = true) -> "A"
+            brigadeName.contains("Brigada B", ignoreCase = true) -> "B"
+            brigadeName.contains("Brigada C", ignoreCase = true) -> "C"
+            brigadeName.contains("Brigada D", ignoreCase = true) -> "D"
+            brigadeName.contains("Brigada E", ignoreCase = true) -> "E"
+            brigadeName.contains("Brigada F", ignoreCase = true) -> "F"
+            brigadeName.contains(" A", ignoreCase = true) -> "A"
+            brigadeName.contains(" B", ignoreCase = true) -> "B"
+            brigadeName.contains(" C", ignoreCase = true) -> "C"
+            brigadeName.contains(" D", ignoreCase = true) -> "D"
+            brigadeName.contains(" E", ignoreCase = true) -> "E"
+            brigadeName.contains(" F", ignoreCase = true) -> "F"
+            else -> brigadeName.take(3)
+        }
+    }
+
+    /**
+     * Obtiene el sufijo abreviado
+     */
+    private fun getShortSuffix(suffix: String): String {
+        return when (suffix.lowercase()) {
+            "día completo" -> "DC"
+            "tarde y noche" -> "TN"
+            "mañana y tarde" -> "MT"
+            "mañana" -> "M"
+            "tarde" -> "T"
+            "noche" -> "N"
+            else -> if (suffix.length > 3) suffix.take(2) else suffix
+        }
+    }
+
+    /**
+     * Encuentra la última asignación válida para una fecha y brigada requerida.
+     *
+     * REPLICA EXACTAMENTE LA LÓGICA DE REACT (findLastAssignment en UserGuardsCalendarPage.jsx):
+     *
+     * 1. Si hay asignaciones del MISMO DÍA:
+     *    - Si hay 1 sola: verificar si coincide con requiredBrigada
+     *    - Si hay 2: lógica de turnos para determinar sufijo
+     *    - Si hay más de 2: ordenar por prioridad de turno
+     *
+     * 2. Si NO hay asignaciones del mismo día:
+     *    - Buscar la última asignación ANTERIOR a la fecha
+     */
+    private fun findLastAssignment(date: LocalDate, requiredBrigada: Int): Pair<FirefighterAssignment?, String> {
+        // 1. Obtener asignaciones del MISMO DÍA
+        val sameDayAssignments = effectiveAssignments.filter { assignment ->
+            try {
+                val assignmentDate = LocalDate.parse(assignment.fecha_ini, dateFormatter)
+                assignmentDate.isEqual(date)
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        if (sameDayAssignments.size == 1) {
+            // Solo una asignación en ese día
+            val single = sameDayAssignments[0]
+            if (single.id_brigada_destino == requiredBrigada) {
+                val suffix = when (single.turno) {
+                    "Mañana" -> "Día completo"
+                    "Tarde" -> "Tarde y noche"
+                    "Noche" -> "Noche"
+                    else -> ""
+                }
+                return Pair(single, suffix)
+            }
+            return Pair(single, "")
+
+        } else if (sameDayAssignments.size == 2) {
+            // Dos asignaciones en el mismo día
+            val matching = sameDayAssignments.filter { it.id_brigada_destino == requiredBrigada }
+
+            if (matching.size == 1) {
+                val other = sameDayAssignments.find { it.id_brigada_destino != requiredBrigada }
+                val matchingTurn = matching[0].turno ?: "Mañana"
+                val otherTurn = other?.turno ?: "Mañana"
+
+                var suffix = ""
+
+                // Determinar sufijo basado en turnos (igual que React)
+                if (matchingTurn == "Mañana" && otherTurn == "Tarde" &&
+                    other?.id_brigada_origen == requiredBrigada) {
+                    suffix = "Mañana"
+                } else if (matchingTurn == "Tarde" && otherTurn == "Noche" &&
+                    other?.id_brigada_origen == requiredBrigada) {
+                    suffix = "Tarde"
+                } else if (matchingTurn == "Mañana" && otherTurn == "Noche") {
+                    suffix = "Mañana"
+                } else {
+                    // Lógica genérica
+                    val isTemporaryAssignment = other?.id_brigada_origen == requiredBrigada ||
+                            other?.id_brigada_destino == requiredBrigada
+
+                    suffix = if (isTemporaryAssignment) {
+                        when (matchingTurn) {
+                            "Mañana" -> "Mañana"
+                            "Tarde" -> "Tarde"
+                            "Noche" -> "Noche"
+                            else -> ""
+                        }
+                    } else {
+                        when (matchingTurn) {
+                            "Mañana" -> "Día completo"
+                            "Tarde" -> "Tarde y noche"
+                            "Noche" -> "Noche"
+                            else -> ""
+                        }
+                    }
+                }
+
+                return Pair(matching[0], suffix)
+
+            } else if (matching.size == 2) {
+                // Ambas asignaciones coinciden con la brigada requerida
+                val sorted = matching.sortedBy { assignment ->
+                    val turno = assignment.turno ?: "Mañana"
+                    TURN_PRIORITY.indexOf(turno).let { if (it == -1) Int.MAX_VALUE else it }
+                }
+
+                val isSequential = sorted[0].id_brigada_origen == sorted[1].id_brigada_destino ||
+                        sorted[1].id_brigada_origen == sorted[0].id_brigada_destino
+
+                val suffix = if (isSequential) {
+                    val t0 = sorted[0].turno ?: ""
+                    val t1 = sorted[1].turno ?: ""
+                    when {
+                        t0 == "Mañana" && t1 == "Tarde" -> "Mañana y tarde"
+                        t0 == "Mañana" && t1 == "Noche" -> "Mañana"
+                        t0 == "Tarde" && t1 == "Noche" -> "Tarde y noche"
+                        else -> sorted[0].turno ?: ""
+                    }
+                } else {
+                    when (sorted[0].turno) {
+                        "Mañana" -> "Día completo"
+                        "Tarde" -> "Tarde y noche"
+                        "Noche" -> "Noche"
+                        else -> ""
+                    }
+                }
+
+                return Pair(sorted[0], suffix)
+            } else {
+                // Ninguna coincide
+                val sorted = sameDayAssignments.sortedBy { assignment ->
+                    val turno = assignment.turno ?: "Mañana"
+                    TURN_PRIORITY.indexOf(turno).let { if (it == -1) Int.MAX_VALUE else it }
+                }
+                return Pair(sorted[0], "")
+            }
+
+        } else if (sameDayAssignments.size > 2) {
+            // Más de dos asignaciones
+            val matching = sameDayAssignments.filter { it.id_brigada_destino == requiredBrigada }
+            if (matching.isNotEmpty()) {
+                val sorted = matching.sortedBy { assignment ->
+                    val turno = assignment.turno ?: "Mañana"
+                    TURN_PRIORITY.indexOf(turno).let { if (it == -1) Int.MAX_VALUE else it }
+                }
+                val suffix = when (sorted[0].turno) {
+                    "Mañana" -> "Día completo"
+                    "Tarde" -> "Tarde y noche"
+                    "Noche" -> "Noche"
+                    else -> ""
+                }
+                return Pair(sorted[0], suffix)
+            } else {
+                val sorted = sameDayAssignments.sortedBy { assignment ->
+                    val turno = assignment.turno ?: "Mañana"
+                    TURN_PRIORITY.indexOf(turno).let { if (it == -1) Int.MAX_VALUE else it }
+                }
+                return Pair(sorted[0], "")
+            }
+        }
+
+        // 2. Si no hay asignaciones del mismo día, buscar la última asignación ANTERIOR
+        val previousAssignments = effectiveAssignments.filter { assignment ->
+            try {
+                val assignmentDate = LocalDate.parse(assignment.fecha_ini, dateFormatter)
+                assignmentDate.isBefore(date)
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        if (previousAssignments.isNotEmpty()) {
+            val sorted = previousAssignments.sortedWith(
+                compareByDescending<FirefighterAssignment> { assignment ->
+                    try {
+                        LocalDate.parse(assignment.fecha_ini, dateFormatter)
+                    } catch (e: Exception) {
+                        LocalDate.MIN
+                    }
+                }.thenBy { assignment ->
+                    val turno = assignment.turno ?: "Mañana"
+                    TURN_PRIORITY.indexOf(turno).let { if (it == -1) Int.MAX_VALUE else it }
+                }
+            )
+            return Pair(sorted[0], "")
+        }
+
+        return Pair(null, "")
+    }
+
+    // ==========================================
+    // FUNCIONES AUXILIARES
+    // ==========================================
+
+    fun getCalendarLegend(): List<LegendItem> {
+        return listOf(
+            LegendItem("Brigada A", EventColor.BRIGADE_A),
+            LegendItem("Brigada B", EventColor.BRIGADE_B),
+            LegendItem("Brigada C", EventColor.BRIGADE_C),
+            LegendItem("Brigada D", EventColor.BRIGADE_D),
+            LegendItem("Brigada E", EventColor.BRIGADE_E),
+            LegendItem("Brigada F", EventColor.BRIGADE_F),
+            LegendItem("Vacaciones", EventColor.VACACIONES),
+            LegendItem("Asuntos Propios", EventColor.ASUNTOS_PROPIOS),
+            LegendItem("Baja", EventColor.BAJA),
+            LegendItem("Cambio Guardia", EventColor.SHIFT_CHANGE_WORK),
+        )
+    }
+
+    private fun getRequestShortLabel(tipo: String): String {
+        return when (tipo.lowercase()) {
+            "vacaciones" -> "VAC"
+            "asuntos propios" -> "AP"
+            "baja" -> "BAJA"
+            "licencias por jornadas" -> "LJ"
+            "licencias por días" -> "LD"
+            "horas sindicales" -> "HS"
+            "modulo" -> "MOD"
+            "vestuario" -> "VEST"
+            "compensacion grupos especiales" -> "CGE"
+            else -> tipo.take(3).uppercase()
+        }
+    }
+
+    private fun getRequestEventColor(tipo: String): EventColor {
+        return when (tipo.lowercase()) {
+            "vacaciones" -> EventColor.VACACIONES
+            "asuntos propios" -> EventColor.ASUNTOS_PROPIOS
+            "baja" -> EventColor.BAJA
+            "licencias por jornadas", "licencias por días" -> EventColor.LICENCIAS
+            "horas sindicales" -> EventColor.HORAS_SINDICALES
+            "modulo" -> EventColor.MODULO
+            "vestuario" -> EventColor.VESTUARIO
+            "compensacion grupos especiales" -> EventColor.COMPENSACION
+            else -> EventColor.DEFAULT
+        }
+    }
+
+    private fun getBrigadeEventColor(brigadeName: String): EventColor {
+        return when {
+            brigadeName.contains("A", ignoreCase = true) -> EventColor.BRIGADE_A
+            brigadeName.contains("B", ignoreCase = true) -> EventColor.BRIGADE_B
+            brigadeName.contains("C", ignoreCase = true) -> EventColor.BRIGADE_C
+            brigadeName.contains("D", ignoreCase = true) -> EventColor.BRIGADE_D
+            brigadeName.contains("E", ignoreCase = true) -> EventColor.BRIGADE_E
+            brigadeName.contains("F", ignoreCase = true) -> EventColor.BRIGADE_F
+            else -> EventColor.DEFAULT
+        }
+    }
+
+    fun getStatusColor(status: String): StatusColor {
+        return when (status.lowercase()) {
+            "confirmada" -> StatusColor.CONFIRMADA
+            "aceptado" -> StatusColor.ACEPTADO
+            "pendiente" -> StatusColor.PENDIENTE
+            "cancelada" -> StatusColor.CANCELADA
+            "rechazada" -> StatusColor.RECHAZADA
+            "rechazado" -> StatusColor.RECHAZADO
+            else -> StatusColor.DEFAULT
+        }
+    }
+
     // ==========================================
     // CAMBIO DE CONTRASEÑA
     // ==========================================
-
-    // Estado adicional para loading del cambio de contraseña
-    private val _isChangingPassword = MutableStateFlow(false)
-    val isChangingPassword: StateFlow<Boolean> = _isChangingPassword.asStateFlow()
 
     fun changePassword(
         currentUser: User,
@@ -762,13 +1013,12 @@ class ProfileViewModel(
             _passwordChangeError.value = null
             _passwordChangeSuccess.value = null
 
-            val request = UpdateUserRequest(
-                current_password = currentPassword,
-                password = newPassword,
-                password_confirmation = confirmPassword
+            val result = usersRepository.changePassword(
+                userId = currentUser.id_empleado,
+                currentPassword = currentPassword,
+                newPassword = newPassword,
+                confirmPassword = confirmPassword
             )
-
-            val result = usersRepository.updateUser(currentUser.id_empleado, request)
 
             result.fold(
                 onSuccess = {
@@ -777,7 +1027,7 @@ class ProfileViewModel(
                 },
                 onFailure = { error ->
                     _passwordChangeError.value = error.message ?: "Error al cambiar la contraseña"
-                    Log.e(TAG, "❌ Error al cambiar contraseña: ${error.message}")
+                    Log.e(TAG, "❌ Error: ${error.message}")
                 }
             )
 
@@ -785,9 +1035,11 @@ class ProfileViewModel(
         }
     }
 
-    fun clearPasswordMessages() {
+    fun clearMessages() {
         _passwordChangeSuccess.value = null
         _passwordChangeError.value = null
+        _successMessage.value = null
+        _errorMessage.value = null
     }
 
     fun clearSuccessMessage() {
@@ -798,36 +1050,22 @@ class ProfileViewModel(
         _errorMessage.value = null
     }
 
-    // ==========================================
-// HORAS EXTRA - CÁLCULOS
-// ==========================================
-
-    fun getTotalDiurnas(): Double {
-        return _monthExtraHours.value.sumOf { it.horas_diurnas.toDouble() }
+    fun clearPasswordMessages() {
+        _passwordChangeSuccess.value = null
+        _passwordChangeError.value = null
     }
-
-    fun getTotalNocturnas(): Double {
-        return _monthExtraHours.value.sumOf { it.horas_nocturnas.toDouble() }
-    }
-
-    fun getTotalExtraHoursSalary(): Double {
-        var total = 0.0
-        for (hour in _monthExtraHours.value) {
-            val diurnas = hour.horas_diurnas.toDouble()
-            val nocturnas = hour.horas_nocturnas.toDouble()
-            val precioDiurno = hour.salarie?.precio_diurno ?: 0.0
-            val precioNocturno = hour.salarie?.precio_nocturno ?: 0.0
-            total += (diurnas * precioDiurno) + (nocturnas * precioNocturno)
-        }
-        return total
-    }
-
-// ==========================================
-// COLORES DE ESTADO (alias para compatibilidad)
-// ==========================================
 
     fun getEstadoColor(status: String): StatusColor {
         return getStatusColor(status)
+    }
+
+    fun getTotalExtraHoursSalary(): Double {
+        val diurnas = getTotalDiurnas()
+        val nocturnas = getTotalNocturnas()
+        // Tarifas aproximadas (ajustar según convenga)
+        val tarifaDiurna = 15.0
+        val tarifaNocturna = 20.0
+        return (diurnas * tarifaDiurna) + (nocturnas * tarifaNocturna)
     }
 }
 
@@ -842,7 +1080,7 @@ sealed class ProfileUiState {
 }
 
 // ==========================================
-// DATA CLASSES
+// MODELOS DE DATOS PARA UI
 // ==========================================
 
 data class PermissionStat(
@@ -868,15 +1106,15 @@ data class ShiftChangesStats(
     val mirror: Int
 )
 
-data class CalendarDayInfo(
-    val date: LocalDate,
-    val monthOffset: Int  // -1, 0, 1
-)
+// ==========================================
+// EVENTOS DE CALENDARIO
+// ==========================================
 
 data class CalendarEvent(
     val type: CalendarEventType,
     val label: String,
-    val color: EventColor
+    val color: EventColor,
+    val isRequerimiento: Boolean = false  // Para pintar verde si viene por requerimiento
 )
 
 enum class CalendarEventType {
@@ -886,42 +1124,37 @@ enum class CalendarEventType {
     SHIFT_CHANGE_FREE
 }
 
+data class LegendItem(
+    val label: String,
+    val color: EventColor
+)
+
 enum class EventColor(val hex: String) {
-    // Brigadas
-    BRIGADE_A("#22C55E"),      // Verde
-    BRIGADE_B("#F4F4F5"),      // Casi blanco
-    BRIGADE_C("#3B82F6"),      // Azul
-    BRIGADE_D("#EF4444"),      // Rojo
-    BRIGADE_E("#FACC15"),      // Amarillo
-    BRIGADE_F("#9CA3AF"),      // Gris
-    BRIGADE_DEFAULT("#78909C"),
-
-    // Solicitudes
+    BRIGADE_A("#3B82F6"),      // Azul
+    BRIGADE_B("#10B981"),      // Verde
+    BRIGADE_C("#F59E0B"),      // Naranja
+    BRIGADE_D("#8B5CF6"),      // Violeta
+    BRIGADE_E("#EC4899"),      // Rosa
+    BRIGADE_F("#06B6D4"),      // Cyan
     VACACIONES("#EF4444"),     // Rojo
-    ASUNTOS_PROPIOS("#F59E0B"), // Amarillo/Naranja
+    ASUNTOS_PROPIOS("#F59E0B"), // Amarillo
     BAJA("#6B7280"),           // Gris
-    LICENCIA("#8B5CF6"),       // Púrpura
-    MODULO("#EC4899"),         // Rosa
-    COMPENSACION("#14B8A6"),   // Teal
-    HORAS_SINDICALES("#06B6D4"), // Cyan
-    OTHER_REQUEST("#9CA3AF"),
-
-    // Cambios de guardia
-    SHIFT_CHANGE_WORK("#10B981"), // Verde esmeralda
-    SHIFT_CHANGE_FREE("#6366F1")  // Índigo
+    LICENCIAS("#14B8A6"),      // Teal
+    HORAS_SINDICALES("#8B5CF6"), // Violeta
+    MODULO("#FBBF24"),         // Amarillo (diferente tono)
+    VESTUARIO("#A855F7"),      // Purple
+    COMPENSACION("#06B6D4"),   // Cyan
+    SHIFT_CHANGE_WORK("#22C55E"), // Verde brillante
+    REQUERIMIENTO("#22C55E"),  // Verde brillante (igual que React bg-green-500)
+    DEFAULT("#9CA3AF")         // Gris claro
 }
 
 enum class StatusColor(val hex: String) {
     CONFIRMADA("#22C55E"),
     ACEPTADO("#22C55E"),
     PENDIENTE("#F59E0B"),
-    CANCELADA("#6B7280"),
+    CANCELADA("#EF4444"),
     RECHAZADA("#EF4444"),
     RECHAZADO("#EF4444"),
     DEFAULT("#9CA3AF")
 }
-
-data class LegendItem(
-    val label: String,
-    val color: EventColor
-)

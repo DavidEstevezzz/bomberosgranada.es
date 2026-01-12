@@ -16,6 +16,8 @@ import IncidentDetailModal from '../components/IncidentDetailModal';
 import EditIncidentModal from '../components/EditIncidentModal';
 import ResolveIncidentModal from '../components/ResolveIncidentModal';
 import MarkResolvingModal from '../components/MarkResolvingModal';
+import ExportPdfModal from '../components/ExportPdfModal';
+
 
 
 const IncidentListPage = () => {
@@ -41,6 +43,7 @@ const IncidentListPage = () => {
   const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [resolutionText, setResolutionText] = useState("");
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Filtros
   const [selectedParkFilter, setSelectedParkFilter] = useState("Todas");
@@ -155,55 +158,61 @@ const IncidentListPage = () => {
     return array;
   };
 
-  const exportPDF = () => {
+  const exportPDF = (sortOrder = 'desc') => {
     const doc = new jsPDF();
     let yOffset = 10;
     doc.setFontSize(16);
     doc.text(`Incidencias No Resueltas - ${selectedParkFilter}`, 14, yOffset);
     yOffset += 10;
 
+    // Ordenar las incidencias según la selección del usuario
+    const sortedIncidents = [...pendingIncidents].sort((a, b) => {
+      const dateA = new Date(a.fecha);
+      const dateB = new Date(b.fecha);
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+
     const tableData = [];
-    pendingIncidents.forEach(incident => {
+    sortedIncidents.forEach(incident => {
       let extraInfo = getExtraValue(incident);
       tableData.push({
         fecha: dayjs(incident.fecha).format('DD/MM/YYYY'),
         descripcion: incident.descripcion,
         tipo: normalizeTypeName(incident.tipo),
         extra: extraInfo,
-        nivel: incident.nivel ? incident.nivel.toLowerCase() : ''
+        nivel: incident.nivel ? incident.nivel.charAt(0).toUpperCase() + incident.nivel.slice(1) : '',
+        creador: getCreatorName(incident),
+        parque: incident.park?.nombre || ''
       });
     });
 
-    tableData.sort((a, b) => a.extra.localeCompare(b.extra));
-
-    const columns = [
-      { header: 'Tipo', dataKey: 'tipo' },
-      { header: 'Vehículo/Empleado', dataKey: 'extra' },
-      { header: 'Descripción', dataKey: 'descripcion' },
-      { header: 'Fecha', dataKey: 'fecha' },
-    ];
-
     doc.autoTable({
       startY: yOffset,
-      head: [columns.map(col => col.header)],
-      body: tableData.map(row => columns.map(col => row[col.dataKey])),
-      theme: 'grid',
-      headStyles: { fillColor: 150 },
-      didParseCell: function (data) {
-        if (data.section === 'body') {
-          const rowObj = tableData[data.row.index];
-          if (rowObj.nivel === 'alto') {
-            data.cell.styles.fillColor = [255, 153, 153];
-          } else if (rowObj.nivel === 'medio') {
-            data.cell.styles.fillColor = [255, 219, 153];
-          } else if (rowObj.nivel === 'bajo') {
-            data.cell.styles.fillColor = [255, 255, 153];
-          }
-        }
+      head: [['Fecha', 'Descripción', 'Tipo', 'Extra', 'Nivel', 'Creador', 'Parque']],
+      body: tableData.map(row => [
+        row.fecha,
+        row.descripcion,
+        row.tipo,
+        row.extra,
+        row.nivel,
+        row.creador,
+        row.parque
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246] },
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: {
+        1: { cellWidth: 50 } // Descripción más ancha
       }
     });
 
-    doc.save("incidencias_no_resueltas.pdf");
+    // Agregar indicador de orden en el PDF
+    const orderText = sortOrder === 'desc' ? 'Ordenado: Más recientes primero' : 'Ordenado: Más antiguas primero';
+    doc.setFontSize(8);
+    doc.setTextColor(128);
+    doc.text(orderText, 14, doc.internal.pageSize.height - 10);
+
+    doc.save(`incidencias_${selectedParkFilter.toLowerCase()}_${dayjs().format('YYYY-MM-DD')}.pdf`);
   };
 
   const handleResolveSubmit = async () => {
@@ -451,7 +460,7 @@ const IncidentListPage = () => {
               <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
               <span>Nueva Incidencia</span>
             </button>
-            <button onClick={exportPDF} className={buttonSecondaryClass}>
+            <button onClick={() => setIsExportModalOpen(true)} className={buttonSecondaryClass}>
               <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4" />
               <span>Exportar PDF</span>
             </button>
@@ -1230,6 +1239,12 @@ const IncidentListPage = () => {
           onSubmit={handleMarkResolvingSubmit}
         />
       )}
+      {/* Modal de Exportación PDF */}
+      <ExportPdfModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onExport={(order) => exportPDF(order)}
+      />
     </div>
   );
 };

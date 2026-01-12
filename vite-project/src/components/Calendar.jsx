@@ -106,7 +106,7 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap, title = null }
     { name: 'Brigada C', short: 'C', color: 'bg-blue-500' },
     { name: 'Brigada D', short: 'D', color: 'bg-red-600' },
     { name: 'Brigada E', short: 'E', color: 'bg-yellow-300' },
-    { name: 'Brigada F', short: 'F', color: 'bg-gray-300' },
+    { name: 'Brigada F', short: 'F', color: 'bg-gray-900' },
     { name: 'GREPS', short: 'GREPS', color: 'bg-orange-500' },
     { name: 'GRAFOR', short: 'GRAFOR', color: 'bg-green-500' },
     { name: 'UNIBUL', short: 'UNIBUL', color: 'bg-indigo-500' },
@@ -115,38 +115,32 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap, title = null }
   ];
 
   // Estilos modernos
-  const containerClass = `w-full rounded-3xl border p-6 transition-colors duration-300 ${
-    darkMode 
-      ? 'border-slate-800 bg-slate-900/60' 
-      : 'border-slate-200 bg-salte-100'
-  }`;
-
-  const headerClass = `flex items-center justify-between mb-6 pb-4 border-b ${
-    darkMode ? 'border-slate-800' : 'border-slate-200'
-  }`;
-
-  const buttonClass = `inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
-    darkMode
-      ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white'
-      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
-  }`;
-
-  const monthTitleClass = `text-xl font-bold ${
-    darkMode ? 'text-slate-100' : 'text-slate-900'
-  }`;
-
-  const weekDayClass = `text-center text-xs font-semibold uppercase tracking-wider py-3 ${
-    darkMode ? 'text-slate-400' : 'text-slate-600'
-  }`;
-
-  const getDayClasses = (day, brigadeColor) => {
-    const baseClass = `group relative flex flex-col items-center justify-center rounded-2xl border transition-all duration-200 cursor-pointer ${
-      isMobile ? 'h-20 p-2' : 'h-24 p-4'
+  const containerClass = `w-full rounded-3xl border p-6 transition-colors duration-300 ${darkMode
+    ? 'border-slate-800 bg-slate-900/60'
+    : 'border-slate-200 bg-salte-100'
     }`;
 
-    const monthOffsetClass = day.monthOffset !== 0 
-      ? darkMode 
-        ? 'text-slate-600 border-slate-800/50 bg-slate-900/30' 
+  const headerClass = `flex items-center justify-between mb-6 pb-4 border-b ${darkMode ? 'border-slate-800' : 'border-slate-200'
+    }`;
+
+  const buttonClass = `inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${darkMode
+    ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white'
+    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+    }`;
+
+  const monthTitleClass = `text-xl font-bold ${darkMode ? 'text-slate-100' : 'text-slate-900'
+    }`;
+
+  const weekDayClass = `text-center text-xs font-semibold uppercase tracking-wider py-3 ${darkMode ? 'text-slate-400' : 'text-slate-600'
+    }`;
+
+  const getDayClasses = (day, brigadeColor) => {
+    const baseClass = `group relative flex flex-col items-center justify-center rounded-2xl border transition-all duration-200 cursor-pointer ${isMobile ? 'h-20 p-2' : 'h-24 p-4'
+      }`;
+
+    const monthOffsetClass = day.monthOffset !== 0
+      ? darkMode
+        ? 'text-slate-600 border-slate-800/50 bg-slate-900/30'
         : 'text-slate-400 border-slate-200/50 bg-slate-50/50'
       : '';
 
@@ -154,12 +148,11 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap, title = null }
       ? 'hover:border-primary-500/50 hover:shadow-lg hover:shadow-primary-500/10'
       : 'hover:border-primary-400 hover:shadow-lg hover:shadow-primary-200/50';
 
-    const brigadeClass = brigadeColor 
-      ? `${brigadeColor} ${
-          darkMode 
-            ? 'border-slate-700' 
-            : 'border-slate-300'
-        }` 
+    const brigadeClass = brigadeColor
+      ? `${brigadeColor} ${darkMode
+        ? 'border-slate-700'
+        : 'border-slate-300'
+      }`
       : darkMode
         ? 'border-slate-800 bg-slate-900/80'
         : 'border-slate-200 bg-white';
@@ -171,14 +164,12 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap, title = null }
     <div className={containerClass}>
       {/* Título opcional - Ahora más destacado */}
       {title && (
-        <div className={`mb-6 px-6 py-5 rounded-2xl text-center ${
-          darkMode
-            ? 'bg-gradient-to-r from-primary-900/50 via-primary-800/50 to-primary-700/50 border-b border-slate-800'
-            : 'bg-gradient-to-r from-primary-50 via-primary-100 to-primary-50 border-b border-primary-200'
-        }`}>
-          <p className={`text-xs font-semibold uppercase tracking-[0.3em] mb-2 ${
-            darkMode ? 'text-primary-300' : 'text-primary-600'
+        <div className={`mb-6 px-6 py-5 rounded-2xl text-center ${darkMode
+          ? 'bg-gradient-to-r from-primary-900/50 via-primary-800/50 to-primary-700/50 border-b border-slate-800'
+          : 'bg-gradient-to-r from-primary-50 via-primary-100 to-primary-50 border-b border-primary-200'
           }`}>
+          <p className={`text-xs font-semibold uppercase tracking-[0.3em] mb-2 ${darkMode ? 'text-primary-300' : 'text-primary-600'
+            }`}>
             Calendario de Guardias
           </p>
           <h2 className={`text-2xl font-bold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
@@ -189,21 +180,21 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap, title = null }
 
       {/* Header con navegación */}
       <div className={headerClass}>
-        <button 
-          onClick={handlePrevMonth} 
+        <button
+          onClick={handlePrevMonth}
           className={buttonClass}
           aria-label="Mes anterior"
         >
           <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4" />
           <span className="hidden sm:inline">Anterior</span>
         </button>
-        
+
         <h2 className={monthTitleClass}>
           {monthName}
         </h2>
-        
-        <button 
-          onClick={handleNextMonth} 
+
+        <button
+          onClick={handleNextMonth}
           className={buttonClass}
           aria-label="Mes siguiente"
         >
@@ -260,8 +251,8 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap, title = null }
                 brigadeShort = 'E';
                 break;
               case 'Brigada F':
-                brigadeColor = 'bg-gray-300';
-                nameColor = 'text-gray-700';
+                brigadeColor = 'bg-gray-900';
+                nameColor = 'text-white';
                 brigadeShort = 'F';
                 break;
               case 'GREPS':
@@ -304,9 +295,8 @@ const Calendar = ({ onDateClick, onEditClick, guards, brigadeMap, title = null }
               onClick={() => handleDateClick(date)}
             >
               <div className="flex flex-col items-center justify-center h-full">
-                <div className={`font-semibold ${isMobile ? 'text-lg' : 'text-base'} ${
-                  day.monthOffset === 0 ? nameColor : ''
-                }`}>
+                <div className={`font-semibold ${isMobile ? 'text-lg' : 'text-base'} ${day.monthOffset === 0 ? nameColor : ''
+                  }`}>
                   {day.day}
                 </div>
                 {displayName && day.monthOffset === 0 && (

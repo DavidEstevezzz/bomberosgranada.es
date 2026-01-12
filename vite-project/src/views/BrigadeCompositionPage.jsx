@@ -47,15 +47,18 @@ const BrigadeCompositionPage = () => {
     'C': { color: 'bg-blue-500', hoverColor: 'hover:bg-blue-600', textColor: 'text-white' },
     'D': { color: 'bg-red-600', hoverColor: 'hover:bg-red-700', textColor: 'text-white' },
     'E': { color: 'bg-yellow-300 text-gray-800', hoverColor: 'hover:bg-yellow-400', textColor: 'text-gray-800' },
+    'F': { color: 'bg-gray-900', hoverColor: 'hover:bg-gray-800', textColor: 'text-white' },
+
   };
 
-  // Brigadas configuradas (solo A-E, sin F)
   const brigadesConfig = [
     { name: 'Brigada A', short: 'A' },
     { name: 'Brigada B', short: 'B' },
     { name: 'Brigada C', short: 'C' },
     { name: 'Brigada D', short: 'D' },
     { name: 'Brigada E', short: 'E' },
+    { name: 'Brigada F', short: 'F' },
+
   ];
 
   // Configuración de estados con colores

@@ -46,6 +46,7 @@ import GuardDetailPage from './views/GuardDetailPage.jsx';
 import BrigadePracticesPage from './views/BrigadePracticesPage.jsx';
 import ClothingItems from './views/ClothingItems.jsx';
 import BrigadeCompositionPage from './views/BrigadeCompositionPage.jsx';
+import PrivacyPolicy from './views/PrivacyPolicy.jsx';
 
 const router = createBrowserRouter([
   {
@@ -106,6 +107,8 @@ const router = createBrowserRouter([
   { path: '/forgot-password', element: <ForgotPassword /> },
   { path: '/reset-password/:token', element: <ResetPassword /> },
   { path: '*', element: <NotFound /> },
+    { path: '/privacidad', element: <PrivacyPolicy /> },
+
 ]);
 
 export default router;

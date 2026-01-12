@@ -454,95 +454,95 @@ const BrigadeDetail = () => {
   };
 
   useEffect(() => {
-  console.log('🔍 DEBUG 2 - useEffect previousGuards ejecutado:', {
-    previousGuardsLength: previousGuards.length,
-    previousGuards: previousGuards
-  });
+    console.log('🔍 DEBUG 2 - useEffect previousGuards ejecutado:', {
+      previousGuardsLength: previousGuards.length,
+      previousGuards: previousGuards
+    });
 
-  const loadAllPreviousAssignments = async () => {
-    if (!previousGuards || previousGuards.length === 0) {
-      console.log('🔍 DEBUG 3 - No hay previousGuards, saltando carga');
-      setLoadingPreviousAssignments(false);
-      return;
-    }
-
-    try {
-      console.log('🔍 DEBUG 4 - Iniciando carga de asignaciones previas');
-      
-      // Obtener todas las asignaciones en una sola petición
-      const response = await GuardAssignmentApiService.getGuardAssignments();
-      const allAssignments = response.data;
-      
-      console.log('🔍 DEBUG 5 - Asignaciones obtenidas:', {
-        total: allAssignments.length,
-        primeras5: allAssignments.slice(0, 5)
-      });
-
-      // Crear un caché de asignaciones por bombero
-      const firefighterAssignments = {};
-
-      // Para cada guardia anterior, buscar asignaciones
-      for (const guardData of previousGuards) {
-        const guardId = guardData.guard.id;
-        console.log('🔍 DEBUG 6 - Procesando guardia:', {
-          guardId,
-          fecha: guardData.date,
-          diasAtras: guardData.daysBack
-        });
-
-        // Filtrar asignaciones para esta guardia
-        const guardAssignments = allAssignments.filter(a => a.id_guard === guardId);
-        console.log('🔍 DEBUG 7 - Asignaciones encontradas para guardia', guardId, ':', guardAssignments.length);
-
-        // Para cada asignación, guardarla en el caché
-        guardAssignments.forEach(assignment => {
-          const firefighterId = assignment.id_empleado;
-
-          // Solo guardar la primera asignación encontrada (la más reciente)
-          if (!firefighterAssignments[firefighterId]) {
-            const date = new Date(guardData.date);
-            const formattedDate = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-
-            firefighterAssignments[firefighterId] = {
-              asignacion: assignment.asignacion,
-              fecha: formattedDate,
-              turno: assignment.turno,
-              diasAtras: guardData.daysBack
-            };
-            
-            console.log('🔍 DEBUG 8 - Guardada asignación para bombero', firefighterId, ':', firefighterAssignments[firefighterId]);
-          }
-        });
+    const loadAllPreviousAssignments = async () => {
+      if (!previousGuards || previousGuards.length === 0) {
+        console.log('🔍 DEBUG 3 - No hay previousGuards, saltando carga');
+        setLoadingPreviousAssignments(false);
+        return;
       }
 
-      console.log('🔍 DEBUG 9 - Cache completo de asignaciones:', {
-        totalBomberos: Object.keys(firefighterAssignments).length,
-        asignaciones: firefighterAssignments
-      });
-      
-      setPreviousAssignmentsCache(firefighterAssignments);
-    } catch (error) {
-      console.error('🔍 DEBUG 10 - Error cargando asignaciones previas:', error);
-    } finally {
-      console.log('🔍 DEBUG 11 - Finalizando carga, estableciendo loading en false');
-      setLoadingPreviousAssignments(false);
-    }
-  };
+      try {
+        console.log('🔍 DEBUG 4 - Iniciando carga de asignaciones previas');
 
-  loadAllPreviousAssignments();
-}, [previousGuards]);
+        // Obtener todas las asignaciones en una sola petición
+        const response = await GuardAssignmentApiService.getGuardAssignments();
+        const allAssignments = response.data;
+
+        console.log('🔍 DEBUG 5 - Asignaciones obtenidas:', {
+          total: allAssignments.length,
+          primeras5: allAssignments.slice(0, 5)
+        });
+
+        // Crear un caché de asignaciones por bombero
+        const firefighterAssignments = {};
+
+        // Para cada guardia anterior, buscar asignaciones
+        for (const guardData of previousGuards) {
+          const guardId = guardData.guard.id;
+          console.log('🔍 DEBUG 6 - Procesando guardia:', {
+            guardId,
+            fecha: guardData.date,
+            diasAtras: guardData.daysBack
+          });
+
+          // Filtrar asignaciones para esta guardia
+          const guardAssignments = allAssignments.filter(a => a.id_guard === guardId);
+          console.log('🔍 DEBUG 7 - Asignaciones encontradas para guardia', guardId, ':', guardAssignments.length);
+
+          // Para cada asignación, guardarla en el caché
+          guardAssignments.forEach(assignment => {
+            const firefighterId = assignment.id_empleado;
+
+            // Solo guardar la primera asignación encontrada (la más reciente)
+            if (!firefighterAssignments[firefighterId]) {
+              const date = new Date(guardData.date);
+              const formattedDate = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+
+              firefighterAssignments[firefighterId] = {
+                asignacion: assignment.asignacion,
+                fecha: formattedDate,
+                turno: assignment.turno,
+                diasAtras: guardData.daysBack
+              };
+
+              console.log('🔍 DEBUG 8 - Guardada asignación para bombero', firefighterId, ':', firefighterAssignments[firefighterId]);
+            }
+          });
+        }
+
+        console.log('🔍 DEBUG 9 - Cache completo de asignaciones:', {
+          totalBomberos: Object.keys(firefighterAssignments).length,
+          asignaciones: firefighterAssignments
+        });
+
+        setPreviousAssignmentsCache(firefighterAssignments);
+      } catch (error) {
+        console.error('🔍 DEBUG 10 - Error cargando asignaciones previas:', error);
+      } finally {
+        console.log('🔍 DEBUG 11 - Finalizando carga, estableciendo loading en false');
+        setLoadingPreviousAssignments(false);
+      }
+    };
+
+    loadAllPreviousAssignments();
+  }, [previousGuards]);
 
   const PreviousAssignmentDisplay = ({ firefighter }) => {
     // Obtener asignación del caché
     const prevAssignmentInfo = previousAssignmentsCache[firefighter.id_empleado];
 
     console.log('🔍 DEBUG 12 - PreviousAssignmentDisplay renderizado:', {
-    bombero: `${firefighter.nombre} ${firefighter.apellido}`,
-    id_empleado: firefighter.id_empleado,
-    prevAssignmentInfo: prevAssignmentInfo,
-    loadingPreviousAssignments: loadingPreviousAssignments,
-    cacheCompleto: previousAssignmentsCache
-  });
+      bombero: `${firefighter.nombre} ${firefighter.apellido}`,
+      id_empleado: firefighter.id_empleado,
+      prevAssignmentInfo: prevAssignmentInfo,
+      loadingPreviousAssignments: loadingPreviousAssignments,
+      cacheCompleto: previousAssignmentsCache
+    });
 
     // 🔍 LOG GENERAL PARA TODOS LOS CAMBIOS DE GUARDIA
     if (firefighter.id_change_request) {
@@ -1147,7 +1147,7 @@ const BrigadeDetail = () => {
       } else if (brigade?.nombre === 'Brigada E') {
         headerColor = [253, 224, 71]; // amarillo
       } else if (brigade?.nombre === 'Brigada F') {
-        headerColor = [209, 213, 219]; // gris
+        headerColor = [31, 41, 55]; // gris
       } else {
         headerColor = [150, 154, 133]; // gris verde
       }
@@ -1209,8 +1209,8 @@ const BrigadeDetail = () => {
         pdfHeaderFillColor = '#fde047';
         pdfHeaderTextColor = '#000000';
       } else if (brigade?.nombre === 'Brigada F') {
-        pdfHeaderFillColor = '#d1d5db';
-        pdfHeaderTextColor = '#4b5563';
+        pdfHeaderFillColor = '#1f2937'; // casi negro
+        pdfHeaderTextColor = '#ffffff'; 
       } else {
         pdfHeaderFillColor = '#969a85';
         pdfHeaderTextColor = '#ffffff';

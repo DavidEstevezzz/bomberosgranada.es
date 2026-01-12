@@ -16,8 +16,7 @@ import IncidentDetailModal from '../components/IncidentDetailModal';
 import EditIncidentModal from '../components/EditIncidentModal';
 import ResolveIncidentModal from '../components/ResolveIncidentModal';
 import MarkResolvingModal from '../components/MarkResolvingModal';
-import ExportPdfModal from '../components/ExportPdfModal';
-
+import ExportPdfModal from '../components/Exportpdfmodal';
 
 
 const IncidentListPage = () => {

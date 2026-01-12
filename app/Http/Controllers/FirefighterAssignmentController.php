@@ -879,7 +879,7 @@ class FirefighterAssignmentController extends Controller
         $asignacionVuelta = Firefighters_assignment::create([
             'id_empleado' => $idEmpleado,
             'id_brigada_origen' => $idBrigadaDestino,
-            'id_brigada_destino' => $brigadaOrigen,
+            'id_brigada_destino' => $asignacionIda->id_brigada_origen,
             'fecha_ini' => $fechaVuelta,
             'turno' => $turnoVuelta,
             'requerimiento' => false,

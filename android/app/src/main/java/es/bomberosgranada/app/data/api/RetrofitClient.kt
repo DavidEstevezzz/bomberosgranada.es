@@ -1,33 +1,47 @@
 package es.bomberosgranada.app.data.api
 
-import android.content.Context
 import es.bomberosgranada.app.data.local.TokenManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
+/**
+ * Cliente Retrofit para todas las llamadas a la API
+ *
+ * Configuración:
+ * - Base URL: api.bomberosgranada.es
+ * - Timeout: 60 segundos
+ * - Logging: BODY level (desarrollo)
+ * - Auth: Interceptor automático con token
+ */
 object RetrofitClient {
-    private const val BASE_URL = "https://api.bomberosgranada.es/"
+    private const val BASE_URL = "https://api.bomberosgranada.es/api/"
 
     private var tokenManager: TokenManager? = null
 
-    fun initialize(context: Context) {
-        tokenManager = TokenManager(context)
+    fun initialize(tokenManager: TokenManager) {
+        this.tokenManager = tokenManager
     }
 
-    private val authInterceptor = Interceptor { chain ->
-        val originalRequest = chain.request()
+    /**
+     * Interceptor de autenticación
+     * Añade el token Bearer automáticamente a todas las peticiones
+     */
+    private val authInterceptor = Interceptor { chain: Interceptor.Chain ->
+        val originalRequest: Request = chain.request()
 
-        val token = runBlocking {
-            tokenManager?.token?.first()
+        val token: String? = runBlocking {
+            tokenManager?.getToken()?.first()
         }
 
-        val newRequest = if (token != null) {
+        val newRequest: Request = if (token != null) {
             originalRequest.newBuilder()
                 .header("Authorization", "Bearer $token")
                 .header("Accept", "application/json")
@@ -41,11 +55,18 @@ object RetrofitClient {
         chain.proceed(newRequest)
     }
 
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+    /**
+     * Interceptor de logging
+     * Muestra detalles de las peticiones HTTP en Logcat
+     */
+    private val loggingInterceptor: HttpLoggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    private val httpClient = OkHttpClient.Builder()
+    /**
+     * Cliente HTTP con interceptores
+     */
+    private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor)
         .connectTimeout(60, TimeUnit.SECONDS)
@@ -53,7 +74,10 @@ object RetrofitClient {
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
-    // Exponer retrofit para ApiClient
+    /**
+     * Instancia de Retrofit
+     * Usada por ApiClient para crear servicios
+     */
     internal val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(httpClient)

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import es.bomberosgranada.app.ui.theme.ExtendedColors
 
@@ -171,6 +172,28 @@ fun PrimaryButton(
 }
 
 // ============================================
+// BOTÓN ELEGANTE (alias del primario con loading)
+// ============================================
+
+@Composable
+fun ElegantButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false
+) {
+    PrimaryButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        loading = loading
+    )
+}
+
+
+// ============================================
 // BOTÓN SECUNDARIO (Outline)
 // ============================================
 
@@ -281,6 +304,7 @@ fun ElegantTextField(
     label: String,
     modifier: Modifier = Modifier,
     placeholder: String = "",
+    visualTransformation: VisualTransformation = VisualTransformation.None,
     enabled: Boolean = true,
     readOnly: Boolean = false,
     singleLine: Boolean = true,
@@ -314,6 +338,7 @@ fun ElegantTextField(
             readOnly = readOnly,
             singleLine = singleLine,
             maxLines = maxLines,
+            visualTransformation = visualTransformation,
             leadingIcon = if (leadingIcon != null) {
                 {
                     Icon(
@@ -373,6 +398,38 @@ fun LoadingScreen(
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// ============================================
+// LOADING INDICATOR - Indicador de carga elegante
+// ============================================
+
+@Composable
+fun LoadingIndicator(
+    modifier: Modifier = Modifier,
+    message: String = "Cargando..."
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 4.dp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

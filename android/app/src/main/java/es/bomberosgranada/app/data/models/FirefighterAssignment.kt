@@ -1,5 +1,8 @@
 package es.bomberosgranada.app.data.models
 
+import com.google.gson.annotations.JsonAdapter
+import es.bomberosgranada.app.data.serialization.BooleanAsIntAdapter
+
 data class FirefighterAssignment(
     val id_asignacion: Int,
     val id_empleado: Int,
@@ -9,6 +12,7 @@ data class FirefighterAssignment(
     val id_brigada_destino: Int,
     val turno: String,
     val tipo_asignacion: String?,
+    @JsonAdapter(BooleanAsIntAdapter::class)
     val requerimiento: Boolean? = null,
     val horas_traslado: Double? = null,
     val created_at: String?,
@@ -41,6 +45,7 @@ data class UpdateAssignmentRequest(
     val id_brigada_origen: Int? = null,
     val id_brigada_destino: Int,
     val turno: String,
+    @JsonAdapter(BooleanAsIntAdapter::class)
     val requerimiento: Boolean? = null,
     val tipo_asignacion: String
 )

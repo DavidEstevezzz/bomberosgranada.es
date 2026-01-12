@@ -3,6 +3,8 @@ package es.bomberosgranada.app.data.repositories
 import android.util.Log
 import es.bomberosgranada.app.data.api.ApiClient
 import es.bomberosgranada.app.data.api.services.*
+import es.bomberosgranada.app.data.models.*
+
 
 class BrigadeUsersRepository {
     private val TAG = "BrigadeUsersRepository"

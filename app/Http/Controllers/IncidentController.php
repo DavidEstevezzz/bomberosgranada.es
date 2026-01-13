@@ -27,14 +27,14 @@ class IncidentController extends Controller
             'fecha'        => 'required|date',
             'id_empleado'  => 'required|exists:users,id_empleado',
             'tipo'         => 'required|in:vehiculo,personal,instalacion,equipo,vestuario,equipos_comunes', // Añade "equipos_comunes"
-            'estado'       => 'required|in:Pendiente,En proceso,Resuelto',
+            'estado'       => 'required|in:pendiente,en_proceso,resuelta',
             'descripcion'  => 'required|string',
             'nivel'        => 'required|in:alto,medio,bajo',
             'id_parque'    => 'required|exists:parks,id_parque',
             'leido'        => 'boolean',
             'resolviendo'   => 'nullable|string',
         ];
-        
+
         // Añadir reglas condicionales según el tipo
         $tipo = $request->input('tipo');
         if ($tipo === 'vehiculo') {
@@ -47,9 +47,9 @@ class IncidentController extends Controller
             $rules['id_vestuario'] = 'required|exists:clothing_items,id';
         }
         // Para 'instalacion' y 'equipos_comunes' no se requieren campos adicionales
-        
+
         $validator = Validator::make($request->all(), $rules);
-        if ($validator->fails()){
+        if ($validator->fails()) {
             return response()->json($validator->errors(), 400);
         }
 
@@ -83,14 +83,14 @@ class IncidentController extends Controller
             'fecha'        => 'required|date',
             'id_empleado'  => 'required|exists:users,id_empleado',
             'tipo'         => 'required|in:vehiculo,personal,instalacion,equipo,vestuario,equipos_comunes', // Añade "equipos_comunes"
-            'estado'       => 'required|in:Pendiente,En proceso, resuelta',
+            'estado'       => 'required|in:pendiente,en_proceso,resuelta',
             'descripcion'  => 'required|string',
             'nivel'        => 'required|in:alto,medio,bajo',
             'id_parque'    => 'required|exists:parks,id_parque',
             'leido'        => 'boolean',
             'resolviendo'   => 'nullable|string',
         ];
-        
+
         // Añadir reglas condicionales según el tipo
         $tipo = $request->input('tipo');
         if ($tipo === 'vehiculo') {
@@ -105,7 +105,7 @@ class IncidentController extends Controller
         // Para 'instalacion' y 'equipos_comunes' no se requieren campos adicionales
 
         $validator = Validator::make($request->all(), $rules);
-        if ($validator->fails()){
+        if ($validator->fails()) {
             return response()->json($validator->errors(), 400);
         }
 
@@ -127,50 +127,48 @@ class IncidentController extends Controller
     }
 
     /**
- * Marca una incidencia como leída.
- */
-public function markAsRead($id)
-{
-    $incident = Incident::find($id);
-    if (!$incident) {
-        return response()->json(['error' => 'Incidencia no encontrada'], 404);
-    }
-    $incident->leido = true;
-    $incident->save();
-    return response()->json($incident, 200);
-}
-
-
-public function resolve(Request $request, $id)
-{
-    $incident = Incident::find($id);
-    if (!$incident) {
-         return response()->json(['error' => 'Incidencia no encontrada'], 404);
+     * Marca una incidencia como leída.
+     */
+    public function markAsRead($id)
+    {
+        $incident = Incident::find($id);
+        if (!$incident) {
+            return response()->json(['error' => 'Incidencia no encontrada'], 404);
+        }
+        $incident->leido = true;
+        $incident->save();
+        return response()->json($incident, 200);
     }
 
-    // Validar que se proporcione tanto el id del empleado que resuelve como la resolución
-    $validator = Validator::make($request->all(), [
-         'resulta_por' => 'required',
-         'resolucion'  => 'required|string'
-    ]);
-    if ($validator->fails()){
-         return response()->json($validator->errors(), 400);
+
+    public function resolve(Request $request, $id)
+    {
+        $incident = Incident::find($id);
+        if (!$incident) {
+            return response()->json(['error' => 'Incidencia no encontrada'], 404);
+        }
+
+        // Validar que se proporcione tanto el id del empleado que resuelve como la resolución
+        $validator = Validator::make($request->all(), [
+            'resulta_por' => 'required',
+            'resolucion'  => 'required|string'
+        ]);
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $incident->estado = 'resuelta';
+        $incident->resulta_por = $request->input('resulta_por');
+        $incident->resolucion = $request->input('resolucion');
+        $incident->save();
+
+        return response()->json($incident, 200);
     }
 
-    $incident->estado = 'resuelta';
-    $incident->resulta_por = $request->input('resulta_por');
-    $incident->resolucion = $request->input('resolucion');
-    $incident->save();
 
-    return response()->json($incident, 200);
-}
-
-
-public function countPending()
-{
-    $pendingCount = Incident::where('estado', 'pendiente')->count();
-    return response()->json(['pending' => $pendingCount], 200);
-}
-
-
+    public function countPending()
+    {
+        $pendingCount = Incident::where('estado', 'pendiente')->count();
+        return response()->json(['pending' => $pendingCount], 200);
+    }
 }

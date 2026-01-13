@@ -1,2 +1,27 @@
 User-agent: *
-Disallow: /
+Allow: /
+
+# Bloquear áreas privadas de la aplicación
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /profile
+Disallow: /settings
+Disallow: /login
+Disallow: /register
+
+# Permitir recursos estáticos
+Allow: /assets/
+Allow: /*.css
+Allow: /*.js
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.jpeg
+Allow: /*.svg
+Allow: /*.webp
+Allow: /*.ico
+
+# Sitemap
+Sitemap: https://bomberosgranada.es/sitemap.xml
+
+# Crawl-delay para no sobrecargar el servidor
+Crawl-delay: 1

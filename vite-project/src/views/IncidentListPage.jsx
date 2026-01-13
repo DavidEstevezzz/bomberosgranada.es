@@ -239,7 +239,7 @@ const IncidentListPage = () => {
   };
 
   const handleDelete = async (incidentId) => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar esta incidencia?")) {
+    if (window.confirm("¿Estás seguro de que deseas eliminar esta incidencia? ")) {
       try {
         await IncidentApiService.deleteIncident(incidentId);
         fetchIncidents();
@@ -448,7 +448,7 @@ const IncidentListPage = () => {
           <div>
             <p className={`text-sm font-semibold uppercase tracking-[0.3em] ${darkMode ? 'text-primary-300' : 'text-primary-600'
               }`}>
-              Gestión de Incidencias
+              Gestión de Incidencias nuevo
             </p>
             <h1 className={`mt-2 text-3xl font-bold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
               Incidencias

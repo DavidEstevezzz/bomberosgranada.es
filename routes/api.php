@@ -169,6 +169,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::get('/firefighters-assignments', [FirefighterAssignmentController::class, 'index']);
+    Route::get('/firefighters-assignments/active-transfers', [FirefighterAssignmentController::class, 'getActiveTransfers']);
+
     Route::get('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'show']);
     Route::get('/firefighters-assignments/{id}/firefighters', [FirefighterAssignmentController::class, 'getFirefightersByAssignment']);
 
@@ -282,7 +284,6 @@ Route::middleware(['auth:sanctum', 'role:Jefe|Mando'])->group(function () {
     Route::delete('/transfers/{id_transfer}', [TransferController::class, 'destroy']);
 
     // Traslados legacy (mantener por compatibilidad)
-    Route::get('/firefighters-assignments/active-transfers', [FirefighterAssignmentController::class, 'getActiveTransfers']);
     Route::post('/firefighters-assignments/undo-transfer', [FirefighterAssignmentController::class, 'undoTransfer']);
     Route::put('/firefighters-assignments/{id_asignacion}/increment-user-column', [FirefighterAssignmentController::class, 'increaseUserColumnValue']);
     Route::put('/firefighters-assignments/{id}', [FirefighterAssignmentController::class, 'update']);

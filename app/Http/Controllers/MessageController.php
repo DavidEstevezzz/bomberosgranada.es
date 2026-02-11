@@ -306,7 +306,7 @@ class MessageController extends Controller
                 return response()->json(['message' => 'Archivo no encontrado'], 404);
             }
 
-            $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $message->attachment);
+            $filePath = ('/var/www/bomberosgranada.es/shared/storage/' . $message->attachment);
             Log::emergency("Ruta de archivo adjunto: " . $filePath);
 
             if (!file_exists($filePath)) {

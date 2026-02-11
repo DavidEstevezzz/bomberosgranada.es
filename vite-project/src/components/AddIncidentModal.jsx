@@ -181,26 +181,33 @@ const AddIncidentModal = ({ isOpen, onClose, onAdd }) => {
   };
 
   const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    setErrorMessages({});
+  event.preventDefault();
+  if (isSubmitting) return;
+  setIsSubmitting(true);
+  setErrorMessages({});
 
-    try {
-      const response = await IncidentApiService.createIncident(formValues);
-      onAdd(response.data);
-      handleClose();
-    } catch (error) {
-      console.error('Error creating incident:', error);
-      if (error.response && error.response.data) {
-        setErrorMessages(error.response.data);
-      } else {
-        setErrorMessages({ general: 'Ocurrió un error al crear la incidencia.' });
-      }
-    } finally {
-      setIsSubmitting(false);
+  try {
+    // Normalizar el estado a minúsculas antes de enviar
+    const dataToSend = {
+      ...formValues,
+      estado: formValues.estado.toLowerCase(),
+      nivel: formValues.nivel.toLowerCase()  
+    };
+    
+    const response = await IncidentApiService.createIncident(dataToSend);
+    onAdd(response.data);
+    handleClose();
+  } catch (error) {
+    console.error('Error creating incident:', error);
+    if (error.response && error.response.data) {
+      setErrorMessages(error.response.data);
+    } else {
+      setErrorMessages({ general: 'Ocurrió un error al crear la incidencia.' });
     }
-  };
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   if (!isOpen) return null;
 

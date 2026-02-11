@@ -88,7 +88,7 @@ async updateGeneralIncidents(idBrigada, date, incidencias_generales) {
   });
 }
 
-async getPreviousGuards(id_brigada, currentDate, daysBack = [5, 10, 15]) {
+async getPreviousGuards(id_brigada, currentDate, daysBack = [6, 12, 18]) {
   try {
     const guardPromises = daysBack.map(days => {
       // USAR STRING PARSING EN LUGAR DE new Date()

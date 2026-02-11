@@ -9,14 +9,14 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Carbon;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\URL;
 
 
 class PdfDocumentController extends Controller
 {
-
-    private const STORAGE_BASE_PATH = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/';
+    // Usar ruta relativa al proyecto - más portable
+    private const STORAGE_BASE_PATH = '/var/www/bomberosgranada.es/shared/storage/';
 
     /**
      * Obtener el documento PDF más reciente.
@@ -79,6 +79,7 @@ class PdfDocumentController extends Controller
             'is_new' => $view->wasRecentlyCreated,
         ]);
     }
+
     private function resolveFileInfo(PdfDocument $document, string $type = 'primary'): array
     {
         $normalizedType = $type === 'secondary' ? 'secondary' : 'primary';
@@ -205,7 +206,7 @@ class PdfDocumentController extends Controller
             foreach ($existingDocuments as $doc) {
                 Log::info('Eliminando documento existente: ' . $doc->original_filename . ' con ruta: ' . $doc->file_path);
                 // Eliminar el primer archivo
-                $absolutePath = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $doc->file_path;
+                $absolutePath = self::STORAGE_BASE_PATH . $doc->file_path;
                 if (file_exists($absolutePath)) {
                     unlink($absolutePath);
                     Log::info('Archivo eliminado correctamente: ' . $absolutePath);
@@ -215,7 +216,7 @@ class PdfDocumentController extends Controller
 
                 // Eliminar el segundo archivo si existe
                 if ($doc->file_path_second) {
-                    $absolutePath_second = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $doc->file_path_second;
+                    $absolutePath_second = self::STORAGE_BASE_PATH . $doc->file_path_second;
                     if (file_exists($absolutePath_second)) {
                         unlink($absolutePath_second);
                         Log::info('Archivo secundario eliminado correctamente: ' . $absolutePath_second);
@@ -236,9 +237,9 @@ class PdfDocumentController extends Controller
             $filename = Str::random(40) . '.' . $file->getClientOriginalExtension();
 
             // Definir la ruta destino absoluta
-            $destinationDir = '/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/pdfs';
+            $destinationDir = self::STORAGE_BASE_PATH . 'pdfs';
             if (!is_dir($destinationDir)) {
-                mkdir($destinationDir, 0777, true);
+                mkdir($destinationDir, 0755, true);
             }
 
             // Mover el primer archivo a la carpeta de destino
@@ -339,7 +340,6 @@ class PdfDocumentController extends Controller
 
         [$fullPath, $downloadName] = $this->resolveFileInfo($document, $type);
 
-
         return response()->download($fullPath, $downloadName);
     }
 
@@ -354,12 +354,16 @@ class PdfDocumentController extends Controller
         $document = PdfDocument::findOrFail($id);
 
         // Eliminar los archivos físicos
-        if (Storage::disk('public')->exists($document->file_path)) {
-            Storage::disk('public')->delete($document->file_path);
+        $absolutePath = self::STORAGE_BASE_PATH . $document->file_path;
+        if (file_exists($absolutePath)) {
+            unlink($absolutePath);
         }
 
-        if ($document->file_path_second && Storage::disk('public')->exists($document->file_path_second)) {
-            Storage::disk('public')->delete($document->file_path_second);
+        if ($document->file_path_second) {
+            $absolutePath_second = self::STORAGE_BASE_PATH . $document->file_path_second;
+            if (file_exists($absolutePath_second)) {
+                unlink($absolutePath_second);
+            }
         }
 
         // Eliminar el registro de la base de datos

@@ -159,7 +159,7 @@ class RequestController extends Controller
         }
 
         // Obtener la ruta completa al archivo almacenado
-        $filePath = ('/home/david-api/htdocs/api.bomberosgranada.es/shared/storage/' . $miRequest->file);
+        $filePath = ('/var/www/bomberosgranada.es/shared/storage/' . $miRequest->file);
 
         // Verificar si el archivo existe físicamente en el servidor
         if (!file_exists($filePath)) {

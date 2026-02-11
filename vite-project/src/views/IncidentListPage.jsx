@@ -448,7 +448,7 @@ const IncidentListPage = () => {
           <div>
             <p className={`text-sm font-semibold uppercase tracking-[0.3em] ${darkMode ? 'text-primary-300' : 'text-primary-600'
               }`}>
-              Gestión de Incidencias nuevo
+              Gestión de Incidencias
             </p>
             <h1 className={`mt-2 text-3xl font-bold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
               Incidencias
@@ -457,7 +457,7 @@ const IncidentListPage = () => {
           <div className="flex flex-wrap gap-3">
             <button onClick={() => setIsAddModalOpen(true)} className={buttonPrimaryClass}>
               <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-              <span>Nueva Incidencia</span>
+              <span>Nueva Incidencia</span> 
             </button>
             <button onClick={() => setIsExportModalOpen(true)} className={buttonSecondaryClass}>
               <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4" />

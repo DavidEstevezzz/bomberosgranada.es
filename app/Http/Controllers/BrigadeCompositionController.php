@@ -55,7 +55,6 @@ class BrigadeCompositionController extends Controller
             $endDate = $startDate->copy()->endOfMonth();
 
             $guardDays = Guard::where('id_brigada', $brigadeId)
-                ->where('id_parque', $idParque)
                 ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
                 ->orderBy('date')
                 ->pluck('date')

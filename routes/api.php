@@ -219,7 +219,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Rutas de Login y Logout (abiertas)
-Route::post('/login', [apiController::class, 'login']);
+Route::post('/login', [apiController::class, 'login'])->middleware('throttle:login');
 Route::middleware('auth:sanctum')->post('/logout', [apiController::class, 'logout']);
 
 // Rutas protegidas por rol jefe

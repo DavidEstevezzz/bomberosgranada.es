@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faTachometerAlt,
@@ -7,7 +7,6 @@ import {
   faPeopleGroup,
   faGear,
   faClock,
-  faChartBar,
   faFile,
   faCalendar,
   faChevronDown,
@@ -17,18 +16,16 @@ import {
   faExchangeAlt,
   faFilePdf,
   faRadio,
-  faCalendarCheck,
-  faClipboardList
 } from '@fortawesome/free-solid-svg-icons';
 import { useDarkMode } from '../contexts/DarkModeContext';
 import { useStateContext } from '../contexts/ContextProvider';
-import MessagesApiService from '../services/MessagesApiService';
-import IncidentApiService from '../services/IncidentApiService';
-import UsuariosApiService from '../services/UsuariosApiService';
-import PdfDocumentApiService from '../services/PdfDocumentApiService';
+import { useSidebar } from '../contexts/SidebarContext';
 
 const Aside = ({ className }) => {
   const { user } = useStateContext();
+  const { unreadCount, pendingIncidentsCount, isMandoEspecial, hasNewPdf } = useSidebar();
+  const { darkMode } = useDarkMode();
+  
   const [dropdownOpen, setDropdownOpen] = useState({
     users: false,
     brigades: false,
@@ -39,69 +36,6 @@ const Aside = ({ className }) => {
     equipment: false,
     calendars: false,
   });
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [pendingIncidentsCount, setPendingIncidentsCount] = useState(0);
-  const [isMandoEspecial, setIsMandoEspecial] = useState(false);
-  const [hasNewPdf, setHasNewPdf] = useState(false);
-  const { darkMode } = useDarkMode();
-
-  useEffect(() => {
-    if (user) {
-      fetchUnreadMessages();
-      fetchPendingIncidentsCount();
-      checkMandoEspecial();
-      fetchLatestPdfStatus();
-
-    }
-  }, [user]);
-
-  const fetchUnreadMessages = async () => {
-    try {
-      const response = await MessagesApiService.getInbox();
-      const unreadMessages = response.data.filter((message) => !message.is_read);
-      setUnreadCount(unreadMessages.length);
-    } catch (error) {
-      console.error('Error fetching unread messages:', error);
-    }
-  };
-
-  const fetchPendingIncidentsCount = async () => {
-    try {
-      const response = await IncidentApiService.countPending();
-      setPendingIncidentsCount(response.data.pending);
-    } catch (error) {
-      console.error('Error fetching pending incidents count:', error);
-    }
-  };
-
-  const checkMandoEspecial = async () => {
-    try {
-      const response = await UsuariosApiService.checkMandoEspecial(user.id_empleado);
-      setIsMandoEspecial(response.data.mando_especial);
-    } catch (error) {
-      console.error('Error al verificar si el usuario es mando especial:', error);
-      setIsMandoEspecial(false);
-    }
-  };
-
-  const fetchLatestPdfStatus = async () => {
-    if (!user || (user.type !== 'jefe' && user.type !== 'mando')) {
-      setHasNewPdf(false);
-      return;
-    }
-
-    try {
-      const response = await PdfDocumentApiService.getLatestStatus();
-      setHasNewPdf(response.data?.has_new ?? false);
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        setHasNewPdf(false);
-      } else {
-        console.error('Error al obtener el estado del PDF más reciente:', error);
-      }
-    }
-  };
-
 
   const toggleDropdown = (dropdown) => {
     setDropdownOpen((prevState) => ({
@@ -122,37 +56,30 @@ const Aside = ({ className }) => {
 
   const userType = user.type;
 
-  // Estilos base
-  const asideBaseClass = `w-64 h-screen overflow-y-auto transition-colors duration-300 ${darkMode ? 'bg-slate-950 border-r border-slate-800' : 'bg-white border-r border-slate-200'
-    }`;
+  // Estilos base (sin cambios)
+  const asideBaseClass = `w-64 h-screen overflow-y-auto transition-colors duration-300 ${darkMode ? 'bg-slate-950 border-r border-slate-800' : 'bg-white border-r border-slate-200'}`;
 
   const linkClass = `group flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-xl mx-2 ${darkMode
     ? 'text-slate-300 hover:bg-slate-900 hover:text-primary-400'
-    : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'
-    }`;
+    : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'}`;
 
   const dropdownButtonClass = `group flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left transition-all duration-200 rounded-xl mx-2 ${darkMode
     ? 'text-slate-300 hover:bg-slate-900 hover:text-primary-400'
-    : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'
-    }`;
+    : 'text-slate-700 hover:bg-slate-50 hover:text-primary-600'}`;
 
   const dropdownItemClass = `block px-4 py-2.5 text-sm transition-all duration-200 rounded-lg mx-6 my-1 ${darkMode
     ? 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-    }`;
+    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`;
 
-  const iconClass = `w-5 h-5 mr-3 transition-colors ${darkMode ? 'text-slate-400 group-hover:text-primary-400' : 'text-slate-500 group-hover:text-primary-600'
-    }`;
+  const iconClass = `w-5 h-5 mr-3 transition-colors ${darkMode ? 'text-slate-400 group-hover:text-primary-400' : 'text-slate-500 group-hover:text-primary-600'}`;
 
   const badgeClass = `ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full transition-all duration-200 ${darkMode
     ? 'bg-primary-500/20 text-primary-300 ring-1 ring-primary-500/30'
-    : 'bg-primary-500 text-white shadow-sm'
-    }`;
+    : 'bg-primary-500 text-white shadow-sm'}`;
 
   const badgeRedClass = `ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full transition-all duration-200 ${darkMode
     ? 'bg-red-500/20 text-red-300 ring-1 ring-red-500/30'
-    : 'bg-red-500 text-white shadow-sm'
-    }`;
+    : 'bg-red-500 text-white shadow-sm'}`;
 
   return (
     <aside className={`${asideBaseClass} ${className}`}>
@@ -190,8 +117,7 @@ const Aside = ({ className }) => {
               </span>
               <FontAwesomeIcon
                 icon={faChevronDown}
-                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.equipment ? 'rotate-180' : ''
-                  } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.equipment ? 'rotate-180' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
               />
             </button>
             {dropdownOpen.equipment && (
@@ -216,7 +142,6 @@ const Aside = ({ className }) => {
         )}
 
         {/* Brigadas - Jefe y Mando */}
-
         {(userType === 'jefe' || userType === 'mando') && (
           <div className="relative">
             <button onClick={() => toggleDropdown('brigades')} className={dropdownButtonClass}>
@@ -226,13 +151,11 @@ const Aside = ({ className }) => {
               </span>
               <FontAwesomeIcon
                 icon={faChevronDown}
-                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.brigades ? 'rotate-180' : ''
-                  } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.brigades ? 'rotate-180' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
               />
             </button>
             {dropdownOpen.brigades && (
               <div className="py-2">
-                {/* Solo Jefes */}
                 {userType === 'jefe' && (
                   <>
                     <a href="/brigades" className={dropdownItemClass}>
@@ -243,7 +166,6 @@ const Aside = ({ className }) => {
                     </a>
                   </>
                 )}
-                {/* Jefes y Mandos */}
                 <a href="/composicion-brigadas" className={dropdownItemClass}>
                   Composición de Brigadas
                 </a>
@@ -262,8 +184,7 @@ const Aside = ({ className }) => {
               </span>
               <FontAwesomeIcon
                 icon={faChevronDown}
-                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.settings ? 'rotate-180' : ''
-                  } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.settings ? 'rotate-180' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
               />
             </button>
             {dropdownOpen.settings && (
@@ -285,8 +206,7 @@ const Aside = ({ className }) => {
             </span>
             <FontAwesomeIcon
               icon={faChevronDown}
-              className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.extraHours ? 'rotate-180' : ''
-                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.extraHours ? 'rotate-180' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
             />
           </button>
           {dropdownOpen.extraHours && (
@@ -329,8 +249,7 @@ const Aside = ({ className }) => {
             </span>
             <FontAwesomeIcon
               icon={faChevronDown}
-              className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.solicitudes ? 'rotate-180' : ''
-                } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+              className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.solicitudes ? 'rotate-180' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
             />
           </button>
           {dropdownOpen.solicitudes && (
@@ -379,8 +298,7 @@ const Aside = ({ className }) => {
               </span>
               <FontAwesomeIcon
                 icon={faChevronDown}
-                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.calendars ? 'rotate-180' : ''
-                  } ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
+                className={`w-4 h-4 transition-transform duration-200 ${dropdownOpen.calendars ? 'rotate-180' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}
               />
             </button>
             {dropdownOpen.calendars && (
@@ -428,7 +346,6 @@ const Aside = ({ className }) => {
             <FontAwesomeIcon icon={faFilePdf} className={iconClass} />
             <span>Parte Jefatura</span>
             {hasNewPdf && <span className={badgeClass}>Nuevo</span>}
-
           </a>
         )}
       </nav>

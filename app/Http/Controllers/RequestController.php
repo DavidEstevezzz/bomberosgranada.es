@@ -10,6 +10,7 @@ use App\Models\Firefighters_assignment;
 use App\Mail\RequestStatusUpdatedMail;
 use Illuminate\Support\Facades\Mail;
 use App\Models\User;
+use App\Models\Guard;
 use Illuminate\Support\Facades\Auth;
 
 
@@ -52,8 +53,9 @@ class RequestController extends Controller
             'tipo' => 'required|in:vacaciones,asuntos propios,horas sindicales,salidas personales,vestuario,licencias por jornadas,licencias por dias,modulo,compensacion grupos especiales',
             'fecha_ini' => 'required|date',
             'fecha_fin' => 'required|date',
+            'guardias_vacaciones' => 'nullable|string',
             'estado' => 'required|in:Pendiente,Confirmada,Cancelada,Denegada',
-            'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048', // Validación del archivo
+            'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
         ];
 
         // Reglas específicas para "asuntos propios"
@@ -175,7 +177,7 @@ class RequestController extends Controller
     public function update(Request $request, $id)
     {
 
-            Log::info("🔥 UPDATE LLAMADO - ID: {$id}, Datos recibidos:", $request->all());
+        Log::info("🔥 UPDATE LLAMADO - ID: {$id}, Datos recibidos:", $request->all());
 
 
         $miRequest = MiRequest::findOrFail($id);
@@ -202,9 +204,16 @@ class RequestController extends Controller
             // Verificaciones específicas por tipo
             switch ($miRequest->tipo) {
                 case 'vacaciones':
-                    $fechaInicio = new \DateTime($miRequest->fecha_ini);
-                    $fechaFin = new \DateTime($miRequest->fecha_fin);
-                    $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+                    if ($miRequest->guardias_vacaciones) {
+                        $guardiasSeleccionadas = is_array($miRequest->guardias_vacaciones)
+                            ? $miRequest->guardias_vacaciones
+                            : json_decode($miRequest->guardias_vacaciones, true);
+                        $diasSolicitados = count($guardiasSeleccionadas) * 6;
+                    } else {
+                        $fechaInicio = new \DateTime($miRequest->fecha_ini);
+                        $fechaFin = new \DateTime($miRequest->fecha_fin);
+                        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+                    }
 
                     if ($user->vacaciones < $diasSolicitados) {
                         return response()->json(['error' => 'El usuario no tiene suficientes días de vacaciones disponibles'], 400);
@@ -286,127 +295,126 @@ class RequestController extends Controller
                 Log::info("Asignaciones eliminadas para solicitud ID: {$miRequest->id}");
             }
         }
-            // Enviar correo de notificación
+        // Enviar correo de notificación
 
-            // Enviar correo de notificación
-            $user = $miRequest->EnviadaPor;
+        // Enviar correo de notificación
+        $user = $miRequest->EnviadaPor;
 
-            Log::info("=== INICIO PROCESO ENVÍO CORREO ===");
-            Log::info("Solicitud ID: {$miRequest->id}");
-            Log::info("Estado anterior: {$oldEstado}");
-            Log::info("Estado nuevo: {$newEstado}");
+        Log::info("=== INICIO PROCESO ENVÍO CORREO ===");
+        Log::info("Solicitud ID: {$miRequest->id}");
+        Log::info("Estado anterior: {$oldEstado}");
+        Log::info("Estado nuevo: {$newEstado}");
 
-            if (!$user) {
-                Log::error("❌ Usuario no encontrado para la solicitud ID: {$miRequest->id}");
-                return response()->json($miRequest, 200);
-            }
-
-            Log::info("✅ Usuario encontrado:", [
-                'id_empleado' => $user->id_empleado,
-                'nombre' => $user->nombre,
-                'email' => $user->email
-            ]);
-
-            if (!$user->email) {
-                Log::warning("⚠️ Usuario no tiene email configurado - ID: {$user->id_empleado}");
-                return response()->json($miRequest, 200);
-            }
-
-            // Verificar configuración de correo
-            $mailMailer = config('mail.default');
-            Log::info("📧 Configuración de correo actual:", [
-                'MAIL_MAILER' => $mailMailer,
-                'MAIL_FROM_ADDRESS' => config('mail.from.address'),
-                'MAIL_FROM_NAME' => config('mail.from.name'),
-            ]);
-
-            // Configuración específica según el mailer
-            if ($mailMailer === 'mailgun') {
-                Log::info("🎯 Usando Mailgun API");
-                Log::info("MAILGUN_DOMAIN: " . config('services.mailgun.domain'));
-                Log::info("MAILGUN_SECRET configurado: " . (config('services.mailgun.secret') ? 'SÍ' : 'NO'));
-                Log::info("MAILGUN_ENDPOINT: " . config('services.mailgun.endpoint'));
-            } elseif ($mailMailer === 'sendgrid') {
-                Log::info("🎯 Usando SendGrid API");
-                Log::info("API KEY configurada: " . (config('services.sendgrid.key') ? 'SÍ' : 'NO'));
-            } elseif ($mailMailer === 'smtp') {
-                Log::info("📧 Configuración SMTP:", [
-                    'MAIL_HOST' => config('mail.mailers.smtp.host'),
-                    'MAIL_PORT' => config('mail.mailers.smtp.port'),
-                    'MAIL_USERNAME' => config('mail.mailers.smtp.username'),
-                    'MAIL_ENCRYPTION' => config('mail.mailers.smtp.encryption'),
-                    'PASSWORD_SET' => config('mail.mailers.smtp.password') ? 'SÍ' : 'NO'
-                ]);
-            }
-
-            Log::info("📨 Preparando envío de correo:");
-            Log::info("Destinatario: {$user->email}");
-            Log::info("Tipo de solicitud: {$miRequest->tipo}");
-            Log::info("Fecha inicio: {$miRequest->fecha_ini}");
-            Log::info("Fecha fin: {$miRequest->fecha_fin}");
-
-            try {
-                Log::info("🚀 Iniciando envío de correo...");
-
-                // Solo verificar conectividad SMTP si es SMTP puro
-                if ($mailMailer === 'smtp') {
-                    Log::info("🔌 Verificando conectividad SMTP...");
-
-                    $host = config('mail.mailers.smtp.host');
-                    $port = config('mail.mailers.smtp.port');
-
-                    // Test de conectividad básica
-                    $fp = @fsockopen($host, $port, $errno, $errstr, 10);
-                    if (!$fp) {
-                        Log::error("❌ No se puede conectar a {$host}:{$port}");
-                        Log::error("Error número: {$errno}");
-                        Log::error("Error mensaje: {$errstr}");
-                        throw new \Exception("No se puede conectar al servidor SMTP: {$errstr}");
-                    } else {
-                        Log::info("✅ Conexión TCP a {$host}:{$port} exitosa");
-                        fclose($fp);
-                    }
-                } else {
-                    Log::info("⚡ Usando {$mailMailer} API (no requiere conexión SMTP)");
-                }
-
-                // Medir tiempo de envío
-                $startTime = microtime(true);
-
-                Log::info("📧 Creando instancia del Mailable...");
-                $mailable = new RequestStatusUpdatedMail($miRequest, $newEstado);
-                Log::info("✅ Mailable creado exitosamente");
-
-                Log::info("📤 Enviando correo...");
-
-                Mail::to($user->email)->send($mailable);
-
-                $endTime = microtime(true);
-                $executionTime = round(($endTime - $startTime) * 1000, 2);
-
-                Log::info("✅ Correo enviado exitosamente!");
-                Log::info("⏱️ Tiempo de envío: {$executionTime}ms");
-                Log::info("📧 Correo enviado a: {$user->email}");
-            } catch (\Exception $e) {
-                Log::error("❌ ERROR AL ENVIAR CORREO:");
-                Log::error("Tipo de excepción: " . get_class($e));
-                Log::error("Mensaje: " . $e->getMessage());
-                Log::error("Código: " . $e->getCode());
-                Log::error("Archivo: " . $e->getFile() . ":" . $e->getLine());
-                Log::error("Stack trace: " . $e->getTraceAsString());
-
-                // Información adicional de debug
-                Log::error("🔍 Información adicional:");
-                Log::error("PHP Version: " . PHP_VERSION);
-                Log::error("Laravel Version: " . app()->version());
-                Log::error("Environment: " . config('app.env'));
-                Log::error("Mailer. usado: " . $mailMailer);
-            } finally {
-                Log::info("=== FIN PROCESO ENVÍO CORREO ===");
-            }
-
+        if (!$user) {
+            Log::error("❌ Usuario no encontrado para la solicitud ID: {$miRequest->id}");
             return response()->json($miRequest, 200);
-        
+        }
+
+        Log::info("✅ Usuario encontrado:", [
+            'id_empleado' => $user->id_empleado,
+            'nombre' => $user->nombre,
+            'email' => $user->email
+        ]);
+
+        if (!$user->email) {
+            Log::warning("⚠️ Usuario no tiene email configurado - ID: {$user->id_empleado}");
+            return response()->json($miRequest, 200);
+        }
+
+        // Verificar configuración de correo
+        $mailMailer = config('mail.default');
+        Log::info("📧 Configuración de correo actual:", [
+            'MAIL_MAILER' => $mailMailer,
+            'MAIL_FROM_ADDRESS' => config('mail.from.address'),
+            'MAIL_FROM_NAME' => config('mail.from.name'),
+        ]);
+
+        // Configuración específica según el mailer
+        if ($mailMailer === 'mailgun') {
+            Log::info("🎯 Usando Mailgun API");
+            Log::info("MAILGUN_DOMAIN: " . config('services.mailgun.domain'));
+            Log::info("MAILGUN_SECRET configurado: " . (config('services.mailgun.secret') ? 'SÍ' : 'NO'));
+            Log::info("MAILGUN_ENDPOINT: " . config('services.mailgun.endpoint'));
+        } elseif ($mailMailer === 'sendgrid') {
+            Log::info("🎯 Usando SendGrid API");
+            Log::info("API KEY configurada: " . (config('services.sendgrid.key') ? 'SÍ' : 'NO'));
+        } elseif ($mailMailer === 'smtp') {
+            Log::info("📧 Configuración SMTP:", [
+                'MAIL_HOST' => config('mail.mailers.smtp.host'),
+                'MAIL_PORT' => config('mail.mailers.smtp.port'),
+                'MAIL_USERNAME' => config('mail.mailers.smtp.username'),
+                'MAIL_ENCRYPTION' => config('mail.mailers.smtp.encryption'),
+                'PASSWORD_SET' => config('mail.mailers.smtp.password') ? 'SÍ' : 'NO'
+            ]);
+        }
+
+        Log::info("📨 Preparando envío de correo:");
+        Log::info("Destinatario: {$user->email}");
+        Log::info("Tipo de solicitud: {$miRequest->tipo}");
+        Log::info("Fecha inicio: {$miRequest->fecha_ini}");
+        Log::info("Fecha fin: {$miRequest->fecha_fin}");
+
+        try {
+            Log::info("🚀 Iniciando envío de correo...");
+
+            // Solo verificar conectividad SMTP si es SMTP puro
+            if ($mailMailer === 'smtp') {
+                Log::info("🔌 Verificando conectividad SMTP...");
+
+                $host = config('mail.mailers.smtp.host');
+                $port = config('mail.mailers.smtp.port');
+
+                // Test de conectividad básica
+                $fp = @fsockopen($host, $port, $errno, $errstr, 10);
+                if (!$fp) {
+                    Log::error("❌ No se puede conectar a {$host}:{$port}");
+                    Log::error("Error número: {$errno}");
+                    Log::error("Error mensaje: {$errstr}");
+                    throw new \Exception("No se puede conectar al servidor SMTP: {$errstr}");
+                } else {
+                    Log::info("✅ Conexión TCP a {$host}:{$port} exitosa");
+                    fclose($fp);
+                }
+            } else {
+                Log::info("⚡ Usando {$mailMailer} API (no requiere conexión SMTP)");
+            }
+
+            // Medir tiempo de envío
+            $startTime = microtime(true);
+
+            Log::info("📧 Creando instancia del Mailable...");
+            $mailable = new RequestStatusUpdatedMail($miRequest, $newEstado);
+            Log::info("✅ Mailable creado exitosamente");
+
+            Log::info("📤 Enviando correo...");
+
+            Mail::to($user->email)->send($mailable);
+
+            $endTime = microtime(true);
+            $executionTime = round(($endTime - $startTime) * 1000, 2);
+
+            Log::info("✅ Correo enviado exitosamente!");
+            Log::info("⏱️ Tiempo de envío: {$executionTime}ms");
+            Log::info("📧 Correo enviado a: {$user->email}");
+        } catch (\Exception $e) {
+            Log::error("❌ ERROR AL ENVIAR CORREO:");
+            Log::error("Tipo de excepción: " . get_class($e));
+            Log::error("Mensaje: " . $e->getMessage());
+            Log::error("Código: " . $e->getCode());
+            Log::error("Archivo: " . $e->getFile() . ":" . $e->getLine());
+            Log::error("Stack trace: " . $e->getTraceAsString());
+
+            // Información adicional de debug
+            Log::error("🔍 Información adicional:");
+            Log::error("PHP Version: " . PHP_VERSION);
+            Log::error("Laravel Version: " . app()->version());
+            Log::error("Environment: " . config('app.env'));
+            Log::error("Mailer. usado: " . $mailMailer);
+        } finally {
+            Log::info("=== FIN PROCESO ENVÍO CORREO ===");
+        }
+
+        return response()->json($miRequest, 200);
     }
 
     /**
@@ -453,8 +461,8 @@ class RequestController extends Controller
         // Determinar la brigada en función del tipo de solicitud
         switch (strtolower($miRequest->tipo)) {
             case 'vacaciones':
-                $brigadeId = \App\Models\Brigade::where('nombre', 'Vacaciones')->value('id_brigada');
-                break;
+                $this->createVacationAssignments($miRequest);
+                return; // La lógica de vacaciones es independiente
             case 'asuntos propios':
                 $brigadeId = \App\Models\Brigade::where('nombre', 'Asuntos Propios')->value('id_brigada');
                 break;
@@ -495,7 +503,7 @@ class RequestController extends Controller
         }
 
         // Obtener la brigada original para devolver al empleado a su puesto
-        $brigadeOriginal = $this->getOriginalBrigade($miRequest->id_empleado, $miRequest->fecha_ini);
+        $brigadeOriginal = $this->getOriginalBrigade($miRequest->id_empleado, $miRequest->fecha_ini, $miRequest->turno);
 
 
 
@@ -531,6 +539,308 @@ class RequestController extends Controller
             'fecha_ini' => $fechaDevolucion,
             'turno' => $turnoDevolucion,
             'tipo_asignacion' => 'vuelta',
+        ]);
+    }
+
+    /**
+     * Crear asignaciones de vacaciones por guardias individuales.
+     */
+    private function createVacationAssignments($miRequest)
+    {
+        $brigadeVacaciones = \App\Models\Brigade::where('nombre', 'Vacaciones')->value('id_brigada');
+
+        if (!$brigadeVacaciones) {
+            Log::error("No se encontró la brigada 'Vacaciones'");
+            return;
+        }
+
+        $guardiasSeleccionadas = is_array($miRequest->guardias_vacaciones)
+            ? $miRequest->guardias_vacaciones
+            : json_decode($miRequest->guardias_vacaciones, true);
+
+        if (empty($guardiasSeleccionadas)) {
+            Log::info("Solicitud de vacaciones sin guardias_vacaciones, usando sistema antiguo");
+
+            $brigadeOriginal = $this->getOriginalBrigade($miRequest->id_empleado, $miRequest->fecha_ini, 'Mañana');
+
+            Firefighters_assignment::create([
+                'id_empleado' => $miRequest->id_empleado,
+                'id_request' => $miRequest->id,
+                'id_brigada_origen' => $brigadeOriginal,
+                'id_brigada_destino' => $brigadeVacaciones,
+                'fecha_ini' => $miRequest->fecha_ini,
+                'turno' => 'Mañana',
+                'tipo_asignacion' => 'ida',
+            ]);
+
+            $fechaDevolucion = $this->determinarFechaDevolucion(
+                $miRequest->fecha_ini,
+                $miRequest->fecha_fin,
+                $miRequest->turno,
+                $miRequest->tipo
+            );
+
+            Firefighters_assignment::create([
+                'id_empleado' => $miRequest->id_empleado,
+                'id_request' => $miRequest->id,
+                'id_brigada_origen' => $brigadeVacaciones,
+                'id_brigada_destino' => $brigadeOriginal,
+                'fecha_ini' => $fechaDevolucion,
+                'turno' => 'Mañana',
+                'tipo_asignacion' => 'vuelta',
+            ]);
+
+            return;
+        }
+
+        sort($guardiasSeleccionadas);
+
+        Log::info("Creando asignaciones de vacaciones para guardias: " . implode(', ', $guardiasSeleccionadas));
+
+        // Agrupar guardias consecutivas en bloques
+        $bloques = [];
+        $bloqueActual = ['inicio' => $guardiasSeleccionadas[0]];
+
+        for ($i = 0; $i < count($guardiasSeleccionadas); $i++) {
+            $fechaGuardia = $guardiasSeleccionadas[$i];
+
+            // Buscar la siguiente guardia real del bombero después de esta
+            $nextGuard = $this->findNextGuard($miRequest->id_empleado, $fechaGuardia);
+            $fechaVuelta = $nextGuard ? $nextGuard['date'] : date('Y-m-d', strtotime($fechaGuardia . ' +6 days'));
+
+            // Si hay una siguiente guardia seleccionada y coincide con la fecha de vuelta o es anterior
+            $siguienteSeleccionada = $guardiasSeleccionadas[$i + 1] ?? null;
+
+            if ($siguienteSeleccionada && $siguienteSeleccionada <= $fechaVuelta) {
+                // Son consecutivas, seguir extendiendo el bloque
+                continue;
+            } else {
+                // Fin del bloque
+                $bloqueActual['fin'] = $fechaVuelta;
+                $bloques[] = $bloqueActual;
+
+                // Iniciar nuevo bloque si hay más guardias
+                if ($siguienteSeleccionada) {
+                    $bloqueActual = ['inicio' => $siguienteSeleccionada];
+                }
+            }
+        }
+
+        // Crear asignaciones por bloque
+        foreach ($bloques as $bloque) {
+            $brigadeOriginal = $this->getOriginalBrigade($miRequest->id_empleado, $bloque['inicio'], 'Mañana');
+
+            Log::info("Vacaciones bloque - Ida: {$bloque['inicio']}, Vuelta: {$bloque['fin']}");
+
+            Firefighters_assignment::create([
+                'id_empleado' => $miRequest->id_empleado,
+                'id_request' => $miRequest->id,
+                'id_brigada_origen' => $brigadeOriginal,
+                'id_brigada_destino' => $brigadeVacaciones,
+                'fecha_ini' => $bloque['inicio'],
+                'turno' => 'Mañana',
+                'tipo_asignacion' => 'ida',
+            ]);
+
+            Firefighters_assignment::create([
+                'id_empleado' => $miRequest->id_empleado,
+                'id_request' => $miRequest->id,
+                'id_brigada_origen' => $brigadeVacaciones,
+                'id_brigada_destino' => $brigadeOriginal,
+                'fecha_ini' => $bloque['fin'],
+                'turno' => 'Mañana',
+                'tipo_asignacion' => 'vuelta',
+            ]);
+        }
+    }
+
+    private function findNextGuard($idEmpleado, $afterDate)
+    {
+        $brigadeVacaciones = \App\Models\Brigade::where('nombre', 'Vacaciones')
+            ->value('id_brigada');
+
+        // Buscar la siguiente asignación de ida que NO sea a Vacaciones
+        $nextAssignment = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', '>', $afterDate)
+            ->where('tipo_asignacion', 'ida')
+            ->where('id_brigada_destino', '!=', $brigadeVacaciones)
+            ->orderBy('fecha_ini', 'asc')
+            ->first();
+
+        if ($nextAssignment) {
+            return ['date' => $nextAssignment->fecha_ini];
+        }
+
+        // Fallback: buscar en el calendario de guardias
+        $searchEnd = date('Y-m-d', strtotime($afterDate . ' +60 days'));
+
+        $excludedBrigadeIds = \App\Models\Brigade::whereIn('nombre', [
+            'Bajas',
+            'Vacaciones',
+            'Asuntos Propios',
+            'Modulo',
+            'Licencias por Jornadas',
+            'Licencias por Días',
+            'Compensacion grupos especiales',
+            'Horas Sindicales'
+        ])->pluck('id_brigada')->toArray();
+
+        $lastAssignment = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', '<=', $afterDate)
+            ->whereNotIn('id_brigada_destino', $excludedBrigadeIds)
+            ->orderBy('fecha_ini', 'desc')
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->first();
+
+        $brigadaActual = $lastAssignment ? $lastAssignment->id_brigada_destino : null;
+
+        if ($brigadaActual) {
+            $guard = Guard::where('date', '>', $afterDate)
+                ->where('date', '<=', $searchEnd)
+                ->where('id_brigada', $brigadaActual)
+                ->orderBy('date')
+                ->first();
+
+            if ($guard) {
+                return ['date' => $guard->date];
+            }
+        }
+
+        Log::warning("No se encontró la siguiente guardia para empleado {$idEmpleado} después de {$afterDate}");
+        return null;
+    }
+
+    /**
+     * Obtener la brigada del bombero para una fecha dada.
+     */
+    private function getBrigadeForDate($idEmpleado, $fecha)
+    {
+        // Buscar asignaciones del mismo día
+        $sameDayAssignments = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', $fecha)
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->get();
+
+        if ($sameDayAssignments->isNotEmpty()) {
+            $excludedBrigadeNames = ['Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo', 'Licencias por Jornadas', 'Licencias por Días', 'Compensacion grupos especiales', 'Horas Sindicales'];
+
+            $best = null;
+            foreach ($sameDayAssignments as $a) {
+                if ($best === null) {
+                    $best = $a;
+                    continue;
+                }
+
+                $currentName = $a->brigadeDestination ? $a->brigadeDestination->nombre : null;
+                $bestName = $best->brigadeDestination ? $best->brigadeDestination->nombre : null;
+                $currentExcluded = in_array($currentName, $excludedBrigadeNames);
+                $bestExcluded = in_array($bestName, $excludedBrigadeNames);
+
+                if ($currentExcluded && !$bestExcluded) {
+                    $best = $a;
+                } elseif (!$currentExcluded && $bestExcluded) {
+                    // mantener best
+                } elseif ($best->tipo_asignacion === 'vuelta' && $a->tipo_asignacion === 'ida') {
+                    $best = $a;
+                }
+            }
+
+            return $best ? $best->id_brigada_destino : null;
+        }
+
+        // Si no hay del mismo día, buscar la última asignación anterior
+        $previousAssignment = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', '<', $fecha)
+            ->orderBy('fecha_ini', 'desc')
+            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")
+            ->first();
+
+        return $previousAssignment ? $previousAssignment->id_brigada_destino : null;
+    }
+
+    public function getMyGuards(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'month' => 'required|date_format:Y-m',
+            'id_empleado' => 'required|exists:users,id_empleado',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
+
+        $idEmpleado = $request->input('id_empleado');
+        $month = $request->input('month');
+
+        $startDate = $month . '-01';
+        $endDate = date('Y-m-t', strtotime($startDate));
+
+        $user = User::find($idEmpleado);
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+
+        $guards = Guard::with('brigade:id_brigada,nombre')
+            ->whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date')
+            ->get();
+
+        // Solicitudes de vacaciones existentes
+        $existingVacationRequests = MiRequest::where('id_empleado', $idEmpleado)
+            ->where('tipo', 'vacaciones')
+            ->whereIn('estado', ['Pendiente', 'Confirmada'])
+            ->where(function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('fecha_ini', [$startDate, $endDate])
+                    ->orWhereBetween('fecha_fin', [$startDate, $endDate]);
+            })
+            ->get();
+
+        $vacationDates = [];
+        foreach ($existingVacationRequests as $vacReq) {
+            if ($vacReq->guardias_vacaciones) {
+                $fechasGuardias = is_array($vacReq->guardias_vacaciones)
+                    ? $vacReq->guardias_vacaciones
+                    : json_decode($vacReq->guardias_vacaciones, true);
+                if (is_array($fechasGuardias)) {
+                    foreach ($fechasGuardias as $fecha) {
+                        $vacationDates[$fecha] = $vacReq->estado;
+                    }
+                }
+            } else {
+                $current = new \DateTime($vacReq->fecha_ini);
+                $end = new \DateTime($vacReq->fecha_fin);
+                while ($current <= $end) {
+                    $vacationDates[$current->format('Y-m-d')] = $vacReq->estado;
+                    $current->modify('+1 day');
+                }
+            }
+        }
+
+        $myGuards = [];
+
+        foreach ($guards as $guard) {
+            $fecha = $guard->date;
+            $brigadaDelBombero = $this->getBrigadeForDate($idEmpleado, $fecha);
+
+            if ($brigadaDelBombero === $guard->id_brigada) {
+                $vacationStatus = $vacationDates[$fecha] ?? null;
+
+                $myGuards[] = [
+                    'date' => $fecha,
+                    'id_brigada' => $guard->id_brigada,
+                    'brigade_name' => $guard->brigade ? $guard->brigade->nombre : 'N/A',
+                    'has_vacation_request' => $vacationStatus !== null,
+                    'vacation_status' => $vacationStatus,
+                ];
+            }
+        }
+
+        return response()->json([
+            'guards' => $myGuards,
+            'vacation_days_available' => $user->vacaciones,
+            'month' => $month,
         ]);
     }
 
@@ -581,17 +891,35 @@ class RequestController extends Controller
 
 
 
-    private function getOriginalBrigade($idEmpleado, $fechaInicio)
+    private function getOriginalBrigade($idEmpleado, $fechaInicio, ?string $turnoSolicitud = null)
+
     {
         Log::info("Buscando brigada original para empleado: {$idEmpleado} antes de la fecha: {$fechaInicio}");
 
+        $turnoAncla = $this->determinarTurnoInicial($turnoSolicitud ?? 'Mañana');
+
+        $turnoOrder = match ($turnoAncla) {
+            'Mañana' => 1,
+            'Tarde' => 2,
+            'Noche' => 3,
+            default => 1
+        };
+
         $assignment = Firefighters_assignment::where('id_empleado', $idEmpleado)
-            ->where('fecha_ini', '<=', $fechaInicio)
-            ->orderBy('fecha_ini', 'desc')                                    // 1. Fecha más reciente
-            ->orderByRaw("FIELD(turno, 'Noche', 'Tarde', 'Mañana')")        // 2. Prioridad de turno
-            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')")          // 3. Tipo de asignación
-            ->orderBy('created_at', 'desc')                                   // 4. Más reciente en caso de empate
-            ->first();  //  ESTO ES LO CRÍTICO: first() en la query, no en la colección
+            ->where(function ($q) use ($fechaInicio, $turnoOrder) {
+                $q->where('fecha_ini', '<', $fechaInicio)
+                    ->orWhere(function ($q2) use ($fechaInicio, $turnoOrder) {
+                        $q2->where('fecha_ini', '=', $fechaInicio)
+                            ->whereRaw("FIELD(turno, 'Mañana','Tarde','Noche') <= ?", [$turnoOrder]);
+                    });
+            })
+            ->orderBy('fecha_ini', 'desc')
+            ->orderByRaw("FIELD(turno, 'Mañana','Tarde','Noche') DESC")
+            ->orderByRaw("FIELD(tipo_asignacion, 'ida', 'vuelta')") // 👈 ida prioriza
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+
 
         if (!$assignment) {
             Log::info("No se encontraron asignaciones anteriores para el empleado {$idEmpleado} antes de la fecha {$fechaInicio}.");
@@ -639,9 +967,18 @@ class RequestController extends Controller
         }
 
         // Calcular los días solicitados
-        $fechaInicio = new \DateTime($miRequest->fecha_ini);
-        $fechaFin = new \DateTime($miRequest->fecha_fin);
-        $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+        if ($miRequest->guardias_vacaciones) {
+            // Nuevo sistema: 6 días por cada guardia seleccionada
+            $guardiasSeleccionadas = is_array($miRequest->guardias_vacaciones)
+                ? $miRequest->guardias_vacaciones
+                : json_decode($miRequest->guardias_vacaciones, true);
+            $diasSolicitados = count($guardiasSeleccionadas) * 6;
+        } else {
+            // Sistema antiguo: diferencia entre fechas
+            $fechaInicio = new \DateTime($miRequest->fecha_ini);
+            $fechaFin = new \DateTime($miRequest->fecha_fin);
+            $diasSolicitados = $fechaInicio->diff($fechaFin)->days + 1;
+        }
 
         // Restar días de vacaciones cuando se confirma la solicitud
         if (($oldEstado === 'Pendiente' || $oldEstado === 'Cancelada' || $oldEstado === 'Denegada') && $newEstado === 'Confirmada') {

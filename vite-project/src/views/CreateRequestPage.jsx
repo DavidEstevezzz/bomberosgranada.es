@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import RequestApiService from '../services/RequestApiService';
+import VacationGuardSelector from '../components/VacationGuardSelector';
 import GuardsApiService from '../services/GuardsApiService';
 import AssignmentsApiService from '../services/AssignmentsApiService';
 import { useStateContext } from '../contexts/ContextProvider';
@@ -22,6 +23,7 @@ const CreateRequestPage = () => {
   const [success, setSuccess] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [file, setFile] = useState(null);
+  const [selectedVacationGuards, setSelectedVacationGuards] = useState([]);
 
   // NUEVOS ESTADOS para la funcionalidad de jefe
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -35,6 +37,10 @@ const CreateRequestPage = () => {
   useEffect(() => {
     setBrigadeCache({});
   }, [selectedEmployee]);
+
+  useEffect(() => {
+    setSelectedVacationGuards([]);
+  }, [tipo, selectedEmployee]);
 
   // Cargar empleados si es jefe
   useEffect(() => {
@@ -57,12 +63,12 @@ const CreateRequestPage = () => {
   }, [user]);
 
   useEffect(() => {
-  // Limpiar campos de hora si se selecciona "Día Completo" en horas sindicales
-  if (tipo === 'horas sindicales' && turno === 'Día Completo') {
-    setHoraIni('');
-    setHoraFin('');
-  }
-}, [tipo, turno]);
+    // Limpiar campos de hora si se selecciona "Día Completo" en horas sindicales
+    if (tipo === 'horas sindicales' && turno === 'Día Completo') {
+      setHoraIni('');
+      setHoraFin('');
+    }
+  }, [tipo, turno]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -149,15 +155,13 @@ const CreateRequestPage = () => {
 
   const validateVacationDays = () => {
     const targetUser = getTargetUser();
-    const startDate = dayjs(fechaIni);
-    const endDate = dayjs(fechaFin);
 
-    if (startDate.isAfter(endDate)) {
-      setError('La fecha de inicio no puede ser posterior a la fecha de fin.');
+    if (selectedVacationGuards.length === 0) {
+      setError('Debes seleccionar al menos una guardia para pedir vacaciones.');
       return false;
     }
 
-    const requestedDays = endDate.diff(startDate, 'day') + 1;
+    const requestedDays = selectedVacationGuards.length * 6;
     const availableDays = targetUser.vacaciones || 0;
 
     if (requestedDays > availableDays) {
@@ -165,7 +169,7 @@ const CreateRequestPage = () => {
         ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
         : 'el usuario';
       setError(
-        `${userName} no tiene suficientes días de vacaciones. Disponibles: ${availableDays}, solicitados: ${requestedDays}`
+        `${userName} no tiene suficientes días de vacaciones. Disponibles: ${availableDays}, solicitados: ${requestedDays} (${selectedVacationGuards.length} guardias × 6 días)`
       );
       return false;
     }
@@ -364,11 +368,6 @@ const CreateRequestPage = () => {
         setIsLoading(false);
         return;
       }
-      const areDatesValid = await validateDates();
-      if (!areDatesValid) {
-        setIsLoading(false);
-        return;
-      }
     }
 
     // Validación de horas según el tipo
@@ -397,23 +396,25 @@ const CreateRequestPage = () => {
       return;
     }
 
-    formData.append('id_empleado', targetId);
-    formData.append('tipo', tipo);
-    formData.append('motivo', motivo);
-    formData.append('fecha_ini', fechaIni);
-
-    // CORREGIDO: 'compensacion grupos especiales' usa fecha_ini como fecha_fin (igual que asuntos propios)
-    formData.append(
-      'fecha_fin',
-      tipo === 'salidas personales' ||
-        tipo === 'horas sindicales' ||
-        tipo === 'licencias por jornadas' ||
-        tipo === 'modulo' ||
-        tipo === 'vestuario' ||
-        tipo === 'compensacion grupos especiales'
-        ? fechaIni
-        : fechaFin
-    );
+    if (tipo === 'vacaciones') {
+      const sortedGuards = [...selectedVacationGuards].sort();
+      formData.append('fecha_ini', sortedGuards[0]);
+      formData.append('fecha_fin', sortedGuards[sortedGuards.length - 1]);
+      formData.append('guardias_vacaciones', JSON.stringify(sortedGuards));
+    } else {
+      formData.append('fecha_ini', fechaIni);
+      formData.append(
+        'fecha_fin',
+        tipo === 'salidas personales' ||
+          tipo === 'horas sindicales' ||
+          tipo === 'licencias por jornadas' ||
+          tipo === 'modulo' ||
+          tipo === 'vestuario' ||
+          tipo === 'compensacion grupos especiales'
+          ? fechaIni
+          : fechaFin
+      );
+    }
 
     // CORREGIDO: 'compensacion grupos especiales' requiere turno (igual que asuntos propios)
     formData.append(
@@ -461,6 +462,7 @@ const CreateRequestPage = () => {
       setHoraIni('');
       setHoraFin('');
       setTurno('');
+      setSelectedVacationGuards([]);
       setFile(null);
       setSelectedEmployee(null);
     } catch (error) {
@@ -617,8 +619,6 @@ const CreateRequestPage = () => {
                 >
                   <option value="vacaciones">Vacaciones</option>
                   <option value="asuntos propios">Asuntos Propios</option>
-                  {/*                  <option value="salidas personales">Salidas Personales</option>
- */}
                   <option value="licencias por jornadas">Licencias por Jornadas</option>
                   <option value="licencias por dias">Licencias por Días</option>
                   <option value="modulo">Módulo</option>
@@ -627,38 +627,49 @@ const CreateRequestPage = () => {
                   <option value="vestuario">Vestuario</option>
                 </select>
               </div>
-
-              <div className="space-y-2">
-                <label className={labelBaseClass} htmlFor="fechaIni">
-                  {/* CORREGIDO: Para compensacion grupos especiales solo se muestra "Fecha" */}
-                  {tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales' || tipo === 'licencias por jornadas' || tipo === 'horas sindicales' || tipo === 'vestuario' || tipo === 'modulo' ? 'Fecha' : 'Fecha de inicio'}
-                </label>
-                <input
-                  type="date"
-                  id="fechaIni"
-                  value={fechaIni}
-                  onChange={(e) => setFechaIni(e.target.value)}
-                  className={dateInputClass}
-                  required
-                />
-              </div>
             </div>
 
-            {/* CORREGIDO: No mostrar campo "Fecha de fin" para compensacion grupos especiales */}
-            {!['asuntos propios', 'licencias por jornadas', 'compensacion grupos especiales', 'horas sindicales', 'vestuario', 'salidas personales', 'modulo'].includes(tipo) && (
-              <div className="space-y-2">
-                <label className={labelBaseClass} htmlFor="fechaFin">
-                  Fecha de fin
-                </label>
-                <input
-                  type="date"
-                  id="fechaFin"
-                  value={fechaFin}
-                  onChange={(e) => setFechaFin(e.target.value)}
-                  className={dateInputClass}
-                  required
-                />
-              </div>
+            {tipo === 'vacaciones' ? (
+              <VacationGuardSelector
+                idEmpleado={selectedEmployee?.id_empleado || user?.id_empleado}
+                darkMode={darkMode}
+                onSelectionChange={(guards) => setSelectedVacationGuards(guards)}
+                vacacionesDisponibles={getTargetUser()?.vacaciones || 0}
+              />
+            ) : (
+              <>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className={labelBaseClass} htmlFor="fechaIni">
+                      {tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales' || tipo === 'licencias por jornadas' || tipo === 'horas sindicales' || tipo === 'vestuario' || tipo === 'modulo' ? 'Fecha' : 'Fecha de inicio'}
+                    </label>
+                    <input
+                      type="date"
+                      id="fechaIni"
+                      value={fechaIni}
+                      onChange={(e) => setFechaIni(e.target.value)}
+                      className={dateInputClass}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {!['asuntos propios', 'licencias por jornadas', 'compensacion grupos especiales', 'horas sindicales', 'vestuario', 'salidas personales', 'modulo'].includes(tipo) && (
+                  <div className="space-y-2">
+                    <label className={labelBaseClass} htmlFor="fechaFin">
+                      Fecha de fin
+                    </label>
+                    <input
+                      type="date"
+                      id="fechaFin"
+                      value={fechaFin}
+                      onChange={(e) => setFechaFin(e.target.value)}
+                      className={dateInputClass}
+                      required
+                    />
+                  </div>
+                )}
+              </>
             )}
 
 
@@ -698,8 +709,8 @@ const CreateRequestPage = () => {
             {tipo === 'horas sindicales' && turno === 'Día Completo' && (
               <div
                 className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${darkMode
-                    ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
-                    : 'border-blue-200 bg-blue-50 text-blue-700'
+                  ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
+                  : 'border-blue-200 bg-blue-50 text-blue-700'
                   }`}
               >
                 Se solicitarán automáticamente 24 horas sindicales para el día completo seleccionado.

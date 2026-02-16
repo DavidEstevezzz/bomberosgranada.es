@@ -18,12 +18,12 @@ class RequestApiService {
     // Crear una nueva solicitud
     async createRequest(request) {
         let headers = {};
-    
+
         // Si el request es FormData, ajusta el encabezado
         if (request instanceof FormData) {
             headers['Content-Type'] = 'multipart/form-data';
         }
-    
+
         return await BaseApiService.post(API_URL, request, null, headers);
     }
 
@@ -46,6 +46,12 @@ class RequestApiService {
     async getEmployees() {
         const url = `${API_BASE_URL}/employees`;
         return await BaseApiService.get(url);
+    }
+    
+    async getMyGuards(month, idEmpleado) {
+        const url = `${API_BASE_URL}/requests/my-guards`;
+        const params = { month, id_empleado: idEmpleado };
+        return await BaseApiService.get(url, params);
     }
 }
 

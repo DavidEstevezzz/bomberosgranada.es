@@ -1,8 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useStateContext } from "../contexts/ContextProvider";
 import { useDarkMode } from '../contexts/DarkModeContext';
-import { useEffect, useState } from "react";
-import UsuariosApiService from '../services/UsuariosApiService';
+import { useState } from "react";
 import LogApiService from "../services/LogApiService";
 import Aside from "../components/aside";
 import Header from "../components/header";
@@ -12,7 +11,6 @@ export default function DefaultLayout() {
     const { user, token, setUser, setToken } = useStateContext();
     const [isAsideOpen, setIsAsideOpen] = useState(true);
     const { darkMode } = useDarkMode();
-
 
     const toggleAside = () => {
         setIsAsideOpen(!isAsideOpen);
@@ -33,28 +31,6 @@ export default function DefaultLayout() {
             console.error('Logout failed:', err);
         }
     };
-
-    useEffect(() => {
-        if (!token) {
-            console.log("No token available, unable to fetch user data.");
-            return;
-        }
-
-        const fetchUserData = async () => {
-            try {
-                const response = await UsuariosApiService.getUserByToken();
-                if (response && response.data) {
-                    setUser(response.data);
-                } else {
-                    throw new Error("No user data received");
-                }
-            } catch (err) {
-                console.error('Error fetching user data:', err);
-            }
-        };
-
-        fetchUserData();
-    }, [setUser, token]);
 
     if (!token) {
         return <Navigate to="/login" replace />;

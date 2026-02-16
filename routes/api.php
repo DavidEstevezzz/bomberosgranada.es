@@ -192,6 +192,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Requests y ShiftChangeRequests abiertos para index, show y store
     Route::get('/requests', [RequestController::class, 'index']);
+    Route::get('/requests/my-guards', [RequestController::class, 'getMyGuards']);
     Route::get('/requests/{id}', [RequestController::class, 'show']);
     Route::put('/requests/{id}', [RequestController::class, 'update']);
     Route::post('/requests', [RequestController::class, 'store']);

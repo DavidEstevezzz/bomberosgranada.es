@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import MessagesApiService from '../services/MessagesApiService';
 import IncidentApiService from '../services/IncidentApiService';
 import UsuariosApiService from '../services/UsuariosApiService';
@@ -13,7 +13,7 @@ const SidebarContext = createContext({
   refreshSidebarData: () => {},
 });
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos en milisegundos
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
 export const SidebarProvider = ({ children }) => {
   const { user } = useStateContext();
@@ -21,31 +21,38 @@ export const SidebarProvider = ({ children }) => {
   const [pendingIncidentsCount, setPendingIncidentsCount] = useState(0);
   const [isMandoEspecial, setIsMandoEspecial] = useState(false);
   const [hasNewPdf, setHasNewPdf] = useState(false);
-  const [lastFetch, setLastFetch] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  
+  // Usar refs para evitar re-renders y llamadas duplicadas
+  const lastFetchRef = useRef(null);
+  const isLoadingRef = useRef(false);
+  const lastUserIdRef = useRef(null);
 
-  const fetchAllData = useCallback(async (force = false) => {
+  const fetchAllData = async (force = false) => {
     if (!user) return;
     
     // Si no es forzado y tenemos datos recientes, no hacer nada
-    if (!force && lastFetch && Date.now() - lastFetch < CACHE_DURATION) {
+    const now = Date.now();
+    if (!force && lastFetchRef.current && (now - lastFetchRef.current) < CACHE_DURATION) {
+      console.log('SidebarContext: usando cache, faltan', Math.round((CACHE_DURATION - (now - lastFetchRef.current)) / 1000), 'segundos');
       return;
     }
 
     // Evitar múltiples llamadas simultáneas
-    if (isLoading) return;
+    if (isLoadingRef.current) {
+      console.log('SidebarContext: ya hay una carga en progreso');
+      return;
+    }
     
-    setIsLoading(true);
+    isLoadingRef.current = true;
+    console.log('SidebarContext: cargando datos...');
 
     try {
-      // Ejecutar todas las llamadas en paralelo
       const promises = [
         MessagesApiService.getInbox().catch(() => ({ data: [] })),
         IncidentApiService.countPending().catch(() => ({ data: { pending: 0 } })),
         UsuariosApiService.checkMandoEspecial(user.id_empleado).catch(() => ({ data: { mando_especial: false } })),
       ];
 
-      // Solo agregar PDF si es jefe o mando
       if (user.type === 'jefe' || user.type === 'mando') {
         promises.push(
           PdfDocumentApiService.getLatestStatus().catch(() => ({ data: { has_new: false } }))
@@ -53,8 +60,6 @@ export const SidebarProvider = ({ children }) => {
       }
 
       const results = await Promise.all(promises);
-
-      // Procesar resultados
       const [messagesRes, incidentsRes, mandoRes, pdfRes] = results;
 
       setUnreadCount(messagesRes.data?.filter?.(m => !m.is_read)?.length || 0);
@@ -65,25 +70,27 @@ export const SidebarProvider = ({ children }) => {
         setHasNewPdf(pdfRes.data?.has_new || false);
       }
 
-      setLastFetch(Date.now());
+      lastFetchRef.current = Date.now();
+      console.log('SidebarContext: datos cargados correctamente');
     } catch (error) {
       console.error('Error fetching sidebar data:', error);
     } finally {
-      setIsLoading(false);
+      isLoadingRef.current = false;
     }
-  }, [user, lastFetch, isLoading]);
+  };
 
-  // Cargar datos cuando el usuario cambia
+  // Solo ejecutar cuando cambia el usuario
   useEffect(() => {
-    if (user) {
-      fetchAllData(true); // Forzar carga inicial
+    if (user && user.id_empleado !== lastUserIdRef.current) {
+      lastUserIdRef.current = user.id_empleado;
+      lastFetchRef.current = null; // Resetear cache para nuevo usuario
+      fetchAllData(true);
     }
-  }, [user?.id_empleado]);
+  }, [user]);
 
-  // Función para refrescar manualmente (ej: después de leer un mensaje)
-  const refreshSidebarData = useCallback(() => {
+  const refreshSidebarData = () => {
     fetchAllData(true);
-  }, [fetchAllData]);
+  };
 
   return (
     <SidebarContext.Provider

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faTachometerAlt,
@@ -56,7 +57,6 @@ const Aside = ({ className }) => {
 
   const userType = user.type;
 
-  // Estilos base (sin cambios)
   const asideBaseClass = `w-64 h-screen overflow-y-auto transition-colors duration-300 ${darkMode ? 'bg-slate-950 border-r border-slate-800' : 'bg-white border-r border-slate-200'}`;
 
   const linkClass = `group flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-xl mx-2 ${darkMode
@@ -85,26 +85,26 @@ const Aside = ({ className }) => {
     <aside className={`${asideBaseClass} ${className}`}>
       <nav className="py-6 space-y-1">
         {/* Inicio */}
-        <a href="/dashboard" className={linkClass}>
+        <NavLink to="/dashboard" className={linkClass}>
           <FontAwesomeIcon icon={faTachometerAlt} className={iconClass} />
           <span>Inicio</span>
-        </a>
+        </NavLink>
 
         {/* Mensajes */}
-        <a href="/messages" className={linkClass}>
+        <NavLink to="/messages" className={linkClass}>
           <FontAwesomeIcon icon={faInbox} className={iconClass} />
           <span>Mensajes</span>
           {unreadCount > 0 && (
             <span className={badgeClass}>{unreadCount}</span>
           )}
-        </a>
+        </NavLink>
 
         {/* Vehículos - Solo Jefe */}
         {userType === 'jefe' && (
-          <a href="/vehicles" className={linkClass}>
+          <NavLink to="/vehicles" className={linkClass}>
             <FontAwesomeIcon icon={faTruck} className={iconClass} />
             <span>Vehículos</span>
-          </a>
+          </NavLink>
         )}
 
         {/* Inventario - Jefe o Mando */}
@@ -122,12 +122,12 @@ const Aside = ({ className }) => {
             </button>
             {dropdownOpen.equipment && (
               <div className="py-2">
-                <a href="/personal-equipment" className={dropdownItemClass}>
+                <NavLink to="/personal-equipment" className={dropdownItemClass}>
                   Equipos Personales
-                </a>
-                <a href="/clothing-items" className={dropdownItemClass}>
+                </NavLink>
+                <NavLink to="/clothing-items" className={dropdownItemClass}>
                   Vestuario
-                </a>
+                </NavLink>
               </div>
             )}
           </div>
@@ -135,10 +135,10 @@ const Aside = ({ className }) => {
 
         {/* Usuarios - Solo Jefe */}
         {userType === 'jefe' && (
-          <a href="/users" className={linkClass}>
+          <NavLink to="/users" className={linkClass}>
             <FontAwesomeIcon icon={faUser} className={iconClass} />
             <span>Usuarios</span>
-          </a>
+          </NavLink>
         )}
 
         {/* Brigadas - Jefe y Mando */}
@@ -158,17 +158,17 @@ const Aside = ({ className }) => {
               <div className="py-2">
                 {userType === 'jefe' && (
                   <>
-                    <a href="/brigades" className={dropdownItemClass}>
+                    <NavLink to="/brigades" className={dropdownItemClass}>
                       Ver Brigadas
-                    </a>
-                    <a href="/firefighter-assignments" className={dropdownItemClass}>
+                    </NavLink>
+                    <NavLink to="/firefighter-assignments" className={dropdownItemClass}>
                       Asignar Brigada
-                    </a>
+                    </NavLink>
                   </>
                 )}
-                <a href="/composicion-brigadas" className={dropdownItemClass}>
+                <NavLink to="/composicion-brigadas" className={dropdownItemClass}>
                   Composición de Brigadas
-                </a>
+                </NavLink>
               </div>
             )}
           </div>
@@ -189,9 +189,9 @@ const Aside = ({ className }) => {
             </button>
             {dropdownOpen.settings && (
               <div className="py-2">
-                <a href="/settings" className={dropdownItemClass}>
+                <NavLink to="/settings" className={dropdownItemClass}>
                   Preferencias
-                </a>
+                </NavLink>
               </div>
             )}
           </div>
@@ -213,29 +213,29 @@ const Aside = ({ className }) => {
             <div className="py-2">
               {userType === 'jefe' && (
                 <>
-                  <a href="/horas-extra" className={dropdownItemClass}>
+                  <NavLink to="/horas-extra" className={dropdownItemClass}>
                     Horas Extra
-                  </a>
-                  <a href="/total-horas-extra" className={dropdownItemClass}>
+                  </NavLink>
+                  <NavLink to="/total-horas-extra" className={dropdownItemClass}>
                     Total Horas Extra
-                  </a>
+                  </NavLink>
                 </>
               )}
-              <a href="/horas-requerimientos" className={dropdownItemClass}>
+              <NavLink to="/horas-requerimientos" className={dropdownItemClass}>
                 Horas Ofrecidas
-              </a>
-              <a href="/requerimientos" className={dropdownItemClass}>
+              </NavLink>
+              <NavLink to="/requerimientos" className={dropdownItemClass}>
                 Requerimientos 24h
-              </a>
-              <a href="/requerimientos-10-horas" className={dropdownItemClass}>
+              </NavLink>
+              <NavLink to="/requerimientos-10-horas" className={dropdownItemClass}>
                 Requerimientos 10h
-              </a>
-              <a href="/requerimientos-operadores-mañana" className={dropdownItemClass}>
+              </NavLink>
+              <NavLink to="/requerimientos-operadores-mañana" className={dropdownItemClass}>
                 Requerimientos Operadores Mañana
-              </a>
-              <a href="/requerimientos-operadores-noche" className={dropdownItemClass}>
+              </NavLink>
+              <NavLink to="/requerimientos-operadores-noche" className={dropdownItemClass}>
                 Requerimientos Operadores Noche
-              </a>
+              </NavLink>
             </div>
           )}
         </div>
@@ -254,23 +254,23 @@ const Aside = ({ className }) => {
           </button>
           {dropdownOpen.solicitudes && (
             <div className="py-2">
-              <a href="/solicitud" className={dropdownItemClass}>
+              <NavLink to="/solicitud" className={dropdownItemClass}>
                 Crear Solicitud
-              </a>
-              <a href="/cambio-guardia" className={dropdownItemClass}>
+              </NavLink>
+              <NavLink to="/cambio-guardia" className={dropdownItemClass}>
                 Crear Cambio de Guardia
-              </a>
-              <a href="/lista-solicitudes" className={dropdownItemClass}>
+              </NavLink>
+              <NavLink to="/lista-solicitudes" className={dropdownItemClass}>
                 Mis solicitudes
-              </a>
+              </NavLink>
               {userType !== 'bombero' && (
                 <>
-                  <a href="/solicitudes" className={dropdownItemClass}>
+                  <NavLink to="/solicitudes" className={dropdownItemClass}>
                     Lista de Solicitudes
-                  </a>
-                  <a href="/solicitudes-guardia" className={dropdownItemClass}>
+                  </NavLink>
+                  <NavLink to="/solicitudes-guardia" className={dropdownItemClass}>
                     Solicitudes de Guardia
-                  </a>
+                  </NavLink>
                 </>
               )}
             </div>
@@ -279,13 +279,13 @@ const Aside = ({ className }) => {
 
         {/* Incidencias - Jefe o Mando */}
         {(userType === 'jefe' || userType === 'mando') && (
-          <a href="/incidents" className={linkClass}>
+          <NavLink to="/incidents" className={linkClass}>
             <FontAwesomeIcon icon={faExclamationTriangle} className={iconClass} />
             <span>Incidencias</span>
             {pendingIncidentsCount > 0 && (
               <span className={badgeRedClass}>{pendingIncidentsCount}</span>
             )}
-          </a>
+          </NavLink>
         )}
 
         {/* Calendarios - Jefe o Mando Especial */}
@@ -304,21 +304,21 @@ const Aside = ({ className }) => {
             {dropdownOpen.calendars && (
               <div className="py-2">
                 {userType === 'jefe' && (
-                  <a href="/calendario-norte" className={dropdownItemClass}>
+                  <NavLink to="/calendario-norte" className={dropdownItemClass}>
                     Calendario Guardias
-                  </a>
+                  </NavLink>
                 )}
                 {isMandoEspecial && (
                   <>
-                    <a href="/calendario-especial" className={dropdownItemClass}>
+                    <NavLink to="/calendario-especial" className={dropdownItemClass}>
                       Gestionar Guardias Especiales
-                    </a>
-                    <a href="/detalle-guardia-calendario" className={dropdownItemClass}>
+                    </NavLink>
+                    <NavLink to="/detalle-guardia-calendario" className={dropdownItemClass}>
                       Ver Detalles de Guardias
-                    </a>
-                    <a href="/brigade-practices" className={dropdownItemClass}>
+                    </NavLink>
+                    <NavLink to="/brigade-practices" className={dropdownItemClass}>
                       Registro de Prácticas
-                    </a>
+                    </NavLink>
                   </>
                 )}
               </div>
@@ -327,26 +327,26 @@ const Aside = ({ className }) => {
         )}
 
         {/* Sugerencias */}
-        <a href="/sugerencias" className={linkClass}>
+        <NavLink to="/sugerencias" className={linkClass}>
           <FontAwesomeIcon icon={faLightbulb} className={iconClass} />
           <span>Sugerencias</span>
-        </a>
+        </NavLink>
 
         {/* Traslados - Jefe o Mando */}
         {(userType === 'jefe' || userType === 'mando') && (
-          <a href="/transfers" className={linkClass}>
+          <NavLink to="/transfers" className={linkClass}>
             <FontAwesomeIcon icon={faExchangeAlt} className={iconClass} />
             <span>Traslados</span>
-          </a>
+          </NavLink>
         )}
 
         {/* Parte Jefatura - Jefe o Mando */}
         {(userType === 'jefe' || userType === 'mando') && (
-          <a href="/pdf" className={linkClass}>
+          <NavLink to="/pdf" className={linkClass}>
             <FontAwesomeIcon icon={faFilePdf} className={iconClass} />
             <span>Parte Jefatura</span>
             {hasNewPdf && <span className={badgeClass}>Nuevo</span>}
-          </a>
+          </NavLink>
         )}
       </nav>
     </aside>

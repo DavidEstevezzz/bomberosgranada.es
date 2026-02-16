@@ -15,10 +15,15 @@ class Request extends Model
         'motivo',
         'fecha_ini',
         'fecha_fin',
+        'guardias_vacaciones',
         'estado',
         'turno',
         'horas',
         'file',
+    ];
+
+    protected $casts = [
+        'guardias_vacaciones' => 'array',
     ];
 
     public function EnviadaPor()

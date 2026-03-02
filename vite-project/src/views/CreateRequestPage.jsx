@@ -6,6 +6,8 @@ import GuardsApiService from '../services/GuardsApiService';
 import AssignmentsApiService from '../services/AssignmentsApiService';
 import { useStateContext } from '../contexts/ContextProvider';
 import { useDarkMode } from '../contexts/DarkModeContext';
+import GuardSelector from '../components/GuardSelector';
+
 
 const CreateRequestPage = () => {
   const { user } = useStateContext();
@@ -29,6 +31,8 @@ const CreateRequestPage = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+  const [selectedAPGuard, setSelectedAPGuard] = useState(null);
+
 
   // Cache para optimización
   const [brigadeCache, setBrigadeCache] = useState({});
@@ -38,8 +42,14 @@ const CreateRequestPage = () => {
     setBrigadeCache({});
   }, [selectedEmployee]);
 
+
+
   useEffect(() => {
     setSelectedVacationGuards([]);
+    setSelectedGuard(null);
+    setTurno('');
+    setHoraIni('');
+    setHoraFin('');
   }, [tipo, selectedEmployee]);
 
   // Cargar empleados si es jefe
@@ -109,6 +119,11 @@ const CreateRequestPage = () => {
     }
   }, [tipo, fechaIni]);
 
+
+  const GUARD_SELECTOR_TYPES = ['asuntos propios', 'licencias por jornadas', 'salidas personales'];
+
+  const usesGuardSelector = (tipoSolicitud) => GUARD_SELECTOR_TYPES.includes(tipoSolicitud);
+
   // Función optimizada con cache
   const fetchUserBrigadeForDate = async (date, targetUserId = null) => {
     const cacheKey = `${targetUserId || user?.id_empleado}-${date}`;
@@ -176,31 +191,55 @@ const CreateRequestPage = () => {
     return true;
   };
 
-  // CORREGIDO: Mapeo correcto de campos para 'compensacion grupos especiales'
-  const validateDaysAvailable = (type) => {
+
+
+  const validateDaysAvailable = (requestType) => {
     const targetUser = getTargetUser();
 
-    // Mapear el tipo al campo correcto de la base de datos
-    let field;
-    if (type === 'asuntos propios') {
-      field = 'AP';
-    } else if (type === 'compensacion grupos especiales') {
-      field = 'compensacion_grupos';
-    } else {
-      field = 'otros';
-    }
-
-    const availableDays = targetUser[field] || 0;
-
-    if (availableDays <= 0) {
-      const userName = selectedEmployee
-        ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
-        : 'El usuario';
-      setError(
-        `${userName} no tiene días disponibles de ${type}. Disponibles: ${availableDays}`
-      );
+    // Si usa selector de guardias, validar que se ha seleccionado una
+    if (usesGuardSelector(requestType) && !selectedGuard) {
+      setError('Debes seleccionar una guardia para tu solicitud.');
       return false;
     }
+
+    // Validar turno para AP y LJ
+    if ((requestType === 'asuntos propios' || requestType === 'licencias por jornadas') && !turno) {
+      setError('Debes seleccionar un turno.');
+      return false;
+    }
+
+    // Calcular jornadas según turno (solo para AP, LJ y compensación)
+    if (requestType === 'asuntos propios' || requestType === 'licencias por jornadas' || requestType === 'compensacion grupos especiales') {
+      const jornadasSolicitadas =
+        turno === 'Día Completo' ? 3 :
+          turno === 'Mañana y tarde' || turno === 'Tarde y noche' ? 2 : 1;
+
+      let availableBalance = 0;
+      let balanceLabel = '';
+
+      if (requestType === 'asuntos propios') {
+        availableBalance = targetUser.AP || 0;
+        balanceLabel = 'jornadas de asuntos propios';
+      } else if (requestType === 'licencias por jornadas') {
+        // Licencias por jornadas - si tiene campo propio, usarlo; si no, no validar saldo
+        // Ajusta esto según tu modelo de datos
+        return true; // Las LJ pueden no tener saldo limitado, depende de tu lógica
+      } else if (requestType === 'compensacion grupos especiales') {
+        availableBalance = targetUser.compensacion_grupos || 0;
+        balanceLabel = 'jornadas de compensación de grupos especiales';
+      }
+
+      if (balanceLabel && jornadasSolicitadas > availableBalance) {
+        const userName = selectedEmployee
+          ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
+          : 'el usuario';
+        setError(
+          `${userName} no tiene suficientes ${balanceLabel}. Disponibles: ${availableBalance}, solicitadas: ${jornadasSolicitadas}`
+        );
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -221,8 +260,16 @@ const CreateRequestPage = () => {
   };
 
   // Validación para Salidas Personales
+
   const validateSPHours = () => {
     const targetUser = getTargetUser();
+
+    // Validar que se ha seleccionado una guardia
+    if (!selectedGuard) {
+      setError('Debes seleccionar una guardia para solicitar salidas personales.');
+      return null;
+    }
+
     if (!horaIni || !horaFin) {
       setError('Debe especificar hora de inicio y fin para salidas personales.');
       return null;
@@ -250,6 +297,7 @@ const CreateRequestPage = () => {
 
     return hoursDifference;
   };
+
 
   // Validación para Horas Sindicales
   const validateSindicalHours = () => {
@@ -396,18 +444,24 @@ const CreateRequestPage = () => {
       return;
     }
 
+
     if (tipo === 'vacaciones') {
+      // Vacaciones: múltiples guardias
       const sortedGuards = [...selectedVacationGuards].sort();
       formData.append('fecha_ini', sortedGuards[0]);
       formData.append('fecha_fin', sortedGuards[sortedGuards.length - 1]);
       formData.append('guardias_vacaciones', JSON.stringify(sortedGuards));
+    } else if (usesGuardSelector(tipo)) {
+      // AP, LJ, SP: guardia única seleccionada
+      formData.append('fecha_ini', selectedGuard);
+      formData.append('fecha_fin', selectedGuard);
+      formData.append('guardias_seleccionadas', JSON.stringify([selectedGuard]));
     } else {
+      // Resto de tipos: input date clásico
       formData.append('fecha_ini', fechaIni);
       formData.append(
         'fecha_fin',
-        tipo === 'salidas personales' ||
-          tipo === 'horas sindicales' ||
-          tipo === 'licencias por jornadas' ||
+        tipo === 'horas sindicales' ||
           tipo === 'modulo' ||
           tipo === 'vestuario' ||
           tipo === 'compensacion grupos especiales'
@@ -431,6 +485,9 @@ const CreateRequestPage = () => {
       'horas',
       tipo === 'salidas personales' || tipo === 'horas sindicales' ? horas : ''
     );
+    formData.append('id_empleado', targetId);
+    formData.append('tipo', tipo);
+    formData.append('motivo', motivo || '');
     formData.append('estado', 'Pendiente');
 
     if (file) {
@@ -443,11 +500,7 @@ const CreateRequestPage = () => {
     }
 
     try {
-      await RequestApiService.createRequest(formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      await RequestApiService.createRequest(formData);
 
       const targetName = selectedEmployee
         ? `${selectedEmployee.nombre} ${selectedEmployee.apellido}`
@@ -463,6 +516,7 @@ const CreateRequestPage = () => {
       setHoraFin('');
       setTurno('');
       setSelectedVacationGuards([]);
+      setSelectedGuard(null);
       setFile(null);
       setSelectedEmployee(null);
     } catch (error) {
@@ -629,19 +683,126 @@ const CreateRequestPage = () => {
               </div>
             </div>
 
+
+            {/* ===== SELECTOR DE GUARDIAS / FECHAS según tipo ===== */}
+
             {tipo === 'vacaciones' ? (
+              // ─── VACACIONES: selector múltiple existente ───
               <VacationGuardSelector
                 idEmpleado={selectedEmployee?.id_empleado || user?.id_empleado}
                 darkMode={darkMode}
                 onSelectionChange={(guards) => setSelectedVacationGuards(guards)}
                 vacacionesDisponibles={getTargetUser()?.vacaciones || 0}
               />
+
+            ) : tipo === 'asuntos propios' ? (
+              // ─── ASUNTOS PROPIOS: selector de guardia + turno ───
+              <>
+                <GuardSelector
+                  idEmpleado={selectedEmployee?.id_empleado || user?.id_empleado}
+                  darkMode={darkMode}
+                  onSelectionChange={(guards) => setSelectedGuard(guards.length > 0 ? guards[0] : null)}
+                  tipoSolicitud="asuntos propios"
+                  multiple={false}
+                  infoText="ℹ️ Selecciona la guardia en la que quieres solicitar asuntos propios. Después elige el turno."
+                  counterLabel="Seleccionada"
+                  availableBalance={getTargetUser()?.AP || 0}
+                  balanceLabel="AP disponibles"
+                />
+                {selectedGuard && (
+                  <div className="space-y-2 mt-4">
+                    <label className={labelBaseClass} htmlFor="turno">Turno</label>
+                    <select id="turno" value={turno} onChange={(e) => setTurno(e.target.value)} className={inputBaseClass} required>
+                      <option value="">Selecciona un turno</option>
+                      <option value="Mañana">Mañana</option>
+                      <option value="Tarde">Tarde</option>
+                      <option value="Noche">Noche</option>
+                      <option value="Día Completo">Día Completo</option>
+                      <option value="Mañana y tarde">Mañana y Tarde</option>
+                      <option value="Tarde y noche">Tarde y Noche</option>
+                    </select>
+                  </div>
+                )}
+              </>
+
+            ) : tipo === 'licencias por jornadas' ? (
+              // ─── LICENCIAS POR JORNADAS: selector de guardia + turno ───
+              <>
+                <GuardSelector
+                  idEmpleado={selectedEmployee?.id_empleado || user?.id_empleado}
+                  darkMode={darkMode}
+                  onSelectionChange={(guards) => setSelectedGuard(guards.length > 0 ? guards[0] : null)}
+                  tipoSolicitud="licencias por jornadas"
+                  multiple={false}
+                  infoText="ℹ️ Selecciona la guardia para tu licencia por jornada. Después elige el turno."
+                  counterLabel="Seleccionada"
+                  showBalance={false}
+                />
+                {selectedGuard && (
+                  <div className="space-y-2 mt-4">
+                    <label className={labelBaseClass} htmlFor="turno">Turno</label>
+                    <select id="turno" value={turno} onChange={(e) => setTurno(e.target.value)} className={inputBaseClass} required>
+                      <option value="">Selecciona un turno</option>
+                      <option value="Mañana">Mañana</option>
+                      <option value="Tarde">Tarde</option>
+                      <option value="Noche">Noche</option>
+                      <option value="Día Completo">Día Completo</option>
+                      <option value="Mañana y tarde">Mañana y Tarde</option>
+                      <option value="Tarde y noche">Tarde y Noche</option>
+                    </select>
+                  </div>
+                )}
+              </>
+
+            ) : tipo === 'salidas personales' ? (
+              // ─── SALIDAS PERSONALES: selector de guardia + horas ───
+              <>
+                <GuardSelector
+                  idEmpleado={selectedEmployee?.id_empleado || user?.id_empleado}
+                  darkMode={darkMode}
+                  onSelectionChange={(guards) => setSelectedGuard(guards.length > 0 ? guards[0] : null)}
+                  tipoSolicitud="salidas personales"
+                  multiple={false}
+                  infoText="ℹ️ Selecciona la guardia en la que quieres la salida personal. Después indica las horas."
+                  counterLabel="Seleccionada"
+                  availableBalance={getTargetUser()?.SP || 0}
+                  balanceLabel="Horas SP disponibles"
+                />
+                {selectedGuard && (
+                  <div className="grid gap-6 md:grid-cols-2 mt-4">
+                    <div className="space-y-2">
+                      <label className={labelBaseClass} htmlFor="horaIni">Hora de inicio</label>
+                      <input
+                        type="time"
+                        id="horaIni"
+                        value={horaIni}
+                        onChange={(e) => setHoraIni(e.target.value)}
+                        className={inputBaseClass}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={labelBaseClass} htmlFor="horaFin">Hora de fin</label>
+                      <input
+                        type="time"
+                        id="horaFin"
+                        value={horaFin}
+                        onChange={(e) => setHoraFin(e.target.value)}
+                        className={inputBaseClass}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+
             ) : (
+              // ─── RESTO DE TIPOS: formulario clásico con input date ───
               <>
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <label className={labelBaseClass} htmlFor="fechaIni">
-                      {tipo === 'asuntos propios' || tipo === 'compensacion grupos especiales' || tipo === 'licencias por jornadas' || tipo === 'horas sindicales' || tipo === 'vestuario' || tipo === 'modulo' ? 'Fecha' : 'Fecha de inicio'}
+                      {tipo === 'compensacion grupos especiales' || tipo === 'horas sindicales' || tipo === 'vestuario' || tipo === 'modulo' ? 'Fecha' : 'Fecha de inicio'}
                     </label>
                     <input
                       type="date"
@@ -654,67 +815,61 @@ const CreateRequestPage = () => {
                   </div>
                 </div>
 
-                {!['asuntos propios', 'licencias por jornadas', 'compensacion grupos especiales', 'horas sindicales', 'vestuario', 'salidas personales', 'modulo'].includes(tipo) && (
+                {/* Fecha fin solo para licencias por días */}
+                {tipo === 'licencias por dias' && (
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className={labelBaseClass} htmlFor="fechaFin">Fecha de fin</label>
+                      <input
+                        type="date"
+                        id="fechaFin"
+                        value={fechaFin}
+                        onChange={(e) => setFechaFin(e.target.value)}
+                        className={dateInputClass}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Turno para compensación grupos y horas sindicales (los que quedan con date input) */}
+                {['compensacion grupos especiales', 'horas sindicales'].includes(tipo) && (
                   <div className="space-y-2">
-                    <label className={labelBaseClass} htmlFor="fechaFin">
-                      Fecha de fin
-                    </label>
-                    <input
-                      type="date"
-                      id="fechaFin"
-                      value={fechaFin}
-                      onChange={(e) => setFechaFin(e.target.value)}
-                      className={dateInputClass}
-                      required
-                    />
+                    <label className={labelBaseClass} htmlFor="turno">Turno</label>
+                    <select id="turno" value={turno} onChange={(e) => setTurno(e.target.value)} className={inputBaseClass} required>
+                      <option value="">Selecciona un turno</option>
+                      <option value="Mañana">Mañana</option>
+                      <option value="Tarde">Tarde</option>
+                      <option value="Noche">Noche</option>
+                      <option value="Día Completo">Día Completo</option>
+                      <option value="Mañana y tarde">Mañana y Tarde</option>
+                      <option value="Tarde y noche">Tarde y Noche</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Horas para horas sindicales (cuando NO es día completo) */}
+                {tipo === 'horas sindicales' && turno !== 'Día Completo' && (
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className={labelBaseClass} htmlFor="horaIni">Hora de inicio</label>
+                      <input type="time" id="horaIni" value={horaIni} onChange={(e) => setHoraIni(e.target.value)} className={inputBaseClass} required />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={labelBaseClass} htmlFor="horaFin">Hora de fin</label>
+                      <input type="time" id="horaFin" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} className={inputBaseClass} required />
+                    </div>
+                  </div>
+                )}
+
+                {/* Mensaje día completo horas sindicales */}
+                {tipo === 'horas sindicales' && turno === 'Día Completo' && (
+                  <div className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${darkMode ? 'border-blue-500/40 bg-blue-500/10 text-blue-200' : 'border-blue-200 bg-blue-50 text-blue-700'
+                    }`}>
+                    Se solicitarán automáticamente 24 horas sindicales para el día completo seleccionado.
                   </div>
                 )}
               </>
-            )}
-
-
-            {(tipo === 'salidas personales' || tipo === 'horas sindicales') && turno !== 'Día Completo' && (
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className={labelBaseClass} htmlFor="horaIni">
-                    Hora de inicio
-                  </label>
-                  <input
-                    type="time"
-                    id="horaIni"
-                    value={horaIni}
-                    onChange={(e) => setHoraIni(e.target.value)}
-                    className={inputBaseClass}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className={labelBaseClass} htmlFor="horaFin">
-                    Hora de fin
-                  </label>
-                  <input
-                    type="time"
-                    id="horaFin"
-                    value={horaFin}
-                    onChange={(e) => setHoraFin(e.target.value)}
-                    className={inputBaseClass}
-                    required
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Mensaje informativo cuando se selecciona Día Completo en horas sindicales */}
-            {tipo === 'horas sindicales' && turno === 'Día Completo' && (
-              <div
-                className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${darkMode
-                  ? 'border-blue-500/40 bg-blue-500/10 text-blue-200'
-                  : 'border-blue-200 bg-blue-50 text-blue-700'
-                  }`}
-              >
-                Se solicitarán automáticamente 24 horas sindicales para el día completo seleccionado.
-              </div>
             )}
 
             {/* CORREGIDO: Incluye 'compensacion grupos especiales' para mostrar selector de turno */}

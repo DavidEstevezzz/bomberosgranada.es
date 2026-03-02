@@ -54,6 +54,7 @@ class RequestController extends Controller
             'fecha_ini' => 'required|date',
             'fecha_fin' => 'required|date',
             'guardias_vacaciones' => 'nullable|string',
+            'guardias_seleccionadas' => 'nullable|string',
             'estado' => 'required|in:Pendiente,Confirmada,Cancelada,Denegada',
             'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
         ];
@@ -1144,4 +1145,151 @@ class RequestController extends Controller
 
         $user->save();
     }
+
+    /**
+ * Obtener las guardias del bombero para un mes, con info de solicitudes existentes de cualquier tipo.
+ * 
+ * Parámetros:
+ * - month: YYYY-MM
+ * - id_empleado: int
+ * - tipo_solicitud: string (ej: 'asuntos propios', 'modulo', 'compensacion grupos especiales')
+ * 
+ * Devuelve las guardias del bombero con has_existing_request y existing_request_status
+ * para el tipo de solicitud indicado.
+ */
+public function getMyGuardsForRequest(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'month' => 'required|date_format:Y-m',
+        'id_empleado' => 'required|exists:users,id_empleado',
+        'tipo_solicitud' => 'required|string',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 400);
+    }
+
+    $idEmpleado = $request->input('id_empleado');
+    $month = $request->input('month');
+    $tipoSolicitud = $request->input('tipo_solicitud');
+
+    $startDate = $month . '-01';
+    $endDate = date('Y-m-t', strtotime($startDate));
+
+    $user = User::find($idEmpleado);
+    if (!$user) {
+        return response()->json(['error' => 'Usuario no encontrado'], 404);
+    }
+
+    // Obtener todas las guardias del mes
+    $guards = Guard::with('brigade:id_brigada,nombre')
+        ->whereBetween('date', [$startDate, $endDate])
+        ->orderBy('date')
+        ->get();
+
+    // Buscar solicitudes existentes de este tipo para el usuario en este rango
+    $existingRequests = MiRequest::where('id_empleado', $idEmpleado)
+        ->where('tipo', $tipoSolicitud)
+        ->whereIn('estado', ['Pendiente', 'Confirmada'])
+        ->where(function ($query) use ($startDate, $endDate) {
+            $query->whereBetween('fecha_ini', [$startDate, $endDate])
+                  ->orWhereBetween('fecha_fin', [$startDate, $endDate]);
+        })
+        ->get();
+
+    // Crear mapa de fechas con solicitudes existentes
+    $requestDates = [];
+    foreach ($existingRequests as $req) {
+        // Para solicitudes que usan guardias_seleccionadas (nuevo sistema)
+        if ($req->guardias_seleccionadas) {
+            $fechasGuardias = is_array($req->guardias_seleccionadas)
+                ? $req->guardias_seleccionadas
+                : json_decode($req->guardias_seleccionadas, true);
+
+            if (is_array($fechasGuardias)) {
+                foreach ($fechasGuardias as $fecha) {
+                    $requestDates[$fecha] = $req->estado;
+                }
+            }
+        }
+
+        // Para solicitudes con el sistema antiguo (fecha_ini directa)
+        // En AP la fecha_ini == fecha_fin, así que solo necesitamos fecha_ini
+        if (!$req->guardias_seleccionadas) {
+            $requestDates[$req->fecha_ini] = $req->estado;
+        }
+    }
+
+    // Determinar las brigadas del bombero para filtrar sus guardias
+    $excludedBrigadeNames = [
+        'Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo',
+        'Licencias por Jornadas', 'Licencias por Días',
+        'Compensacion grupos especiales', 'Horas Sindicales'
+    ];
+
+    $excludedBrigadeIds = \App\Models\Brigade::whereIn('nombre', $excludedBrigadeNames)
+        ->pluck('id_brigada')
+        ->toArray();
+
+    // Buscar las brigadas del bombero en el periodo
+    $userAssignments = Firefighters_assignment::where('id_empleado', $idEmpleado)
+        ->where('fecha_ini', '<=', $endDate)
+        ->whereNotIn('id_brigada_destino', $excludedBrigadeIds)
+        ->orderBy('fecha_ini', 'desc')
+        ->get();
+
+    // Función para determinar la brigada del bombero en una fecha
+    $getBrigadeForDate = function ($fecha) use ($userAssignments) {
+        foreach ($userAssignments as $assignment) {
+            if ($assignment->fecha_ini <= $fecha) {
+                return $assignment->id_brigada_destino;
+            }
+        }
+        return null;
+    };
+
+    // Filtrar solo las guardias que corresponden al bombero
+    $myGuards = [];
+    foreach ($guards as $guard) {
+        $brigadeBombero = $getBrigadeForDate($guard->date);
+
+        if ($brigadeBombero && $guard->id_brigada == $brigadeBombero) {
+            $existingStatus = $requestDates[$guard->date] ?? null;
+
+            $myGuards[] = [
+                'date' => $guard->date,
+                'id_brigada' => $guard->id_brigada,
+                'brigade_name' => $guard->brigade ? $guard->brigade->nombre : 'N/A',
+                'has_existing_request' => $existingStatus !== null,
+                'existing_request_status' => $existingStatus,
+            ];
+        }
+    }
+
+    // Devolver saldo según el tipo
+    $balance = 0;
+    switch ($tipoSolicitud) {
+        case 'asuntos propios':
+            $balance = $user->AP ?? 0;
+            break;
+        case 'modulo':
+            $balance = $user->modulo ?? 0;
+            break;
+        case 'compensacion grupos especiales':
+            $balance = $user->compensacion_grupos ?? 0;
+            break;
+        case 'licencias por jornadas':
+            // Si tiene un campo específico, úsalo aquí
+            $balance = 0;
+            break;
+    }
+
+    return response()->json([
+        'guards' => $myGuards,
+        'balance' => $balance,
+        'month' => $month,
+        'tipo_solicitud' => $tipoSolicitud,
+    ]);
+}
+
 }

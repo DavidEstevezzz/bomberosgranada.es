@@ -47,10 +47,25 @@ class RequestApiService {
         const url = `${API_BASE_URL}/employees`;
         return await BaseApiService.get(url);
     }
-    
+
     async getMyGuards(month, idEmpleado) {
         const url = `${API_BASE_URL}/requests/my-guards`;
         const params = { month, id_empleado: idEmpleado };
+        return await BaseApiService.get(url, params);
+    }
+    /**
+ * Obtener las guardias del bombero para un mes, filtrando por tipo de solicitud.
+ * Devuelve guardias con info de solicitudes existentes de ese tipo.
+ * Usado por: asuntos propios, licencias por jornadas, salidas personales
+ * 
+ * @param {string} month - Formato YYYY-MM
+ * @param {number} idEmpleado - ID del empleado
+ * @param {string} tipoSolicitud - Tipo de solicitud (ej: 'asuntos propios', 'licencias por jornadas', 'salidas personales')
+ * @returns {Promise} - { guards: [...], balance: number, month, tipo_solicitud }
+ */
+    async getMyGuardsForRequest(month, idEmpleado, tipoSolicitud) {
+        const url = `${API_BASE_URL}/requests/my-guards-for-request`;
+        const params = { month, id_empleado: idEmpleado, tipo_solicitud: tipoSolicitud };
         return await BaseApiService.get(url, params);
     }
 }

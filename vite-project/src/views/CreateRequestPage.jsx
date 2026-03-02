@@ -31,7 +31,7 @@ const CreateRequestPage = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
-  const [selectedAPGuard, setSelectedAPGuard] = useState(null);
+const [selectedGuard, setSelectedGuard] = useState(null);
 
 
   // Cache para optimización

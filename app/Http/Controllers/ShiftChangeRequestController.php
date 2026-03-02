@@ -53,6 +53,65 @@ class ShiftChangeRequestController extends Controller
             ], 400);
         }
     
+        if ($request->fecha2) {
+            $fecha1 = $request->fecha;
+            $fecha2Req = $request->fecha2;
+            $fechaMenor = min($fecha1, $fecha2Req);
+            $fechaMayor = max($fecha1, $fecha2Req);
+
+            // Brigadas excluidas (no son guardias "reales" de servicio)
+            $excludedBrigadeNames = [
+                'Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo',
+                'Licencias por Jornadas', 'Licencias por Días',
+                'Compensacion grupos especiales', 'Horas Sindicales',
+                'Salidas Personales'
+            ];
+
+            $excludedBrigadeIds = \App\Models\Brigade::whereIn('nombre', $excludedBrigadeNames)
+                ->pluck('id_brigada')
+                ->toArray();
+
+            // Asignaciones de ambos bomberos para determinar su brigada en cada fecha
+            $assignmentsEmp1 = Firefighters_assignment::where('id_empleado', $request->id_empleado1)
+                ->whereNotIn('id_brigada_destino', $excludedBrigadeIds)
+                ->orderBy('fecha_ini', 'desc')
+                ->get();
+
+            $assignmentsEmp2 = Firefighters_assignment::where('id_empleado', $request->id_empleado2)
+                ->whereNotIn('id_brigada_destino', $excludedBrigadeIds)
+                ->orderBy('fecha_ini', 'desc')
+                ->get();
+
+            $getBrigadeForDate = function ($fecha, $assignments) {
+                foreach ($assignments as $assignment) {
+                    if ($assignment->fecha_ini <= $fecha) {
+                        return $assignment->id_brigada_destino;
+                    }
+                }
+                return null;
+            };
+
+            // Obtener guardias estrictamente entre las dos fechas
+            $guardsInBetween = \App\Models\Guard::where('date', '>', $fechaMenor)
+                ->where('date', '<', $fechaMayor)
+                ->orderBy('date')
+                ->get();
+
+            // Verificar si alguna guardia intermedia pertenece a alguno de los dos bomberos
+            foreach ($guardsInBetween as $guard) {
+                $brigadeEmp1 = $getBrigadeForDate($guard->date, $assignmentsEmp1);
+                $brigadeEmp2 = $getBrigadeForDate($guard->date, $assignmentsEmp2);
+
+                if ($guard->id_brigada == $brigadeEmp1 || $guard->id_brigada == $brigadeEmp2) {
+                    return response()->json([
+                        'message' => 'No se puede realizar un cambio espejo entre estas guardias. Hay una guardia de uno de los dos bomberos en medio (día ' . $guard->date . '). Las guardias deben ser consecutivas sin guardias intermedias de ninguno de los dos.',
+                    ], 422);
+                }
+            }
+
+            Log::info('Validación espejo OK: no hay guardias intermedias entre ' . $fechaMenor . ' y ' . $fechaMayor);
+        }
+        
         // Crear solicitud de cambio de guardia
         $shiftChangeRequest = ShiftChangeRequest::create([
             'id_empleado1' => $request->id_empleado1,

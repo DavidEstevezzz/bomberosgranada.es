@@ -666,6 +666,20 @@ class RequestController extends Controller
                 'tipo_asignacion' => 'vuelta',
             ]);
         }
+
+        // ─── FASE 3: Actualizar fecha_ini y fecha_fin de la solicitud ───
+        // Para que el calendario del perfil pinte correctamente los días de vacaciones
+        // fecha_ini = primer día de vacaciones (inicio del primer bloque)
+        // fecha_fin = último día de vacaciones (día anterior a la vuelta del último bloque)
+        $primerBloque = $bloques[0];
+        $ultimoBloque = end($bloques);
+        $fechaFinReal = date('Y-m-d', strtotime($ultimoBloque['fin'] . ' -1 day'));
+
+        $miRequest->fecha_ini = $primerBloque['inicio'];
+        $miRequest->fecha_fin = $fechaFinReal;
+        $miRequest->save();
+
+        Log::info("Solicitud actualizada - fecha_ini: {$primerBloque['inicio']}, fecha_fin: {$fechaFinReal}");
     }
 
     // ============================================================

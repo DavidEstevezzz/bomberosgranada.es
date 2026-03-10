@@ -598,45 +598,58 @@ class RequestController extends Controller
 
         Log::info("Creando asignaciones de vacaciones para guardias: " . implode(', ', $guardiasSeleccionadas));
 
-        // Agrupar guardias consecutivas en bloques
+        // Obtener la brigada origen de cada guardia seleccionada
+        // (la brigada de servicio real del bombero ese día)
+        $brigadaPorGuardia = [];
+        foreach ($guardiasSeleccionadas as $fecha) {
+            $brigadaPorGuardia[$fecha] = $this->getBrigadeForDate($miRequest->id_empleado, $fecha);
+        }
+
+        // ─── FASE 1: Calcular todos los bloques ANTES de crear asignaciones ───
         $bloques = [];
-        $bloqueActual = ['inicio' => $guardiasSeleccionadas[0]];
+        $bloqueActual = [
+            'inicio' => $guardiasSeleccionadas[0],
+            'brigade_original' => $brigadaPorGuardia[$guardiasSeleccionadas[0]],
+        ];
 
         for ($i = 0; $i < count($guardiasSeleccionadas); $i++) {
             $fechaGuardia = $guardiasSeleccionadas[$i];
+            $brigadaOrigen = $brigadaPorGuardia[$fechaGuardia];
 
-            // Buscar la siguiente guardia real del bombero después de esta
-            $nextGuard = $this->findNextGuard($miRequest->id_empleado, $fechaGuardia);
-            $fechaVuelta = $nextGuard ? $nextGuard['date'] : date('Y-m-d', strtotime($fechaGuardia . ' +6 days'));
+            // Buscar fecha de vuelta para esta guardia
+            $fechaVuelta = $this->findNextGuardForVacation(
+                $miRequest->id_empleado,
+                $fechaGuardia,
+                $brigadaOrigen,
+                $guardiasSeleccionadas
+            );
 
-            // Si hay una siguiente guardia seleccionada y coincide con la fecha de vuelta o es anterior
+            // Si hay una siguiente guardia seleccionada y cae antes o igual a la fecha de vuelta → fusionar bloque
             $siguienteSeleccionada = $guardiasSeleccionadas[$i + 1] ?? null;
 
             if ($siguienteSeleccionada && $siguienteSeleccionada <= $fechaVuelta) {
-                // Son consecutivas, seguir extendiendo el bloque
                 continue;
             } else {
-                // Fin del bloque
                 $bloqueActual['fin'] = $fechaVuelta;
                 $bloques[] = $bloqueActual;
 
-                // Iniciar nuevo bloque si hay más guardias
                 if ($siguienteSeleccionada) {
-                    $bloqueActual = ['inicio' => $siguienteSeleccionada];
+                    $bloqueActual = [
+                        'inicio' => $siguienteSeleccionada,
+                        'brigade_original' => $brigadaPorGuardia[$siguienteSeleccionada],
+                    ];
                 }
             }
         }
 
-        // Crear asignaciones por bloque
+        // ─── FASE 2: Crear todas las asignaciones ───
         foreach ($bloques as $bloque) {
-            $brigadeOriginal = $this->getOriginalBrigade($miRequest->id_empleado, $bloque['inicio'], 'Mañana');
-
-            Log::info("Vacaciones bloque - Ida: {$bloque['inicio']}, Vuelta: {$bloque['fin']}");
+            Log::info("Vacaciones bloque - Ida: {$bloque['inicio']}, Vuelta: {$bloque['fin']}, Brigada origen: {$bloque['brigade_original']}");
 
             Firefighters_assignment::create([
                 'id_empleado' => $miRequest->id_empleado,
                 'id_request' => $miRequest->id,
-                'id_brigada_origen' => $brigadeOriginal,
+                'id_brigada_origen' => $bloque['brigade_original'],
                 'id_brigada_destino' => $brigadeVacaciones,
                 'fecha_ini' => $bloque['inicio'],
                 'turno' => 'Mañana',
@@ -647,12 +660,77 @@ class RequestController extends Controller
                 'id_empleado' => $miRequest->id_empleado,
                 'id_request' => $miRequest->id,
                 'id_brigada_origen' => $brigadeVacaciones,
-                'id_brigada_destino' => $brigadeOriginal,
+                'id_brigada_destino' => $bloque['brigade_original'],
                 'fecha_ini' => $bloque['fin'],
                 'turno' => 'Mañana',
                 'tipo_asignacion' => 'vuelta',
             ]);
         }
+    }
+
+    // ============================================================
+    // NUEVO MÉTODO: findNextGuardForVacation
+    //
+    // Determina la fecha de vuelta de vacaciones para una guardia.
+    //
+    // Lógica:
+    // 1. Buscar si en los próximos 6 días hay una asignación de ida
+    //    a brigada de servicio (= guardia extra) que NO esté también
+    //    seleccionada como vacaciones → vuelta = esa fecha
+    // 2. Si no → vuelta = siguiente guardia de la brigada origen
+    //    en el calendario de guardias
+    // 3. Fallback → +6 días
+    // ============================================================
+    private function findNextGuardForVacation($idEmpleado, $fechaGuardia, $brigadaOrigen, $guardiasSeleccionadas = [])
+    {
+        $excludedBrigadeNames = [
+            'Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo',
+            'Licencias por Jornadas', 'Licencias por Días',
+            'Compensacion grupos especiales', 'Horas Sindicales',
+            'Salidas Personales'
+        ];
+
+        $excludedBrigadeIds = \App\Models\Brigade::whereIn('nombre', $excludedBrigadeNames)
+            ->pluck('id_brigada')
+            ->toArray();
+
+        // ─── PASO 1: ¿Hay guardia extra en los próximos 6 días? ───
+        $limitDate = date('Y-m-d', strtotime($fechaGuardia . ' +6 days'));
+
+        $idasProximas = Firefighters_assignment::where('id_empleado', $idEmpleado)
+            ->where('fecha_ini', '>', $fechaGuardia)
+            ->where('fecha_ini', '<=', $limitDate)
+            ->where('tipo_asignacion', 'ida')
+            ->whereNotIn('id_brigada_destino', $excludedBrigadeIds)
+            ->orderBy('fecha_ini', 'asc')
+            ->get();
+
+        foreach ($idasProximas as $ida) {
+            // Solo si esa fecha NO está seleccionada como vacaciones también
+            if (!in_array($ida->fecha_ini, $guardiasSeleccionadas)) {
+                Log::info("findNextGuardForVacation: Empleado {$idEmpleado}, guardia extra el {$ida->fecha_ini} → vuelta ahí");
+                return $ida->fecha_ini;
+            }
+        }
+
+        // ─── PASO 2: Sin guardia extra → siguiente guardia normal de brigada origen ───
+        $searchEnd = date('Y-m-d', strtotime($fechaGuardia . ' +60 days'));
+
+        $siguienteGuardia = \App\Models\Guard::where('date', '>', $fechaGuardia)
+            ->where('date', '<=', $searchEnd)
+            ->where('id_brigada', $brigadaOrigen)
+            ->orderBy('date', 'asc')
+            ->first();
+
+        if ($siguienteGuardia) {
+            Log::info("findNextGuardForVacation: Empleado {$idEmpleado}, siguiente guardia brigada {$brigadaOrigen} el {$siguienteGuardia->date}");
+            return $siguienteGuardia->date;
+        }
+
+        // ─── FALLBACK ───
+        $fallback = date('Y-m-d', strtotime($fechaGuardia . ' +6 days'));
+        Log::warning("findNextGuardForVacation: Sin siguiente guardia para empleado {$idEmpleado} después de {$fechaGuardia}. Fallback: {$fallback}");
+        return $fallback;
     }
 
     private function findNextGuard($idEmpleado, $afterDate)
@@ -1220,38 +1298,9 @@ public function getMyGuardsForRequest(Request $request)
         }
     }
 
-    // Determinar las brigadas del bombero para filtrar sus guardias
-    $excludedBrigadeNames = [
-        'Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo',
-        'Licencias por Jornadas', 'Licencias por Días',
-        'Compensacion grupos especiales', 'Horas Sindicales'
-    ];
-
-    $excludedBrigadeIds = \App\Models\Brigade::whereIn('nombre', $excludedBrigadeNames)
-        ->pluck('id_brigada')
-        ->toArray();
-
-    // Buscar las brigadas del bombero en el periodo
-    $userAssignments = Firefighters_assignment::where('id_empleado', $idEmpleado)
-        ->where('fecha_ini', '<=', $endDate)
-        ->whereNotIn('id_brigada_destino', $excludedBrigadeIds)
-        ->orderBy('fecha_ini', 'desc')
-        ->get();
-
-    // Función para determinar la brigada del bombero en una fecha
-    $getBrigadeForDate = function ($fecha) use ($userAssignments) {
-        foreach ($userAssignments as $assignment) {
-            if ($assignment->fecha_ini <= $fecha) {
-                return $assignment->id_brigada_destino;
-            }
-        }
-        return null;
-    };
-
-    // Filtrar solo las guardias que corresponden al bombero
     $myGuards = [];
     foreach ($guards as $guard) {
-        $brigadeBombero = $getBrigadeForDate($guard->date);
+        $brigadeBombero = $this->getBrigadeForDate($idEmpleado, $guard->date);
 
         if ($brigadeBombero && $guard->id_brigada == $brigadeBombero) {
             $existingStatus = $requestDates[$guard->date] ?? null;

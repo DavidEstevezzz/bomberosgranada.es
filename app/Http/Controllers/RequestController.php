@@ -506,7 +506,56 @@ class RequestController extends Controller
         // Obtener la brigada original para devolver al empleado a su puesto
         $brigadeOriginal = $this->getOriginalBrigade($miRequest->id_empleado, $miRequest->fecha_ini, $miRequest->turno);
 
-                
+        // ─── CASO ESPECIAL: Mañana y noche (4 asignaciones) ───
+        if ($miRequest->turno === 'Mañana y noche') {
+            // 1. Ida por la Mañana → AP (u otro tipo)
+            Firefighters_assignment::create([
+                'id_empleado' => $miRequest->id_empleado,
+                'id_request' => $miRequest->id,
+                'id_brigada_origen' => $brigadeOriginal,
+                'id_brigada_destino' => $brigadeId,
+                'fecha_ini' => $miRequest->fecha_ini,
+                'turno' => 'Mañana',
+                'tipo_asignacion' => 'ida',
+            ]);
+
+            // 2. Vuelta por la Tarde → brigada original (vuelve a trabajar la tarde)
+            Firefighters_assignment::create([
+                'id_empleado' => $miRequest->id_empleado,
+                'id_request' => $miRequest->id,
+                'id_brigada_origen' => $brigadeId,
+                'id_brigada_destino' => $brigadeOriginal,
+                'fecha_ini' => $miRequest->fecha_ini,
+                'turno' => 'Tarde',
+                'tipo_asignacion' => 'vuelta',
+            ]);
+
+            // 3. Ida por la Noche → AP (u otro tipo)
+            Firefighters_assignment::create([
+                'id_empleado' => $miRequest->id_empleado,
+                'id_request' => $miRequest->id,
+                'id_brigada_origen' => $brigadeOriginal,
+                'id_brigada_destino' => $brigadeId,
+                'fecha_ini' => $miRequest->fecha_ini,
+                'turno' => 'Noche',
+                'tipo_asignacion' => 'ida',
+            ]);
+
+            // 4. Vuelta por la Mañana del día siguiente → brigada original
+            $fechaSiguiente = date('Y-m-d', strtotime($miRequest->fecha_ini . ' +1 day'));
+            Firefighters_assignment::create([
+                'id_empleado' => $miRequest->id_empleado,
+                'id_request' => $miRequest->id,
+                'id_brigada_origen' => $brigadeId,
+                'id_brigada_destino' => $brigadeOriginal,
+                'fecha_ini' => $fechaSiguiente,
+                'turno' => 'Mañana',
+                'tipo_asignacion' => 'vuelta',
+            ]);
+
+            Log::info("Asignaciones Mañana y noche creadas - Empleado: {$miRequest->id_empleado}, Fecha: {$miRequest->fecha_ini}");
+            return; // Ya se crearon las 4 asignaciones, no seguir con la lógica normal
+        }
 
         // Crear la asignación inicial
         Firefighters_assignment::create([

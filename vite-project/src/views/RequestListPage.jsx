@@ -128,7 +128,7 @@ const RequestListPage = () => {
   const calcularJornadasPorTurno = (turno) => {
     if (turno === 'Día Completo') {
       return 3;
-    } else if (turno === 'Mañana y tarde' || turno === 'Tarde y noche') {
+    } else if (turno === 'Mañana y tarde' || turno === 'Tarde y noche' || turno === 'Mañana y noche') {
       return 2;
     } else {
       return 1;
@@ -221,24 +221,20 @@ const RequestListPage = () => {
     }));
   };
 
-  const cardContainerClass = `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-full overflow-hidden rounded-3xl border shadow-xl backdrop-blur transition-colors duration-300 ${
-    darkMode ? 'border-slate-800 bg-slate-900/80 text-slate-100' : 'border-slate-200 bg-white/90 text-slate-900'
-  }`;
-  const contentSectionClass = `rounded-2xl border px-5 py-6 transition-colors ${
-    darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50/70'
-  }`;
-  const tableWrapperClass = `overflow-x-auto rounded-2xl border transition-colors ${
-    darkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-white/90'
-  }`;
+  const cardContainerClass = `min-h-[calc(100vh-6rem)] w-full mx-auto max-w-full overflow-hidden rounded-3xl border shadow-xl backdrop-blur transition-colors duration-300 ${darkMode ? 'border-slate-800 bg-slate-900/80 text-slate-100' : 'border-slate-200 bg-white/90 text-slate-900'
+    }`;
+  const contentSectionClass = `rounded-2xl border px-5 py-6 transition-colors ${darkMode ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-slate-50/70'
+    }`;
+  const tableWrapperClass = `overflow-x-auto rounded-2xl border transition-colors ${darkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-white/90'
+    }`;
   const tableHeaderClass = darkMode
     ? 'bg-slate-900/80 text-slate-100'
     : 'bg-slate-100 text-slate-600';
   const subtleTextClass = darkMode ? 'text-slate-300' : 'text-slate-600';
-  const navigationButtonClass = `rounded-2xl border px-4 py-2 text-sm font-semibold transition-all duration-300 ${
-    darkMode
-      ? 'border-slate-700 bg-slate-900/70 text-slate-100 hover:bg-slate-900'
-      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-  }`;
+  const navigationButtonClass = `rounded-2xl border px-4 py-2 text-sm font-semibold transition-all duration-300 ${darkMode
+    ? 'border-slate-700 bg-slate-900/70 text-slate-100 hover:bg-slate-900'
+    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+    }`;
   const actionButtonBase =
     'rounded-xl border px-4 py-1 text-xs font-semibold text-white shadow-sm transition hover:shadow-md';
 
@@ -256,10 +252,9 @@ const RequestListPage = () => {
         'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200 border-rose-400/40',
     };
 
-    return `${baseClass} ${
-      variants[status] ||
+    return `${baseClass} ${variants[status] ||
       'bg-slate-100 text-slate-700 dark:bg-slate-600/30 dark:text-slate-200 border-slate-400/40'
-    }`;
+      }`;
   };
 
   const statusDescriptions = {
@@ -297,16 +292,14 @@ const RequestListPage = () => {
   return (
     <div className={cardContainerClass}>
       <div
-        className={`bg-gradient-to-r px-8 py-10 transition-colors duration-300 ${
-          darkMode
-            ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80 text-white'
-            : 'from-primary-200 via-primary-300 to-primary-400 text-slate-900'
-        }`}
+        className={`bg-gradient-to-r px-8 py-10 transition-colors duration-300 ${darkMode
+          ? 'from-primary-900/90 via-primary-700/90 to-primary-500/80 text-white'
+          : 'from-primary-200 via-primary-300 to-primary-400 text-slate-900'
+          }`}
       >
         <p
-          className={`text-xs font-semibold uppercase tracking-[0.3em] ${
-            darkMode ? 'text-white/80' : 'text-slate-800/90'
-          }`}
+          className={`text-xs font-semibold uppercase tracking-[0.3em] ${darkMode ? 'text-white/80' : 'text-slate-800/90'
+            }`}
         >
           Seguimiento mensual
         </p>
@@ -314,9 +307,8 @@ const RequestListPage = () => {
           <div>
             <h1 className="text-3xl font-semibold">Gestión de solicitudes</h1>
             <p
-              className={`mt-2 text-sm ${
-                darkMode ? 'text-white/80' : 'text-slate-700/90'
-              }`}
+              className={`mt-2 text-sm ${darkMode ? 'text-white/80' : 'text-slate-700/90'
+                }`}
             >
               Controla las solicitudes de permisos correspondientes a {currentMonthLabel}.
             </p>
@@ -326,11 +318,10 @@ const RequestListPage = () => {
               Mes anterior
             </button>
             <div
-              className={`rounded-2xl border px-4 py-2 text-center text-sm font-semibold ${
-                darkMode
-                  ? 'border-white/20 bg-white/10 text-white'
-                  : 'border-white/70 bg-white/80 text-slate-900'
-              }`}
+              className={`rounded-2xl border px-4 py-2 text-center text-sm font-semibold ${darkMode
+                ? 'border-white/20 bg-white/10 text-white'
+                : 'border-white/70 bg-white/80 text-slate-900'
+                }`}
             >
               {currentMonthLabel}
             </div>
@@ -342,7 +333,7 @@ const RequestListPage = () => {
       </div>
 
       <div className="space-y-8 px-6 py-8 sm:px-10">
-        
+
 
         {statusesToShow.map((status) => {
           const filteredByStatus = filteredRequests.filter((request) => request.estado === status);
@@ -411,9 +402,8 @@ const RequestListPage = () => {
                         </tr>
                       </thead>
                       <tbody
-                        className={`divide-y ${
-                          darkMode ? 'divide-slate-800 bg-slate-950/40' : 'divide-slate-100 bg-white/70'
-                        }`}
+                        className={`divide-y ${darkMode ? 'divide-slate-800 bg-slate-950/40' : 'divide-slate-100 bg-white/70'
+                          }`}
                       >
                         {paginatedRequests.map((request) => (
                           <tr
@@ -505,13 +495,12 @@ const RequestListPage = () => {
                     <button
                       onClick={() => updatePage(status, Math.max(currentPage - 1, 1))}
                       disabled={currentPage === 1}
-                      className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition-all ${
-                        currentPage === 1
-                          ? 'cursor-not-allowed border-slate-400/40 text-slate-400'
-                          : darkMode
-                              ? 'border-slate-700 bg-slate-900/70 text-slate-100 hover:bg-slate-900'
-                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition-all ${currentPage === 1
+                        ? 'cursor-not-allowed border-slate-400/40 text-slate-400'
+                        : darkMode
+                          ? 'border-slate-700 bg-slate-900/70 text-slate-100 hover:bg-slate-900'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       Anterior
                     </button>
@@ -521,13 +510,12 @@ const RequestListPage = () => {
                     <button
                       onClick={() => updatePage(status, Math.min(currentPage + 1, totalPages))}
                       disabled={currentPage === totalPages}
-                      className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition-all ${
-                        currentPage === totalPages
-                          ? 'cursor-not-allowed border-slate-400/40 text-slate-400'
-                          : darkMode
-                              ? 'border-slate-700 bg-slate-900/70 text-slate-100 hover:bg-slate-900'
-                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition-all ${currentPage === totalPages
+                        ? 'cursor-not-allowed border-slate-400/40 text-slate-400'
+                        : darkMode
+                          ? 'border-slate-700 bg-slate-900/70 text-slate-100 hover:bg-slate-900'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       Siguiente
                     </button>
@@ -535,11 +523,10 @@ const RequestListPage = () => {
                 </div>
               ) : (
                 <p
-                  className={`mt-6 rounded-2xl border px-4 py-4 text-sm ${
-                    darkMode
-                      ? 'border-slate-800 bg-slate-900/60 text-slate-300'
-                      : 'border-slate-200 bg-slate-50 text-slate-600'
-                  }`}
+                  className={`mt-6 rounded-2xl border px-4 py-4 text-sm ${darkMode
+                    ? 'border-slate-800 bg-slate-900/60 text-slate-300'
+                    : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
                 >
                   No hay solicitudes para este estado este mes.
                 </p>

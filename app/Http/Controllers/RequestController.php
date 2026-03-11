@@ -506,7 +506,7 @@ class RequestController extends Controller
         // Obtener la brigada original para devolver al empleado a su puesto
         $brigadeOriginal = $this->getOriginalBrigade($miRequest->id_empleado, $miRequest->fecha_ini, $miRequest->turno);
 
-
+                
 
         // Crear la asignación inicial
         Firefighters_assignment::create([
@@ -698,9 +698,14 @@ class RequestController extends Controller
     private function findNextGuardForVacation($idEmpleado, $fechaGuardia, $brigadaOrigen, $guardiasSeleccionadas = [])
     {
         $excludedBrigadeNames = [
-            'Bajas', 'Vacaciones', 'Asuntos Propios', 'Modulo',
-            'Licencias por Jornadas', 'Licencias por Días',
-            'Compensacion grupos especiales', 'Horas Sindicales',
+            'Bajas',
+            'Vacaciones',
+            'Asuntos Propios',
+            'Modulo',
+            'Licencias por Jornadas',
+            'Licencias por Días',
+            'Compensacion grupos especiales',
+            'Horas Sindicales',
             'Salidas Personales'
         ];
 
@@ -944,6 +949,7 @@ class RequestController extends Controller
             'Tarde', 'Tarde y noche' => 'Tarde',
             'Noche' => 'Noche',
             'Día Completo' => 'Mañana',
+            'Mañana y noche' => 'Mañana',
             default => $turnoActual,
         };
     }
@@ -954,6 +960,7 @@ class RequestController extends Controller
             'Tarde', 'Mañana y tarde' => 'Noche',
             'Tarde y noche', 'Noche', 'Día Completo' => 'Mañana',
             'Mañana' => 'Tarde',
+            'Mañana y noche' => 'Mañana',
         };
     }
 
@@ -1083,7 +1090,7 @@ class RequestController extends Controller
         }
 
         // Sumar días de vacaciones cuando se cancela la solicitud
-        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Pendiente')) {
+        if ($oldEstado === 'Confirmada' && ($newEstado === 'Cancelada' || $newEstado === 'Denegada' || $newEstado === 'Pendiente')) {
             $user->vacaciones += $diasSolicitados;
             Log::info("Sumando {$diasSolicitados} días de vacaciones al usuario ID: {$user->id_empleado}");
         }
@@ -1123,7 +1130,7 @@ class RequestController extends Controller
     {
         if ($turno === 'Día Completo') {
             return 3;
-        } else if ($turno === 'Mañana y tarde' || $turno === 'Tarde y noche') {
+        } else if ($turno === 'Mañana y tarde' || $turno === 'Tarde y noche' || $turno === 'Mañana y noche') {
             return 2;
         } else {
             return 1;
@@ -1239,120 +1246,119 @@ class RequestController extends Controller
     }
 
     /**
- * Obtener las guardias del bombero para un mes, con info de solicitudes existentes de cualquier tipo.
- * 
- * Parámetros:
- * - month: YYYY-MM
- * - id_empleado: int
- * - tipo_solicitud: string (ej: 'asuntos propios', 'modulo', 'compensacion grupos especiales')
- * 
- * Devuelve las guardias del bombero con has_existing_request y existing_request_status
- * para el tipo de solicitud indicado.
- */
-public function getMyGuardsForRequest(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'month' => 'required|date_format:Y-m',
-        'id_empleado' => 'required|exists:users,id_empleado',
-        'tipo_solicitud' => 'required|string',
-    ]);
+     * Obtener las guardias del bombero para un mes, con info de solicitudes existentes de cualquier tipo.
+     * 
+     * Parámetros:
+     * - month: YYYY-MM
+     * - id_empleado: int
+     * - tipo_solicitud: string (ej: 'asuntos propios', 'modulo', 'compensacion grupos especiales')
+     * 
+     * Devuelve las guardias del bombero con has_existing_request y existing_request_status
+     * para el tipo de solicitud indicado.
+     */
+    public function getMyGuardsForRequest(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'month' => 'required|date_format:Y-m',
+            'id_empleado' => 'required|exists:users,id_empleado',
+            'tipo_solicitud' => 'required|string',
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json($validator->errors(), 400);
-    }
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
+        }
 
-    $idEmpleado = $request->input('id_empleado');
-    $month = $request->input('month');
-    $tipoSolicitud = $request->input('tipo_solicitud');
+        $idEmpleado = $request->input('id_empleado');
+        $month = $request->input('month');
+        $tipoSolicitud = $request->input('tipo_solicitud');
 
-    $startDate = $month . '-01';
-    $endDate = date('Y-m-t', strtotime($startDate));
+        $startDate = $month . '-01';
+        $endDate = date('Y-m-t', strtotime($startDate));
 
-    $user = User::find($idEmpleado);
-    if (!$user) {
-        return response()->json(['error' => 'Usuario no encontrado'], 404);
-    }
+        $user = User::find($idEmpleado);
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
 
-    // Obtener todas las guardias del mes
-    $guards = Guard::with('brigade:id_brigada,nombre')
-        ->whereBetween('date', [$startDate, $endDate])
-        ->orderBy('date')
-        ->get();
+        // Obtener todas las guardias del mes
+        $guards = Guard::with('brigade:id_brigada,nombre')
+            ->whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date')
+            ->get();
 
-    // Buscar solicitudes existentes de este tipo para el usuario en este rango
-    $existingRequests = MiRequest::where('id_empleado', $idEmpleado)
-        ->where('tipo', $tipoSolicitud)
-        ->whereIn('estado', ['Pendiente', 'Confirmada'])
-        ->where(function ($query) use ($startDate, $endDate) {
-            $query->whereBetween('fecha_ini', [$startDate, $endDate])
-                  ->orWhereBetween('fecha_fin', [$startDate, $endDate]);
-        })
-        ->get();
+        // Buscar solicitudes existentes de este tipo para el usuario en este rango
+        $existingRequests = MiRequest::where('id_empleado', $idEmpleado)
+            ->where('tipo', $tipoSolicitud)
+            ->whereIn('estado', ['Pendiente', 'Confirmada'])
+            ->where(function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('fecha_ini', [$startDate, $endDate])
+                    ->orWhereBetween('fecha_fin', [$startDate, $endDate]);
+            })
+            ->get();
 
-    // Crear mapa de fechas con solicitudes existentes
-    $requestDates = [];
-    foreach ($existingRequests as $req) {
-        // Para solicitudes que usan guardias_seleccionadas (nuevo sistema)
-        if ($req->guardias_seleccionadas) {
-            $fechasGuardias = is_array($req->guardias_seleccionadas)
-                ? $req->guardias_seleccionadas
-                : json_decode($req->guardias_seleccionadas, true);
+        // Crear mapa de fechas con solicitudes existentes
+        $requestDates = [];
+        foreach ($existingRequests as $req) {
+            // Para solicitudes que usan guardias_seleccionadas (nuevo sistema)
+            if ($req->guardias_seleccionadas) {
+                $fechasGuardias = is_array($req->guardias_seleccionadas)
+                    ? $req->guardias_seleccionadas
+                    : json_decode($req->guardias_seleccionadas, true);
 
-            if (is_array($fechasGuardias)) {
-                foreach ($fechasGuardias as $fecha) {
-                    $requestDates[$fecha] = $req->estado;
+                if (is_array($fechasGuardias)) {
+                    foreach ($fechasGuardias as $fecha) {
+                        $requestDates[$fecha] = $req->estado;
+                    }
                 }
+            }
+
+            // Para solicitudes con el sistema antiguo (fecha_ini directa)
+            // En AP la fecha_ini == fecha_fin, así que solo necesitamos fecha_ini
+            if (!$req->guardias_seleccionadas) {
+                $requestDates[$req->fecha_ini] = $req->estado;
             }
         }
 
-        // Para solicitudes con el sistema antiguo (fecha_ini directa)
-        // En AP la fecha_ini == fecha_fin, así que solo necesitamos fecha_ini
-        if (!$req->guardias_seleccionadas) {
-            $requestDates[$req->fecha_ini] = $req->estado;
+        $myGuards = [];
+        foreach ($guards as $guard) {
+            $brigadeBombero = $this->getBrigadeForDate($idEmpleado, $guard->date);
+
+            if ($brigadeBombero && $guard->id_brigada == $brigadeBombero) {
+                $existingStatus = $requestDates[$guard->date] ?? null;
+
+                $myGuards[] = [
+                    'date' => $guard->date,
+                    'id_brigada' => $guard->id_brigada,
+                    'brigade_name' => $guard->brigade ? $guard->brigade->nombre : 'N/A',
+                    'has_existing_request' => $existingStatus !== null,
+                    'existing_request_status' => $existingStatus,
+                ];
+            }
         }
-    }
 
-    $myGuards = [];
-    foreach ($guards as $guard) {
-        $brigadeBombero = $this->getBrigadeForDate($idEmpleado, $guard->date);
-
-        if ($brigadeBombero && $guard->id_brigada == $brigadeBombero) {
-            $existingStatus = $requestDates[$guard->date] ?? null;
-
-            $myGuards[] = [
-                'date' => $guard->date,
-                'id_brigada' => $guard->id_brigada,
-                'brigade_name' => $guard->brigade ? $guard->brigade->nombre : 'N/A',
-                'has_existing_request' => $existingStatus !== null,
-                'existing_request_status' => $existingStatus,
-            ];
+        // Devolver saldo según el tipo
+        $balance = 0;
+        switch ($tipoSolicitud) {
+            case 'asuntos propios':
+                $balance = $user->AP ?? 0;
+                break;
+            case 'modulo':
+                $balance = $user->modulo ?? 0;
+                break;
+            case 'compensacion grupos especiales':
+                $balance = $user->compensacion_grupos ?? 0;
+                break;
+            case 'licencias por jornadas':
+                // Si tiene un campo específico, úsalo aquí
+                $balance = 0;
+                break;
         }
+
+        return response()->json([
+            'guards' => $myGuards,
+            'balance' => $balance,
+            'month' => $month,
+            'tipo_solicitud' => $tipoSolicitud,
+        ]);
     }
-
-    // Devolver saldo según el tipo
-    $balance = 0;
-    switch ($tipoSolicitud) {
-        case 'asuntos propios':
-            $balance = $user->AP ?? 0;
-            break;
-        case 'modulo':
-            $balance = $user->modulo ?? 0;
-            break;
-        case 'compensacion grupos especiales':
-            $balance = $user->compensacion_grupos ?? 0;
-            break;
-        case 'licencias por jornadas':
-            // Si tiene un campo específico, úsalo aquí
-            $balance = 0;
-            break;
-    }
-
-    return response()->json([
-        'guards' => $myGuards,
-        'balance' => $balance,
-        'month' => $month,
-        'tipo_solicitud' => $tipoSolicitud,
-    ]);
-}
-
 }
